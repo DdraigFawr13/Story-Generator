@@ -74,7 +74,8 @@ These are **candidate values**. Confirm with a full desktop view and at least on
 - [x] Direction C chosen as baseline
 - [x] Approved direction recorded in repo design and decision docs
 - [ ] Verify pixel complexity and contrast at actual displayed sizes on phone and desktop
-- [ ] Compare three simple original art treatments; decide actual source sprite size, pixel density, zoom and movement emphasis (not a mandatory 16px tile)
+- [x] Compare three original treatments and record the selected simple direction with human-shaped figures (D-017)
+- [ ] Decide actual source sprite size, pixel density, zoom and movement emphasis (not a mandatory 16px tile)
 - [ ] Confirm collapsed/expanded chronicle on representative phone width via static layout/prototype
 - [ ] Check event selection, map focus and inspector on desktop and phone
 - [ ] Approve UI specs and resolve any art constraints before generating production sprites
@@ -91,7 +92,7 @@ Full continent views and political overlays arrive in Phase 4. Detailed individu
 
 ## Art direction refinement checkpoint
 
-Compare three simplified original treatments of the **same** overhead village composition and chronicle: minimal graphic, illustrated minimal (preferred candidate), and soft illustrative. Only then finalize exact pixel density, silhouette detail and production assets. This does **not** reopen the approved Direction C interface structure.
+Three treatments and refinements were reviewed; D-017 selects the original first simple concept with human-shaped figures. Finalize exact pixel density, scale and export conventions before production assets. This does **not** reopen the approved Direction C interface structure.
 
 ## Recommended continuation
 
