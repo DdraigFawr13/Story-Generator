@@ -25,6 +25,7 @@ The register distinguishes what was **approved**, what is **pending review**, an
 | D-017 | Return to the original first concept, changing only the people to recognizable human shapes (2026-10-09 UTC) | Preserve the first image’s simple graphics; avoid the added texture/detail of the rejected blend | Working art direction; human sprites remain aggregate P1 population, with named identities in P2 |
 | D-018 | Seasons materially change the economy, including preparation for winter (2026-10-09 UTC) | User wants meaningful growing-season harvests and winter reserves | Replace the all-season crop placeholder; review seasonal numeric contracts |
 | D-019 | Pause while the app is closed or backgrounded (2026-10-09 UTC) | User should not miss the world’s history | No elapsed-time catch-up; return paused with explicit Play to continue |
+| D-020 | Keep the phone arrangement: map above expandable chronicle, time controls at the top (2026-10-09 UTC) | User approved the shown information hierarchy | Preserve map context and accessible sheet controls; implementation/device tests still required |
 
 ## Pending Phase 0 decisions
 
