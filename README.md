@@ -16,6 +16,8 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Detailed ordered implementation plan (Phase 0–6)](docs/IMPLEMENTATION_PLAN.md)
 - [Approved middle-fantasy tone](docs/WORLD_TONE.md)
 - [Decision register and future ideas](docs/DECISIONS.md)
+- [Approved Direction C visual specification](docs/ART_UI_SPEC.md)
+- [Next step: technical architecture review](docs/ARCHITECTURE_REVIEW.md)
 - [Working agreements and branch hygiene](CONTRIBUTING.md)
 
 ## Approved direction
@@ -24,8 +26,8 @@ Start a seeded world, observe a society from founding to transformation or colla
 
 ## Immediate next decision
 
-Finish Phase 0: review alternative visual concepts, approve a target, select technical stack and define Phase 1 numeric mechanics contracts. **Do not begin Phase 1 until the pre-build gate is met.**
+**Direction C (Naturalist's Observation Desk) is selected.** Next, validate the visual details on desktop/phone, review the proposed technical architecture, and define Phase 1 numeric mechanics contracts. **Do not begin Phase 1 until the pre-build gate is met.**
 
 ## Development
 
-Planning documents are versioned and merged using scoped pull requests. Runtime, package manager, deployment target, and visual assets are intentionally not locked until design review.
+Planning documents are versioned and merged using scoped pull requests. Architecture and pixel density proposals are documented, but runtime, package manager, deployment target and production assets remain unimplemented pending Phase 0 approval.
