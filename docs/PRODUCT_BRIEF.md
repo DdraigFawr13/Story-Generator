@@ -8,7 +8,7 @@ Start a world, become curious about a place or person, watch real changes unfold
 
 Observation should reward attention without requiring constant input. People can thrive, fail, act kindly or cruelly, be forgotten or leave a legacy. The simulation must not protect favorites, schedule a catastrophe for entertainment, or generate prose that invents facts. Later explicit Story Spotlights broaden context-valid opportunities; they do not select outcomes. Passive inspection never changes the world.
 
-The visual target is the approved Naturalist's Observation Desk: readable overhead world, literary but crisp chronicle, contextual inspection. After comparing three concepts and rejecting a blended refinement, the user chose the original first concept’s simple graphics with only the resident markers changed to recognizable human shapes. That targeted edit has been shown and is the working visual reference; phone/scale validation remains open. Human-shaped sprites in P1 represent aggregate population without implying simulated individual identities.
+The visual target is the approved Naturalist's Observation Desk: readable overhead world, literary but crisp chronicle, contextual inspection. After comparing three concepts and rejecting a blended refinement, the user chose the original first concept’s simple graphics with only the resident markers changed to recognizable human shapes. That targeted edit has been shown and is the working visual reference; the phone arrangement is now confirmed (map above expandable chronicle, time controls at top); actual-size and interaction validation remain open. Human-shaped sprites in P1 represent aggregate population without implying simulated individual identities.
 
 ## Confirmed requirements
 
@@ -28,7 +28,7 @@ The visual target is the approved Naturalist's Observation Desk: readable overhe
 | Seasonal economy | Growing seasons and winter preparation materially affect food/resources | Seasonal visuals must correspond to real economic consequences |
 | Time while away | Pause when the app is closed or in the background; no catch-up on return | The viewer can follow history without missing unseen years |
 
-These product priorities are confirmed; exact simulation constants remain proposals. Simulation time units and wall-clock presentation speed are separate contracts; changing play speed must not change the result after the same tick count. Three desktop art concepts and subsequent refinements were reviewed; the working target is original concept 1 with human-shaped figures. Phone and actual-size validation remain open.
+These product priorities are confirmed; exact simulation constants remain proposals. Simulation time units and wall-clock presentation speed are separate contracts; changing play speed must not change the result after the same tick count. Three desktop art concepts and subsequent refinements were reviewed; the working target is original concept 1 with human-shaped figures. The phone arrangement is approved; actual-size and interaction validation remain open.
 
 ## First-session acceptance scenarios
 
