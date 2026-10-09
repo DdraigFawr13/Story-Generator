@@ -17,6 +17,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Plan review and remaining mechanics/storage contracts](docs/PLAN_REVIEW.md)
 - [Product brief and first-playable quality bar](docs/PRODUCT_BRIEF.md)
 - [Proposed Phase 1 numeric rules](docs/PHASE1_RULES.md)
+- [Proposed deterministic geography contract](docs/GEOGRAPHY_CONTRACT.md)
 - [Proposed technical and persistence contract](docs/TECHNICAL_CONTRACT.md)
 - [Approved middle-fantasy tone](docs/WORLD_TONE.md)
 - [Decision register and future ideas](docs/DECISIONS.md)
@@ -26,6 +27,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Story Spotlight opportunity expansion](docs/SPOTLIGHT_OPPORTUNITIES.md)
 - [Next step: technical architecture review](docs/ARCHITECTURE_REVIEW.md)
 - [Working agreements and branch hygiene](CONTRIBUTING.md)
+- [Available tools, skills and connector inventory](docs/TOOLING_CAPABILITIES.md)
 
 ## Approved direction
 
@@ -38,3 +40,4 @@ Start a seeded world, observe a society from founding to transformation or colla
 ## Development
 
 Planning documents are versioned and merged using scoped pull requests. Architecture and pixel density proposals are documented, but runtime, package manager, deployment target and production assets remain unimplemented pending Phase 0 approval.
+
