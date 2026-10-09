@@ -1,8 +1,8 @@
 import { FOUNDATION_CONFIG } from './config';
 import { capture } from './immutable';
 
-export const SETTLEMENT_VERSION = 'p1-settlement-v1';
-export const SETTLEMENT_CONFIG = capture({
+export const LEGACY_SETTLEMENT_VERSION = 'p1-settlement-v1';
+export const LEGACY_SETTLEMENT_CONFIG = capture({
   ...FOUNDATION_CONFIG,
   economy: {
     workerDivisor: 2,
@@ -45,3 +45,20 @@ export const SETTLEMENT_CONFIG = capture({
     seasonalDecay: 1,
   },
 });
+
+export const SETTLEMENT_VERSION = 'p1-settlement-v2';
+export const SETTLEMENT_CONFIG = capture({
+  ...LEGACY_SETTLEMENT_CONFIG,
+  economy: {
+    ...LEGACY_SETTLEMENT_CONFIG.economy,
+    seasonMultipliers: [1000, 1200, 1000, 0],
+    recovery: { minimumWorkforce: 2, protectedForagers: 1, foodWeeks: 6 },
+  },
+});
+export type SettlementConfig = typeof LEGACY_SETTLEMENT_CONFIG | typeof SETTLEMENT_CONFIG;
+export type SettlementEconomy = SettlementConfig['economy'];
+export function settlementConfig(version: string): SettlementConfig {
+  if (version === LEGACY_SETTLEMENT_VERSION) return LEGACY_SETTLEMENT_CONFIG;
+  if (version === SETTLEMENT_VERSION) return SETTLEMENT_CONFIG;
+  throw new Error('Invalid settlement state: unsupported version');
+}

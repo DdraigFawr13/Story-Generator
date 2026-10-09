@@ -81,6 +81,43 @@ test('aborting after put success retains the old complete IndexedDB slot', async
   expect(result.after).toEqual(result.before);
 });
 
+test('new winter rules show dormant fields and real labor while a legacy save keeps its rules', async ({
+  page,
+}) => {
+  await fresh(page);
+  await fixture(page, 'writeFixture', 'RIVERSIDE', 47);
+  await menu(page);
+  await page.getByRole('button', { name: 'Resume local save' }).click();
+  await page.getByRole('button', { name: 'Step one week' }).click();
+  await expect(page.getByTestId('tick')).toHaveText('48');
+  await expect(page.getByText('Dashed plots: fields resting in winter')).toBeVisible();
+  await expect(
+    page.getByText('Winter fields rest; no crop harvest', { exact: true }),
+  ).toBeVisible();
+  await page.getByText('Last week’s work', { exact: true }).click();
+  await expect(page.locator('.labor-summary')).toContainText('Foraging');
+  await expect(
+    page
+      .locator('.labor-summary dl div')
+      .filter({ has: page.getByText('Fields', { exact: true }) }),
+  ).toContainText('0');
+  await save(page, 48);
+  expect(await fixture(page, 'storedDigest')).toEqual({
+    tick: 48,
+    seed: 'RIVERSIDE',
+    digest: await digestCanonical(simulateSettlement('RIVERSIDE', 48).state),
+  });
+  await fixture(page, 'writeFixture', 'RIVERSIDE', 47, 'p1-settlement-v1');
+  await page.getByRole('button', { name: 'Resume local save' }).click();
+  await expect(page.getByText('This world retains reduced winter crop production.')).toBeVisible();
+  await page.getByRole('button', { name: 'Step one week' }).click();
+  await expect(page.getByRole('button', { name: /winter harvest brings \d+ food/ })).toBeVisible();
+  await expect(page.getByText('Dashed plots: fields resting in winter')).toHaveCount(0);
+  await save(page, 48);
+  const slot = await fixture<{ payload: { simulationVersion: string } }>(page, 'readSlot');
+  expect(slot.payload.simulationVersion).toBe('p1-settlement-v1');
+});
+
 for (const checksummed of [false, true])
   test(`corrupt ${checksummed ? 'checksummed' : 'damaged'} saves stay stored and cannot replace a running world`, async ({
     page,

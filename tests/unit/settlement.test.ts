@@ -3,6 +3,10 @@ import { canonicalBytes, canonicalJson } from '../../src/sim/canonical';
 import { capture } from '../../src/sim/immutable';
 import { createSettlement } from '../../src/sim/settlement-initial';
 import {
+  LEGACY_SETTLEMENT_CONFIG,
+  LEGACY_SETTLEMENT_VERSION,
+} from '../../src/sim/settlement-config';
+import {
   advanceSettlement,
   reduceSettlementWeek,
   simulateSettlement,
@@ -208,12 +212,14 @@ describe('weekly settlement accounting', () => {
       next.events.find((e) => e.tick === 12 && e.type === 'building_removed')!.id,
     );
   });
-  it('exposes the field-first low-population recovery risk without changing policy', () => {
+  it('preserves the legacy field-first low-population rule for existing worlds', () => {
     const next = fixture(0, (s) => {
       s.world.settlement.population = 4;
       s.world.settlement.households = 1;
       s.world.settlement.food = 0;
       s.world.settlement.timber = 0;
+      s.simulationVersion = s.rulesVersion = LEGACY_SETTLEMENT_VERSION;
+      s.config = LEGACY_SETTLEMENT_CONFIG;
     });
     expect(next.lastTick?.labor).toMatchObject({
       workforce: 2,

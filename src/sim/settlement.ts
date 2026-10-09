@@ -17,6 +17,8 @@ import {
   settlementTotals,
   shelter,
   weatherKind,
+  workforce,
+  protectedForagers,
 } from './settlement-math';
 import { validateSettlementState } from './settlement-validation';
 import type { BuildingKind } from './terrain';
@@ -30,12 +32,11 @@ import type {
   TickLedger,
 } from './state';
 
-const E = SETTLEMENT_CONFIG.economy;
-
 // A pure candidate reducer. Callers supply a validated immutable snapshot and
 // must admit the entire result before publishing it. Developer fixtures can
 // inject valid phase inputs; production cannot inject weather or outcomes.
 export function reduceSettlementWeek(committed: SettlementSnapshot): SettlementState {
+  const E = committed.config.economy;
   // Own every record we mutate. Frozen map/history records can be shared;
   // admission still isolates all newly produced mutable data.
   const s = {
@@ -66,7 +67,7 @@ export function reduceSettlementWeek(committed: SettlementSnapshot): SettlementS
     tick: s.tick,
     opening,
     labor: {
-      workforce: Math.floor(opening.population / E.workerDivisor),
+      workforce: workforce(opening.population, E),
       fields: [],
       foragers: 0,
       repairs: 0,
@@ -141,7 +142,7 @@ export function reduceSettlementWeek(committed: SettlementSnapshot): SettlementS
 
   // 1. Environment. Extinct settlements retain seasonal weather and history.
   if (calendar.week === 1) {
-    const kind = weatherKind(draw('weather', E.weatherRange));
+    const kind = weatherKind(draw('weather', E.weatherRange), E);
     const weather = { kind, multiplier: E.weatherMultipliers[kind], startTick: s.tick };
     w.currentWeather = weather;
     w.currentWeatherEventId = emit('weather', 1, {
@@ -155,7 +156,11 @@ export function reduceSettlementWeek(committed: SettlementSnapshot): SettlementS
   // 2. Reserve exclusive labor and opening materials; no mid-tick reassignment.
   let remaining = ledger.labor.workforce;
   const fields = w.buildings.filter((b) => b.kind === 'field');
-  ledger.labor.fields = fields.slice(0, remaining).map((b) => b.id);
+  const protectedCount = protectedForagers(opening.population, opening.food, E);
+  ledger.labor.fields =
+    E.seasonMultipliers[seasonIndex] === 0
+      ? []
+      : fields.slice(0, Math.max(0, remaining - protectedCount)).map((b) => b.id);
   remaining -= ledger.labor.fields.length;
   ledger.labor.foragers = Math.min(remaining, Math.ceil(opening.population / E.foragerDivisor));
   remaining -= ledger.labor.foragers;
@@ -283,7 +288,7 @@ export function reduceSettlementWeek(committed: SettlementSnapshot): SettlementS
   if (calendar.seasonBoundary) {
     ledger.production.fields = fields.map((b) => {
       const input = { id: b.id, fertility: w.map.tiles[b.tile]![1], tendedWeeks: b.tendedWeeks };
-      return { ...input, yield: fieldYield(input, weather.multiplier, seasonIndex) };
+      return { ...input, yield: fieldYield(input, weather.multiplier, seasonIndex, E) };
     });
     ledger.production.harvest = ledger.production.fields.reduce((sum, b) => sum + b.yield, 0);
     const before = v.food + ledger.production.foraging;

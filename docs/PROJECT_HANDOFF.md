@@ -1,6 +1,6 @@
 # Project handoff — recovered 2026-10-09
 
-**Current checkpoint:** PR #13 is merged at [96d9614](https://github.com/DdraigFawr13/Story-Generator/commit/96d9614dc86dae5ce0caea52c67fda32b7e01f52). D-022 continues to authorize milestone merges. Playback, IndexedDB save/resume and functional chronicle are now supplemented by readable phone map crop/zoom/pan, focused event locations, full record navigation and preserved older reading position. [PHASE1_VIEWER.md](PHASE1_VIEWER.md) records 1,000/10,000-week real storage measurements, Chromium crash recovery and ten-seed experience findings. Balance/storage experience acceptance, selected-art references, physical-device support and human usability review remain open. No deployment or individual-agent phase has begun.
+**Current checkpoint:** the v2 winter/recovery milestone is [PR #16](https://github.com/DdraigFawr13/Story-Generator/pull/16), based on viewer PR #14 at [af30301](https://github.com/DdraigFawr13/Story-Generator/commit/af30301fc5a60e8a57eeb3d5820097950cb4594e). D-022 continues to authorize verified milestone merges. D-023 confirms “Keep most starts viable, make winter reserves matter, and allow recovery from small populations.” V2 makes winter fields dormant, protects low-reserve foraging and permits bounded work at small populations. V1 saves continue unchanged. [PHASE1_BALANCE.md](PHASE1_BALANCE.md) records rules, compatibility and measured evidence; [PHASE1_VIEWER.md](PHASE1_VIEWER.md) retains v1 storage/crash measurements. Final storage-policy/human experience acceptance, selected-art references and physical-device support remain open. No deployment or individual-agent phase has begun.
 
 The recovery below describes the earlier PR #9 checkpoint and preserved provenance. D-020 supersedes its no-scaffolding restriction; it does not retroactively establish visual/balance acceptance.
 
@@ -25,7 +25,7 @@ Use [PRODUCT_BRIEF.md](PRODUCT_BRIEF.md) for the first-session experience and qu
 
 ## Active proposal set and conflicts to resolve
 
-The active documents are [SETTLEMENT_RULES.md](SETTLEMENT_RULES.md), [TERRAIN_CONTRACT.md](TERRAIN_CONTRACT.md) and [LOCAL_PERSISTENCE_CONTRACT.md](LOCAL_PERSISTENCE_CONTRACT.md). Keep their units and formulas together. Terrain/founding are now the versioned foundation baseline; weekly balance and persistence choices remain provisional until their scoped implementation and review.
+The active documents are [SETTLEMENT_RULES.md](SETTLEMENT_RULES.md), [TERRAIN_CONTRACT.md](TERRAIN_CONTRACT.md) and [LOCAL_PERSISTENCE_CONTRACT.md](LOCAL_PERSISTENCE_CONTRACT.md). Keep their units and formulas together. Terrain/founding, weekly rules and persistence are implemented versioned baselines. The table below preserves conflicts at the earlier recovery checkpoint; D-022 implements scheduling/persistence and D-023 resolves winter/recovery emphasis. It is not a second set of current numeric requirements.
 
 | Topic | Latest merged candidate | Older branch candidate | Review consequence |
 | --- | --- | --- | --- |
@@ -36,7 +36,7 @@ The active documents are [SETTLEMENT_RULES.md](SETTLEMENT_RULES.md), [TERRAIN_CO
 | Seed/determinism | 1–64 ASCII characters, FNV-1a/xorshift32 named streams | Unicode-normalized seed and alternate stream proposal | Follow the merged contract and terrain golden vector; do not combine encodings/PRNGs |
 | Save representation | Single atomic complete envelope, one world slot | Snapshot generations and separate shared archive records | Use the merged persistence candidate with accepted ADR ownership; older layout is not an additional P1 requirement |
 
-Concrete low-population fixture to review: opening P=4 gives W=2. With three completed fields, both workers are reserved for fields and there are no workers for foraging, repairs, construction or timber gathering that week. At P=1, W=0. These follow directly from the proposal; they are review questions about recovery, not measured autonomous trajectories or a new rule change.
+The historical v1 low-population fixture gives P=4, W=2 and no remaining workers after field allocation; P=1 has W=0. V2 addresses this explicitly: W=min(P,max(2,floor(P/2))), with one forager protected below six weeks of opening food. Controlled depleted P=1/2/4 inputs now have measured recovery capacity. This does not guarantee survival or revive an extinct world.
 
 The 20-tick autosave proposal also needs a viewing-pace review. At the proposed 15-second weekly tick it means five active minutes between triggers at 1x, 75 seconds at 4x and 18.75 seconds at 16x, before write delay/failure. The five-second throttle does not provide five-second recovery. Keep the existing cadence proposed until that loss window is accepted or revised.
 
@@ -58,13 +58,13 @@ python3 docs/probes/terrain_probe.py
 
 It reproduced 100 distinct maps, 72 founding centers, zero natural fallbacks, forest range 481–1,429, passing river-preserving forced fallback and rejected all-water input. RIVERSIDE again produced center 1327, terrain RNG 2847659418 and digest `07a68eb6bb14a59ac536def9ac133478774970d059b49e1da5406d48be7268eb`.
 
-At the recovery checkpoint this was Python generation evidence only. The foundation slice now adds exact TypeScript fixture comparison, Node/browser parity and preview interaction checks; see its [verification record](PHASE1_FOUNDATIONS.md). Running settlement balance, persistence and physical-device support remain untested. Pacing and low-population observations above are arithmetic consequences, not application tests.
+At the recovery checkpoint this was Python generation evidence only. The foundation slice adds exact TypeScript fixture comparison, Node/browser parity and preview interaction checks; see its [verification record](PHASE1_FOUNDATIONS.md). Later settlement, playback, viewer and balance records contain actual runtime/save/browser evidence. Physical-device support remains unverified; historical recovery arithmetic above must not be substituted for those measured tests.
 
 ## Next work in order
 
-1. Review winter/low-population recovery and autosave cadence with the recorded runtime evidence. All ten sampled first years and the 100-seed week-1,000 battery stay fed; finite timber eventually produces decline. Tune only with explicit versioned changes and preserved old-save behavior.
+1. Review the v2 balance findings and the still-open five-minute 1x autosave loss window with a human viewer. D-023's tuning emphasis is implemented; continue only with explicit versioned rule changes and preserved old-save behavior.
 2. Recover exact selected desktop/phone references before faithful production art or source-density comparison. Do not invent approval or claim replacement symbols are the selected art.
 3. Obtain physical Android/installed Safari interaction/performance and a viewer usability review. Desktop browser emulation and controlled Chromium crash recovery are useful evidence with different scope.
-4. Close the first-playable acceptance checklist before advancing to individual people/families/Spotlights. Preserve the complete P1 save/version baseline when proposing P2 extensions.
+4. Complete 1.17's aggregate resident representation and close the first-playable acceptance checklist before advancing to individual people/families/Spotlights. Preserve the complete P1 save/version baseline when proposing P2 extensions.
 
 Continue through scoped pull requests. Ask only for outstanding experience tradeoffs or missing evidence; do not ask the user to reselect recorded architecture, art or phone hierarchy. Do not mark future implementation or browser tests complete from planning documents.

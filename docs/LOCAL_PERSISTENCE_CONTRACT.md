@@ -73,6 +73,8 @@ Read the envelope into a candidate without changing the running world. Check env
 
 Events must have legal ordering and ticks no greater than the snapshot tick. Cause references must resolve to earlier archived events; entity references must resolve to living or historical records. Validate configuration against the matching rule version.
 
+Schema 2 recognizes both `p1-settlement-v1` and `p1-settlement-v2`; rulesVersion must equal simulationVersion and configuration must exactly match that profile. New worlds use v2. Resuming v1 retains its original winter production, labor, RNG and history rather than migrating it. Frozen pre-change digests and real browser winter save/resume checks verify this dispatch; see [PHASE1_BALANCE.md](PHASE1_BALANCE.md).
+
 Only after all checks pass may the controller atomically replace the in-memory world and start a new adapter session. Loading never silently repairs, discards or migrates data. Unsupported and corrupt saves remain stored for a future recovery decision. A failed load leaves an existing in-memory world untouched.
 
 ## Archive and payload limits

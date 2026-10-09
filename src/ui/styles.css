@@ -374,6 +374,11 @@ button[aria-pressed='true'] {
   padding: 10px 16px 0;
   font-size: 0.85rem;
 }
+.labor-summary summary {
+  min-height: 45px;
+  padding: 8px 0;
+  cursor: pointer;
+}
 @media (max-width: 760px) {
   .navigable-map {
     height: 300px;
