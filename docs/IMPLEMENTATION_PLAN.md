@@ -45,7 +45,7 @@ Candidate closure documents: [product brief](PRODUCT_BRIEF.md), [numeric mechani
 - [x] 0.3 Set viewer baseline: passive observer; possible small nudges are **deferred**.
 - [x] 0.4 Map core subsystems, seeded-world contract, canonical event model, story-quality principles.
 - [x] 0.5 Break P1–P6 into ordered engineering increments with deliverables, tests and exit gates (this document).
-- [ ] 0.6 Direction C **layout** is approved. Refine map art with **simple stylized RimWorld-like legibility (original assets, slightly more detail)**, comparing three detail levels, then confirm scale/contrast and phone layout (see [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md) and [ART_UI_SPEC.md](ART_UI_SPEC.md)).
+- [ ] 0.6 Direction C **layout** is approved. Three art treatments were reviewed; the working target is the original first simple concept with human-shaped people (D-017), and the phone arrangement is approved (D-020). Finish actual sprite/text scale, contrast and source/export conventions (see [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md) and [ART_UI_SPEC.md](ART_UI_SPEC.md)).
 - [ ] 0.7 **Architecture proposal documented** in [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md) (TypeScript core, Vite/React, Canvas 2D, testing and persistence seams). Review and record stack decisions as ADRs before marking complete.
 - [ ] 0.8 Complete the P1 mechanics contract checklist in [PLAN_REVIEW.md](PLAN_REVIEW.md): adjustable numeric constants, aggregate population/households, workforce and material sourcing, construction priorities, demographic order, extinction behavior, RNG/rounding rules, event retention and storage limits. Each rule must specify inputs, units, preconditions, update order, RNG use, costs/effects, events and invariants; constants alone do not close this gate.
 - [ ] 0.9 Set up engineering issue/checklist backlog in scope-order only after visual/architecture review; no app scaffolding before this phase is signed off.
@@ -245,3 +245,4 @@ Other future candidates: grounded/high fantasy world-profile packages, varied in
 ## First engineering PR (NOT to start yet)
 
 After Phase 0 design/architecture approval: `feat/phase1-engine-seed-clock`: project skeleton, deterministic PRNG/tick engine, seed/config schema, state/event digest, initial tests and CI; no pixel game yet. Close it before proceeding to terrain, resources or UI.
+
