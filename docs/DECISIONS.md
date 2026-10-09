@@ -21,12 +21,16 @@ The register distinguishes what was **approved**, what is **pending review**, an
 
 | D-013 | Architecture approved by the user on 2026-10-09: ADR-001–003 | Strict TypeScript core, React/Vite shell, Canvas 2D/HTML, Node 24 LTS/npm, IndexedDB, Vitest/Playwright | Phase 0.7 complete; exact versions at scaffolding; visual and mechanics/storage gates remain open |
 
+## Art selection — 2026-10-09
+
+**D-014:** The user selected **Illustrated Minimal**, option 2 of the final three-image comparison. This retains Direction C and chooses its map-art treatment. Collapsed and expanded phone chronicle studies were subsequently generated. This is art selection, not evidence that source sprite size, actual-device readability, interactions, numeric mechanics or the entire pre-build gate are approved. See [continuation review](CONTINUATION_REVIEW.md) for the exact selected artifact and outstanding checks.
+
 ## Pending Phase 0 decisions
 
 | ID | Question | Candidate approach | Blocking work |
 | --- | --- | --- | --- |
 | Q-001 (resolved) | Which pixel-world interface presentation? | **C: Naturalist's Observation Desk**, approved (D-008) | Exact art settings + layout validation still pending |
-| Q-002 | Exact pixel art constraints? | Compare minimal graphic, illustrated minimal (preferred), soft illustrative; 16px is no longer prescribed | Asset pipeline |
+| Q-002 | Exact pixel art constraints? | Illustrated Minimal selected (D-014); source density, zoom and actual-size validation remain open; 16px is not prescribed | Asset pipeline |
 | Q-003 (resolved) | Rendering, app/test/build frameworks? | Accepted [ADR-001–003](adr/README.md) under D-013 | Overall pre-build gate still required |
 | Q-004 | Complete P1 mechanics and numeric units? | Review [SETTLEMENT_RULES.md](SETTLEMENT_RULES.md): concrete numeric/order/RNG proposals; checklist in [PLAN_REVIEW.md](PLAN_REVIEW.md) | Phase 1 sim behavior |
 | Q-005 | Spotlight interaction and budgets? | Explicit activated opportunity-expansion vs passive bookmark; cap counts and family complexity | Phase 2 spotlight mechanics; see [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md) |
