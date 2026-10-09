@@ -1,6 +1,6 @@
 # New art target — simplified, stylized sprite-world
 
-**Status:** user preference approved in principle: **simple, artistic top-down 2D, reminiscent of the readability and restraint of RimWorld, with slightly richer details and stronger artistic personality**. Exact execution remains unapproved pending visual samples.
+**Status:** user preference approved in principle: **simple, artistic top-down 2D, reminiscent of the readability and restraint of RimWorld, with slightly richer details and stronger artistic personality**. The user subsequently chose the original first concept with human-shaped people (D-017); the rejected blend is superseded. Source resolution and actual-size checks remain open.
 
 ## Preserve Direction C's UX while revising the map art
 
@@ -47,9 +47,9 @@ Source resolution, tile size and in-game zoom should be measured against the *di
 - Placeholder drawings in planning should not be mistaken for released sprites.
 - Fantasy variety can be integrated later via modular silhouettes, accents and creatures; do not require dozens of species in Phase 1.
 
-## Next visual review
+## Original visual comparison brief (completed; see current direction below)
 
-Generate **three genuinely comparable game-view mockups** using one underlying 2D village plan, with different degrees of simplification. Show an expanded chronicle next to the map and one selected person. Evaluate phone layout after choosing the art density; do not start building simulation mechanics to answer an art question.
+The completed comparison requested **three genuinely comparable game-view mockups** using one underlying 2D village plan, with different degrees of simplification. Show an expanded chronicle next to the map and one selected person. Evaluate phone layout after choosing the art density; do not start building simulation mechanics to answer an art question.
 
 ## Concept review — 2026-10-09 UTC
 
