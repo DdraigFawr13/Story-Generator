@@ -1,10 +1,10 @@
 # Phase 0.7 — Architecture proposal and decision checklist
 
-**Status: proposed for review, not an approved stack.** Written after Direction C was selected. No code has been scaffolded or deployed. Avoid dependency-version or API assumptions until implementation.
+**Status: architecture accepted by the user on 2026-10-09 (D-013).** Written after Direction C was selected. No code has been scaffolded or deployed. Avoid dependency-version or API assumptions until implementation.
 
-## Decision records prepared for review
+## Accepted decision records
 
-Review [ADR-001–003](adr/README.md) for concrete proposals on the build/core boundary, rendering/controller, and persistence/test architecture. They propose Node 24 LTS with npm, explain headless history-limit admission, and define browser capability and cross-engine evidence requirements. Their status is proposed; Phase 0.7 remains open pending explicit acceptance.
+Review [ADR-001–003](adr/README.md) for concrete proposals on the build/core boundary, rendering/controller, and persistence/test architecture. They propose Node 24 LTS with npm, explain headless history-limit admission, and define browser capability and cross-engine evidence requirements. The repository owner accepted all three records on 2026-10-09; Phase 0.7 is complete. Visual and mechanics/storage gates remain open.
 
 The numeric [settlement rules](SETTLEMENT_RULES.md) and [local persistence contract](LOCAL_PERSISTENCE_CONTRACT.md) are now documented proposals. Review those separately for Phase 0.8; merged documentation does not establish tested balance or close a gate.
 
@@ -27,7 +27,7 @@ A **browser-first TypeScript app with a pure deterministic simulation engine**, 
 | Persistence | IndexedDB basic local save/resume in P1; complete versioned state + archive | Preserve a settlement between sessions; independent of UI state | P5 adds multiple named worlds, migrations and timeline seeking |
 | Hosting | Static site / Vercel at demonstrable milestone | Simulation runs client-side; no mandatory backend | Measure bundle/load size and mobile memory |
 
-These are planning recommendations, not a claim that a framework has been installed, tested or deployed.
+The accepted records govern the architecture choices. Packages have not been installed and the app has not been tested or deployed.
 
 ## Architecture boundaries
 
@@ -105,10 +105,10 @@ Boundary rules:
 
 ## Items to approve before moving to engineering
 
-- [ ] Accept ADR-001: Vite + TypeScript + React, pure TS core, Node/npm policy.
-- [ ] Accept ADR-002: Canvas 2D, HTML accessibility and controller-owned fixed ticks.
-- [ ] Accept ADR-003: IndexedDB and headless/browser/manual verification boundaries.
-- [ ] Browser-local simulation, no account, server, LLM or paid service required in Phase 1.
+- [x] Accept ADR-001: Vite + TypeScript + React, pure TS core, Node/npm policy.
+- [x] Accept ADR-002: Canvas 2D, HTML accessibility and controller-owned fixed ticks.
+- [x] Accept ADR-003: IndexedDB and headless/browser/manual verification boundaries.
+- [x] Browser-local simulation, no account, server, LLM or paid service required in Phase 1.
 - [ ] Canonical event records and typed stable IDs; initial seed/config/version formats.
 - [ ] Complete Phase 1 mechanics and storage contracts using [PLAN_REVIEW.md](PLAN_REVIEW.md), including rule ordering, workforce/material accounting, demographics, extinction, retention limits and autosave cadence.
 - [ ] Static visual validation per ART_UI_SPEC.md (not yet complete).
