@@ -47,6 +47,14 @@ Create a single versioned rules/configuration specification before implementing 
 
 Do not choose final rates from a single attractive seed. Once implementation is authorized, run resource ledgers, invariant fixtures and a fixed seed battery before qualitative tuning. Numeric proposals must clearly separate dimensional consistency from empirically tested balance.
 
+## Candidate specifications prepared after this review
+
+- [Product brief](PRODUCT_BRIEF.md): intended experience, outstanding user questions and first-session acceptance scenarios.
+- [Phase 1 rules](PHASE1_RULES.md): explicit proposed numeric mechanics with worked accounting examples; not empirically balanced.
+- [Technical contract](TECHNICAL_CONTRACT.md): proposed engineering decisions, save semantics and validation budgets; not benchmark results.
+
+These make review concrete. They do not close the pre-build gate or authorize app scaffolding.
+
 ## Ordered remaining work
 
 1. Prepare the numeric rules and storage contract above and architecture decision records for review. This is documentation work and can progress alongside visual exploration.
