@@ -1,6 +1,6 @@
 # Phase 0.6 — Pixel-world visual exploration
 
-**Status:** **Direction C selected and approved** as the visual baseline. The three options remain for historical context. Fine-grained pixel art parameters and the phone-sized static layout are **not yet approved/verified**, and no game implementation is authorized. See [ART_UI_SPEC.md](ART_UI_SPEC.md).
+**Status:** **Direction C selected and approved** for layout. Earlier illustration-heavy mockups are **not** approved as final art. Revised target is original, simpler, more graphic and RimWorld-like in readability, with a little more artistic detail; see [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md). Phone layout and final density remain unverified. No simulation code has been authorized.
 
 ## Nonnegotiable layout/data constraints
 
@@ -42,7 +42,7 @@
 
 **Visual priority:** a living pixel terrarium with the tools of a historian, without a full management dashboard.
 
-- Crisp compact top-down pixel village map in cool forest greens with warm lamp/roof contrast.
+- Crisp **simple stylized top-down** village map with highly readable figures and buildings, restrained foliage/roof accents and no dense isometric medieval detailing.
 - Chronicle occupies ~30% desktop as a light scholarly ledger, ordered live headlines and relationship links.
 - Selection inspector slides over lower map or appears below event details; inspectors can pin a character.
 - Time/seed controls remain separate from simulation metrics, minimizing visual clutter.
@@ -69,11 +69,11 @@
 ## Before implementing Phase 1
 
 - [x] Choose Direction C as preferred layout and visual baseline
-- [ ] Choose pixel-art complexity, map tile density, camera zoom range, and accessible label sizes
+- [ ] Choose from three original simplified art variations (minimal graphic, illustrated minimal, soft illustrative); then set source-art scale, camera zoom and accessible label sizes. No mandated 16px pixel tiles.
 - [ ] Determine how residents/structures/important events are highlighted without aesthetic clutter
 - [ ] Validate a phone-sized map/chronicle transition on a static prototype *before* coding the simulation
 - [x] Record Direction C approval here and in `DECISIONS.md`
 - [ ] Create renderer/stack ADR; set initial pixel art guidelines
 - [ ] Only then close the design gate and begin Phase 1 engineering
 
-**Source of truth:** `IMPLEMENTATION_PLAN.md` defines the implementation schedule. The detailed approved direction and remaining visual validation are in [ART_UI_SPEC.md](ART_UI_SPEC.md); technical candidates are in [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md).
+**Source of truth:** [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) defines build sequence. The approved layout is in [ART_UI_SPEC.md](ART_UI_SPEC.md), the revised original art brief is [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md), and technical candidates are in [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md).
