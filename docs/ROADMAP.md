@@ -1,10 +1,10 @@
 # Phased plan and acceptance gates
 
-**Status: approved strategic scope; implementation steps are documented but not yet started.** The complete ordered implementation checklist, dependencies, and acceptance gates live in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md). Middle fantasy is the starting direction; spectator nudges are an explicitly deferred future idea. Complete and test one phase before expanding the next.
+**Status: approved strategic scope; implementation steps are documented but not yet started.** The complete ordered checklist and phase gates are in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md). Middle fantasy is the starting direction; deliberate Story Spotlights may widen context-valid opportunity eligibility from Phase 2 onward without guaranteeing outcomes. Separate manual observer nudges remain deferred. Complete and test one phase before expanding the next.
 
 ## Phase 0 — Concept and repository groundwork (current)
-- **Decided:** living-world vision with settlement-first scaling; middle-fantasy starting tone; spectator-only initial implementation.
-- **Approved:** Direction C — Naturalist's Observation Desk — for layout/visual baseline.
+- **Decided:** living-world vision with settlement-first scaling; middle-fantasy starting tone; observer-led experience with later explicit Story Spotlight activation distinct from passive selection and unrelated to deferred manual nudges.
+- **Approved:** Direction C — Naturalist's Observation Desk — for layout/visual baseline; simplify and stylize art toward RimWorld-like readability with slightly richer artistic details and independent original assets.
 - **Pending:** verify tile/phone presentation, confirm technical stack/ADRs and Phase 1 numerical simulation contracts.
 - Publish design pillars, simulation architecture, proposed UI, and roadmap.
 - Define a small, testable first vertical slice.
@@ -28,6 +28,7 @@
 ## Phase 2 — People, memory and consequences
 
 - Named individuals/families, jobs, relationships, needs and simple migrations.
+- Deliberate **Story Spotlight** for individuals/families: additional context-valid **opportunities**, not forced actions/results, with recorded activation and deterministic replay.
 - Reasons behind decisions, not independent random outcomes.
 - Multi-step chains: surplus → construction → growth; shortage → unrest → migration or mortality.
 - Filter log by actor, settlement, category, severity.
@@ -39,6 +40,7 @@
 
 - Council/chieftain/monarchy candidates; succession and legitimacy.
 - Wealth, trade, law, social tensions, faith/culture, research and discovery.
+- Context-grounded settlement spotlight opportunities; dark, uplifting, lawful and chaotic paths without narrative outcome quotas.
 - Political and economic interventions arise from conditions and actors.
 
 **Done when:** distinct governing structures produce different historical trajectories under comparable stresses.
@@ -46,6 +48,7 @@
 ## Phase 4 — Multiple settlements and a region
 
 - World map, resource regions, migration trails, roads, trade, alliances, conflicts and borders.
+- Kingdom/faction spotlights with extra possible opportunity families and cross-scale historical links.
 - Nested simulation detail: inspect individual settlements, aggregate less relevant areas.
 - Long-lived ruins, dynasties, successor factions, renamed places, shifting boundaries.
 
@@ -55,7 +58,7 @@
 
 - Event dependency graphs ("why did this happen?"), timelines, bookmarks, historical era summaries.
 - Replay/scrub and save/load; seed sharing and exportable chronicles.
-- Observer-only tools, bookmarks, inspection and non-mutating annotations. **No intervention system in the committed roadmap.**
+- Passive bookmark/inspection tools and non-mutating annotations; historical replay distinguishes these from recorded deliberate Story Spotlight eligibility changes. **No direct manual observer-nudge system is in the committed roadmap.**
 
 **Done when:** a viewer can reconstruct a story spanning generations using only the world's events and inspection views.
 
@@ -79,6 +82,6 @@ Seed `RIVERSIDE`: a small group begins next to a forest and river, clears land, 
 
 ## Decisions and remaining Phase 0 gates
 
-- **Decided:** middle fantasy, village-first to continent-scale, observer-first without current intervention implementation, browser-first responsive, open-ended history.
-- **Remaining:** validate Direction C's pixel settings/mobile layout, approve [architecture proposal](ARCHITECTURE_REVIEW.md), and define initial numerical sim contracts/acceptance metrics. See [ART_UI_SPEC.md](ART_UI_SPEC.md) and [DECISIONS.md](DECISIONS.md).
-- **Parked:** guided/on-demand nudges, alternate fantasy intensity profiles and additional species. See [DECISIONS.md](DECISIONS.md).
+- **Decided:** middle fantasy, village-first to continent-scale, observer-led with future explicit opportunity-expanding spotlights (not forced outcomes), browser-first responsive, open-ended history.
+- **Remaining:** compare three simpler, original art treatments (see [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md)), validate Direction C's phone layout, approve [architecture proposal](ARCHITECTURE_REVIEW.md), and define initial numerical sim contracts/acceptance metrics. See [ART_UI_SPEC.md](ART_UI_SPEC.md) and [DECISIONS.md](DECISIONS.md).
+- **Parked:** **direct** guided/on-demand nudges, alternate fantasy intensity profiles and additional species. See [DECISIONS.md](DECISIONS.md).
