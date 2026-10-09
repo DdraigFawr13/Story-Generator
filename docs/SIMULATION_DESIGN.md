@@ -9,12 +9,12 @@ Narrative entries must be projections of actual state-changing events. The text-
 - `seeded-rng`: deterministic PRNG, named independent streams for terrain/population/incidents.
 - `world-gen`: seeded terrain, water, forests, fertility and starting resources.
 - `clock`: discrete ticks; day/season/year; deterministic ordered phase updates.
-- `entities`: settlements, buildings, residents (small sample first), food stores, families, factions later.
-- `systems`: resource production/consumption, demographic changes, settlement growth, weather, simple disease and conflict triggers.
+- `entities`: one settlement, buildings, aggregate population/households and food stores in P1; named individuals/relationships in P2 and factions later.
+- `systems`: resource production/consumption, aggregate demographic changes, settlement construction and weather in P1. Individual sickness/decisions and institutional/regional conflicts follow their later phase contracts.
 - `event-core`: evaluate preconditions from state and RNG, apply effects, emit structured events and causal links.
 - `chronicle`: compact and detailed text templates from events; severity tiers; filtering and search.
 - `renderer`: separate top-down pixel canvas; interpolation allowed, but display randomness never changes simulation state.
-- `save-replay`: seed, version, config, snapshots, append-only canonical events.
+- `save-replay`: P1 basic local save/resume with complete versioned state, all RNG/ID allocator state, tick/config and canonical archive. P5 seeking restores checkpoints and reruns deterministic ticks; chronicle events alone are not a complete state-transition log.
 
 ## Representative record
 
@@ -86,7 +86,7 @@ A **separate** potential future direct-nudge interface would inject intentional 
 - Simulation at fixed ticks independent of frame rendering.
 - No `Math.random()` or wall-clock time in the simulation core.
 - Deterministic iteration order; dedicated RNG streams prevent UI animation from perturbing history.
-- In the future use worker-based simulation and coarse-grained world entities; only nearby/selected areas get fine detail.
+- In the future use worker-based simulation and coarse-grained world entities on deterministic update schedules. Only rendering detail may depend on proximity/selection; authoritative historical outcomes must not.
 - Snapshot/restore to support saves and timeline seeking; explicit simulation schema versions for old seed compatibility.
 - Caps and backpressure for long-running simulations (headlines + compressed detail over centuries).
 
@@ -96,13 +96,13 @@ Event selection should be influenced by actual state, relationships and unresolv
 
 ## Quality gates
 
-1. Same seed/config/version → same state digest and canonical event stream after N ticks.
+1. Same seed/config/version and, from P2, ordered tick-stamped Spotlight commands → same state digest and canonical event stream after N ticks.
 2. Different seeds show meaningfully different outcomes in long-run sampled batches.
 3. Every logged event corresponds to state change or fact recorded in the simulation.
 4. No negative population, resources, or broken references after thousands of steps.
 5. Population decline, recovery and extinction are possible, not forced on a timer.
 6. Pausing/speed changes do not change outcomes for the same number of ticks.
-7. Save/load then resume matches an uninterrupted run (when implemented).
+7. P1 save/load then resume matches an uninterrupted run, including all RNG streams, ID allocation and retained history. Failed writes preserve the last valid save.
 
 ## Recommended technical direction (not yet locked)
 
