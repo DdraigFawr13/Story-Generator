@@ -1,6 +1,6 @@
 # New art target — simplified, stylized sprite-world
 
-**Status:** user preference approved in principle: **simple, artistic top-down 2D, reminiscent of the readability and restraint of RimWorld, with slightly richer details and stronger artistic personality**. Exact execution remains unapproved pending visual samples.
+**Status:** user preference approved in principle: **simple, artistic top-down 2D, reminiscent of the readability and restraint of RimWorld, with slightly richer details and stronger artistic personality**. Illustrated Minimal was selected by the user on 2026-10-09 (D-014). Source sprite size, zoom thresholds and interaction validation remain open.
 
 ## Preserve Direction C's UX while revising the map art
 
@@ -47,6 +47,8 @@ Source resolution, tile size and in-game zoom should be measured against the *di
 - Placeholder drawings in planning should not be mistaken for released sprites.
 - Fantasy variety can be integrated later via modular silhouettes, accents and creatures; do not require dozens of species in Phase 1.
 
-## Next visual review
+## Current visual checkpoint
 
-Generate **three genuinely comparable game-view mockups** using one underlying 2D village plan, with different degrees of simplification. Show an expanded chronicle next to the map and one selected person. Evaluate phone layout after choosing the art density; do not start building simulation mechanics to answer an art question.
+The final three-treatment comparison is complete, and the user selected Illustrated Minimal. Two matching phone static studies now show collapsed chronicle and expanded event details with a highlighted map location and explicit return to map. See [continuation review](CONTINUATION_REVIEW.md).
+
+Next validate actual-size readability and interactions against that selected target; do not repeat art selection. Generated images are not production sprites, measured touch targets or a working simulation. Named resident details in the desktop study preview Phase 2; the Phase 1 inspector uses settlement/building/event facts.
