@@ -4,7 +4,8 @@
 
 ## Phase 0 — Concept and repository groundwork (current)
 - **Decided:** living-world vision with settlement-first scaling; middle-fantasy starting tone; spectator-only initial implementation.
-- **Pending:** approve visual target, technical stack/ADRs and Phase 1 numerical simulation contracts.
+- **Approved:** Direction C — Naturalist's Observation Desk — for layout/visual baseline.
+- **Pending:** verify tile/phone presentation, confirm technical stack/ADRs and Phase 1 numerical simulation contracts.
 - Publish design pillars, simulation architecture, proposed UI, and roadmap.
 - Define a small, testable first vertical slice.
 - Establish branch/PR hygiene and automatic merged-branch cleanup where permissions allow.
@@ -79,5 +80,5 @@ Seed `RIVERSIDE`: a small group begins next to a forest and river, clears land, 
 ## Decisions and remaining Phase 0 gates
 
 - **Decided:** middle fantasy, village-first to continent-scale, observer-first without current intervention implementation, browser-first responsive, open-ended history.
-- **Remaining:** approve visual composition(s), choose stack/rendering/persistence details, define the initial numerical sim contracts and acceptance metrics. See [DECISIONS.md](DECISIONS.md).
+- **Remaining:** validate Direction C's pixel settings/mobile layout, approve [architecture proposal](ARCHITECTURE_REVIEW.md), and define initial numerical sim contracts/acceptance metrics. See [ART_UI_SPEC.md](ART_UI_SPEC.md) and [DECISIONS.md](DECISIONS.md).
 - **Parked:** guided/on-demand nudges, alternate fantasy intensity profiles and additional species. See [DECISIONS.md](DECISIONS.md).

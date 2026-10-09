@@ -1,6 +1,6 @@
 # Phase 0.6 — Pixel-world visual exploration
 
-**Status:** three design options proposed for review. They are **not approved art direction and not instructions to build the app**. One should be selected and refined before Phase 1 work. All variants depict the SAME simulation, not three distinct games.
+**Status:** **Direction C selected and approved** as the visual baseline. The three options remain for historical context. Fine-grained pixel art parameters and the phone-sized static layout are **not yet approved/verified**, and no game implementation is authorized. See [ART_UI_SPEC.md](ART_UI_SPEC.md).
 
 ## Nonnegotiable layout/data constraints
 
@@ -38,7 +38,7 @@
 
 **Mock data:** Year 109 / two towns connected by trade / an old bridge closure causes rationing.
 
-## Direction C — The Naturalist's Observation Desk (**recommended**)
+## Direction C — The Naturalist's Observation Desk (**APPROVED**)
 
 **Visual priority:** a living pixel terrarium with the tools of a historian, without a full management dashboard.
 
@@ -64,16 +64,16 @@
 | Chronicle integration | Medium | High | High |
 | First prototype scope | Low | Medium-high | Medium |
 
-**Recommendation:** choose C, borrow the readable village sprites/lighting of A, and reserve B's geographical overlays for the multi-settlement phase.
+**Decision:** use C, borrowing readable village sprites/lighting from A and reserving B's geographical overlays for the multi-settlement phase. The exact sprite density and final camera treatment still require visual validation.
 
 ## Before implementing Phase 1
 
-- [ ] Compare three visual mockups and select preferred direction (or mix)
+- [x] Choose Direction C as preferred layout and visual baseline
 - [ ] Choose pixel-art complexity, map tile density, camera zoom range, and accessible label sizes
 - [ ] Determine how residents/structures/important events are highlighted without aesthetic clutter
 - [ ] Validate a phone-sized map/chronicle transition on a static prototype *before* coding the simulation
-- [ ] Record approved choices in this file and `DECISIONS.md`
+- [x] Record Direction C approval here and in `DECISIONS.md`
 - [ ] Create renderer/stack ADR; set initial pixel art guidelines
 - [ ] Only then close the design gate and begin Phase 1 engineering
 
-**Source of truth:** `IMPLEMENTATION_PLAN.md` defines the implementation schedule. This file only defines the pending visual design gate.
+**Source of truth:** `IMPLEMENTATION_PLAN.md` defines the implementation schedule. The detailed approved direction and remaining visual validation are in [ART_UI_SPEC.md](ART_UI_SPEC.md); technical candidates are in [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md).
