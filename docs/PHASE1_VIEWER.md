@@ -15,6 +15,8 @@ PR #13 is merged at `96d9614`. D-022 authorizes continued engineering and verifi
 
 PR #13’s hosted browser job completed all 57 checks with one WebKit mock-clock setup retry (`pauseAt(new Date())` could target the past). This slice anchors the mocked date before loading the page and pauses at a fixed later timestamp; the updated checks pass in all three local engines. This was test scheduling, not an observed simulation catch-up failure.
 
+Resumed verification found PR #14's first hosted browser run passed 74/75 checks but failed Chromium pointer inspection. Focusing a partly visible canvas could scroll the document between pointer-down and pointer-up, selecting a different row. Canvas focus now uses `preventScroll`; a regression clicks a partially visible map and checks both the exact selected tile and unchanged document scroll. The controller tests also replace an iteration-count wait with a bounded time-based poll: asynchronous WebCrypto hashing can outlast 500 immediate callbacks under load. Save queue behavior and assertions are unchanged.
+
 Screenshots in `docs/evidence/phase1-viewer-*.png` record desktop, phone-map and expanded-sheet states. They are functional engineering evidence, not a comparison against the unavailable selected references.
 
 ### Resumed verification: pointer focus scrolling

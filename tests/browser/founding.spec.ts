@@ -71,6 +71,29 @@ test('clicking a partly visible map preserves scroll and selects the pointed til
   expect(await page.evaluate(() => scrollY)).toBe(scroll);
 });
 
+test('pointer inspection preserves the clicked tile when the map is partly below the viewport', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New world', exact: true }).click();
+  await page.getByLabel('Tile X').fill('0');
+  await page.getByLabel('Tile Y').fill('0');
+  await page.getByRole('button', { name: 'Inspect tile' }).click();
+  const map = page.locator('canvas');
+  await map.evaluate((canvas) => {
+    window.scrollTo(0, canvas.getBoundingClientRect().top + window.scrollY - innerHeight + 120);
+  });
+  const box = (await map.boundingBox())!;
+  const scroll = await page.evaluate(() => window.scrollY);
+  await page.mouse.move(box.x + (box.width - 64 * 12) / 2 + 10.5 * 12, box.y + 5.5 * 12);
+  await page.mouse.down();
+  await expect(map).toBeFocused();
+  await page.mouse.up();
+  await expect(page.locator('.tile-facts')).toContainText('Tile 330:');
+  expect(await page.evaluate(() => window.scrollY)).toBe(scroll);
+});
+
 for (const width of [320, 390, 768, 1280]) {
   test(`founding preview fits ${width}px and retains usable controls`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });

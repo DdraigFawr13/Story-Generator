@@ -39,11 +39,7 @@ class Clock implements TimerClock {
   }
 }
 async function until(predicate: () => boolean) {
-  for (let i = 0; i < 500; i++) {
-    if (predicate()) return;
-    await new Promise<void>((done) => setImmediate(done));
-  }
-  throw new Error('Async operation did not settle');
+  await expect.poll(predicate, { timeout: 5_000, interval: 10 }).toBe(true);
 }
 function memory(value: unknown = undefined) {
   const state = {
