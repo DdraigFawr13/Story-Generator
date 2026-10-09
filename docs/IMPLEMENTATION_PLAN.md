@@ -1,0 +1,234 @@
+# Implementation plan — milestone contracts (v1)
+
+**Planning status:** approved product direction; engineering proposal awaiting normal milestone reviews. **This document is not authorization to start implementation.** No source code, assets, services, packages or deployments should be added in this documentation-only change.
+
+## Approved core constraints
+
+- **Destination:** an observable, open-ended pixel world with personal-to-civilizational histories; **first playable** is one detailed settlement.
+- **World tone:** middle fantasy: grounded causal societies plus bounded, consequential magic; support other intensity profiles *later*, without implementing profile toggles now.
+- **Viewer:** pure observer for the active roadmap. Optional minor "nudges" are **parked for future exploration**, outside all implementation acceptance criteria.
+- **Narrative:** state transitions make history. Chronicle prose reports facts; events are never arbitrarily invented by the UI or a language model.
+- **Runs:** deterministic within version + seed + settings, saveable and explainable; societies may thrive, transform, or fail organically, never on a forced countdown.
+- **Delivery:** browser-first, responsive desktop/mobile experience. Simulation engine does not depend on rendering or any hosted service. Stack choices are provisional pending Phase 0 decisions.
+
+## Cross-phase engineering rules
+
+1. Every mechanics change specifies state inputs, update order, preconditions, RNG use, effects, and emitted event(s).
+2. Maintain persistent IDs and versioned save/event schemas. No unexplained retroactive changes in prior chronology.
+3. All authoritative simulations use an injected seeded PRNG and fixed ticks; UI animations and time controls cannot alter outcomes.
+4. Events record entity IDs, location, cause references or causal facts, state deltas, and visibility/importance. UI must never invent events.
+5. Simulated behavior has an inspectable reason chain; rare event rates can be tuned but should not secretly force desired plots.
+6. Log/highlight accessibility, mobile readability, simulation speed, memory, and determinism are release criteria, not post-launch extras.
+7. Each milestone closes with tests, a qualitative story review across multiple seeds, doc updates, a scoped PR, and branch cleanup.
+8. Work in small independently mergeable PRs. Do not create speculative multi-phase branches or merge failing changes.
+9. **No scheduled, automatic or manual Vercel deployments at every commit:** preview at demonstrable visual milestones only.
+10. Integration test evidence should link to actual commands/results when engineering begins; documentation alone is not a tested application.
+
+## Dependency map
+
+`P0 design gate -> P1 living settlement -> P2 agents/memory -> P3 institutions/fantasy mechanism -> P4 regional multi-settlement -> P5 historian tools -> P6 depth/scaling`.
+
+Cross-cutting tests and documentation advance with each phase. P5 save/replay depends on persisted IDs/event schema introduced in P1, with fuller implementation later. P4 needs aggregation that does not make the history dependent on which area the viewer has selected.
+
+---
+
+## Phase 0 — Pre-build specification and foundations (CURRENT; documentation only)
+
+**Outcome:** A decision-ready brief, implementation slices, art target, and architecture rules, without adding a runnable game.
+
+### Ordered work
+
+- [x] 0.1 Confirm product vision: living world / village-first, simulation-driven chronicle, open-ended histories.
+- [x] 0.2 Decide setting baseline: **middle fantasy**; varying intensity profiles are future work.
+- [x] 0.3 Set viewer baseline: passive observer; possible small nudges are **deferred**.
+- [x] 0.4 Map core subsystems, seeded-world contract, canonical event model, story-quality principles.
+- [x] 0.5 Break P1–P6 into ordered engineering increments with deliverables, tests and exit gates (this document).
+- [ ] 0.6 Produce/approve 2–3 visual compositions for map + chronicle + inspect panel; evaluate desktop and phone readability.
+- [ ] 0.7 Confirm technical stack: TypeScript simulation core, dev/test frameworks, pixel renderer, persistence approach, accessibility target and hosting path; write architecture decision records (ADRs).
+- [ ] 0.8 Set P1 numeric constants as adjustable configuration: tile dimensions, tick-to-season ratio, founder count, food unit, resource bounds, birth/death cadence, building prerequisites; list invariants before coding.
+- [ ] 0.9 Set up engineering issue/checklist backlog in scope-order only after visual/architecture review; no app scaffolding before this phase is signed off.
+
+**Exit gate:** user approves visual target; architecture/engine boundaries and P1 rules recorded; requirements and tests are specific enough to code without improvising critical mechanics.
+
+**Risk:** expanding planned content before the small deterministic test-bed works. **Mitigation:** limit P1 to one settlement and a few meaningful resource chains.
+
+---
+
+## Phase 1 — First playable: the living settlement
+
+**Outcome:** seeded pixel terrain, one evolving settlement, seasonal resource cycle, authentic real-time chronicle. This must already be engaging to *watch*.
+
+### 1A — Project and deterministic engine
+- [ ] 1.1 Initialize browser project, formatting, lint/typecheck, unit test runner, CI (typecheck/tests/build), license and asset provenance policy.
+- [ ] 1.2 Separate `sim-core` pure-state reducers from `ui` renderer and adapters; define simulation version, seed, settings, clock/ticks, stable entity IDs.
+- [ ] 1.3 Implement reproducible named RNG streams; serialize/restore RNG state; document ordering of simulation phases and invariant assertions.
+- [ ] 1.4 Provide headless `advanceTicks(seed, config, N)` and canonical state/event digest for regression tests.
+
+### 1B — Geography and starting society
+- [ ] 1.5 Generate a seeded ~64x40 logical tile map with elevation, water, terrain, forest, fertility and valid settlement start area.
+- [ ] 1.6 Spawn founder households, food stock, land occupancy, an initial shelter and settlement name based on deterministic rules.
+- [ ] 1.7 Define inspectable settlement state: population, household count, capacity, food, production, structures, current season.
+
+### 1C — State-changing simulation loops
+- [ ] 1.8 Advance fixed seasons; weather/fertility adjust harvest production. Every consumed or produced unit is balanced and bounded.
+- [ ] 1.9 Consume food per population; shortages reduce health/growth and may generate migration/death conditions rather than automatic demise.
+- [ ] 1.10 Add population birth/death aggregate rules initially; growth bounded by food and housing; handle zero-population worlds.
+- [ ] 1.11 Add deterministic construction/removal of huts, fields, stores and visual decay based on actual labor/material constraints.
+- [ ] 1.12 Allow improvement, stagnation, recovery, or natural collapse, with no guaranteed dramatic timeline.
+
+### 1D — Canonical events and chronicle
+- [ ] 1.13 Introduce events with tick, type, actor/place IDs, causes, facts, state effects and importance.
+- [ ] 1.14 Publish founding, harvest/surplus/shortage, construction/decay and demographic changes only when the corresponding state/fact actually occurs.
+- [ ] 1.15 Text renderer chooses headline/details from immutable canonical facts. Show causal context (e.g. drought and low stores).
+- [ ] 1.16 Retain an ordered bounded log with full historical records separated from short live-headline presentation.
+
+### 1E — Pixel viewer and milestone QA
+- [ ] 1.17 Draw top-down tiles, water/forest, structures, crop fields and lightweight resident markers from simulation state.
+- [ ] 1.18 Support seed input/random seed, New World, pause/play, single step, 1x/4x/16x, year/season, stats, map-pan/zoom as appropriate.
+- [ ] 1.19 Implement live chronicle panel; select event to focus its place and show actual changed values/causes. Provide responsive phone layout and keyboard/touch basics.
+- [ ] 1.20 Run unit/property tests of RNG, terrain and resource invariants; same-seed snapshot at 1,000 ticks; speed equivalence; 100-seed non-crash batch; manual mobile/desktop UI smoke tests.
+- [ ] 1.21 Review ten seeds for visible, qualitatively different trajectories; tune rates without special-casing seed stories; demonstrate a meaningful vertical slice and merge.
+
+**Acceptance:** same seed/settings/version yields identical state/event digest; two seeds can differ meaningfully; all visible buildings/stats/headlines agree with state; a real settlement grows or declines; zero-population and exhausted-resource edge cases do not crash. 1,000-tick replay verified. **Fantasy boundary:** underlying environment may include reserved semantic types, but no decorative magical "events" without mechanics.
+
+**Avoid:** pathfinding tens of thousands of people, multiple nations, AI-written lore, paid runtime services or branching quest logic.
+
+---
+
+## Phase 2 — Individuals, families, memory and consequences
+
+**Outcome:** the first genuine personal stories, causally connected to settlement conditions.
+
+### Ordered increments
+- [ ] 2.1 Replace/augment population totals with a bounded agent population; define age, life stage, health, needs, profession, location, household and relationships; aggregate where practical.
+- [ ] 2.2 Deterministically generate names, traits/temperaments and kinship; ensure uniqueness of IDs, stable relation references and coherent lifespans.
+- [ ] 2.3 Simulate activities with costs/opportunity constraints: farming, construction, repairs, caretaking, gathering, travel.
+- [ ] 2.4 Model household food allocation, scarcity, injuries, sickness and death; explain *which* state drove the result.
+- [ ] 2.5 Add births, marriage/partnership, inheritance/guardianship where appropriate, and family succession over generations.
+- [ ] 2.6 Create limited social memory: favors, grudges, loyalty, attachments, prior disputes; define decay/retention rules and political/migration influence.
+- [ ] 2.7 Implement state-grounded decisions to stay, leave, cooperate, retaliate or reconcile; no arbitrary scripted character arcs.
+- [ ] 2.8 Capture biography-worthy events with structured actor/cause/effect links; per-person/family time lines, relationship views and follow/bookmark affordances.
+- [ ] 2.9 Add chronicle filters by person, family, category, importance; include "what led to this?" trace where records exist.
+- [ ] 2.10 Long-run tests: generations, orphan handling, relation integrity, name/ID stability, death effects, bounded per-agent memory and 100-seed story samples.
+
+**Acceptance:** observable relationships change future decisions; a resident can be followed birth-to-death with verifiable log; families persist across generations; replay stays deterministic; no unbounded memory growth.
+
+**Scope stop:** no complex full psychological model or deep tactical combat.
+
+---
+
+## Phase 3 — Institutions, politics, culture and the first bounded fantasy mechanics
+
+**Outcome:** recognizable institutions and social conflicts; one supernatural rule affects material society without dominating every run.
+
+### Ordered increments
+- [ ] 3.1 Introduce economy basics: divisible resources, roles, storage, exchange/trade rules, scarcity, production and wealth allocation.
+- [ ] 3.2 Implement governance prototypes with explicit laws, offices, legitimacy, succession and council decisions; agents react to outcomes.
+- [ ] 3.3 Add interest groups, reputations, disagreements, social mobility and grievances with measurable thresholds and causal event logs.
+- [ ] 3.4 Model shared customs/beliefs as persistent state (not random decorative religion text); cultural changes respond to actual experience.
+- [ ] 3.5 Add institutional choices: taxation, public works, resource restrictions, disputes, reform, secession pressures; outcomes alter next decisions.
+- [ ] 3.6 Add knowledge/discovery progression through practical prerequisites and diffusion; inventions modify real production or safety parameters.
+- [ ] 3.7 Define **one** optional middle-fantasy resource/phenomenon (e.g., a rare arcane spring): measurable location, discovery conditions, access, depletion/regrowth, benefits, hazards, and political competition.
+- [ ] 3.8 Ensure supernatural effects update ordinary systems (land value, migration, health, crop output or power structures). Record consequences and costs; allow worlds with no observed phenomenon.
+- [ ] 3.9 Surface political timelines and institutional history; inspect leadership changes, law history, cultural memory, supernatural discovery and its causal footprint.
+- [ ] 3.10 Comparative tests: identical seeds with different governance setups or arcane settings yield coherent results; default middle-fantasy remains rare but real; no forced rebellions; verify rate and bounds across seeds.
+
+**Acceptance:** institutions change incentives and subsequent choices; rulers can be succeeded, challenged or replaced; cultural memory survives individuals; a magical mechanism causally matters when it occurs; no scripted political/fantasy plots.
+
+**Scope stop:** no spellcasting armies, dozens of species, pantheons or controllable gods yet.
+
+---
+
+## Phase 4 — Multiple settlements, regional simulation and historical states
+
+**Outcome:** village-scale human stories become regional history; independent cities and civilizations interact.
+
+### Ordered increments
+- [ ] 4.1 Generate a regional/continent-scale geography with climate/resource regions and settlement-capable routes; persist seeds and map provenance.
+- [ ] 4.2 Enable migration and founding of new towns when people/resources/route conditions permit; maintain ancestry and place names.
+- [ ] 4.3 Introduce distance, travel time, roads, caravans, market access and trade networks; movement costs matter.
+- [ ] 4.4 Add polity identity and territory, membership, treaties, borders, access disputes, tribute and alliance persistence.
+- [ ] 4.5 Implement conflicts with defined motive, participants, resource costs and peace outcomes; high-level resolution first, never hidden army tactics.
+- [ ] 4.6 Support splinter factions, annexation, assimilation, conquest, collapse, rebuilding and state succession, retaining ruins and historical claims.
+- [ ] 4.7 Separate regional coarse updates from active settlement detail without making **historical outcomes depend on camera position**.
+- [ ] 4.8 Add level-of-detail region/village map transition, map filters/overlays, route/border visualization and linked chronology by location.
+- [ ] 4.9 Run headless 100–1000 seed samples across long histories: invariants, normalized resources, civilization diversity, border coherence, no orphaned entities, stable speed/performance.
+- [ ] 4.10 Test detail equivalence: changing viewpoint, viewport resolution or selected settlement changes neither canonical state nor events.
+
+**Acceptance:** multiple towns can emerge, exchange goods, split, fight, ally, disappear, or recover; world history is persistent, inspectable, seeded and insensitive to zoom/selection.
+
+**Scope stop:** avoid fully detailed individual agents in every world tile.
+
+---
+
+## Phase 5 — Historian experience, saves and replay
+
+**Outcome:** the world is as interesting to study as it is to watch.
+
+### Ordered increments
+- [ ] 5.1 Version save schemas (world state, seed/RNG state, event history, tick, config); add compatibility/migration policy.
+- [ ] 5.2 Add autosave/manual save, resume, rename, delete and safe recovery from corrupt/partial saves.
+- [ ] 5.3 Add deterministic checkpoints/snapshots and timeline seeking; choose event-log replay plus snapshots according to measured size/performance.
+- [ ] 5.4 Build multi-scale timeline with periods, region filters, important events and expandable evidence.
+- [ ] 5.5 Build historical dossiers for person, family, settlement, dynasty, law, artifact and conflict; stable historical hyperlinks even after death/destruction.
+- [ ] 5.6 Implement causal navigation: each headline can expose directly recorded causes, precursors and changes; clearly mark when an exact causal explanation is unavailable.
+- [ ] 5.7 Implement bookmarks, followed subjects, notable-event notifications, adjustable chronicle detail/importance filters, and user annotations that do **not** mutate world state.
+- [ ] 5.8 Build exports/shareable seed+settings+version, selected biographies and historical summaries grounded in records; protect against unsupported claims.
+- [ ] 5.9 Stress test centuries of history, snapshot equivalence, backwards compatibility, event storage size, UI accessibility, cross-device responsive performance.
+- [ ] 5.10 Conduct spectator UX sessions: a viewer should be able to identify a consequential arc, follow its people, and explain its causes from UI evidence.
+
+**Acceptance:** loading and seeking preserve history; the same saved simulation resumed matches uninterrupted execution; no fabricated biographies or inaccessible events; archives remain navigable.
+
+**Scope stop:** intervention/nudge mechanics are **not part of P5**. Annotation, follow and selection do not alter the simulation.
+
+---
+
+## Phase 6 — Depth, balance, optimization and content expansion
+
+**Outcome:** sustained emergent diversity without sacrificing determinism or observability.
+
+### Ordered increments
+- [ ] 6.1 Measure diversity on many seeds: migration, lifespan, polity births/deaths, cultural divergence, event coverage, persistence and recurrence.
+- [ ] 6.2 Diagnose story anti-patterns: death spirals, immortal stagnation, automatic war cycles, overfiring crisis events, lore spam, causal dead ends.
+- [ ] 6.3 Add a **small prioritized content batch per PR**: biome/resource combinations, livelihoods, disease and disasters, technology, diplomacy, settlement specialization.
+- [ ] 6.4 Expand middle-fantasy mechanisms cautiously: uncommon creatures/lineages, arcane resources, discoveries and institutions each with costs and societal effects.
+- [ ] 6.5 Keep fantasy intensity as data configuration/profiles for future variants; **do not treat grounded/high-fantasy support as required for the initial middle-fantasy release**.
+- [ ] 6.6 Optimize simulation worker/off-thread processing, spatial indexing, coarse aggregation, snapshot frequency and renderer culling based on profiling.
+- [ ] 6.7 Expand pixel art and animation only for systems already implemented; modular asset naming, provenance/licensing and accessible tile contrasts.
+- [ ] 6.8 Add localization-ready text keys, accessibility fixes, tooltips, input remapping and platform/browser compatibility as appropriate.
+- [ ] 6.9 Establish long-duration battery with configurable seeds, property invariants, balance distribution dashboards and regression baseline snapshots.
+- [ ] 6.10 Release readiness: save stability, mobile usability, benchmark budgets, error reporting/privacy review, user feedback and changelog.
+
+**Acceptance:** a broader range of plausible histories, no critical soft locks, predictable performance/memory growth, consistent causal records and repeatable replay. Expansion is evidence-driven rather than content-volume driven.
+
+---
+
+## Backlog explicitly OUTSIDE the committed roadmap
+
+### Optional spectator nudges — exploratory design only
+
+Potential future mechanic: a viewer may sometimes choose from constrained opportunities ("a wandering scholar approaches", "a storm changes course") or make small voluntary interventions. **Do not implement, prototype, add controls, assign a milestone, or create engineering dependencies now.**
+
+If reconsidered after observing unassisted histories:
+1. Determine whether passive observation actually needs more engagement; define a concrete player benefit.
+2. Compare *prompted* choices, *on-demand* limited nudges, and hybrid models.
+3. Preserve causal honesty: effects become explicit externally sourced changes in canonical records and must still obey world rules.
+4. Keep separate modes/seeds or replay flags so intervention does not contaminate unmodified-world comparability.
+5. Define costs/limits/visibility and rules that avoid creating prescribed storylines or replacing genuine emergent outcomes.
+6. Add no production scope until expressly approved in a future planning round.
+
+Other future candidates: grounded/high fantasy world-profile packages, varied intelligent species, mod support, publishable historical chronicles, alternate visualization styles, open-ended scenario templates, remote seed sharing. None is promised for P1.
+
+---
+
+## Branch and phase-merge protocol
+
+- Maintain `main` as sole standing branch and **only one scoped work branch per task**.
+- Each PR: objective, changed state contracts, screenshots where UI changes, tests and results, docs updated, known limitations.
+- Require passing CI where available; squash merge; delete merged branch. GitHub branch-cleanup workflow is backup; GitHub settings may also delete branches automatically. Verify result after each PR.
+- Do not delete unmerged/foreign active branches. Never force-update main to "clean it up."
+- Design approvals and implementation approvals are separate; this documentation PR only covers the plan.
+
+## First engineering PR (NOT to start yet)
+
+After Phase 0 design/architecture approval: `feat/phase1-engine-seed-clock`: project skeleton, deterministic PRNG/tick engine, seed/config schema, state/event digest, initial tests and CI; no pixel game yet. Close it before proceeding to terrain, resources or UI.
