@@ -1,6 +1,6 @@
 # Winter reserves and recovery — 2026-10-09
 
-D-023 records the user's emphasis: “Keep most starts viable, make winter reserves matter, and allow recovery from small populations.” This milestone implements `p1-settlement-v2` for new worlds while retaining `p1-settlement-v1` for existing saves. Viewer PR #14 is merged at `af30301`; D-022 authorizes verified milestone merges.
+D-023 records the user's emphasis: “Keep most starts viable, make winter reserves matter, and allow recovery from small populations.” [PR #16](https://github.com/DdraigFawr13/Story-Generator/pull/16) implements `p1-settlement-v2` for new worlds while retaining `p1-settlement-v1` for existing saves. Viewer PR #14 is merged at `af30301`; D-022 authorizes verified milestone merges.
 
 ## Rule amendment
 
