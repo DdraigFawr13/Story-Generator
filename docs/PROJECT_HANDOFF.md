@@ -1,12 +1,14 @@
 # Project handoff — recovered 2026-10-09
 
-**Checkpoint:** pre-production, after merged PR #9. No playable application, runtime dependencies, production sprites or deployment exist. The resumed-thread user knows of no later decisions outside GitHub. This recovery preserves recorded requirements and makes remaining work explicit; it does not close the Phase 0 gate.
+**Current checkpoint:** PR #10 is merged at [cefd9da](https://github.com/DdraigFawr13/Story-Generator/commit/cefd9dadb8e0cf4194af39830f7d767597ee48a2). The user then explicitly requested continuing to the next phase (D-020). Phase 1's core/terrain/founding preview is implemented, with scope and evidence in [PHASE1_FOUNDATIONS.md](PHASE1_FOUNDATIONS.md). No weekly settlement loop, local save system, production sprites or deployment exists yet. Balance, selected-reference and physical-device evidence remain open.
+
+The recovery below describes the earlier PR #9 checkpoint and preserved provenance. D-020 supersedes its no-scaffolding restriction; it does not retroactively establish visual/balance acceptance.
 
 ## Sources and precedence
 
 | Source | Checkpoint | How to use it |
 | --- | --- | --- |
-| Main | [00f1141](https://github.com/DdraigFawr13/Story-Generator/commit/00f114185bf070af82d6910e676da9a9a66d6f37), PR #9, 13:57 UTC | Latest merged architecture, selected art, reviewed weekly settlement/storage proposals and connected terrain probe |
+| Recovery baseline | [00f1141](https://github.com/DdraigFawr13/Story-Generator/commit/00f114185bf070af82d6910e676da9a9a66d6f37), PR #9, 13:57 UTC | Architecture, selected art, reviewed weekly settlement/storage proposals and connected terrain probe at the recovery checkpoint |
 | Older product branch | [0dbcead](https://github.com/DdraigFawr13/Story-Generator/commit/0dbcead1371cd46dc6b26c3e35fef65af275a7aa), 06:22 UTC | Recover compatible user-confirmed pacing, review priority, seasons, background pausing and phone hierarchy |
 | Older art-validation branch | `design/phase0-art-validation`, at main's earlier `1e33bfe` checkpoint | No unique commits when inspected; it supplies no newer approval or asset recovery |
 
@@ -23,7 +25,7 @@ Use [PRODUCT_BRIEF.md](PRODUCT_BRIEF.md) for the first-session experience and qu
 
 ## Active proposal set and conflicts to resolve
 
-The current candidates are [SETTLEMENT_RULES.md](SETTLEMENT_RULES.md), [TERRAIN_CONTRACT.md](TERRAIN_CONTRACT.md) and [LOCAL_PERSISTENCE_CONTRACT.md](LOCAL_PERSISTENCE_CONTRACT.md). Keep their units and formulas together; they remain proposed.
+The active documents are [SETTLEMENT_RULES.md](SETTLEMENT_RULES.md), [TERRAIN_CONTRACT.md](TERRAIN_CONTRACT.md) and [LOCAL_PERSISTENCE_CONTRACT.md](LOCAL_PERSISTENCE_CONTRACT.md). Keep their units and formulas together. Terrain/founding are now the versioned foundation baseline; weekly balance and persistence choices remain provisional until their scoped implementation and review.
 
 | Topic | Latest merged candidate | Older branch candidate | Review consequence |
 | --- | --- | --- | --- |
@@ -56,13 +58,13 @@ python3 docs/probes/terrain_probe.py
 
 It reproduced 100 distinct maps, 72 founding centers, zero natural fallbacks, forest range 481–1,429, passing river-preserving forced fallback and rejected all-water input. RIVERSIDE again produced center 1327, terrain RNG 2847659418 and digest `07a68eb6bb14a59ac536def9ac133478774970d059b49e1da5406d48be7268eb`.
 
-This is Python generation evidence. It does not establish TypeScript/browser equivalence, running settlement balance, persistence behavior, UI interaction or physical-device support. Pacing and low-population observations above are arithmetic consequences, not application tests.
+At the recovery checkpoint this was Python generation evidence only. The foundation slice now adds exact TypeScript fixture comparison, Node/browser parity and preview interaction checks; see its [verification record](PHASE1_FOUNDATIONS.md). Running settlement balance, persistence and physical-device support remain untested. Pacing and low-population observations above are arithmetic consequences, not application tests.
 
 ## Next work in order
 
-1. Prepare a focused acceptance review of the current weekly mechanics, terrain and save proposals against the recovered product requirements. Resolve winter production, low-population labor and the autosave loss window; keep exact tuning provisional until runtime evidence exists.
-2. Recover the selected references. Review desktop first, then validate actual-size source density, contrast and the complete phone interaction flow. Record unavailable physical-device evidence explicitly.
-3. Record accepted mechanics/terrain/storage choices and sufficient visual evidence, then the overall Phase 0 exit decision. Phase 0.6 and 0.8 remain open; architecture 0.7 is complete. Documentation checks and the terrain probe do not satisfy the outstanding gate.
-4. After the gate, start slice 1A from [CONTINUATION_REVIEW.md](CONTINUATION_REVIEW.md): strict TypeScript scaffold, pinned supported versions, dependency boundaries, CI, seed/clock/RNG, canonical encoding and headless candidate admission. Port terrain with the exact golden vector next; then settlement loops/events, persistence/controller and integrated viewer.
+1. Continue with slice 1C: weekly labor, food/timber accounting, construction, demographics and state-grounded canonical events. Use the fixed core/terrain baseline; complete the settlement reducer and headless runner before adding playback controls. Review winter production and low-population recovery with forced fixtures and multi-seed trajectories; keep tuning provisional until runtime evidence exists.
+2. Implement one-slot local persistence and the advancing controller as continuation slice 1D. Review the autosave loss window before finalizing cadence; test rollback, recovery and two-tab ownership.
+3. Recover the selected references for faithful visual work. Integrate selected-art map/chronicle/inspector as slice 1E; review desktop first, then complete phone interaction, readability and physical-device evidence.
+4. Close carried Phase 0.6/0.8 evidence and the full first-playable acceptance checklist. The foundation preview does not satisfy long-run, balance, save/resume, selected-art or physical-device gates.
 
 Continue through scoped pull requests. Ask only for outstanding experience tradeoffs or missing evidence; do not ask the user to reselect recorded architecture, art or phone hierarchy. Do not mark future implementation or browser tests complete from planning documents.

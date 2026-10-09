@@ -24,6 +24,11 @@ The register distinguishes what was **approved**, what is **pending review**, an
 | D-017 | Seasons materially change the economy, including preparation for winter | Harvests and reserves should matter | Exact seasonal multipliers, foraging policy and reserve thresholds remain proposed |
 | D-018 | Pause while closed or backgrounded; return paused with explicit Play | The viewer should not miss unseen history | Clear scheduling debt; no elapsed-time catch-up; saved-world Resume does not implicitly start Play |
 | D-019 | Phone arrangement approved: map above expandable chronicle, time controls at top | Preserve the reviewed information hierarchy | Actual-size, accessibility and interaction checks remain open |
+| D-020 | Phase 1 engineering authorized on 2026-10-09: “Ok merge that pr and continue to next phase” | User explicitly requested merging recovery PR #10 and moving forward | Supersedes the earlier no-scaffolding restriction; start scoped core/terrain work, then settlement loops. Carry unfinished balance, visual and storage evidence into the milestone; do not mark it passed |
+
+## Phase 1 authorization — 2026-10-09
+
+PR #10 was merged at [cefd9da](https://github.com/DdraigFawr13/Story-Generator/commit/cefd9dadb8e0cf4194af39830f7d767597ee48a2). The user's instruction quoted in D-020 authorizes entering Phase 1; it does not assert that unavailable selected images were inspected or that economy/storage proposals were runtime-tested. Use the latest merged terrain/founding contracts as the versioned `p1-foundation-v1` implementation baseline. Keep winter behavior, low-population labor and autosave loss-window questions explicit before treating the first playable as accepted. See [PHASE1_FOUNDATIONS.md](PHASE1_FOUNDATIONS.md) for implemented scope and evidence.
 
 ## Art selection — 2026-10-09
 
@@ -41,7 +46,7 @@ Later merged architecture/art decisions take precedence over the branch's earlie
 | --- | --- | --- | --- |
 | Q-001 (resolved) | Which pixel-world interface presentation? | **C: Naturalist's Observation Desk**, approved (D-008) | Exact art settings + layout validation still pending |
 | Q-002 | Exact pixel art constraints? | Illustrated Minimal selected (D-014); source density, zoom and actual-size validation remain open; 16px is not prescribed | Asset pipeline |
-| Q-003 (resolved) | Rendering, app/test/build frameworks? | Accepted [ADR-001–003](adr/README.md) under D-013 | Overall pre-build gate still required |
+| Q-003 (resolved) | Rendering, app/test/build frameworks? | Accepted [ADR-001–003](adr/README.md) under D-013; engineering authorized by D-020 | Architecture selection and scaffolding authorization complete |
 | Q-004 | Complete P1 mechanics and numeric units? | Review [SETTLEMENT_RULES.md](SETTLEMENT_RULES.md): concrete numeric/order/RNG proposals; checklist in [PLAN_REVIEW.md](PLAN_REVIEW.md) | Phase 1 sim behavior |
 | Q-005 | Spotlight interaction and budgets? | Explicit activated opportunity-expansion vs passive bookmark; cap counts and family complexity | Phase 2 spotlight mechanics; see [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md) |
 | Q-006 | P1 archive/storage limits and autosave cadence? | Review [LOCAL_PERSISTENCE_CONTRACT.md](LOCAL_PERSISTENCE_CONTRACT.md): one-slot atomic snapshots, cadence/budgets, ownership, failures and archive admission (proposed) | P1 persistence and long-run acceptance |

@@ -10,6 +10,8 @@ Observation rewards attention without requiring constant input. Societies may th
 
 ## Confirmed requirements
 
+D-020 now authorizes Phase 1 implementation. The [founding preview](PHASE1_FOUNDATIONS.md) covers seed creation and initial inspection only; the acceptance scenarios below remain the complete first-playable target.
+
 | Requirement | Recorded decision | Practical consequence |
 | --- | --- | --- |
 | Settlement-first | D-002; reaffirmed in the recovered branch | P1 uses aggregate residents/households; named personal histories start in P2 |

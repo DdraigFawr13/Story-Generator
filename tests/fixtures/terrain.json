@@ -1,0 +1,602 @@
+[
+  {
+    "seed": "RIVERSIDE",
+    "digest": "07a68eb6bb14a59ac536def9ac133478774970d059b49e1da5406d48be7268eb",
+    "center": 1327,
+    "terrainRng": 2847659418
+  },
+  {
+    "seed": "TERRAIN_000",
+    "digest": "b211d59ff7a48a71e2958305c42214a93905dfecb9b4fe87e59b282a0b53fb7a",
+    "center": 1430,
+    "terrainRng": 441990697
+  },
+  {
+    "seed": "TERRAIN_001",
+    "digest": "83b3dd1a443b152e9708342a187b33cabdf6a8458c276e8d67b001317f8d7188",
+    "center": 1304,
+    "terrainRng": 622095659
+  },
+  {
+    "seed": "TERRAIN_002",
+    "digest": "462d10edbf59e534f12cadedc47ab40990be7e4dc495c26aa24339398306c3e9",
+    "center": 1241,
+    "terrainRng": 3906735812
+  },
+  {
+    "seed": "TERRAIN_003",
+    "digest": "43e347072312caefa7ca324e59e56d21ef3da8e1b7d49b4e39319c98551ec26c",
+    "center": 1377,
+    "terrainRng": 2004479326
+  },
+  {
+    "seed": "TERRAIN_004",
+    "digest": "62a608842669271edbf359fa5c5066e2a9aad69a166052fb7c973148b6328034",
+    "center": 1254,
+    "terrainRng": 163332935
+  },
+  {
+    "seed": "TERRAIN_005",
+    "digest": "83229cebb87d2e648f5c106230bbabfe69f451b74cc30651db5763e31cbc5328",
+    "center": 1378,
+    "terrainRng": 4106614740
+  },
+  {
+    "seed": "TERRAIN_006",
+    "digest": "f2ac2e475d9e7af44c794a68a9d6482c99c5f36e1abb470d7f0eb4da8a2c098a",
+    "center": 1376,
+    "terrainRng": 707934062
+  },
+  {
+    "seed": "TERRAIN_007",
+    "digest": "6f5c5be43b09981c03ec2177a61563acdfd57400ac8dd30c9c2b7a1029ac51f8",
+    "center": 1325,
+    "terrainRng": 2168307338
+  },
+  {
+    "seed": "TERRAIN_008",
+    "digest": "3759f09861a8214b9b3634ad6b67a3c8fd6175f6aa7596d432fd50d19e6f9d0b",
+    "center": 1324,
+    "terrainRng": 4034741376
+  },
+  {
+    "seed": "TERRAIN_009",
+    "digest": "7c61c7bd5d33e8df25d269492f94cd08e26dc6ddc5b8b469a8faa0ee53dce3e6",
+    "center": 1255,
+    "terrainRng": 1522928373
+  },
+  {
+    "seed": "TERRAIN_010",
+    "digest": "ebd20ca976dcdffc5bb0e6b6366e62fca63e0e5f12009e0244b3da7669c88a19",
+    "center": 1320,
+    "terrainRng": 4145932001
+  },
+  {
+    "seed": "TERRAIN_011",
+    "digest": "34210b5ab65323280dccc423cf8137bc63c36b2d30c4a221f809d800d1284e08",
+    "center": 1316,
+    "terrainRng": 704466991
+  },
+  {
+    "seed": "TERRAIN_012",
+    "digest": "e154edc5e44b37cfe489c8b3d452672881e3f2694a83d3b156e7e48d16392b0a",
+    "center": 1186,
+    "terrainRng": 3854076464
+  },
+  {
+    "seed": "TERRAIN_013",
+    "digest": "abc82ed5121c8021c024a815fb1a4264d73687e819b27dc6aff4927f19b936d7",
+    "center": 1315,
+    "terrainRng": 3999426363
+  },
+  {
+    "seed": "TERRAIN_014",
+    "digest": "825b7578379fb5a6e3c770d167a2026d955d71bd68ac82bf17113eb4f9140b32",
+    "center": 1311,
+    "terrainRng": 2646363730
+  },
+  {
+    "seed": "TERRAIN_015",
+    "digest": "96ab6ee7863dd4e9db295e6fcd60ac109ecdf90e7dec07e308bfc9d74f5a6776",
+    "center": 1377,
+    "terrainRng": 2160486824
+  },
+  {
+    "seed": "TERRAIN_016",
+    "digest": "57725d8290ce8b06cd6c694b17c36bb65947c909bcad51f1ad56c454b0485f23",
+    "center": 1171,
+    "terrainRng": 948169987
+  },
+  {
+    "seed": "TERRAIN_017",
+    "digest": "b6b3a25d589d0e2bb53d18c394405e37f0c69e3a5bdf0f45253298f1d7dbe5fc",
+    "center": 1364,
+    "terrainRng": 2939312926
+  },
+  {
+    "seed": "TERRAIN_018",
+    "digest": "b72bc6f3b45f62c53a27a732fb3b5f1b91de87a7a8ecbfa104fa8ffdac700121",
+    "center": 1248,
+    "terrainRng": 365343851
+  },
+  {
+    "seed": "TERRAIN_019",
+    "digest": "331eb8f1d6d6187da1145475361d4397d58f069831c453918730467dabefbc2f",
+    "center": 1297,
+    "terrainRng": 2686086711
+  },
+  {
+    "seed": "TERRAIN_020",
+    "digest": "a763e7bf2a3b6e419b0c690402354d19d6273ec8dc1b38012e89b07650e433b4",
+    "center": 1300,
+    "terrainRng": 3607931051
+  },
+  {
+    "seed": "TERRAIN_021",
+    "digest": "c57febb2ed907466cea00b5b1f1f7dc32b9224eae3daed4c2ded599b0b95d826",
+    "center": 1320,
+    "terrainRng": 2424698174
+  },
+  {
+    "seed": "TERRAIN_022",
+    "digest": "ba6aef27a74ea50e8c94563ad902ff69d4d23ecd9097fd3e93df7cf720bb068a",
+    "center": 1449,
+    "terrainRng": 3171664160
+  },
+  {
+    "seed": "TERRAIN_023",
+    "digest": "e3d2ab9c7435ca46309d1c997b1c0eb477a23a9a71754a6a24c7f2d522ff880c",
+    "center": 1310,
+    "terrainRng": 90815746
+  },
+  {
+    "seed": "TERRAIN_024",
+    "digest": "4e0a66cb00c2604330129ff1a3a73f8333adae69ef4dfb744b08920d693005ec",
+    "center": 1323,
+    "terrainRng": 222820230
+  },
+  {
+    "seed": "TERRAIN_025",
+    "digest": "f7d450f064d2c243ac2a4b10571596849b0e32638d3d2e2113155a615577d3c6",
+    "center": 1312,
+    "terrainRng": 695105975
+  },
+  {
+    "seed": "TERRAIN_026",
+    "digest": "7d86483225b3c5a7b5e4e96d776f2eea8d0417e2e033238b035b5371879602e8",
+    "center": 1255,
+    "terrainRng": 3726681196
+  },
+  {
+    "seed": "TERRAIN_027",
+    "digest": "e7d674023ba2a75f29249b32a8c087f1ecff5ead789482e7ff38fa90f15885b8",
+    "center": 1297,
+    "terrainRng": 870083666
+  },
+  {
+    "seed": "TERRAIN_028",
+    "digest": "071335360ca5813d0c0d1b48ec0994d4ce545bfdac6fe813b993655d07cafec5",
+    "center": 1205,
+    "terrainRng": 4003139960
+  },
+  {
+    "seed": "TERRAIN_029",
+    "digest": "03f336f7ceda4b4831b44f0ac702870a2f35fa61622215a98b086af18bd33422",
+    "center": 1171,
+    "terrainRng": 4224718993
+  },
+  {
+    "seed": "TERRAIN_030",
+    "digest": "2866589ef9cbf38ee7defa404be39e667dc581843a18dab26674456eaaa6a5b7",
+    "center": 1327,
+    "terrainRng": 2417399244
+  },
+  {
+    "seed": "TERRAIN_031",
+    "digest": "2f1ca53b8d4b64df72add68842595af4fde489f00988812db6cc585f4aaedebe",
+    "center": 1171,
+    "terrainRng": 3800338042
+  },
+  {
+    "seed": "TERRAIN_032",
+    "digest": "a6f09a26c24b916a0d52bcbb90bf0193e06f3e00fd89ae568b10b3e54a1776e4",
+    "center": 1383,
+    "terrainRng": 2278263368
+  },
+  {
+    "seed": "TERRAIN_033",
+    "digest": "33e0829fef8df680aabd2dd4dc3cf28f2ac8b11a291003e3e5e2cac0f7d8ee92",
+    "center": 1198,
+    "terrainRng": 3928030980
+  },
+  {
+    "seed": "TERRAIN_034",
+    "digest": "d822ba2342eeaac15d447ccae113194d1be03a8436a2aa79f483e8bd3109112e",
+    "center": 1246,
+    "terrainRng": 1831656845
+  },
+  {
+    "seed": "TERRAIN_035",
+    "digest": "211e7b04494d5eaf9467314abd665a7df2b4acefbe0b53209c88b718f4357b7e",
+    "center": 1245,
+    "terrainRng": 2471600632
+  },
+  {
+    "seed": "TERRAIN_036",
+    "digest": "921cfbde7b33d3b38f4dda7b1de67243298283957dd653ada5c27f90ed815976",
+    "center": 1262,
+    "terrainRng": 1898491739
+  },
+  {
+    "seed": "TERRAIN_037",
+    "digest": "ec8c0e1e8a70b4e7a96040e81b28adc263b4038e74dcbde96eb0b04cd9700064",
+    "center": 1325,
+    "terrainRng": 1930886471
+  },
+  {
+    "seed": "TERRAIN_038",
+    "digest": "f5dbd1cf42a9209fa35847c9e713e7a32e28c0e375b77d6e550050e4f2747df5",
+    "center": 1184,
+    "terrainRng": 2372801559
+  },
+  {
+    "seed": "TERRAIN_039",
+    "digest": "2ff6c9a2894ef1db02e56df103177b021e36e5a7f47ba043719b15035d149806",
+    "center": 1326,
+    "terrainRng": 1942381230
+  },
+  {
+    "seed": "TERRAIN_040",
+    "digest": "a7a0d8f3cd8ec691b3a6253c6168d015af94419f31df1c027e335ef08aeb82e8",
+    "center": 1391,
+    "terrainRng": 1782758729
+  },
+  {
+    "seed": "TERRAIN_041",
+    "digest": "510785584ee5142bccbee865ae1ee33b86438f9f37283e72e0405950e24c00fc",
+    "center": 1258,
+    "terrainRng": 1759683636
+  },
+  {
+    "seed": "TERRAIN_042",
+    "digest": "39598bfe6c269778d58fa10fea513e7fa4e8e58ac8f4d5205c932278cd742788",
+    "center": 1263,
+    "terrainRng": 2708460697
+  },
+  {
+    "seed": "TERRAIN_043",
+    "digest": "2d1f6d03bcfdaebddfe8b0968b67475f0e54984690f0017b706e883e1d540001",
+    "center": 1450,
+    "terrainRng": 1401853911
+  },
+  {
+    "seed": "TERRAIN_044",
+    "digest": "e134168c5c3baf0c54309a95e08897d38875c1df880c47689e52c79890e57860",
+    "center": 1295,
+    "terrainRng": 1186595078
+  },
+  {
+    "seed": "TERRAIN_045",
+    "digest": "2a2d844df2faf1a7332355ea063336e0e3b9a669012ca82cffeb62e5bb7c19af",
+    "center": 1312,
+    "terrainRng": 3795202381
+  },
+  {
+    "seed": "TERRAIN_046",
+    "digest": "379ccac88c90e97b310a7623bee626dc0a6d75edc59860ded4b6782abfee77d9",
+    "center": 1270,
+    "terrainRng": 357589068
+  },
+  {
+    "seed": "TERRAIN_047",
+    "digest": "8de92cb5390e6a430602d412a092a7fc7f45e58ee9a4cca658bc9dac29ebfccb",
+    "center": 1226,
+    "terrainRng": 2011604939
+  },
+  {
+    "seed": "TERRAIN_048",
+    "digest": "3822a7d79955e6c08640cad388fb31b959408030d42ee55a194d77ae52bc4079",
+    "center": 1311,
+    "terrainRng": 1453718116
+  },
+  {
+    "seed": "TERRAIN_049",
+    "digest": "a7575cc7919102eee809d493424ebbdcf28e07e5a4c3c609e5a321a5cee491c9",
+    "center": 1250,
+    "terrainRng": 1006326812
+  },
+  {
+    "seed": "TERRAIN_050",
+    "digest": "f1224a78ca602ca937c7e375f0d6a76ef79bf4bdd65a5066ad16a394a896f253",
+    "center": 1443,
+    "terrainRng": 1054468663
+  },
+  {
+    "seed": "TERRAIN_051",
+    "digest": "2ce7b45bdaed06126f740cd0fc5c4a814191bc4f821e02367477bfab33ad94e7",
+    "center": 1335,
+    "terrainRng": 73718490
+  },
+  {
+    "seed": "TERRAIN_052",
+    "digest": "80ecdcc11214aea82661e3ced4df729b098007ee2a59e4e8f8443b2c2e8364cd",
+    "center": 1312,
+    "terrainRng": 2510975052
+  },
+  {
+    "seed": "TERRAIN_053",
+    "digest": "de9519f2cff1a73a09d915ccce7c053948745f3fd532a9ac144504a916163ca4",
+    "center": 1315,
+    "terrainRng": 3414439841
+  },
+  {
+    "seed": "TERRAIN_054",
+    "digest": "df18ae5fe1ef74afc4113c1c95fb3c7cbfa864cf6e805be6fa4e0b6511f8d7df",
+    "center": 1309,
+    "terrainRng": 1619573625
+  },
+  {
+    "seed": "TERRAIN_055",
+    "digest": "f34f3f8fe16b3b5dc69af2504414a4b2bba9ea9c12fd28e074c054f0db0151c3",
+    "center": 1440,
+    "terrainRng": 3108533052
+  },
+  {
+    "seed": "TERRAIN_056",
+    "digest": "a47157c3c797a8bf009302fdfb657afa97e72a16c3270a41d118960a2e3fbd37",
+    "center": 1462,
+    "terrainRng": 4208848606
+  },
+  {
+    "seed": "TERRAIN_057",
+    "digest": "5bcb1cf7c8d474d8a63234e0d4420dc37d000044712a0da72dfe25f76199beba",
+    "center": 1323,
+    "terrainRng": 2201585968
+  },
+  {
+    "seed": "TERRAIN_058",
+    "digest": "ef780ad4672fe25ac4e0ef428a84b83fd677a556c9ef37725815f32523c69991",
+    "center": 1311,
+    "terrainRng": 4001497701
+  },
+  {
+    "seed": "TERRAIN_059",
+    "digest": "c3abf75742c8fba03d15208d50ece17213328f0cdfd73d3049f6b8c97a0ebcf8",
+    "center": 1424,
+    "terrainRng": 1022030934
+  },
+  {
+    "seed": "TERRAIN_060",
+    "digest": "2192ada17375b8717bdd2bd893e15969c15eef6d59489a4ab7c983e84e3c4aaf",
+    "center": 1330,
+    "terrainRng": 4019618035
+  },
+  {
+    "seed": "TERRAIN_061",
+    "digest": "bc8a423aba354449cff1a85d968ce553c0fa2345663850d179a5604c51769db5",
+    "center": 1312,
+    "terrainRng": 354788679
+  },
+  {
+    "seed": "TERRAIN_062",
+    "digest": "331aac162ca600de0d27de52d3aeb9d8b3e415287fcc99f717149e293afcf9d2",
+    "center": 1375,
+    "terrainRng": 255222674
+  },
+  {
+    "seed": "TERRAIN_063",
+    "digest": "bc216464f7029abffe1ae0cdb2a4e4f0d13a98be2211da8594aa930cf86e81f7",
+    "center": 1250,
+    "terrainRng": 3492282093
+  },
+  {
+    "seed": "TERRAIN_064",
+    "digest": "f9f4c1b6dc96753f9f6ff368c3654ac648a10f3c8aa6e67394c16f30ad61ac96",
+    "center": 1235,
+    "terrainRng": 1796816534
+  },
+  {
+    "seed": "TERRAIN_065",
+    "digest": "4abfbe0debc7ee186d7a61874206e68051dc3f68d9710f3f03f39867410c0814",
+    "center": 1241,
+    "terrainRng": 3954491212
+  },
+  {
+    "seed": "TERRAIN_066",
+    "digest": "7f9285a7997cef8b9907842bbc2d5f52d139b2c539488f7edcbacd2902c1de34",
+    "center": 1294,
+    "terrainRng": 1714045095
+  },
+  {
+    "seed": "TERRAIN_067",
+    "digest": "c84ce846ccaecfef7b8d7cf8001b8fd205edb988ed7e62a426a98a0aa866d94a",
+    "center": 1266,
+    "terrainRng": 1701524984
+  },
+  {
+    "seed": "TERRAIN_068",
+    "digest": "b3bdd0212aab83ba796db66656a714f51cf48f9e0726058bf9b5bc0820d28950",
+    "center": 1367,
+    "terrainRng": 108303605
+  },
+  {
+    "seed": "TERRAIN_069",
+    "digest": "483d01a9b24c34d12d32693fab778c5dc62d17155775ee4217281bf412a16bbc",
+    "center": 1313,
+    "terrainRng": 900007177
+  },
+  {
+    "seed": "TERRAIN_070",
+    "digest": "a37f783be961375c80fdd193956e4245013b6d891ffbaaf3a386aed3bf97e866",
+    "center": 1246,
+    "terrainRng": 755773639
+  },
+  {
+    "seed": "TERRAIN_071",
+    "digest": "a2d80758ee779789ddb2af7d618968c287167fd7aa738b9ca556d6f95ef6454f",
+    "center": 1251,
+    "terrainRng": 2841495763
+  },
+  {
+    "seed": "TERRAIN_072",
+    "digest": "3b85180e76794c46384e763e43982598149f9834fbea5c21be84c22018a324e2",
+    "center": 1307,
+    "terrainRng": 1814836727
+  },
+  {
+    "seed": "TERRAIN_073",
+    "digest": "1def1abe688e0ad9beeb36926efa4e703aa59379e274b0a1b163d0c800161e10",
+    "center": 1245,
+    "terrainRng": 600465899
+  },
+  {
+    "seed": "TERRAIN_074",
+    "digest": "40c2d78bad699a704b60ac36b3f906ae637d36c621e6749fce74e0c3a2ff7fe5",
+    "center": 1233,
+    "terrainRng": 306893837
+  },
+  {
+    "seed": "TERRAIN_075",
+    "digest": "c94d898ee6f0c4b61785f2f65bd4b756f403fba78e09f3cc3f8f0ecefd87814e",
+    "center": 1245,
+    "terrainRng": 849193958
+  },
+  {
+    "seed": "TERRAIN_076",
+    "digest": "73c11ef8abf7dca3996af69d67cf3a5c24b1c8dccb60592a8d90a73dac7ed58d",
+    "center": 1197,
+    "terrainRng": 1387896450
+  },
+  {
+    "seed": "TERRAIN_077",
+    "digest": "1309a041437d0d9f39d108b0952225662c0399cd433869a0bceb4de8128e6bd8",
+    "center": 1451,
+    "terrainRng": 4135039493
+  },
+  {
+    "seed": "TERRAIN_078",
+    "digest": "32a3732d731c74ca7f005942e99b661874f1bca57ef6e95069ee5878ecf45b85",
+    "center": 1324,
+    "terrainRng": 2982394083
+  },
+  {
+    "seed": "TERRAIN_079",
+    "digest": "6c7bf9211bc138d081b7f7e026adb88a8ff664bd921a4334fca8b63c7cafe5f1",
+    "center": 1188,
+    "terrainRng": 3122172612
+  },
+  {
+    "seed": "TERRAIN_080",
+    "digest": "c8262ed11b91271c3052f440515e7e17c5a4ef394ee407f232c349d1edb111a9",
+    "center": 1246,
+    "terrainRng": 2391707662
+  },
+  {
+    "seed": "TERRAIN_081",
+    "digest": "62c8861789da887f815662e1687b38949eff169bc9a812444fb33cbeacdb25d2",
+    "center": 1303,
+    "terrainRng": 2427106288
+  },
+  {
+    "seed": "TERRAIN_082",
+    "digest": "77ae7c8a8375f0a09f44ccf74346d2a2fb44717d45d716cb1264c5bb34b36bff",
+    "center": 1330,
+    "terrainRng": 158911726
+  },
+  {
+    "seed": "TERRAIN_083",
+    "digest": "104455441aa8740add166a635cb37e33b6cfeec9fb5acbe685a2f9be76477e19",
+    "center": 1319,
+    "terrainRng": 3063534
+  },
+  {
+    "seed": "TERRAIN_084",
+    "digest": "89c1ca62d2f2dfc575894fdaff4a9eea24105261095e8a9118f980f87598391b",
+    "center": 1226,
+    "terrainRng": 946146810
+  },
+  {
+    "seed": "TERRAIN_085",
+    "digest": "61dfc9c55278372ffcb2a322936ae443ab4bda047dd5edcbae18872fab3fbbed",
+    "center": 1314,
+    "terrainRng": 2789229736
+  },
+  {
+    "seed": "TERRAIN_086",
+    "digest": "4a15b2378223f30185e97bfbf11ac0dce5c84df04aae93ad46e77b42fcc51286",
+    "center": 1317,
+    "terrainRng": 1461931939
+  },
+  {
+    "seed": "TERRAIN_087",
+    "digest": "7d916943a62522ec7f0d6f29fedd9aa7ce9b953d6b48133217190eee46b970d0",
+    "center": 1332,
+    "terrainRng": 1111173313
+  },
+  {
+    "seed": "TERRAIN_088",
+    "digest": "d4f12205c348365f38bbbcdd138b12028015dee8e64d21051fdd2a3d1ae0197b",
+    "center": 1266,
+    "terrainRng": 1933927284
+  },
+  {
+    "seed": "TERRAIN_089",
+    "digest": "fd09d2ce690ab3141eb7556344d2ca1edd9eb9a7cf6bc9e6dade579f390b260a",
+    "center": 1309,
+    "terrainRng": 3412186269
+  },
+  {
+    "seed": "TERRAIN_090",
+    "digest": "906447fe45df64828f8ab30feb678d8aa46f64e279bda2c654adbcf39ed9b5be",
+    "center": 1321,
+    "terrainRng": 3158947833
+  },
+  {
+    "seed": "TERRAIN_091",
+    "digest": "bbc745813aedf0101d0c09f1a42636e19d8dcbb9110210fd3619ce92ef0ea612",
+    "center": 1334,
+    "terrainRng": 294225682
+  },
+  {
+    "seed": "TERRAIN_092",
+    "digest": "59b2ebe2083a8ff460ce9a9253c6294481c206b18fa1d4fefc235aa840172648",
+    "center": 1307,
+    "terrainRng": 2456028960
+  },
+  {
+    "seed": "TERRAIN_093",
+    "digest": "05768f349fc59bba2e184580d5f99a810bf8a69c951f58b8d47dfba599e007d2",
+    "center": 1392,
+    "terrainRng": 1595883249
+  },
+  {
+    "seed": "TERRAIN_094",
+    "digest": "da5c7173582a82ca5c783a36d2c5923329171205874e2bc96cde11711b67dd31",
+    "center": 1447,
+    "terrainRng": 3236941188
+  },
+  {
+    "seed": "TERRAIN_095",
+    "digest": "7551a6412fce1394080b350f9485ed24f113c344d3343cebe7f874c257c2a9e9",
+    "center": 1301,
+    "terrainRng": 1866861374
+  },
+  {
+    "seed": "TERRAIN_096",
+    "digest": "065bf8a4fe334a67b84ea4075b0873505c9eb9db580be0b594bb65327ba680ee",
+    "center": 1331,
+    "terrainRng": 172321108
+  },
+  {
+    "seed": "TERRAIN_097",
+    "digest": "23133d7263a627519224516c372a495835b33edf69f78415eb7656f809226e11",
+    "center": 1325,
+    "terrainRng": 1952149414
+  },
+  {
+    "seed": "TERRAIN_098",
+    "digest": "afa2406252b4681c4d68219f65d430ef0d8bbff65420f1acbb029cb9e391019b",
+    "center": 1396,
+    "terrainRng": 4107430620
+  }
+]
