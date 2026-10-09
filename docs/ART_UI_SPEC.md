@@ -69,6 +69,10 @@ These are **candidate values**. Confirm with a full desktop view and at least on
 5. If a historical entity no longer exists, its last recorded location and prior identity still resolve to history; inspectable depth increases in later phases.
 6. Pause, follow, inspect, and opening/closing panels must never consume sim random numbers or alter outcomes.
 
+## Current selection
+
+Illustrated Minimal is selected (D-014). Desktop comparison and two phone static studies are prepared; see [continuation review](CONTINUATION_REVIEW.md) for artifact identity, phone interaction requirements and remaining checks. Generated studies do not establish measured target sizes, device readability or implemented behavior.
+
 ## Usability acceptance for visual gate
 
 - [x] Direction C chosen as baseline
