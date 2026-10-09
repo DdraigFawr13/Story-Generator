@@ -21,6 +21,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Weekly settlement engine, verification and balance findings](docs/PHASE1_SETTLEMENT.md)
 - [Playback, local saves and browser verification](docs/PHASE1_PLAYBACK.md)
 - [Functional viewer, storage measurements and ten-seed review](docs/PHASE1_VIEWER.md)
+- [Reproducible winter and low-population recovery study](docs/PHASE1_BALANCE.md)
 - [Proposed numeric P1 settlement rules](docs/SETTLEMENT_RULES.md)
 - [Deterministic terrain contract and 100-seed probe](docs/TERRAIN_CONTRACT.md)
 - [Proposed local save/resume and recovery contract](docs/LOCAL_PERSISTENCE_CONTRACT.md)
@@ -51,7 +52,7 @@ npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite. Enter a seed or generate one, then select map tiles or use the coordinate inspector. Generation failure preserves the current world. This preview stays at tick zero and has no save controls.
+Open the local URL printed by Vite. Enter a seed or generate one, then play, pause, step and inspect the evolving settlement. Generation failure preserves the current world. Save and Resume keep a complete world in this browser's local storage; reopening or returning from a hidden tab stays paused.
 
 ```sh
 npm run check
@@ -65,3 +66,5 @@ npm run test:browser
 The core API exposes `createSettlement(seed)`, `advanceSettlement(snapshot, weeks, limits)` and `simulateSettlement(seed, weeks, limits)` from `src/sim`. Tests include 100 seeds × 1,000 weeks, so the complete unit suite takes several minutes. To write its measurement report, run `STORY_GENERATOR_REPORT=/tmp/settlement-report.json npm test`; timings stay outside canonical state.
 
 Optional desktop diagnostics: `npm run benchmark:storage` measures real browser save/load/continuation; `npm run benchmark:crash` checks a controlled Chromium process interruption using its own temporary profile. See the [viewer evidence](docs/PHASE1_VIEWER.md) for scope and remaining physical-device/art gates.
+
+`npm run benchmark:balance` compares six explicitly experimental seasonal configurations across the same ten five-year histories and measures forced low-population recovery inputs. It uses isolated diagnostic module graphs, never opens browser storage, and preserves production rules and saves. The [balance study](docs/PHASE1_BALANCE.md) describes its evidence and limits.

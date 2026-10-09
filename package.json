@@ -21,7 +21,8 @@
     "format:check": "prettier --check .",
     "check": "npm run format:check && npm run typecheck && npm run boundaries && npm test && npm run build",
     "benchmark:storage": "node scripts/storage-benchmark.mjs",
-    "benchmark:crash": "node scripts/crash-study.mjs"
+    "benchmark:crash": "node scripts/crash-study.mjs",
+    "benchmark:balance": "node scripts/balance-study.mjs"
   },
   "dependencies": {
     "react": "19.3.0",
