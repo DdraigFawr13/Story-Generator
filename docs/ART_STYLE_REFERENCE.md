@@ -50,3 +50,9 @@ Source resolution, tile size and in-game zoom should be measured against the *di
 ## Next visual review
 
 Generate **three genuinely comparable game-view mockups** using one underlying 2D village plan, with different degrees of simplification. Show an expanded chronicle next to the map and one selected person. Evaluate phone layout after choosing the art density; do not start building simulation mechanics to answer an art question.
+
+## Concept review — 2026-10-09 UTC
+
+Three desktop concept images were shown in the work conversation, in this displayed order: 1 minimal graphic, 2 illustrated minimal, 3 soft illustrative. They share a 1440×1024 target brief, overhead village composition, expanded chronicle and granary inspector. Their illustrative history is mock data, not simulation evidence or approved numeric tuning.
+
+The user requested a blend between displayed concepts 1 and 2: simple graphics with some texture/detail and recognizable human shapes. A single refinement was generated from both actual source images; final confirmation of that refinement is pending. This is an art requirement, not approval to simulate named individuals in P1. Generation introduced composition differences, and the second image drifted toward angled architecture and excessive detail; these are known deviations, not newly accepted requirements. No image closes the visual gate. Refine the selected direction to the original overhead/readability constraints, then validate actual sprite/text sizes and the phone's collapsed/expanded chronicle and event inspection. Desktop-first review and full phone usability are user-confirmed (D-015). No production sprites have been created or approved.
