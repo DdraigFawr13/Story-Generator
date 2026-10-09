@@ -1,6 +1,6 @@
 # Project handoff — recovered 2026-10-09
 
-**Current checkpoint:** PR #11 is merged at [27c8137](https://github.com/DdraigFawr13/Story-Generator/commit/27c813744256836d35503fd0f3fc75ca8773349a). D-021 records the user's request to merge it and continue. The weekly settlement reducer, canonical events and running-state validator are implemented as `p1-settlement-v1` (schema 2); [PHASE1_SETTLEMENT.md](PHASE1_SETTLEMENT.md) records verification and balance findings. The browser remains a founding preview; advancing controller, local saves, live chronicle, production art and deployment are not yet implemented.
+**Current checkpoint:** PR #12 is merged at [2c1e4de](https://github.com/DdraigFawr13/Story-Generator/commit/2c1e4de0c566148ab0adc52b4f980e5886d5774c). D-022 records authorization to continue and merge verified milestones without repeated permission requests. Playback, one-slot atomic IndexedDB persistence, writer ownership and a functional state-derived chronicle are implemented. [PHASE1_PLAYBACK.md](PHASE1_PLAYBACK.md) records behavior and evidence. Map navigation, long-history storage measurement, balance acceptance, selected art and physical-device support remain open; there is no deployment.
 
 The recovery below describes the earlier PR #9 checkpoint and preserved provenance. D-020 supersedes its no-scaffolding restriction; it does not retroactively establish visual/balance acceptance.
 
@@ -62,9 +62,9 @@ At the recovery checkpoint this was Python generation evidence only. The foundat
 
 ## Next work in order
 
-1. Implement one-slot local persistence and the advancing controller as continuation slice 1D. Use schema 2's complete snapshot/ledger, actual saved RNG and `validateSettlementState`; never regenerate a running world from its seed. Review autosave loss window before finalizing cadence; test rollback, recovery, stale sessions and two-tab ownership.
-2. Review the recorded baseline balance evidence: all 100 seeds stay fed through week 1,000, while forced small-population cases expose field-first recovery starvation. Keep tuning explicit/versioned; do not quietly import older daily rules or claim the first session's winter preparation is accepted.
-3. Recover the selected references for faithful visual work. Integrate selected-art map/chronicle/inspector as slice 1E; review desktop first, then complete phone interaction, readability and physical-device evidence.
-4. Close carried Phase 0.6/0.8 evidence and the full first-playable acceptance checklist. The foundation preview does not satisfy long-run, balance, save/resume, selected-art or physical-device gates.
+1. Complete functional viewer navigation/readability: usable phone crop/zoom/pan, event-location focus, chronicle/archive navigation, preserved reading position and 44px controls. Keep selected-art fidelity open until exact references are recovered.
+2. Measure real IndexedDB write/load and continued simulation at 1,000 and 10,000 weeks in desktop browser engines. Record actual timing/payload evidence; do not claim physical phone or installed Safari coverage from emulation.
+3. Review the ten-seed baseline trajectories and first-session winter experience. Keep changes versioned and explicit; the current batch stays fed through week 1,000 and exposes low-population field-first starvation in forced cases.
+4. Recover the selected references, complete selected-art comparison and physical-device evidence, then close the first-playable acceptance checklist. The functional viewer alone does not close those gates.
 
 Continue through scoped pull requests. Ask only for outstanding experience tradeoffs or missing evidence; do not ask the user to reselect recorded architecture, art or phone hierarchy. Do not mark future implementation or browser tests complete from planning documents.

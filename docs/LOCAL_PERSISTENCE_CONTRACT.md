@@ -1,6 +1,6 @@
 # P1 local persistence contract — proposal v1
 
-**Status: proposed, not approved.** This supplies the storage portion of Phase 0.8 and Q-006. D-012 already approves basic local save/resume; the budgets and policies below remain reviewable proposals. Phase 0 stays open. No application or storage adapter has been implemented.
+**Status: implemented engineering baseline under D-022; final storage-policy/device acceptance remains open.** D-012 approves local save/resume and D-013 accepts IndexedDB. The adapter/controller implement the budgets below without changing canonical simulation rules. See [PHASE1_PLAYBACK.md](PHASE1_PLAYBACK.md) for tests and remaining measurements.
 
 Related: [plan review](PLAN_REVIEW.md), [accepted architecture](ARCHITECTURE_REVIEW.md), [implementation plan](IMPLEMENTATION_PLAN.md), [decision register](DECISIONS.md).
 
@@ -113,6 +113,6 @@ A transient storage failure does not automatically stop a valid simulation. Disp
 
 ## Evidence and remaining decisions
 
-This remains a persistence proposal: no IndexedDB, quota or settlement-balance tests have run. D-020 authorizes engineering; the [foundation slice](PHASE1_FOUNDATIONS.md) verifies canonical bytes and immutable history admission, not durable saves. Check the future persistence adapter against these scenarios, recording serialization/save latency, peak memory and tick latency at 1,000 and 10,000 ticks on desktop and a physical Android phone.
+The implemented adapter passes complete-state resume, real IndexedDB abort-after-request-success rollback, injected quota failure, corrupt/unsupported data, replacement and two-tab handoff checks. The save queue also passes clicked-tick capture, coalescing, throttle/backoff and session barriers. Injected quota errors do not measure actual quota capacity; browser transactions do not guarantee crash/eviction durability. Long-history latency and physical Android/installed Safari evidence remain required. See [PHASE1_PLAYBACK.md](PHASE1_PLAYBACK.md).
 
 Review Q-006 against the table and replacement/concurrency behavior. Weekly balance acceptance (Q-004), storage-policy acceptance (Q-006) and selected-art validation remain carried first-playable requirements. Architecture (Q-003) is accepted under D-013 and scaffolding authorized under D-020; ASCII seeds and named-stream determinism are implemented in the foundation baseline. The proposed autosave cadence has not become final policy by being documented.
