@@ -23,7 +23,8 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Refined simplified art style](docs/ART_STYLE_REFERENCE.md)
 - [Narrative spotlights and moral range](docs/NARRATIVE_SPOTLIGHTS.md)
 - [Story Spotlight opportunity expansion](docs/SPOTLIGHT_OPPORTUNITIES.md)
-- [Next step: technical architecture review](docs/ARCHITECTURE_REVIEW.md)
+- [Technical architecture review](docs/ARCHITECTURE_REVIEW.md)
+- [Proposed architecture decision records](docs/adr/README.md)
 - [Working agreements and branch hygiene](CONTRIBUTING.md)
 
 ## Approved direction
