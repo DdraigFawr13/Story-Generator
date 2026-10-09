@@ -1,6 +1,6 @@
 # Narrative divergence, moral range, and multi-scale spotlight (design brief v1)
 
-**Status:** user-approved goals (richer divergences across people, settlements, kingdoms; both dark and uplifting plots). **Mechanism pending review.** This is a design specification and long-term plan, not working code or approval to add spotlight-induced simulation interventions.
+**Status:** user-approved goals and clarification: deliberately spotlighted people, families, towns and kingdoms should have a **wider set of possible opportunities**, not guaranteed outcomes. The exact expansion mechanism and controls are subject to review. See [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md). No game code has been authorized or implemented.
 
 ## Core objective
 
@@ -10,7 +10,7 @@ The viewer should be able to become attached to an individual, family, settlemen
 
 ### A. Passive focus / deep historical tracking — recommended to build
 
-A user follows/bookmarks a subject. UI then:
+The user merely selects/inspects a subject, or uses a **passive follow/bookmark** control. UI then:
 - highlights relevant canonical events (including quiet everyday events); follows relationships, family connections, rivals, mentors, heirs, alliances, and associated places;
 - shows the subject's motivations, stressors, memories, unresolved conflicts, opportunities, and alternate pressures **only when they exist in actual simulation state**;
 - presents summaries at varying scales and increased chronicle resolution for that subject; minimizes unrelated global noise;
@@ -20,16 +20,13 @@ A user follows/bookmarks a subject. UI then:
 
 **Performance path:** all actors use the same authoritative deterministic rules. At regional scale, simulate them at a globally defined tier of detail *independent of focus/viewport*; the spotlight retrieves and narrates existing events and bounded memory. Never secretly increase an entity's outcome RNG or change simulation tick phases because it was clicked.
 
-### B. Active / fate-amplifying focus — parked design question
+### B. Explicit Story Spotlight — approved direction, implementation proposed
 
-The user is also interested in **more actual opportunities for divergence** when a person/town/kingdom is watched, bookmarked or tagged. This could mean a tagged subject receives more state-changing pressures/opportunities than an untagged subject. **That would make following an intervention.**
+**User clarification:** the spotlight should broaden the **scope of eligible narrative opportunities**. Those possibilities may remain unchosen or fail: no guarantee of heroism, tragedy, conflict, fame or success. See [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md) for the proposed eligibility → decision → outcome pipeline.
 
-Do not quietly implement this: compare it to ordinary passive bookmarks in a later product review. Candidate future variants:
-- explicit *Fate Focus* mode or prompt, clearly labeled as simulation-altering;
-- a separate world configuration established at run start;
-- reproducible fork from a bookmark/timestamp with a recorded external command.
+This is not a manual story nudge: characters or settlements still act autonomously, with prerequisites, choices, costs and competition. But it **can change the simulation** after explicit activation. Distinguish inspection (never changes world), optional passive bookmarking (never changes world), and explicit spotlighting (possible future eligibility changes). A spotlight command must be recorded with simulation time for deterministic replay.
 
-If approved later, provenance must record the action; seed+configuration+recorded player decisions must replay. Keep default observer runs strictly unmodified. This concept is distinct from and compatible with *observer nudges*, which remain parked.
+The exact controls, number of tracked entities, frequency and eligible families remain implementation design decisions. Do not silently make basic map clicks affect the simulation. The separate manual observer-nudge idea remains parked.
 
 ## Multi-scale scope model
 
@@ -80,24 +77,24 @@ If needed, offer optional detail controls for graphic or distressing *descriptio
 
 ## Development placement
 
-- **Phase 1:** canonical IDs + settlement events/links; basic settlement follow/bookmark as display-only candidate.
-- **Phase 2:** people/families and their reasons, memories, long-run continuity; build person/family spotlight depth.
-- **Phase 3:** institutions/culture, power, lawful/chaotic governance and social/ethical consequences; complex local plots.
-- **Phase 4:** faction, kingdom and world-level follow, cross-scale event links.
-- **Phase 5:** rich biographies, timelines, event causality, follow feeds, bookmark exports and history navigation.
+- **Phase 1:** canonical IDs + settlement events/links; display-only selection/bookmark candidate; **no spotlight opportunity code yet**.
+- **Phase 2:** people/families, reasons and memories; implement a small, bounded **extra opportunity eligibility set** for deliberately spotlighted people/families, with autonomous consideration/refusal/failure outcomes, plus biographical depth.
+- **Phase 3:** institutions/culture, power, lawful/chaotic governance and social/ethical consequences; expand **settlement** spotlight eligibility with context-sensitive possibilities.
+- **Phase 4:** faction/kingdom spotlight opportunity families and world-level follow, cross-scale event links.
+- **Phase 5:** rich biographies, timelines, event causality, follow feeds, bookmark exports, and replay that shows recorded spotlight activations and effects.
 - **Phase 6:** measure narrative diversity and darkness/hope range across seeds; fix repetitive patterns and excessive trauma loops.
 
 **Do not pull a Phase 4 kingdom feature into Phase 1.** The spotlight should gain depth with the underlying systems at their intended milestones.
 
 ## Tests and evidence once implemented
 
-1. Same seed/config/version after N ticks yields identical world/event hashes whether nothing, a person, a town or a kingdom is followed.
-2. Changing focus frequently or viewing different map regions never changes RNG consumption or causal outcomes.
+1. **Viewing/inspection/passive bookmarks only:** same seed/config/version after N ticks yields identical world/event hashes. **Active spotlight:** same seed/config/version **and the same timestamped spotlight-command history** yields identical hashes; switching spotlights can legitimately change outcomes.
+2. Changing camera/view, inspection, scrolling or event filters never changes RNG or causal outcomes. Explicit spotlight activation is recorded and may change extra eligible opportunity sets at tick boundaries.
 3. Every spotlight event references canonical records; no invented secret villains, manufactured crimes, assured hero arcs, or fake causal relationships.
 4. Related-event retrieval includes cross-scale entity ties and persists after death, rename, conquest and collapse.
-5. Deterministic multi-seed analysis evaluates distinct arc types, rare/ordinary events, outcomes, lifetimes, and runs with both dark and hopeful histories, **without quotas**.
+5. Fixtures verify extra eligible opportunity families for valid spotlighted subjects **without mandating any result**; refusals, failures, missed and never-taken paths are possible. Multi-seed analysis evaluates dark and hopeful arcs without quotas.
 6. Bookmark/feed cost and stored detail remain bounded at high actor counts.
 
 ## Deferred design decision
 
-**Must ask explicitly before building any active fate-focus:** Should marking a subject *only change how much of its real life we see*, or may a separately identified mode *change its chances*? User has expressed interest in both, but has not decided the precise boundary.
+**Resolved at product-intent level:** deliberate Story Spotlight widens opportunity eligibility; it is not simply extra narration and does not force outcomes. **Still to design:** whether to distinguish passive bookmarks and active spotlight buttons, how many may run concurrently, and scale-specific eligibility budgets. No implementation until phase contracts are approved.
