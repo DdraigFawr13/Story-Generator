@@ -1,6 +1,6 @@
 # Game design and agreed direction (v0.2)
 
-> **Approved:** living world vision, settlement-first vertical slice, middle-fantasy baseline, initially observer-only. **Still to review:** precise visual treatment and engineering contracts. See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
+> **Approved:** living world vision, settlement-first vertical slice, middle-fantasy baseline, initially observer-only. **Still to review:** final pixel size/mobile static layout and engineering contracts. **Approved visual baseline:** Direction C — Naturalist's Observation Desk; see [ART_UI_SPEC.md](ART_UI_SPEC.md). See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
 ## Core fantasy
 
@@ -77,4 +77,4 @@ Future configurable world profiles might be grounded, low-, medium- or high-fant
 
 ## Next design checkpoint
 
-Review visual directions for a miniature settlement map and live chronicle, approve one for the first vertical slice, and then confirm Phase 1 engine/rules contracts before coding.
+Direction C has been approved. Validate exact pixel-art, map controls and phone chronicle layout, then confirm proposed [architecture](ARCHITECTURE_REVIEW.md) and Phase 1 engine/rules contracts before coding.
