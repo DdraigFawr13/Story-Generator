@@ -41,12 +41,57 @@ test('founding facts, invalid-seed recovery and keyboard inspection work', async
   const map = page.locator('canvas');
   const bounds = await map.boundingBox();
   await map.click({
-    position: { x: (10.5 * bounds!.width) / 64, y: (20.5 * bounds!.height) / 40 },
+    position: { x: (bounds!.width - 64 * 12) / 2 + 10.5 * 12, y: 20.5 * 12 },
   });
   await expect(page.locator('.tile-facts')).toContainText('Tile 1290:');
   await page.getByRole('button', { name: 'Random seed' }).click();
   await expect(page.getByLabel('World seed', { exact: true })).toHaveValue(/^[a-f0-9]{16}$/);
   expect(errors).toEqual([]);
+});
+
+test('clicking a partly visible map preserves scroll and selects the pointed tile', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New world', exact: true }).click();
+  await page.getByLabel('Tile X').fill('0');
+  await page.getByLabel('Tile Y').fill('0');
+  await page.getByRole('button', { name: 'Inspect tile' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.tile-facts')).toContainText('Tile 0:');
+  const map = page.locator('canvas');
+  await map.evaluate((canvas) => window.scrollBy(0, canvas.getBoundingClientRect().top + 60));
+  const bounds = (await map.boundingBox())!;
+  expect(bounds.y).toBeLessThan(0);
+  const scroll = await page.evaluate(() => scrollY);
+  await page.mouse.click(bounds.x + (bounds.width - 64 * 12) / 2 + 10.5 * 12, bounds.y + 20.5 * 12);
+  await expect(map).toBeFocused();
+  await expect(page.locator('.tile-facts')).toContainText('Tile 1290:');
+  expect(await page.evaluate(() => scrollY)).toBe(scroll);
+});
+
+test('pointer inspection preserves the clicked tile when the map is partly below the viewport', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New world', exact: true }).click();
+  await page.getByLabel('Tile X').fill('0');
+  await page.getByLabel('Tile Y').fill('0');
+  await page.getByRole('button', { name: 'Inspect tile' }).click();
+  const map = page.locator('canvas');
+  await map.evaluate((canvas) => {
+    window.scrollTo(0, canvas.getBoundingClientRect().top + window.scrollY - innerHeight + 120);
+  });
+  const box = (await map.boundingBox())!;
+  const scroll = await page.evaluate(() => window.scrollY);
+  await page.mouse.move(box.x + (box.width - 64 * 12) / 2 + 10.5 * 12, box.y + 5.5 * 12);
+  await page.mouse.down();
+  await expect(map).toBeFocused();
+  await page.mouse.up();
+  await expect(page.locator('.tile-facts')).toContainText('Tile 330:');
+  expect(await page.evaluate(() => window.scrollY)).toBe(scroll);
 });
 
 for (const width of [320, 390, 768, 1280]) {

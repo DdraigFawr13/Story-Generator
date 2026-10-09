@@ -1,6 +1,6 @@
 # Product brief and first-session quality bar
 
-**Status:** synthesis of recorded user decisions, recovered on 2026-10-09 UTC. Architecture and art selection are settled; numeric mechanics, terrain/storage policy and visual validation remain open. This brief does not close Phase 0 or authorize application scaffolding.
+**Status:** synthesis of recorded user decisions, recovered on 2026-10-09 UTC. Architecture and art selection are settled; numeric mechanics, terrain/storage policy and visual validation remain open. D-020/D-022 now authorize implementation; this brief does not imply first-playable acceptance.
 
 ## The experience
 
@@ -10,7 +10,7 @@ Observation rewards attention without requiring constant input. Societies may th
 
 ## Confirmed requirements
 
-D-020 now authorizes Phase 1 implementation. The [founding preview](PHASE1_FOUNDATIONS.md) covers seed creation and initial inspection only; the acceptance scenarios below remain the complete first-playable target.
+The weekly engine, playback, local saves and functional viewer are implemented under D-020/D-022. [PHASE1_VIEWER.md](PHASE1_VIEWER.md) records current interaction/storage evidence and remaining gates; the acceptance scenarios below remain the complete first-playable target.
 
 | Requirement | Recorded decision | Practical consequence |
 | --- | --- | --- |
@@ -56,4 +56,4 @@ Illustrated Minimal is the current art target. The older branch's original-first
 | Continuity | Hidden/closed return and Resume remain paused; no elapsed-time catch-up; saving never advances simulation |
 | Performance | Named runtime/browser measurements and physical-device evidence for claims of device support |
 
-The terrain probe supplies generation evidence only. No application, browser interaction, storage resilience, balance or physical-device performance evidence exists yet. See [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md) for source provenance and next work.
+Core/browser reproducibility, save resilience, navigation/phone interaction and desktop long-history storage evidence now exist. Ten-seed analysis still shows forgiving early winter balance. Selected-art comparison, physical-device evidence and a human understandability study remain open. See [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md) for source provenance and next work.

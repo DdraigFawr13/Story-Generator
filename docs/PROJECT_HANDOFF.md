@@ -1,6 +1,6 @@
 # Project handoff — recovered 2026-10-09
 
-**Current checkpoint:** PR #12 is merged at [2c1e4de](https://github.com/DdraigFawr13/Story-Generator/commit/2c1e4de0c566148ab0adc52b4f980e5886d5774c). D-022 records authorization to continue and merge verified milestones without repeated permission requests. Playback, one-slot atomic IndexedDB persistence, writer ownership and a functional state-derived chronicle are implemented. [PHASE1_PLAYBACK.md](PHASE1_PLAYBACK.md) records behavior and evidence. Map navigation, long-history storage measurement, balance acceptance, selected art and physical-device support remain open; there is no deployment.
+**Current checkpoint:** PR #13 is merged at [96d9614](https://github.com/DdraigFawr13/Story-Generator/commit/96d9614dc86dae5ce0caea52c67fda32b7e01f52). D-022 continues to authorize milestone merges. Playback, IndexedDB save/resume and functional chronicle are now supplemented by readable phone map crop/zoom/pan, focused event locations, full record navigation and preserved older reading position. [PHASE1_VIEWER.md](PHASE1_VIEWER.md) records 1,000/10,000-week real storage measurements, Chromium crash recovery and ten-seed experience findings. Balance/storage experience acceptance, selected-art references, physical-device support and human usability review remain open. No deployment or individual-agent phase has begun.
 
 The recovery below describes the earlier PR #9 checkpoint and preserved provenance. D-020 supersedes its no-scaffolding restriction; it does not retroactively establish visual/balance acceptance.
 
@@ -62,9 +62,9 @@ At the recovery checkpoint this was Python generation evidence only. The foundat
 
 ## Next work in order
 
-1. Complete functional viewer navigation/readability: usable phone crop/zoom/pan, event-location focus, chronicle/archive navigation, preserved reading position and 44px controls. Keep selected-art fidelity open until exact references are recovered.
-2. Measure real IndexedDB write/load and continued simulation at 1,000 and 10,000 weeks in desktop browser engines. Record actual timing/payload evidence; do not claim physical phone or installed Safari coverage from emulation.
-3. Review the ten-seed baseline trajectories and first-session winter experience. Keep changes versioned and explicit; the current batch stays fed through week 1,000 and exposes low-population field-first starvation in forced cases.
-4. Recover the selected references, complete selected-art comparison and physical-device evidence, then close the first-playable acceptance checklist. The functional viewer alone does not close those gates.
+1. Review winter/low-population recovery and autosave cadence with the recorded runtime evidence. All ten sampled first years and the 100-seed week-1,000 battery stay fed; finite timber eventually produces decline. Tune only with explicit versioned changes and preserved old-save behavior.
+2. Recover exact selected desktop/phone references before faithful production art or source-density comparison. Do not invent approval or claim replacement symbols are the selected art.
+3. Obtain physical Android/installed Safari interaction/performance and a viewer usability review. Desktop browser emulation and controlled Chromium crash recovery are useful evidence with different scope.
+4. Close the first-playable acceptance checklist before advancing to individual people/families/Spotlights. Preserve the complete P1 save/version baseline when proposing P2 extensions.
 
 Continue through scoped pull requests. Ask only for outstanding experience tradeoffs or missing evidence; do not ask the user to reselect recorded architecture, art or phone hierarchy. Do not mark future implementation or browser tests complete from planning documents.

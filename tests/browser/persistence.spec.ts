@@ -203,9 +203,9 @@ test('missing locking capability allows explicit unsaved play with no save claim
 });
 
 test('playback and repeated hidden returns stay paused without catch-up', async ({ page }) => {
-  await page.clock.install();
+  await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-01-01T00:01:00Z'));
   await fresh(page);
-  await page.clock.pauseAt(new Date());
   await page.getByRole('button', { name: '16x', exact: true }).click();
   await page.getByRole('button', { name: 'Play', exact: true }).click();
   await page.clock.runFor(938);
@@ -239,7 +239,10 @@ test('chronicle selection uses actual facts and locations without changing the w
   await expect(details).toContainText('Changes at this event');
   await expect(details).toContainText('Recorded causes');
   await expect(page.locator('.tile-facts')).toContainText('Tile 1327:');
-  await details.getByRole('button').first().click();
+  await details
+    .getByRole('button', { name: /^#\d+:/ })
+    .first()
+    .click();
   await expect(page.getByTestId('tick')).toHaveText('12');
 });
 
@@ -258,3 +261,134 @@ test('phone chronicle has keyboard opening, independent scrolling and focus retu
   await expect(opener).toBeFocused();
   await expect(page.getByTestId('tick')).toHaveText('12');
 });
+
+test('phone pan, zoom, pointer selection and keyboard navigation leave the saved history unchanged', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await fresh(page);
+  await save(page, 0);
+  const before = await fixture(page, 'storedDigest'),
+    map = page.locator('canvas');
+  const pixels = () => map.evaluate((canvas) => (canvas as HTMLCanvasElement).toDataURL());
+  const first = await pixels();
+  await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+  await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+  expect(await pixels()).not.toBe(first);
+  await map.focus();
+  await page.keyboard.press('ArrowLeft');
+  const panned = await pixels();
+  await page.getByRole('button', { name: 'Focus selected tile' }).click();
+  expect(await pixels()).not.toBe(panned);
+  const box = (await map.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2 + 20, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.locator('.tile-facts')).toContainText('Tile 1327:');
+  await page.getByRole('button', { name: 'Focus selected tile' }).click();
+  await map.click({ position: { x: box.width / 2 + 24, y: box.height / 2 } });
+  await expect(page.locator('.tile-facts')).toContainText('Tile 1328:');
+  await save(page, 0);
+  expect(await fixture(page, 'storedDigest')).toEqual(before);
+});
+
+test('older archive records remain accessible outside the 200-headline window without seeking time', async ({
+  page,
+}) => {
+  test.setTimeout(60000);
+  await fresh(page);
+  await save(page, 0);
+  await fixture(page, 'writeFixture', 'RIVERSIDE', 1000);
+  await page.getByRole('button', { name: 'Resume local save' }).click();
+  await expect(page.getByTestId('tick')).toHaveText('1000');
+  expect(await page.locator('.event-list .event-button').count()).toBe(200);
+  await page.getByLabel('Record number').fill('1');
+  await page.getByRole('button', { name: 'Find record' }).click();
+  await expect(page.getByRole('region', { name: 'Event evidence' })).toContainText(
+    '24 residents found a settlement',
+  );
+  await expect(page.getByRole('button', { name: 'Previous record' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Next record' }).click();
+  await expect(page.getByRole('region', { name: 'Event evidence' })).toContainText('record #2');
+  await expect(page.getByTestId('tick')).toHaveText('1000');
+});
+
+test('reading an older live record preserves its scroll position while new weeks arrive', async ({
+  page,
+}) => {
+  test.setTimeout(60000);
+  await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-01-01T00:01:00Z'));
+  await fresh(page);
+  await fixture(page, 'writeFixture', 'RIVERSIDE', 1000);
+  await menu(page);
+  await page.getByRole('button', { name: 'Resume local save' }).click();
+  await expect(page.getByTestId('tick')).toHaveText('1000');
+  await page.locator('.event-list').evaluate((element) => {
+    element.scrollTop = 600;
+    element.dispatchEvent(new Event('scroll'));
+  });
+  const anchor = await page.locator('.event-list').evaluate((element) => {
+    const top = element.getBoundingClientRect().top;
+    const item = [...element.querySelectorAll<HTMLElement>('[data-event-id]')].find(
+      (item) => item.getBoundingClientRect().bottom > top,
+    )!;
+    return { id: item.dataset.eventId, offset: item.getBoundingClientRect().top - top };
+  });
+  await page.getByRole('button', { name: '16x', exact: true }).click();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await page.clock.runFor(11250);
+  await expect(page.getByTestId('tick')).toHaveText('1012');
+  const offset = await page
+    .locator(`[data-event-id="${anchor.id}"]`)
+    .evaluate(
+      (element) =>
+        element.getBoundingClientRect().top - element.parentElement!.getBoundingClientRect().top,
+    );
+  expect(Math.abs(offset - anchor.offset)).toBeLessThan(2);
+});
+
+test('phone sheet retains visible map context and event focus after panning elsewhere', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await fresh(page);
+  await steps(page, 12);
+  await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+  await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Pan west' }).click();
+  await page.getByRole('button', { name: 'Open chronicle' }).click();
+  await page.getByRole('button', { name: /spring harvest brings/ }).click();
+  const map = page.locator('canvas'),
+    mapBox = (await map.boundingBox())!,
+    sheetBox = (await page.getByRole('region', { name: 'Chronicle' }).boundingBox())!;
+  expect(Math.min(mapBox.y + mapBox.height, sheetBox.y) - Math.max(mapBox.y, 0)).toBeGreaterThan(
+    100,
+  );
+  await map.click({ position: { x: mapBox.width / 2, y: mapBox.height / 2 } });
+  await expect(page.locator('.tile-facts')).toContainText('Tile 1327:');
+  await map.focus();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Open chronicle' })).toBeFocused();
+  await expect(page.getByTestId('tick')).toHaveText('12');
+});
+
+for (const width of [320, 390])
+  test(`viewer wraps enlarged text and retains 44px targets at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await fresh(page);
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = '20px';
+    });
+    await page.getByRole('button', { name: 'Open chronicle' }).click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
+      false,
+    );
+    for (const button of await page.getByRole('button').all()) {
+      if (!(await button.isVisible())) continue;
+      const box = (await button.boundingBox())!;
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+  });

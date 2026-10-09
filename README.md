@@ -20,6 +20,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Implemented Phase 1 foundations and verification](docs/PHASE1_FOUNDATIONS.md)
 - [Weekly settlement engine, verification and balance findings](docs/PHASE1_SETTLEMENT.md)
 - [Playback, local saves and browser verification](docs/PHASE1_PLAYBACK.md)
+- [Functional viewer, storage measurements and ten-seed review](docs/PHASE1_VIEWER.md)
 - [Proposed numeric P1 settlement rules](docs/SETTLEMENT_RULES.md)
 - [Deterministic terrain contract and 100-seed probe](docs/TERRAIN_CONTRACT.md)
 - [Proposed local save/resume and recovery contract](docs/LOCAL_PERSISTENCE_CONTRACT.md)
@@ -39,7 +40,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 
 ## Current work
 
-**Direction C (Naturalist's Observation Desk) and Illustrated Minimal are selected.** PR #12's weekly engine is merged. D-022 authorizes continued engineering and milestone merges. Controller/persistence and functional chronicle integration are implemented; map navigation/readability and measured long-history save behavior follow. Selected reference images remain unavailable, so current drawings are temporary. See the [handoff](docs/PROJECT_HANDOFF.md) and [playback/save record](docs/PHASE1_PLAYBACK.md).
+**Direction C (Naturalist's Observation Desk) and Illustrated Minimal are selected.** PR #12's weekly engine is merged. D-022 authorizes continued engineering and milestone merges. Controller/persistence, map navigation, phone chronicle and full retained-record inspection are implemented. Real browser storage/continuation measurements cover 1,000 and 10,000 weeks, with a controlled Chromium crash study. Selected reference images remain unavailable, so current drawings are temporary. See the [handoff](docs/PROJECT_HANDOFF.md) and [playback/save record](docs/PHASE1_PLAYBACK.md).
 
 ## Development
 
@@ -62,3 +63,5 @@ npm run test:browser
 `check` verifies formatting, strict types, module/runtime boundaries, core tests and the production build. Browser checks compare canonical fixtures with Node and exercise the preview at 320/390/768/1280 CSS pixels. CI runs both suites. No hosted service or API key is required; deployment remains a milestone decision.
 
 The core API exposes `createSettlement(seed)`, `advanceSettlement(snapshot, weeks, limits)` and `simulateSettlement(seed, weeks, limits)` from `src/sim`. Tests include 100 seeds × 1,000 weeks, so the complete unit suite takes several minutes. To write its measurement report, run `STORY_GENERATOR_REPORT=/tmp/settlement-report.json npm test`; timings stay outside canonical state.
+
+Optional desktop diagnostics: `npm run benchmark:storage` measures real browser save/load/continuation; `npm run benchmark:crash` checks a controlled Chromium process interruption using its own temporary profile. See the [viewer evidence](docs/PHASE1_VIEWER.md) for scope and remaining physical-device/art gates.
