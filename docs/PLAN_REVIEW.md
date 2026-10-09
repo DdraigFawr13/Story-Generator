@@ -59,7 +59,7 @@ These make review concrete. They do not close the pre-build gate or authorize ap
 ## Ordered remaining work
 
 1. Prepare the numeric rules and storage contract above and architecture decision records for review. This is documentation work and can progress alongside visual exploration.
-2. Compare the three original simplified art treatments on the same village composition, then validate chosen density and Direction C's desktop/phone chronicle and inspector per ART_UI_SPEC.md. Visual fixtures may depict future people, but must label them as mockups rather than P1 functionality.
+2. The three art treatments were compared, the user selected the original first concept with human-shaped figures, and the phone arrangement is approved. Finish displayed sprite/text scale and source/export conventions per ART_UI_SPEC.md. Visual fixtures remain explicitly illustrative; human sprites do not imply P2 identities.
 3. Record the accepted architecture, mechanics, storage budgets and visual evidence. Keep unfinished Phase 0 boxes unchecked; request only outstanding product decisions.
 4. After the existing Phase 0 approval gate, build separate scoped increments: seed/clock and CI → terrain/founders → balanced resource and demographic loops/events → local persistence → integrated viewer and end-to-end acceptance. The numbered implementation checklist defines deliverables, not a requirement to defer persistence until all UI work is finished.
 5. Demonstrate the first playable using multiple seeds, one causal chain visible in both map and chronicle, and save/reload continuation on desktop and phone. No forced catastrophe or seed-specific storyline.
