@@ -75,6 +75,10 @@ Build **interacting mechanics** rather than hundreds of isolated event snippets:
 - Important actors may die, but their actions remain in state and history.
 - Intergenerational consequences should be inspectable without storing every mundane action forever.
 
+## Optional future extension seam (planning only)
+
+The eventual event pipeline should be responsible for validating and applying any state-changing command, whatever its source. This leaves open the future possibility of constrained **observer nudges** as explicitly tagged, rule-valid external interventions. **There is no nudge API, action, UI, feature flag or implementation requirement in the current milestones.** Observational interactions such as selecting a resident or following a town must have no side effects on the simulation or RNG. Do not optimize for hypothetical future interventions at the expense of Phase 1 simplicity.
+
 ## Performance and determinism
 
 - Simulation at fixed ticks independent of frame rendering.

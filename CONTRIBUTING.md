@@ -9,6 +9,12 @@
 - Never overwrite unrelated changes or delete an active branch without explicit authorization.
 - Merged same-repository PR branches should be deleted by the branch-cleanup GitHub Action, subject to repository Actions/token permissions.
 
+## Roadmap and requirements
+
+- Consult [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for ordered tasks, phase dependencies, tests and exit gates before starting code.
+- Design/visual approval and implementation approval are separate. Do not introduce code or speculative systems before the Phase 0 gate.
+- New ideas belong in the decision register and must distinguish **approved**, **proposed** and **parked** scope. Deferred spectator nudges must not acquire an implementation milestone by implication.
+
 ## Engineering requirements
 
 - Simulation code stays independent from UI.
