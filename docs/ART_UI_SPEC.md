@@ -96,3 +96,20 @@ Compare three simplified original treatments of the **same** overhead village co
 ## Recommended continuation
 
 Proceed to architecture review in [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md), then confirm numerical simulation rules for Phase 1; static visual verification remains a gate before implementation.
+
+## Desktop/phone checkpoint — 2026-10-09 UTC
+
+The working art direction is the original first desktop concept with only its abstract resident markers replaced by human-shaped figures (D-017); the blended, more textured refinement was rejected. The first phone concept uses this simple reference, a cropped/zoomed map and an expanded bottom chronicle sheet. Images are illustrative design proposals, not working UI or proof of accessibility/performance.
+
+### Candidate responsive contracts
+
+- Review desktop at 1440×1024 and 1280×800; phone at 390×844 and 360×800, with a 320 CSS-pixel reflow check. Do not shrink an entire desktop map to phone width; choose a useful camera view and retain pan/zoom.
+- Keep controls readable with at least 44×44 CSS-pixel interactive targets; visible icons may be smaller, but their actual hit targets must not overlap. Use 16px body text as the initial target and support text enlargement.
+- Desktop retains simultaneous map/chronicle and a contextual inspector. Phone pins essential time controls above the map; less frequent seed/New World actions belong in a clearly labeled reachable menu, not disappearing entirely.
+- Phone sheet has collapsed headline-preview and expanded history/detail states, a clear close button, and an alternative to dragging. Keep a meaningful map region visible; focus the selected building in the unobscured map viewport. Reading older history does not snap back to the latest headline.
+- Closing event details returns to the prior chronology/scroll context; closing the sheet returns to the map. Back/Escape behavior and focus restoration must be predictable. Offer explicit zoom controls and keyboard-accessible DOM inspection alternatives.
+- At zero population, unsupported saves and storage limits, show factual state with an understandable next action. A backgrounded/reopened world returns paused; controls expose Play rather than implying unseen simulation continued.
+- Confirm touch and keyboard flows, screen-reader labels, non-color-only selection, contrast, reduced motion, long text and virtual-keyboard behavior during implementation. Static mockups do not satisfy those tests.
+
+**Still open:** approve the final static phone presentation, inspect final sprite/text scale on representative screens, and record source-art density/export conventions. These proposals do not close the full Phase 0 visual gate by themselves.
+
