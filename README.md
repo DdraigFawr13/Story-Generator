@@ -2,7 +2,7 @@
 
 A procedural, simulation-driven pixel world that tells the histories of its societies as they emerge.
 
-**Status:** Design exploration / pre-production. No game implementation has been selected or claimed.
+**Status:** Pre-production / detailed implementation planning. The scope and middle-fantasy direction are approved; no playable game has been implemented.
 
 ## Vision
 
@@ -13,16 +13,19 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Game concept and design directions](docs/GAME_DESIGN.md)
 - [Simulation architecture and narrative event model](docs/SIMULATION_DESIGN.md)
 - [Phased roadmap, testing, and acceptance criteria](docs/ROADMAP.md)
+- [Detailed ordered implementation plan (Phase 0–6)](docs/IMPLEMENTATION_PLAN.md)
+- [Approved middle-fantasy tone](docs/WORLD_TONE.md)
+- [Decision register and future ideas](docs/DECISIONS.md)
 - [Working agreements and branch hygiene](CONTRIBUTING.md)
 
-## Current design recommendation (subject to feedback)
+## Approved direction
 
-**The Living World:** a continent-level view with the eventual ability to zoom into individual settlements and follow important people. The first playable slice should be a **single living settlement**, not a full multi-civilization world.
+**The Living World:** eventually a continent-scale view with zoomable settlements and inspectable people. Build **one living settlement first**. Start with **middle fantasy**: realistic social/economic causes plus bounded magic, added only when there is a working social model. **Observer-only for current phases**; small optional nudges are deferred as a future idea, not planned implementation.
 
 ## Immediate next decision
 
-Agree on the preferred visual presentation and spectator-versus-intervention model, then start Phase 1 as a small, fully testable simulator with a seeded world, visible development and a factual, causal history log.
+Finish Phase 0: review alternative visual concepts, approve a target, select technical stack and define Phase 1 numeric mechanics contracts. **Do not begin Phase 1 until the pre-build gate is met.**
 
 ## Development
 
-Repository initialization and documentation are in progress. Runtime, package manager, deployment target, and assets are intentionally not locked until the initial design is reviewed.
+Planning documents are versioned and merged using scoped pull requests. Runtime, package manager, deployment target, and visual assets are intentionally not locked until design review.
