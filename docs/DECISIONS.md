@@ -13,14 +13,15 @@ The register distinguishes what was **approved**, what is **pending review**, an
 | D-005 | Detailed phase specs precede engineering | Control scope and avoid rebuilding modules later | P0 approval gate; ordered tasks and tests per phase |
 | D-006 | Scoped PRs + squash merges + merged-branch cleanup | Keep repository navigable | Only main persists between short-lived tasks |
 | D-007 | Responsive browser-first is planning baseline | Start easily on phone or desktop | Final framework selected before Phase 1 scaffolding |
+| D-008 | **Direction C: Naturalist's Observation Desk** approved | Living top-down pixel diorama plus chronicle and historical inspection | Map-first desktop + phone sheet; exact pixel/render settings await validation |
 
 ## Pending Phase 0 decisions
 
 | ID | Question | Candidate approach | Blocking work |
 | --- | --- | --- | --- |
-| Q-001 | Which pixel-world interface presentation? | A: cozy diorama; B: atlas; C: naturalist chronicle | Art approval and UI implementation |
+| Q-001 (resolved) | Which pixel-world interface presentation? | **C: Naturalist's Observation Desk**, approved (D-008) | Exact art settings + layout validation still pending |
 | Q-002 | Exact pixel art constraints? | Tile density, palette, UI scale, zoom levels, animations | Asset pipeline |
-| Q-003 | Rendering, app/test/build frameworks? | Pure TS sim core, browser UI and canvas-based renderer; evaluate after visuals | Phase 1 scaffolding |
+| Q-003 | Rendering, app/test/build frameworks? | See [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md): TS + React/Vite + Canvas 2D candidate | Phase 1 scaffolding |
 | Q-004 | Time and simulation resource units? | Explicit tick-to-season conversion and realistic bounded quantities | Phase 1 sim behavior |
 
 ## Parked concepts — DO NOT IMPLEMENT
