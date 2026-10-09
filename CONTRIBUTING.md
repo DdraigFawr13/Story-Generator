@@ -29,3 +29,10 @@
 - Avoid committing generated or temporary build artifacts.
 - Keep art style and simulation mechanics documented separately.
 - Do not add service API keys or paid AI generation as runtime prerequisites.
+
+
+## Tool awareness
+
+- Consult [docs/TOOLING_CAPABILITIES.md](docs/TOOLING_CAPABILITIES.md) when selecting tools; it records exposed connectors, skills and possible uses, including those not currently needed.
+- Recheck current availability, applicable skill instructions and project authorization before using an integration. A listed tool is not a runtime dependency or proof of connected-account access.
+- Prefer direct existing tools and focused independent reviews; do not install integrations or add hosted services without a concrete project need.
