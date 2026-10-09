@@ -18,7 +18,7 @@ A **browser-first TypeScript app with a pure deterministic simulation engine**, 
 | State/view bridge | Typed snapshots + event stream | UI can rerender without modifying simulation | Add snapshot thinning as world scale grows |
 | Unit/property tests | Vitest | Fast logic tests for RNG, rules, invariants and chronology | Add longer regression seed battery |
 | Browser smoke tests | Playwright | Validate controls/layout on phone and desktop viewport emulation | Include manual physical device checks |
-| Persistence | Seed/config initially; explicit versioned snapshot contracts | Avoid accidental saves bound to UI state | IndexedDB persistence in Phase 5, not P1 prerequisite |
+| Persistence | IndexedDB basic local save/resume in P1; complete versioned state + archive | Preserve a settlement between sessions; independent of UI state | P5 adds multiple named worlds, migrations and timeline seeking |
 | Hosting | Static site / Vercel at demonstrable milestone | Simulation runs client-side; no mandatory backend | Measure bundle/load size and mobile memory |
 
 These are planning recommendations, not a claim that a framework has been installed, tested or deployed.
@@ -59,13 +59,15 @@ Boundary rules:
 4. Chronicle text renders structured records containing actual facts, actors, changed values, causes and coordinates. No AI-generated plot changes.
 5. Simulator can advance arbitrary ticks in Node/headless tests; DOM app is a viewer/control surface only.
 6. Stable entity IDs and history references are established in Phase 1. Do not over-design full dynasty/war data until corresponding phases.
-7. Save schema, simulation version and PRNG state are designed early; full save/load UX and backwards compatibility evolve in Phase 5.
+7. P1 ships basic local save/resume with atomic state/archive writes and validation. Include all RNG streams, ID allocator state, tick and config. P2 extends snapshots with active Spotlights, ordered command history and replay cursor. P5 adds migrations and historian replay; no promise to load unsupported versions silently.
 
 ## Deterministic event and time design
 
 - Fixed discrete tick represents a simulation interval (exact duration to be determined in 0.8).
 - Each tick passes through explicit stable phases: environment -> production -> consumption -> construction/demography -> event record/snapshot; detailed ordering to be finalized with rule contracts.
-- RNG streams are named for independent subsystems, and the PRNG algorithm/version must be explicit. Do not use Math.random for sim decisions.
+- RNG streams are named for independent subsystems, and the PRNG algorithm/version and stream derivation must be explicit. Define stable entity iteration, ties, numeric units/rounding and canonical serialization; exclude camera/UI state from digests. Do not use Math.random for sim decisions.
+- Resume restores complete authoritative state. Historical seeking later restores a checkpoint and reruns ticks with recorded commands; chronicle records are not an exhaustive mutation log.
+- Bound the live feed separately from the persisted canonical archive. Before P1, specify archive limits and storage failure behavior; preserve causal records and the last valid save rather than silently truncating history.
 - Canonical events contain: event ID, tick, type, actor/place IDs, causal references/facts, effects/changed values and importance.
 - Generate narrative headlines by deterministic templates or pure formatters over event facts. Text is not a source of state mutation.
 - Treat controller actions (play, pause, speed, inspect, **passive follow/bookmark**, log filtering) as non-authoritative control/UI choices. **Future explicit Story Spotlight** activation is different: at a deterministic tick boundary it expands eligible opportunity families for the tagged entity, can change future events, and must be included in the run's command history and replay. See [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md).
@@ -81,7 +83,8 @@ Boundary rules:
 
 **Before first UI implementation:**
 - Same `seed + config + simulationVersion` -> same canonical state/event digest after 1, 100 and 1,000 ticks.
-- Different rendering frame rates/speeds/selection -> same outcome after the same N ticks.
+- Different rendering frame rates/speeds/selection -> same outcome after the same N ticks; Node and supported browser engines produce the same canonical digest.
+- Serialize/restore after N ticks, advance M, and compare state/events with uninterrupted N+M ticks; include RNG and ID allocator continuity.
 - Invariant checks on negative resources, nonnegative population, missing entity IDs and impossible occupancy.
 - Boundary seeds: water-dominated maps, poor fertility, zero population, depleted stores.
 
@@ -90,8 +93,9 @@ Boundary rules:
 - Clicking event selects correct location/record, with clear empty-state handling.
 - Browser layout at representative desktop and Android phone widths.
 - State-derived visual changes and chronicle fact consistency.
+- Save, reload, resume and autosave continuity; corrupt/unsupported saves, interrupted writes, quota limits and unavailable storage preserve the last valid save and show honest status.
 
-**Later:** worker equivalence, save/replay continuity, simulated centuries, civilization coherence and cross-version migrations.
+**Later:** worker equivalence, timeline seeking, simulated centuries, civilization coherence and cross-version migrations.
 
 ## Items to approve before moving to engineering
 
@@ -100,7 +104,7 @@ Boundary rules:
 - [ ] Vitest + Playwright for automated checks; manual mobile smoke tests.
 - [ ] Browser-local simulation, no account, server, LLM or paid service required in Phase 1.
 - [ ] Canonical event records and typed stable IDs; initial seed/config/version formats.
-- [ ] Numeric Phase 1 mechanics in a separate contract: tick duration, map dimensions, founder count, food/ration units, crop growth, weather and housing costs.
+- [ ] Complete Phase 1 mechanics and storage contracts using [PLAN_REVIEW.md](PLAN_REVIEW.md), including rule ordering, workforce/material accounting, demographics, extinction, retention limits and autosave cadence.
 - [ ] Static visual validation per ART_UI_SPEC.md (not yet complete).
 
 Once these decisions are approved and documented, prepare the first engineering PR (seed and clock only). Do **not** implement a full game or deploy at this review step.
