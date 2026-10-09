@@ -9,9 +9,15 @@ export function capture<T>(value: T): Immutable<T> {
     if (typeof item === 'number' && Object.is(item, -0)) return 0;
     if (item === null || typeof item !== 'object') return item;
     if (isImmutableCanonical(item)) return item;
-    const copy = Array.isArray(item)
-      ? item.map(isolate)
-      : Object.fromEntries(Object.entries(item).map(([key, child]) => [key, isolate(child)]));
+    let copy: object;
+    if (Array.isArray(item)) {
+      const entries: unknown[] = [];
+      for (let index = 0; index < item.length; index++) {
+        entries.push(isolate(Object.getOwnPropertyDescriptor(item, String(index))!.value));
+      }
+      copy = entries;
+    } else
+      copy = Object.fromEntries(Object.entries(item).map(([key, child]) => [key, isolate(child)]));
     return Object.freeze(copy);
   }
   return isolate(value) as Immutable<T>;

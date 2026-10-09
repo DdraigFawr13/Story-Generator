@@ -24,7 +24,7 @@ Canonical captures still isolate caller-owned mutable data and freeze the result
 | Evidence | Result |
 | --- | --- |
 | Strict types, AST boundaries, formatting, production build | Passed; 20 production modules satisfy dependency/runtime boundaries |
-| Fast core suites | 82 checks passed, including existing terrain/RNG/admission tests and 15 weekly-rule fixtures |
+| Fast core suites | 83 checks passed, including existing terrain/RNG/admission tests, inherited-array capture isolation and 15 weekly-rule fixtures |
 | 100-seed battery | Every fixed seed reached 1,000 weeks without invariant failure or count/byte halt; 100 distinct full-state digests |
 | Real continuity | 137 uninterrupted weeks = validated JSON capture at 57 + 80; varied chunk sizes give the same complete state |
 | Browser suites | 21 checks passed across Chromium 156, Firefox 157 and WebKit 27.2; three settlement seeds match Node state/event digests, all RNG states/allocators and captured continuation |

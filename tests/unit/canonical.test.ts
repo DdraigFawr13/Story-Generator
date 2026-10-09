@@ -60,4 +60,17 @@ describe('canonical JSON and immutable captures', () => {
     const prototypeKey = JSON.parse('{"__proto__":{"value":3}}') as Record<string, unknown>;
     expect(canonicalJson(capture(prototypeKey))).toBe('{"__proto__":{"value":3}}');
   });
+  it('copies array data without invoking inherited behavior', () => {
+    const input = [1, { value: 2 }];
+    Object.setPrototypeOf(input, {
+      map() {
+        throw new Error('Inherited behavior must not run.');
+      },
+    });
+    Object.freeze(input);
+    const saved = capture(input);
+    expect(canonicalJson(saved)).toBe('[1,{"value":2}]');
+    expect(Object.getPrototypeOf(saved)).toBe(Array.prototype);
+    expect(Object.isFrozen(saved[1])).toBe(true);
+  });
 });

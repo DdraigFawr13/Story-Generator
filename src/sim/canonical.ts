@@ -32,7 +32,7 @@ export function canonicalJson(value: unknown): string {
           throw new Error('Arrays must be dense and have no extra properties.');
         }
         const entries: string[] = [];
-        let reusable = Object.isFrozen(item);
+        let reusable = Object.isFrozen(item) && Object.getPrototypeOf(item) === Array.prototype;
         for (let index = 0; index < item.length; index++) {
           const descriptor = Object.getOwnPropertyDescriptor(item, String(index));
           if (!descriptor || !('value' in descriptor) || !descriptor.enumerable) {
