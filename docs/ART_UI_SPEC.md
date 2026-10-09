@@ -111,5 +111,7 @@ The working art direction is the original first desktop concept with only its ab
 - At zero population, unsupported saves and storage limits, show factual state with an understandable next action. A backgrounded/reopened world returns paused; controls expose Play rather than implying unseen simulation continued.
 - Confirm touch and keyboard flows, screen-reader labels, non-color-only selection, contrast, reduced motion, long text and virtual-keyboard behavior during implementation. Static mockups do not satisfy those tests.
 
-**Still open:** approve the final static phone presentation, inspect final sprite/text scale on representative screens, and record source-art density/export conventions. These proposals do not close the full Phase 0 visual gate by themselves.
+**Phone arrangement approved:** the user confirmed keeping the map above an expandable chronicle with time controls at the top (D-020). This approves information hierarchy, not generated-image pixel accuracy or working interactions.
+
+**Still open:** inspect final sprite/text scale on representative screens and record source-art density/export conventions. These proposals do not close the full Phase 0 visual gate by themselves.
 
