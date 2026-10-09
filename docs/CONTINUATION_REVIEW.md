@@ -23,7 +23,7 @@ The selected desktop artifact is `exec-1b13e682-a379-4327-9b7a-988178c814f4.png`
 
 Founding changes are **proposed**, not an unrequested claim of product approval. The fallback still exists for impossible terrain. Initial preparation is recorded at tick zero and does not permit free clearing during simulation.
 
-The current geography algorithm assigns tile elevations independently. It does **not** promise the continuous river, connected woodland or paths depicted in the art study. Those images establish visual treatment, not generated-map acceptance. Define a coherent terrain algorithm and corresponding determinism fixtures before claiming the selected village scene can arise from production geography; do not silently add that behavior while coding.
+The independent-tile geography gap is now addressed by the proposed [terrain contract](TERRAIN_CONTRACT.md) and its offline 100-seed probe. This supplies connected rivers and clustered woodland with exact deterministic rules. It does not establish production-engine equivalence or replicate the mockup's precise building layout and decorative paths.
 
 ## Quantitative checks performed
 
@@ -75,8 +75,8 @@ These are implementation requirements, not claims that a static image passes the
 | 1E | Selected-art map, responsive chronicle and inspector | Map/event/state agreement; keyboard/touch; actual-size phone tests; speed equivalence; browser digest checks |
 | Milestone | First playable review | Ten-seed qualitative review; 10,000-tick benchmark or explicit measured limit; physical Android/Safari evidence when claiming support |
 
-No source code, runtime dependencies or deployment is included here. Physical-device validation must be reported as unavailable if no physical device is accessible, never relabelled from browser emulation.
+No production application, runtime dependencies or deployment is included here. The terrain follow-up adds only a standard-library Python design probe to make its proposed algorithm reproducible. Physical-device validation must be reported as unavailable if no physical device is accessible, never relabelled from browser emulation.
 
 ## Remaining gate, without repeating completed decisions
 
-Art treatment and architecture are decided. The concrete outstanding items are mechanics/storage proposal acceptance, a coherent terrain contract matching intended world geography, source-density/actual-size visual checks and interaction evidence. Source documents still require the overall Phase 0 gate before app scaffolding. This change supplies reviewable corrections and a scoped backlog; it does not mark future verification complete.
+Art treatment and architecture are decided. The concrete outstanding items are mechanics/storage proposal acceptance, acceptance and TypeScript port verification of the now-specified terrain contract, source-density/actual-size visual checks and interaction evidence. Source documents still require the overall Phase 0 gate before app scaffolding. This change supplies reviewable corrections and a scoped backlog; it does not mark future verification complete.
