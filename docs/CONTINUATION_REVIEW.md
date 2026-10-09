@@ -2,6 +2,12 @@
 
 **Status:** art treatment selected; mechanics/storage corrections proposed for acceptance. This review does not close the overall Phase 0 gate or claim a running game.
 
+## Resumed-thread checkpoint
+
+The resumed review recovered compatible user-confirmed requirements from the older unmerged product-contracts branch: viewing pace, seasonal preparation, pause while away, desktop-led review and phone arrangement. They are now recorded as D-015–019 in [DECISIONS.md](DECISIONS.md), with a current [product brief](PRODUCT_BRIEF.md) and durable [project handoff](PROJECT_HANDOFF.md). The later merged architecture and Illustrated Minimal choices take precedence over older conflicting proposals.
+
+The existing Python terrain probe was rerun in the resumed workspace: its 100-seed counts, RIVERSIDE digest/RNG, forced fallback and all-water rejection matched the recorded results. No production simulation or browser/storage validation was added. The handoff identifies the weekly pacing/autosave implications and remaining mechanics questions; the overall gate stays open.
+
 ## Decisions carried forward
 
 - D-013: TypeScript core, React/Vite, Canvas 2D, Node 24/npm, IndexedDB and Vitest/Playwright are accepted.

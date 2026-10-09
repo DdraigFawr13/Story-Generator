@@ -2,11 +2,11 @@
 
 **Status: proposed, not approved.** This supplies the storage portion of Phase 0.8 and Q-006. D-012 already approves basic local save/resume; the budgets and policies below remain reviewable proposals. Phase 0 stays open. No application or storage adapter has been implemented.
 
-Related: [plan review](PLAN_REVIEW.md), [architecture proposal](ARCHITECTURE_REVIEW.md), [implementation plan](IMPLEMENTATION_PLAN.md), [decision register](DECISIONS.md).
+Related: [plan review](PLAN_REVIEW.md), [accepted architecture](ARCHITECTURE_REVIEW.md), [implementation plan](IMPLEMENTATION_PLAN.md), [decision register](DECISIONS.md).
 
 ## Scope and ownership
 
-One browser-local world slot, manual Save, explicit Resume, and autosave. IndexedDB is the proposed adapter. The simulation supplies complete immutable committed-tick snapshots; the adapter owns transactions and operational save status. Storage operations never advance time, consume simulation RNG, or change canonical events.
+One browser-local world slot, manual Save, explicit Resume, and autosave. IndexedDB is the accepted adapter under D-013/ADR-003; the budgets and policies here remain proposed. The simulation supplies complete immutable committed-tick snapshots; the adapter owns transactions and operational save status. Storage operations never advance time, consume simulation RNG, or change canonical events.
 
 A saved chronicle is evidence, not a mutation log. Resumption restores full authoritative state. Historical seeking, migrations, multiple named worlds, exports and cloud accounts remain outside P1.
 
@@ -24,6 +24,8 @@ A saved chronicle is evidence, not a mutation log. Resumption restores full auth
 | Proposed target browsers | Current stable Chromium, Firefox and Safari; Android Chrome | Record exact tested versions and physical phone model at acceptance |
 
 These are starting budgets, not measured capacity guarantees. An archive can reach its limit before the validation horizon. Browser quota may also be lower than the payload budget. Final approval should use measured results when implementation is authorized.
+
+Review cadence against D-015's 10–15-minute/year target. With the proposed 48-week calendar, 20 ticks represent roughly 4 minutes 10 seconds–6 minutes 15 seconds of active 1x viewing; the five-second throttle is only a minimum write interval, not a five-second save guarantee. The proposed 15-second tick in ADR-002 makes that interval five minutes. Decide whether this loss window is acceptable before approving Q-006; no cadence change is approved here.
 
 ## Payload and envelope
 
@@ -62,7 +64,7 @@ Use an exclusive same-origin writer lock for the application lifetime (proposed 
 - New World creates an unsaved in-memory candidate. If a slot exists, keep autosave for the candidate disabled until the user explicitly chooses to replace that saved world. Explain that the slot holds only one world.
 - The old slot remains intact until the replacement transaction completes. If replacement fails, the candidate remains in memory and the old save remains resumable.
 - With no existing slot, creating a world may enqueue an initial tick-zero save.
-- On reload, offer Resume with saved tick/date. Do not automatically replace the slot by constructing a default world.
+- On reload, offer Resume with saved tick/date. Do not automatically replace the slot by constructing a default world. Resume restores into paused state; explicit Play starts scheduling. Closed/backgrounded elapsed time adds no ticks (D-018/ADR-002).
 - Saving paused or extinct worlds is valid. Closing a tab is not a reliable save trigger; show unsaved progress and do not promise an unload write succeeds.
 
 ## Loading and validation
