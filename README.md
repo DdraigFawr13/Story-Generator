@@ -35,7 +35,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 
 ## Immediate next decision
 
-**Direction C (Naturalist's Observation Desk) layout is selected.** Refine the visuals toward original, simplified RimWorld-like clarity with slightly more artistic detail. Next, compare art variants, validate desktop/phone presentation, review technical architecture, and complete Phase 1 mechanics and storage contracts. Basic browser-local save/resume is approved for the first playable; timeline seeking remains later. **Do not begin Phase 1 until the pre-build gate is met.**
+**Direction C (Naturalist's Observation Desk) layout is selected.** The working art target is the original first simple concept with human-shaped people; the phone arrangement is approved. Next, validate sprite/text scale and export conventions, then review the proposed technical, geography, seasonal mechanics and storage contracts. Basic browser-local save/resume is approved for the first playable; timeline seeking remains later. **Do not begin Phase 1 until the pre-build gate is met.**
 
 ## Development
 
