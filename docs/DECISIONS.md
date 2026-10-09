@@ -21,14 +21,17 @@ The register distinguishes what was **approved**, what is **pending review**, an
 | D-013 | Reconfirmed settlement-first P1; named personal stories in P2 (2026-10-09 UTC) | Watch a settlement develop before expanding personal simulation | Preserve aggregate P1 scope |
 | D-014 | Unhurried normal speed: roughly 10–15 minutes per simulated year (2026-10-09 UTC) | Allow time to notice and inspect change | Exact day/tick scheduling remains a proposal; retain faster controls |
 | D-015 | Desktop-first detailed usability review with full phone usability (2026-10-09 UTC) | Prioritize desktop composition without excluding phone users | Validate selected art on desktop, then the complete phone flow |
-| D-016 | Blend simple forms with selective texture/detail and recognizable human silhouettes (2026-10-09 UTC) | User preference between displayed art concepts 1 and 2 | Refine overhead art; P1 human sprites still represent aggregate population, not named lives |
+| D-016 (superseded) | Initially requested a blend of art concepts 1 and 2 | User subsequently rejected the blended result | Replaced by D-017 |
+| D-017 | Return to the original first concept, changing only the people to recognizable human shapes (2026-10-09 UTC) | Preserve the first image’s simple graphics; avoid the added texture/detail of the rejected blend | Working art direction; human sprites remain aggregate P1 population, with named identities in P2 |
+| D-018 | Seasons materially change the economy, including preparation for winter (2026-10-09 UTC) | User wants meaningful growing-season harvests and winter reserves | Replace the all-season crop placeholder; review seasonal numeric contracts |
+| D-019 | Pause while the app is closed or backgrounded (2026-10-09 UTC) | User should not miss the world’s history | No elapsed-time catch-up; return paused with explicit Play to continue |
 
 ## Pending Phase 0 decisions
 
 | ID | Question | Candidate approach | Blocking work |
 | --- | --- | --- | --- |
 | Q-001 (resolved) | Which pixel-world interface presentation? | **C: Naturalist's Observation Desk**, approved (D-008) | Exact art settings + layout validation still pending |
-| Q-002 | Exact pixel art constraints? | Three concepts reviewed; blended refinement per D-016 awaits final visual confirmation and phone validation; 16px is not prescribed | Asset pipeline |
+| Q-002 | Exact pixel art constraints? | Original first concept with human-shaped people per D-017 is the working target; phone/scale validation remains open; 16px is not prescribed | Asset pipeline |
 | Q-003 | Rendering, app/test/build frameworks? | See [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md) and proposed [TECHNICAL_CONTRACT.md](TECHNICAL_CONTRACT.md) | Phase 1 scaffolding |
 | Q-004 | Complete P1 mechanics and numeric units? | Candidate [PHASE1_RULES.md](PHASE1_RULES.md), subject to product answers and arithmetic/balance review | Phase 1 sim behavior |
 | Q-005 | Spotlight interaction and budgets? | Explicit activated opportunity-expansion vs passive bookmark; cap counts and family complexity | Phase 2 spotlight mechanics; see [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md) |
@@ -67,3 +70,4 @@ When a new idea is approved or an old assumption changes:
 3. Update implementation-plan steps and acceptance tests.
 4. Apply via a scoped branch and PR.
 5. Verify merge and branch cleanup before moving on.
+
