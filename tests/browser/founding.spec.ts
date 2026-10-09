@@ -41,7 +41,7 @@ test('founding facts, invalid-seed recovery and keyboard inspection work', async
   const map = page.locator('canvas');
   const bounds = await map.boundingBox();
   await map.click({
-    position: { x: (10.5 * bounds!.width) / 64, y: (20.5 * bounds!.height) / 40 },
+    position: { x: (bounds!.width - 64 * 12) / 2 + 10.5 * 12, y: 20.5 * 12 },
   });
   await expect(page.locator('.tile-facts')).toContainText('Tile 1290:');
   await page.getByRole('button', { name: 'Random seed' }).click();

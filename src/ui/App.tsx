@@ -37,12 +37,14 @@ function Viewer({ controller }: { controller: WorldController }) {
   const view = useSyncExternalStore(controller.subscribe, controller.getView);
   const [seed, setSeed] = useState('RIVERSIDE');
   const [selectedTile, setSelectedTile] = useState(1327);
+  const [mapFocus, setMapFocus] = useState({ tile: 1327, revision: 0 });
   const [x, setX] = useState('47');
   const [y, setY] = useState('20');
   const [error, setError] = useState('');
   const [eventId, setEventId] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
   const opener = useRef<HTMLButtonElement>(null);
+  const mapPanel = useRef<HTMLDivElement>(null);
   const world = view.world;
   const previousWorld = useRef(world);
   useEffect(() => {
@@ -54,8 +56,9 @@ function Viewer({ controller }: { controller: WorldController }) {
     }
     previousWorld.current = world;
   }, [world]);
-  function select(tile: number) {
+  function select(tile: number, focus = true) {
     setSelectedTile(tile);
+    if (focus) setMapFocus((previous) => ({ tile, revision: previous.revision + 1 }));
     setX(String(tile % 64));
     setY(String(Math.floor(tile / 64)));
   }
@@ -65,9 +68,14 @@ function Viewer({ controller }: { controller: WorldController }) {
     if (random) await controller.randomWorld();
     else await controller.newWorld(seed);
   }
+  function openChronicle() {
+    setExpanded(true);
+    mapPanel.current?.scrollIntoView({ block: 'start' });
+  }
   function closeChronicle() {
     setExpanded(false);
-    opener.current?.focus();
+    opener.current?.focus({ preventScroll: true });
+    mapPanel.current?.scrollIntoView({ block: 'start' });
   }
   const canControl = !view.busy && (view.mode === 'owner' || view.mode === 'unavailable');
   const settlement = world?.world.settlement;
@@ -79,7 +87,14 @@ function Viewer({ controller }: { controller: WorldController }) {
       ? 'This world has not been saved.'
       : `Saved through week ${view.save.savedTick}.`;
   return (
-    <main>
+    <main
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && expanded) {
+          event.preventDefault();
+          closeChronicle();
+        }
+      }}
+    >
       <header>
         <p className="eyebrow">Story Generator · Observation desk</p>
         <h1>A place with a history.</h1>
@@ -254,7 +269,7 @@ function Viewer({ controller }: { controller: WorldController }) {
       {world && settlement && tile && (
         <>
           <section className="world-layout" aria-label="Settlement world">
-            <div className="map-panel">
+            <div className="map-panel" ref={mapPanel}>
               <div className="map-heading">
                 <h2>{settlement.name}</h2>
                 <span>{dateLabel(world.tick)}</span>
@@ -265,9 +280,11 @@ function Viewer({ controller }: { controller: WorldController }) {
                   buildings: world.world.buildings,
                   settlement,
                   project: world.world.project,
+                  entities: world.world.entities,
                 }}
                 selectedTile={selectedTile}
-                onSelect={select}
+                onSelect={(tile) => select(tile, false)}
+                focusRequest={mapFocus}
               />
               <ul className="legend" aria-label="Map legend">
                 <li>Blue: river</li>
@@ -277,6 +294,16 @@ function Viewer({ controller }: { controller: WorldController }) {
                 <li>Brown: store</li>
                 <li>Outline: work in progress</li>
               </ul>
+              <button
+                type="button"
+                ref={opener}
+                className="secondary chronicle-opener"
+                aria-expanded={expanded}
+                aria-controls="chronicle"
+                onClick={openChronicle}
+              >
+                Open chronicle
+              </button>
             </div>
             <aside aria-label="Settlement facts">
               <h2>The settlement</h2>
@@ -297,6 +324,14 @@ function Viewer({ controller }: { controller: WorldController }) {
                   <dt>Food</dt>
                   <dd>
                     {settlement.food} / {view.foodCapacity}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Food reserve</dt>
+                  <dd>
+                    {settlement.population
+                      ? `${Math.floor(settlement.food / settlement.population)} whole weeks at current demand`
+                      : 'No residents to feed'}
                   </dd>
                 </div>
                 <div>
@@ -329,6 +364,11 @@ function Viewer({ controller }: { controller: WorldController }) {
                   {world.lastTick.production.gathered} timber gathered.
                 </p>
               )}
+              <p className="note">
+                Seasonal crop factor: {view.seasonalCropPercent}% of spring. Harvests also depend on
+                weather, fertility and crop care. Food reserve assumes current demand, before future
+                production or spoilage.
+              </p>
               <p className="note">
                 Map drawings are temporary. Residents are an aggregate population in this phase.
               </p>
@@ -394,16 +434,6 @@ function Viewer({ controller }: { controller: WorldController }) {
               {project ? `, unfinished ${project.kind} #${project.id}` : ''}.
             </p>
           </section>
-          <button
-            type="button"
-            ref={opener}
-            className="secondary chronicle-opener"
-            aria-expanded={expanded}
-            aria-controls="chronicle"
-            onClick={() => setExpanded(true)}
-          >
-            Open chronicle
-          </button>
           <Chronicle
             world={world}
             selectedId={eventId}

@@ -94,6 +94,11 @@ export class WorldController {
       calendar: world ? calendarAtTick(world.tick) : null,
       housing: world ? shelter(world.world.buildings) : 0,
       foodCapacity: world ? foodCapacity(world.world.buildings) : 0,
+      seasonalCropPercent: world
+        ? world.config.economy.seasonMultipliers[
+            Math.floor((Math.max(1, world.tick) - 1) / world.config.weeksPerSeason) % 4
+          ]! / 10
+        : 100,
     });
   }
   #publish = () => {

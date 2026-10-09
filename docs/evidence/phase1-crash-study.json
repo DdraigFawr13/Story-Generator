@@ -1,0 +1,13 @@
+{
+  "measuredAt": "2026-10-09T19:39:47.333Z",
+  "engine": "chromium",
+  "version": "156.0.8078.4",
+  "crashPoint": "after put request success, while the read-write transaction is held open",
+  "before": "19ab0ce4e2186cb775116aa72b1af5c06e3f3bcb9d3ce286c91c361a816269ff",
+  "after": {
+    "tick": 1000,
+    "digest": "19ab0ce4e2186cb775116aa72b1af5c06e3f3bcb9d3ce286c91c361a816269ff",
+    "seed": "RIVERSIDE"
+  },
+  "oldCompleteSnapshotRetained": true
+}

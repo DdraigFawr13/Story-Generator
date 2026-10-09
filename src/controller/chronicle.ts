@@ -50,7 +50,10 @@ export function headline(event: Immutable<SettlementEvent>): string {
 export function eventDetails(event: Immutable<SettlementEvent>) {
   const facts = Object.entries(event.facts).map(([label, value]) => ({
     label: readable(label),
-    value: display(value),
+    value:
+      (label === 'weatherMultiplier' || label === 'seasonMultiplier') && typeof value === 'number'
+        ? `${value / 10}%`
+        : display(value),
   }));
   const effects = Object.entries(event.effects).map(([label, value]) => {
     if (value && typeof value === 'object' && 'before' in value && 'after' in value)
