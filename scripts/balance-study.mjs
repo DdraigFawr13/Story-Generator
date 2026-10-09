@@ -1,4 +1,4 @@
-import { createServer } from '/workspace/Story-Generator/node_modules/vite/dist/node/index.js';
+import { createServer } from 'vite';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';

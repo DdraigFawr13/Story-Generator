@@ -58,7 +58,7 @@ python3 docs/probes/terrain_probe.py
 
 It reproduced 100 distinct maps, 72 founding centers, zero natural fallbacks, forest range 481–1,429, passing river-preserving forced fallback and rejected all-water input. RIVERSIDE again produced center 1327, terrain RNG 2847659418 and digest `07a68eb6bb14a59ac536def9ac133478774970d059b49e1da5406d48be7268eb`.
 
-At the recovery checkpoint this was Python generation evidence only. The foundation slice now adds exact TypeScript fixture comparison, Node/browser parity and preview interaction checks; see its [verification record](PHASE1_FOUNDATIONS.md). Running settlement balance, persistence and physical-device support remain untested. Pacing and low-population observations above are arithmetic consequences, not application tests.
+At the recovery checkpoint this was Python generation evidence only; running settlement balance, persistence and physical-device support had not been tested. The foundation slice now adds exact TypeScript fixture comparison, Node/browser parity and preview interaction checks; see its [verification record](PHASE1_FOUNDATIONS.md). The current runtime and diagnostic evidence is linked at the top of this handoff. Pacing and low-population observations in the recovered proposal above are arithmetic consequences, not application tests.
 
 ## Next work in order
 

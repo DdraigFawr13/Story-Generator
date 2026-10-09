@@ -72,7 +72,7 @@ The generic reducer-injected `advanceTicks` remains available; it is now supplem
 - [x] 1.6 Spawn aggregate founders (24 residents, six households), food/timber stocks, six huts, two fields and one store, stable occupancy/IDs and a deterministic coordinate-based settlement name. Clearing is recorded and discarded, not free stored timber. Individual identities/life histories remain P2.
 - [x] 1.7 Define inspectable settlement state: population, households, capacity, food, production, structures, season and complete last-tick accounting.
 
-The browser currently inspects founding facts only; advancing-state UI integration remains 1E. Temporary programmatic drawings are not selected-art completion.
+The viewer inspects founding and advancing facts from authoritative state. Temporary programmatic drawings are not selected-art completion.
 
 ### 1C — State-changing simulation loops
 - [x] 1.8 Advance fixed seasons; weather/fertility adjust harvest production. Every consumed or produced unit is balanced and bounded.
