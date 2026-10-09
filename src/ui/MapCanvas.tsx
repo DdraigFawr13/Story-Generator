@@ -1,10 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { SettlementSnapshot } from '../controller/world';
 import { boundCamera, tileAt } from '../controller/map-camera';
+import { populationMarkers, type PopulationMapView } from '../controller/population-markers';
 
 const ZOOM = [8, 12, 18, 24, 32] as const;
-type MapView = SettlementSnapshot['world']['map'] &
-  Pick<SettlementSnapshot['world'], 'buildings' | 'settlement' | 'project' | 'entities'>;
+type MapView = PopulationMapView & Pick<SettlementSnapshot['world'], 'entities'>;
 export function MapCanvas({
   view,
   selectedTile,
@@ -21,6 +21,12 @@ export function MapCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState({ width: 768, height: 420 });
   const [zoom, setZoom] = useState(1);
+  const [showPopulation, setShowPopulation] = useState(true);
+  const { tiles, width, height, buildings, settlement, project } = view;
+  const population = useMemo(
+    () => populationMarkers({ tiles, width, height, buildings, settlement, project }),
+    [tiles, width, height, buildings, settlement, project],
+  );
   const [center, setCenter] = useState({
     x: (view.settlement.center % view.width) + 0.5,
     y: Math.floor(view.settlement.center / view.width) + 0.5,
@@ -135,11 +141,37 @@ export function MapCanvas({
       context.strokeRect(x + 1.5, y + 1.5, tileSize - 3, tileSize - 3);
       context.setLineDash([]);
     }
+    if (showPopulation) {
+      context.fillStyle = '#fff7df';
+      context.strokeStyle = '#283b2e';
+      context.lineWidth = 1;
+      const radius = Math.max(1, Math.min(2.5, tileSize * 0.13));
+      for (const marker of population.markers) {
+        const x = size.width / 2 + (marker.x - camera.x) * tileSize;
+        const y = size.height / 2 + (marker.y - camera.y) * tileSize;
+        if (x + radius < 0 || x - radius > size.width || y + radius < 0 || y - radius > size.height)
+          continue;
+        context.beginPath();
+        context.arc(x, y, radius, 0, Math.PI * 2);
+        context.fill();
+        context.stroke();
+      }
+    }
     const { x, y } = point(selectedTile);
     context.strokeStyle = '#ffffff';
     context.lineWidth = 2;
     context.strokeRect(x + 1, y + 1, tileSize - 2, tileSize - 2);
-  }, [view, selectedTile, camera.x, camera.y, tileSize, size, dormantFields]);
+  }, [
+    view,
+    selectedTile,
+    camera.x,
+    camera.y,
+    tileSize,
+    size,
+    dormantFields,
+    showPopulation,
+    population,
+  ]);
   function pan(dx: number, dy: number) {
     setCenter({ x: camera.x + dx, y: camera.y + dy });
   }
@@ -179,6 +211,15 @@ export function MapCanvas({
         <button
           type="button"
           className="secondary"
+          aria-label="Show population markers"
+          aria-pressed={showPopulation}
+          onClick={() => setShowPopulation((visible) => !visible)}
+        >
+          Residents
+        </button>
+        <button
+          type="button"
+          className="secondary"
           onClick={() => pan(0, -5)}
           aria-label="Pan north"
         >
@@ -210,7 +251,7 @@ export function MapCanvas({
         role="img"
         tabIndex={0}
         aria-label={`Settlement map for ${view.settlement.name}. Drag to pan, use arrow keys or map buttons, and use the coordinate controls to inspect tiles.`}
-        aria-describedby="map-help"
+        aria-describedby="map-help population-help"
         onKeyDown={(event) => {
           const directions: Record<string, [number, number]> = {
             ArrowUp: [0, -5],
@@ -276,6 +317,13 @@ export function MapCanvas({
           drag.current = null;
         }}
       />
+      <p id="population-help" className="map-help">
+        {population.population === 0
+          ? 'No residents remain.'
+          : showPopulation
+            ? `${population.markers.length} of ${population.population} residents represented by dots. Placement is illustrative.`
+            : `Population: ${population.population}. Resident dots are hidden.`}
+      </p>
       <p id="map-help" className="map-help">
         Drag or use arrows to explore. Zoom with +/−. White outline: selected tile. Cross: a removed
         building.

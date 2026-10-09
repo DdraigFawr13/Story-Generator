@@ -309,6 +309,15 @@ test('phone pan, zoom, pointer selection and keyboard navigation leave the saved
     map = page.locator('canvas');
   const pixels = () => map.evaluate((canvas) => (canvas as HTMLCanvasElement).toDataURL());
   const first = await pixels();
+  const residents = page.getByRole('button', { name: 'Show population markers' });
+  await expect(residents).toHaveAttribute('aria-pressed', 'true');
+  await residents.click();
+  await expect(residents).toHaveAttribute('aria-pressed', 'false');
+  expect(await pixels()).not.toBe(first);
+  await residents.focus();
+  await page.keyboard.press('Space');
+  await expect(residents).toHaveAttribute('aria-pressed', 'true');
+  expect(await pixels()).toBe(first);
   await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
   await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
   expect(await pixels()).not.toBe(first);
@@ -328,6 +337,35 @@ test('phone pan, zoom, pointer selection and keyboard navigation leave the saved
   await expect(page.locator('.tile-facts')).toContainText('Tile 1328:');
   await save(page, 0);
   expect(await fixture(page, 'storedDigest')).toEqual(before);
+});
+
+test('resident dots follow a saved population and remain read-only through reload and advancement', async ({
+  page,
+}) => {
+  await fresh(page);
+  await expect(page.locator('#population-help')).toContainText('24 of 24 residents');
+  await expect(page.locator('#population-help')).toContainText('Placement is illustrative.');
+  await fixture(page, 'writeFixture', 'RIVERSIDE', 48);
+  await menu(page);
+  await page.getByRole('button', { name: 'Resume local save' }).click();
+  await expect(page.locator('#population-help')).toContainText('23 of 23 residents');
+  const before = await fixture(page, 'storedDigest');
+  await page.getByRole('button', { name: 'Show population markers' }).click();
+  await expect(page.locator('#population-help')).toContainText(
+    'Population: 23. Resident dots are hidden.',
+  );
+  await save(page, 48);
+  expect(await fixture(page, 'storedDigest')).toEqual(before);
+  await page.reload();
+  await page.getByRole('button', { name: 'Resume local save' }).click();
+  await expect(page.locator('#population-help')).toContainText('23 of 23 residents');
+  await page.getByRole('button', { name: 'Step one week' }).click();
+  await save(page, 49);
+  expect(await fixture(page, 'storedDigest')).toEqual({
+    tick: 49,
+    seed: 'RIVERSIDE',
+    digest: await digestCanonical(simulateSettlement('RIVERSIDE', 49).state),
+  });
 });
 
 test('older archive records remain accessible outside the 200-headline window without seeking time', async ({

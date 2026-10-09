@@ -22,6 +22,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Playback, local saves and browser verification](docs/PHASE1_PLAYBACK.md)
 - [Functional viewer, storage measurements and ten-seed review](docs/PHASE1_VIEWER.md)
 - [Winter reserves, small-population recovery and version compatibility](docs/PHASE1_BALANCE.md)
+- [Aggregate population display and observer verification](docs/PHASE1_POPULATION.md)
 - [Versioned numeric P1 settlement rules](docs/SETTLEMENT_RULES.md)
 - [Deterministic terrain contract and 100-seed probe](docs/TERRAIN_CONTRACT.md)
 - [Proposed local save/resume and recovery contract](docs/LOCAL_PERSISTENCE_CONTRACT.md)
@@ -53,7 +54,7 @@ npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite. Enter a seed or generate one, then Play or Step through the settlement. Pan/zoom the map and inspect tiles, events and the last week's work. Save stores one complete world in this browser; Resume restores it paused. Generation failure preserves the current world.
+Open the local URL printed by Vite. Enter a seed or generate one, then Play or Step through the settlement. Pan/zoom the map and inspect tiles, events and the last week's work. The Residents button controls illustrative population dots; it changes only the display. Save stores one complete world in this browser; Resume restores it paused. Generation failure preserves the current world.
 
 ```sh
 npm run check
