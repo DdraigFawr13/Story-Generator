@@ -18,17 +18,23 @@ The register distinguishes what was **approved**, what is **pending review**, an
 | D-010 | Full moral and tonal range | Dark tragedy/cruelty and warm triumph/compassion both deserve equal possibility, grounded in world conditions | No quotas, no chosen-hero protection, no scripted morality outcomes |
 | D-011 | Rework map art: simple, stylized, original, RimWorld-like readability with slightly more detail | Previous images were too dense and intricate | Direction C layout remains; compare simplified graphic treatments before sprites are created |
 | D-012 | Basic browser-local save/resume belongs in the first playable (user confirmed 2026-10-09 UTC) | Keep a settlement between sessions | P1 manual save/resume and autosave; P5 retains multiple named worlds, migrations and timeline seeking |
+| D-013 | Reconfirmed settlement-first P1; named personal stories in P2 (2026-10-09 UTC) | Watch a settlement develop before expanding personal simulation | Preserve aggregate P1 scope |
+| D-014 | Unhurried normal speed: roughly 10–15 minutes per simulated year (2026-10-09 UTC) | Allow time to notice and inspect change | Exact day/tick scheduling remains a proposal; retain faster controls |
+| D-015 | Desktop-first detailed usability review with full phone usability (2026-10-09 UTC) | Prioritize desktop composition without excluding phone users | Validate selected art on desktop, then the complete phone flow |
+| D-016 | Blend simple forms with selective texture/detail and recognizable human silhouettes (2026-10-09 UTC) | User preference between displayed art concepts 1 and 2 | Refine overhead art; P1 human sprites still represent aggregate population, not named lives |
 
 ## Pending Phase 0 decisions
 
 | ID | Question | Candidate approach | Blocking work |
 | --- | --- | --- | --- |
 | Q-001 (resolved) | Which pixel-world interface presentation? | **C: Naturalist's Observation Desk**, approved (D-008) | Exact art settings + layout validation still pending |
-| Q-002 | Exact pixel art constraints? | Compare minimal graphic, illustrated minimal (preferred), soft illustrative; 16px is no longer prescribed | Asset pipeline |
-| Q-003 | Rendering, app/test/build frameworks? | See [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md): TS + React/Vite + Canvas 2D candidate | Phase 1 scaffolding |
-| Q-004 | Complete P1 mechanics and numeric units? | Rule contracts covering ordering, workforce/material accounting, demographics, extinction and invariants; checklist in [PLAN_REVIEW.md](PLAN_REVIEW.md) | Phase 1 sim behavior |
+| Q-002 | Exact pixel art constraints? | Three concepts reviewed; blended refinement per D-016 awaits final visual confirmation and phone validation; 16px is not prescribed | Asset pipeline |
+| Q-003 | Rendering, app/test/build frameworks? | See [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md) and proposed [TECHNICAL_CONTRACT.md](TECHNICAL_CONTRACT.md) | Phase 1 scaffolding |
+| Q-004 | Complete P1 mechanics and numeric units? | Candidate [PHASE1_RULES.md](PHASE1_RULES.md), subject to product answers and arithmetic/balance review | Phase 1 sim behavior |
 | Q-005 | Spotlight interaction and budgets? | Explicit activated opportunity-expansion vs passive bookmark; cap counts and family complexity | Phase 2 spotlight mechanics; see [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md) |
-| Q-006 | P1 archive/storage limits and autosave cadence? | One local world slot; atomic complete snapshots and archive; visible storage failures; pause at supported archive limit, retain last good save | P1 persistence and long-run acceptance |
+| Q-006 | P1 archive/storage limits and autosave cadence? | Candidate limits, transactions and recovery in [TECHNICAL_CONTRACT.md](TECHNICAL_CONTRACT.md); unmeasured proposals | P1 persistence and long-run acceptance |
+| Q-007 (resolved) | First-playable story emphasis and normal-speed pacing? | D-013/D-014 confirmed; exact mechanics in PHASE1_RULES.md remain proposed | Numeric mechanics review remains open |
+| Q-008 (resolved) | Initial device-review priority? | D-015 confirmed desktop-first; full phone usability retained | Art selection and phone validation remain open |
 
 ## Parked concepts — DO NOT IMPLEMENT
 
