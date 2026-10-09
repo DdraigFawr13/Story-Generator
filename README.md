@@ -14,6 +14,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Simulation architecture and narrative event model](docs/SIMULATION_DESIGN.md)
 - [Phased roadmap, testing, and acceptance criteria](docs/ROADMAP.md)
 - [Detailed ordered implementation plan (Phase 0–6)](docs/IMPLEMENTATION_PLAN.md)
+- [Plan review and remaining mechanics/storage contracts](docs/PLAN_REVIEW.md)
 - [Approved middle-fantasy tone](docs/WORLD_TONE.md)
 - [Decision register and future ideas](docs/DECISIONS.md)
 - [Approved Direction C visual specification](docs/ART_UI_SPEC.md)
@@ -29,7 +30,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 
 ## Immediate next decision
 
-**Direction C (Naturalist's Observation Desk) layout is selected.** Refine the visuals toward original, simplified RimWorld-like clarity with slightly more artistic detail. Next, compare art variants, validate desktop/phone presentation, review technical architecture, and define Phase 1 numeric mechanics contracts. **Do not begin Phase 1 until the pre-build gate is met.**
+**Direction C (Naturalist's Observation Desk) layout is selected.** Refine the visuals toward original, simplified RimWorld-like clarity with slightly more artistic detail. Next, compare art variants, validate desktop/phone presentation, review technical architecture, and complete Phase 1 mechanics and storage contracts. Basic browser-local save/resume is approved for the first playable; timeline seeking remains later. **Do not begin Phase 1 until the pre-build gate is met.**
 
 ## Development
 
