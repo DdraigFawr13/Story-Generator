@@ -11,7 +11,9 @@ npm run benchmark:balance-study
 
 The default report path is `/tmp/story-generator-balance-report.json`; `STORY_GENERATOR_BALANCE_REPORT` can select another path. The committed [raw report](evidence/phase1-balance-study.json) records the source revision, complete baseline configuration, candidate parameters, final state digests, seasonal resource accounting and deliberately forced recovery inputs.
 
-The script uses the retained v1 pure reducer rules, invariant validator and whole-week admission inside separate Vite SSR module graphs. It explicitly selects v1 when the runtime supports both v1 and v2. Only the diagnostic graph substitutes each candidate's configuration. Experimental worlds receive distinct `p1-balance-study-*` version tags. It never opens IndexedDB, loads the browser application, changes source constants or writes a production save. These candidates are not supported save formats.
+The script loads the complete historical v1 simulation modules from [af30301](https://github.com/DdraigFawr13/Story-Generator/commit/af30301fc5a60e8a57eeb3d5820097950cb4594e) into separate Vite SSR module graphs, including the pure reducer, invariant validator and whole-week admission. This pins the study to its original rules even when the application changes. A shallow clone missing that revision must first run `git fetch origin af30301fc5a60e8a57eeb3d5820097950cb4594e`.
+
+Only the diagnostic graph substitutes each candidate's configuration. Experimental worlds receive distinct `p1-balance-study-*` version tags. It never opens IndexedDB, loads the browser application, changes source constants or writes a production save. These candidates are not supported save formats.
 
 All profiles use exactly RIVERSIDE and TERRAIN_000–008 for 240 weeks (five years), without selecting seeds for a desired story. The baseline's population/health/food/timber at weeks 48, 96 and 240 must match the previously committed ten-trajectory report. Each profile validates its final states and compares RIVERSIDE's JSON-captured week 57 plus 183 weeks against its uninterrupted result, including RNG, IDs and full events.
 

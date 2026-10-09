@@ -2,6 +2,7 @@ import { createServer } from 'vite';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
+import { relative } from 'node:path';
 
 // Legacy v1 diagnostic only: an isolated SSR module graph loads each candidate config.
 // Browser code, production config and local saves are never changed.
@@ -18,6 +19,29 @@ const profiles = [
   { id: 'low-yield-stress', harvestBase: 80, winterFactor: 0 },
 ];
 const reference = JSON.parse(await readFile('docs/evidence/phase1-ten-trajectories.json', 'utf8'));
+const sourceRevision = 'af30301fc5a60e8a57eeb3d5820097950cb4594e';
+const sources = new Map();
+try {
+  const paths = execFileSync(
+    'git',
+    ['ls-tree', '-r', '--name-only', sourceRevision, '--', 'src/sim'],
+    {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  )
+    .trim()
+    .split('\n');
+  for (const path of paths)
+    sources.set(
+      path,
+      execFileSync('git', ['show', `${sourceRevision}:${path}`], { encoding: 'utf8' }),
+    );
+} catch {
+  throw new Error(
+    `Historical v1 sources are required. Run git fetch origin ${sourceRevision}, then retry.`,
+  );
+}
 const results = [];
 let baselineConfig;
 for (const profile of profiles) {
@@ -25,43 +49,27 @@ for (const profile of profiles) {
   const server = await createServer({
     root: process.cwd(),
     server: { middlewareMode: true },
-    plugins:
-      profile.id === 'baseline'
-        ? []
-        : [
-            {
-              name: 'isolated-balance-study',
-              enforce: 'pre',
-              transform(_source, id) {
-                if (!id.endsWith('/src/sim/settlement-config.ts')) return;
-                const config = structuredClone(baselineConfig);
-                config.economy.harvestBase = profile.harvestBase;
-                config.economy.seasonMultipliers[3] = profile.winterFactor;
-                return `import { capture } from './immutable';
-export const LEGACY_SETTLEMENT_VERSION = 'p1-settlement-v1';
-export const LEGACY_SETTLEMENT_CONFIG = capture(${JSON.stringify(baselineConfig)});
-export const SETTLEMENT_VERSION = 'p1-balance-study-${profile.id}';
-export const SETTLEMENT_CONFIG = capture(${JSON.stringify(config)});
-export function settlementConfig(version) {
-  if (version === LEGACY_SETTLEMENT_VERSION) return LEGACY_SETTLEMENT_CONFIG;
-  if (version === SETTLEMENT_VERSION) return SETTLEMENT_CONFIG;
-  throw new Error('Unsupported diagnostic version');
-}
-`;
-              },
-            },
-          ],
+    plugins: [
+      {
+        name: 'isolated-balance-study',
+        enforce: 'pre',
+        transform(_source, id) {
+          const path = relative(process.cwd(), id.split('?')[0]).replaceAll('\\', '/');
+          if (!sources.has(path)) return;
+          if (path !== 'src/sim/settlement-config.ts' || profile.id === 'baseline')
+            return sources.get(path);
+          const config = structuredClone(baselineConfig);
+          config.economy.harvestBase = profile.harvestBase;
+          config.economy.seasonMultipliers[3] = profile.winterFactor;
+          return `import { capture } from './immutable';\nexport const SETTLEMENT_VERSION = 'p1-balance-study-${profile.id}';\nexport const SETTLEMENT_CONFIG = capture(${JSON.stringify(config)});\n`;
+        },
+      },
+    ],
   });
   try {
-    const configModule = await server.ssrLoadModule('/src/sim/settlement-config.ts');
-    const config =
-      profile.id === 'baseline'
-        ? (configModule.LEGACY_SETTLEMENT_CONFIG ?? configModule.SETTLEMENT_CONFIG)
-        : configModule.SETTLEMENT_CONFIG;
-    const version =
-      profile.id === 'baseline'
-        ? (configModule.LEGACY_SETTLEMENT_VERSION ?? configModule.SETTLEMENT_VERSION)
-        : configModule.SETTLEMENT_VERSION;
+    const { SETTLEMENT_CONFIG: config, SETTLEMENT_VERSION: version } = await server.ssrLoadModule(
+      '/src/sim/settlement-config.ts',
+    );
     assert.equal(
       version,
       profile.id === 'baseline' ? 'p1-settlement-v1' : `p1-balance-study-${profile.id}`,
@@ -208,9 +216,7 @@ await writeFile(
   output,
   JSON.stringify(
     {
-      sourceRevision: execFileSync('git', ['rev-parse', 'HEAD'], {
-        encoding: 'utf8',
-      }).trim(),
+      sourceRevision,
       nodeVersion: process.version,
       weeks: 240,
       seeds,
