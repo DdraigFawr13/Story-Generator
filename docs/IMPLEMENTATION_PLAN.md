@@ -1,6 +1,6 @@
 # Implementation plan — milestone contracts (v1.1)
 
-**Current status:** Phase 1 engineering authorized under D-020 on 2026-10-09, after the user requested merging PR #10 and continuing to the next phase. The earlier documentation-only scaffolding restriction is superseded. The first core/terrain/founding slice is implemented; remaining balance, selected-art and storage reviews are carried into first-playable acceptance rather than marked complete. See [PHASE1_FOUNDATIONS.md](PHASE1_FOUNDATIONS.md).
+**Current status:** Phase 1 engineering authorized under D-020/D-021. Core/terrain/founding PR #11 is merged; the weekly settlement engine and canonical events are implemented as the next scoped slice. Remaining balance, selected-art and storage reviews are carried into first-playable acceptance rather than marked complete. See [PHASE1_FOUNDATIONS.md](PHASE1_FOUNDATIONS.md) and [PHASE1_SETTLEMENT.md](PHASE1_SETTLEMENT.md).
 
 ## Approved core constraints
 
@@ -62,28 +62,28 @@ Cross-cutting tests and documentation advance with each phase. Basic local save/
 ### 1A — Project and deterministic engine
 - [x] 1.1 Initialize browser project, formatting, strict typecheck and boundary/static checks, unit test runner, CI (typecheck/tests/build), private/unlicensed source and asset provenance policy.
 - [x] 1.2 Separate pure simulation state from UI/controller/adapters; define foundation version, seed, versioned constants, clock/ticks and stable founding entity IDs.
-- [x] 1.3 Implement reproducible named RNG streams with explicit serialized integer states, independent golden vectors and rejection-sampling checks. Founding draw order is fixed; future weekly phase order follows the settlement contract and still needs implementation.
-- [ ] 1.4 Provide headless `advanceTicks(seed, config, N)` and canonical state/event digest for regression tests. Define stable entity ordering, tie-breaking, integer/fixed-point units and rounding, stream derivation, and canonical serialization excluding view state. Test Node/browser digest equivalence.
+- [x] 1.3 Implement reproducible named RNG streams with explicit serialized integer states, independent golden vectors and rejection-sampling checks. Founding and weekly phase/draw order follow their versioned contracts.
+- [x] 1.4 Provide a seed runner (`simulateSettlement`) and captured-state runner (`advanceSettlement`) with fixed validated config, complete-tick admission and canonical state/event digests. Stable ordering, integer rounding and Node/browser equivalence are tested.
 
-1.4 is partial: canonical encoding and a generic reducer-injected `advanceTicks(initial, N, reducer)` implement immutable complete-tick admission. Founding and 100 terrain fixtures are compared across Node/browser. A running settlement reducer, seed/config convenience runner and long-run state/event digests remain 1C work; fixture-reducer continuity is not a village simulation.
+The generic reducer-injected `advanceTicks` remains available; it is now supplemented by the real weekly settlement reducer. Running-state/event parity and 57+80 = 137-week JSON continuation are tested across Node and three browser engines. Config remains an exact versioned record, not a public tuning slider.
 
 ### 1B — Geography and starting society
 - [x] 1.5 Generate a seeded 64x40 logical tile map with elevation, connected river, terrain, forest, fertility and valid settlement start area; match the independent Python fixtures and preserve water during forced fallback.
 - [x] 1.6 Spawn aggregate founders (24 residents, six households), food/timber stocks, six huts, two fields and one store, stable occupancy/IDs and a deterministic coordinate-based settlement name. Clearing is recorded and discarded, not free stored timber. Individual identities/life histories remain P2.
-- [ ] 1.7 Define inspectable settlement state: population, household count, capacity, food, production, structures, current season.
+- [x] 1.7 Define inspectable settlement state: population, households, capacity, food, production, structures, season and complete last-tick accounting.
 
-1.7 is partial: the founding map, resource/capacity/building facts and keyboard tile inspector are runnable. Production rates and live season changes await 1C. Temporary programmatic drawings are not selected-art completion.
+The browser currently inspects founding facts only; advancing-state UI integration remains 1E. Temporary programmatic drawings are not selected-art completion.
 
 ### 1C — State-changing simulation loops
-- [ ] 1.8 Advance fixed seasons; weather/fertility adjust harvest production. Every consumed or produced unit is balanced and bounded.
-- [ ] 1.9 Consume food per population; shortages reduce health/growth and may generate aggregate departure/death conditions rather than automatic demise. If departures are included, define their resource/population accounting; destinations, travel and new settlements remain P4.
-- [ ] 1.10 Add population birth/death aggregate rules initially; growth bounded by food and housing; handle zero-population worlds.
-- [ ] 1.11 Add deterministic construction/removal of huts, fields, stores and visual decay based on actual labor/material constraints.
-- [ ] 1.12 Allow improvement, stagnation, recovery, or natural collapse, with no guaranteed dramatic timeline.
+- [x] 1.8 Advance fixed seasons; weather/fertility adjust harvest production. Every consumed or produced unit is balanced and bounded.
+- [x] 1.9 Consume food per opening population; shortages reduce health and conditional growth, with aggregate death risks. Departures remain excluded from P1; destinations/travel remain P4.
+- [x] 1.10 Add population birth/death aggregate rules; growth bounded by food and housing; handle zero-population worlds and abandoned projects.
+- [x] 1.11 Add deterministic construction/removal and durability decay for huts, fields and stores from actual opening labor/material budgets. Durability/removal visual integration remains 1.17.
+- [x] 1.12 Allow growth, stagnation, shortage recovery and natural collapse without a scripted timer or revival. A RIVERSIDE long run reaches extinction at week 1,980 from finite resources/decay and demographic rules; balance acceptance remains open.
 
 ### 1D — Canonical events and chronicle
-- [ ] 1.13 Introduce events with tick, type, actor/place IDs, causes, facts, state effects and importance.
-- [ ] 1.14 Publish founding, harvest/surplus/shortage, construction/decay and demographic changes only when the corresponding state/fact actually occurs.
+- [x] 1.13 Introduce events with tick/phase, type, entity/place IDs, backward causes, immediate facts/effects and importance.
+- [x] 1.14 Emit founding, weather, harvest/surplus/shortage, construction/maintenance/decay/removal and demographic/extinction records only from actual state changes or recorded harvest facts.
 - [ ] 1.15 Text renderer chooses headline/details from immutable canonical facts. Show causal context (e.g. drought and low stores).
 - [ ] 1.16 Separate a bounded live-headline window from the canonical archive persisted with local saves. Set explicit archive/storage limits in 0.8; never silently evict causal evidence or imply unlimited history. At a supported limit, pause advancing and explain the limit while preserving the last valid save. A storage failure must not corrupt that save or claim new progress was saved.
 
@@ -95,6 +95,8 @@ Cross-cutting tests and documentation advance with each phase. Basic local save/
 - [ ] 1.19b Test save/restore/resume against uninterrupted N+M ticks, including RNG/ID continuity, archive/cause integrity, reload, interrupted writes, quota/unavailable storage and unsupported versions. Verify hidden-tab pause, return-paused and no catch-up across repeated visibility changes. Define autosave cadence and archive limits in 0.8, including their wall-clock implications at normal speed; autosave must not advance ticks or consume simulation RNG.
 - [ ] 1.20 Run unit/property tests of RNG, terrain and resource invariants; same-seed snapshot at 1,000 ticks; speed equivalence; 100-seed non-crash batch; manual mobile/desktop UI smoke tests.
 - [ ] 1.21 Review ten seeds for visible, qualitatively different trajectories; tune rates without special-casing seed stories; demonstrate a meaningful vertical slice and merge.
+
+Core 1.20 evidence now includes the 100-seed × 1,000-week battery, forced rules, immutable admission, JSON continuation and Node/browser parity. Live speed/visibility behavior, persistence and full viewer smoke tests remain open. The batch has no shortages/extinctions by week 1,000; this is a balance finding, not first-playable acceptance. See [PHASE1_SETTLEMENT.md](PHASE1_SETTLEMENT.md).
 
 **Acceptance:** same seed/settings/version yields identical state/event digest; two seeds can differ meaningfully; all visible buildings/stats/headlines agree with state; a real settlement grows or declines; zero-population and exhausted-resource edge cases do not crash. 1,000-tick deterministic execution and save/resume continuity verified; browser reload restores the saved tick and archive. **Fantasy boundary:** underlying environment may include reserved semantic types, but no decorative magical "events" without mechanics.
 

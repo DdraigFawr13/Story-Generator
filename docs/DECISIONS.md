@@ -25,6 +25,7 @@ The register distinguishes what was **approved**, what is **pending review**, an
 | D-018 | Pause while closed or backgrounded; return paused with explicit Play | The viewer should not miss unseen history | Clear scheduling debt; no elapsed-time catch-up; saved-world Resume does not implicitly start Play |
 | D-019 | Phone arrangement approved: map above expandable chronicle, time controls at top | Preserve the reviewed information hierarchy | Actual-size, accessibility and interaction checks remain open |
 | D-020 | Phase 1 engineering authorized on 2026-10-09: “Ok merge that pr and continue to next phase” | User explicitly requested merging recovery PR #10 and moving forward | Supersedes the earlier no-scaffolding restriction; start scoped core/terrain work, then settlement loops. Carry unfinished balance, visual and storage evidence into the milestone; do not mark it passed |
+| D-021 | Merge PR #11 and continue the next slice, 2026-10-09: “Ok when that is done merge and begin the next phase” | The foundation PR and all checks were complete; user requested continuation | PR #11 merged at `27c8137`; implement weekly resources/construction/demographics/events as `p1-settlement-v1`, then controller/local persistence. Numeric balance remains an explicit baseline for runtime review |
 
 ## Phase 1 authorization — 2026-10-09
 

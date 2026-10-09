@@ -1,5 +1,7 @@
 # Phase 1 foundations — 2026-10-09
 
+**Historical slice record:** PR #11 is merged at `27c8137`. Weekly simulation is now implemented separately in [PHASE1_SETTLEMENT.md](PHASE1_SETTLEMENT.md); the tick-zero foundation format and its golden terrain vectors remain unchanged.
+
 ## Authorization and scope
 
 After recovery PR #10 was merged, the user requested “Ok merge that pr and continue to next phase.” D-020 records authorization to begin Phase 1 engineering and supersedes the earlier no-scaffolding restriction. Remaining visual, economy and storage evidence stays open; it is not reported as passed.

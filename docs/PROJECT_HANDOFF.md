@@ -1,6 +1,6 @@
 # Project handoff — recovered 2026-10-09
 
-**Current checkpoint:** PR #10 is merged at [cefd9da](https://github.com/DdraigFawr13/Story-Generator/commit/cefd9dadb8e0cf4194af39830f7d767597ee48a2). The user then explicitly requested continuing to the next phase (D-020). Phase 1's core/terrain/founding preview is implemented, with scope and evidence in [PHASE1_FOUNDATIONS.md](PHASE1_FOUNDATIONS.md). No weekly settlement loop, local save system, production sprites or deployment exists yet. Balance, selected-reference and physical-device evidence remain open.
+**Current checkpoint:** PR #11 is merged at [27c8137](https://github.com/DdraigFawr13/Story-Generator/commit/27c813744256836d35503fd0f3fc75ca8773349a). D-021 records the user's request to merge it and continue. The weekly settlement reducer, canonical events and running-state validator are implemented as `p1-settlement-v1` (schema 2); [PHASE1_SETTLEMENT.md](PHASE1_SETTLEMENT.md) records verification and balance findings. The browser remains a founding preview; advancing controller, local saves, live chronicle, production art and deployment are not yet implemented.
 
 The recovery below describes the earlier PR #9 checkpoint and preserved provenance. D-020 supersedes its no-scaffolding restriction; it does not retroactively establish visual/balance acceptance.
 
@@ -62,8 +62,8 @@ At the recovery checkpoint this was Python generation evidence only. The foundat
 
 ## Next work in order
 
-1. Continue with slice 1C: weekly labor, food/timber accounting, construction, demographics and state-grounded canonical events. Use the fixed core/terrain baseline; complete the settlement reducer and headless runner before adding playback controls. Review winter production and low-population recovery with forced fixtures and multi-seed trajectories; keep tuning provisional until runtime evidence exists.
-2. Implement one-slot local persistence and the advancing controller as continuation slice 1D. Review the autosave loss window before finalizing cadence; test rollback, recovery and two-tab ownership.
+1. Implement one-slot local persistence and the advancing controller as continuation slice 1D. Use schema 2's complete snapshot/ledger, actual saved RNG and `validateSettlementState`; never regenerate a running world from its seed. Review autosave loss window before finalizing cadence; test rollback, recovery, stale sessions and two-tab ownership.
+2. Review the recorded baseline balance evidence: all 100 seeds stay fed through week 1,000, while forced small-population cases expose field-first recovery starvation. Keep tuning explicit/versioned; do not quietly import older daily rules or claim the first session's winter preparation is accepted.
 3. Recover the selected references for faithful visual work. Integrate selected-art map/chronicle/inspector as slice 1E; review desktop first, then complete phone interaction, readability and physical-device evidence.
 4. Close carried Phase 0.6/0.8 evidence and the full first-playable acceptance checklist. The foundation preview does not satisfy long-run, balance, save/resume, selected-art or physical-device gates.
 
