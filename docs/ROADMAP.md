@@ -5,7 +5,7 @@
 ## Phase 0 — Concept and repository groundwork (current)
 - **Decided:** living-world vision with settlement-first scaling; middle-fantasy starting tone; observer-led experience with later explicit Story Spotlight activation distinct from passive selection and unrelated to deferred manual nudges.
 - **Approved:** Direction C — Naturalist's Observation Desk — for layout/visual baseline; simplify and stylize art toward RimWorld-like readability with slightly richer artistic details and independent original assets.
-- **Pending:** verify tile/phone presentation, confirm technical stack/ADRs and Phase 1 numerical simulation contracts.
+- **Pending:** validate displayed sprite/text scale and source/export conventions, then confirm proposed technical, geography and seasonal mechanics/storage contracts; phone arrangement is approved.
 - Publish design pillars, simulation architecture, proposed UI, and roadmap.
 - Define a small, testable first vertical slice.
 - Establish branch/PR hygiene and automatic merged-branch cleanup where permissions allow.
@@ -71,7 +71,7 @@
 
 ## Suggested first demonstration
 
-Seed `RIVERSIDE`: a small group begins next to a forest and river, clears land, builds huts and farms. Several seasons later the settlement may prosper, contract, recover or become empty depending on simulated production, weather and aggregate demographic changes. The chronicle cites concrete resource and population facts. Individual relationships arrive in P2; regional relocation and political fracture are later milestones. **Do not engineer a guaranteed dramatic catastrophe.**
+Seed `RIVERSIDE`: a small group begins on viable land with founder huts, fields and stores; it can then add structures as real labor/materials allow. Several seasons later the settlement may prosper, contract, recover or become empty depending on simulated production, weather and aggregate demographic changes. The chronicle cites concrete resource and population facts. Individual relationships arrive in P2; regional relocation and political fracture are later milestones. **Do not engineer a guaranteed dramatic catastrophe.**
 
 ## Process
 
@@ -86,5 +86,6 @@ Seed `RIVERSIDE`: a small group begins next to a forest and river, clears land, 
 See [PLAN_REVIEW.md](PLAN_REVIEW.md) for the review findings, concrete mechanics checklist and ordered closure of the remaining gates.
 
 - **Decided:** middle fantasy, village-first to continent-scale, observer-led with future explicit opportunity-expanding spotlights (not forced outcomes), browser-first responsive, open-ended history.
-- **Remaining:** compare three simpler, original art treatments (see [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md)), validate Direction C's phone layout, approve [architecture proposal](ARCHITECTURE_REVIEW.md), and define initial numerical sim contracts/acceptance metrics. See [ART_UI_SPEC.md](ART_UI_SPEC.md) and [DECISIONS.md](DECISIONS.md).
+- **Remaining:** validate actual sprite/text scale and export conventions for the selected first concept with human-shaped people; phone arrangement is approved. Review the [architecture proposal](ARCHITECTURE_REVIEW.md), [geography](GEOGRAPHY_CONTRACT.md) and [seasonal numeric rules](PHASE1_RULES.md). See [ART_UI_SPEC.md](ART_UI_SPEC.md) and [DECISIONS.md](DECISIONS.md).
 - **Parked:** **direct** guided/on-demand nudges, alternate fantasy intensity profiles and additional species. See [DECISIONS.md](DECISIONS.md).
+
