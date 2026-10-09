@@ -1,4 +1,4 @@
-# Implementation plan — milestone contracts (v1)
+# Implementation plan — milestone contracts (v1.1)
 
 **Planning status:** approved product direction; engineering proposal awaiting normal milestone reviews. **This document is not authorization to start implementation.** No source code, assets, services, packages or deployments should be added in this documentation-only change.
 
@@ -8,7 +8,7 @@
 - **World tone:** middle fantasy: grounded causal societies plus bounded, consequential magic; support other intensity profiles *later*, without implementing profile toggles now.
 - **Viewer:** observational world with an explicit **Story Spotlight** opportunity-expansion direction beginning gradually in Phase 2; deliberate spotlight may widen context-valid possibilities but must never force a choice or outcome. Mere selection, camera movement and passive bookmarks must not alter the world. Distinct manual observer "nudges" remain **parked**. See [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md).
 - **Narrative:** state transitions make history. Chronicle prose reports facts; events are never arbitrarily invented by the UI or a language model.
-- **Runs:** deterministic within version + seed + settings, saveable and explainable; societies may thrive, transform, or fail organically, never on a forced countdown.
+- **Runs:** deterministic within version + seed + settings (plus ordered authoritative commands from Phase 2 onward), saveable and explainable; societies may thrive, transform, or fail organically, never on a forced countdown.
 - **Delivery:** browser-first, responsive desktop/mobile experience. Simulation engine does not depend on rendering or any hosted service. Stack choices are provisional pending Phase 0 decisions.
 
 ## Cross-phase engineering rules
@@ -28,7 +28,7 @@
 
 `P0 design gate -> P1 living settlement -> P2 agents/memory -> P3 institutions/fantasy mechanism -> P4 regional multi-settlement -> P5 historian tools -> P6 depth/scaling`.
 
-Cross-cutting tests and documentation advance with each phase. P5 save/replay depends on persisted IDs/event schema introduced in P1, with fuller implementation later. P4 needs aggregation that does not make the history dependent on which area the viewer has selected.
+Cross-cutting tests and documentation advance with each phase. Basic local save/resume ships in P1; P5 adds archive management and timeline seeking. Both depend on the versioned state, RNG and event contracts established in P1. P4 needs aggregation that does not make the history dependent on which area the viewer has selected.
 
 ---
 
@@ -45,7 +45,7 @@ Cross-cutting tests and documentation advance with each phase. P5 save/replay de
 - [x] 0.5 Break P1–P6 into ordered engineering increments with deliverables, tests and exit gates (this document).
 - [ ] 0.6 Direction C **layout** is approved. Refine map art with **simple stylized RimWorld-like legibility (original assets, slightly more detail)**, comparing three detail levels, then confirm scale/contrast and phone layout (see [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md) and [ART_UI_SPEC.md](ART_UI_SPEC.md)).
 - [ ] 0.7 **Architecture proposal documented** in [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md) (TypeScript core, Vite/React, Canvas 2D, testing and persistence seams). Review and record stack decisions as ADRs before marking complete.
-- [ ] 0.8 Set P1 numeric constants as adjustable configuration: tile dimensions, tick-to-season ratio, founder count, food unit, resource bounds, birth/death cadence, building prerequisites; list invariants before coding.
+- [ ] 0.8 Complete the P1 mechanics contract checklist in [PLAN_REVIEW.md](PLAN_REVIEW.md): adjustable numeric constants, aggregate population/households, workforce and material sourcing, construction priorities, demographic order, extinction behavior, RNG/rounding rules, event retention and storage limits. Each rule must specify inputs, units, preconditions, update order, RNG use, costs/effects, events and invariants; constants alone do not close this gate.
 - [ ] 0.9 Set up engineering issue/checklist backlog in scope-order only after visual/architecture review; no app scaffolding before this phase is signed off.
 
 **Exit gate:** Direction C is approved, but visual validation is pending; architecture/engine boundaries and P1 rules must still be approved and recorded, with requirements and tests specific enough to code without improvising critical mechanics.
@@ -62,16 +62,16 @@ Cross-cutting tests and documentation advance with each phase. P5 save/replay de
 - [ ] 1.1 Initialize browser project, formatting, lint/typecheck, unit test runner, CI (typecheck/tests/build), license and asset provenance policy.
 - [ ] 1.2 Separate `sim-core` pure-state reducers from `ui` renderer and adapters; define simulation version, seed, settings, clock/ticks, stable entity IDs.
 - [ ] 1.3 Implement reproducible named RNG streams; serialize/restore RNG state; document ordering of simulation phases and invariant assertions.
-- [ ] 1.4 Provide headless `advanceTicks(seed, config, N)` and canonical state/event digest for regression tests.
+- [ ] 1.4 Provide headless `advanceTicks(seed, config, N)` and canonical state/event digest for regression tests. Define stable entity ordering, tie-breaking, integer/fixed-point units and rounding, stream derivation, and canonical serialization excluding view state. Test Node/browser digest equivalence.
 
 ### 1B — Geography and starting society
 - [ ] 1.5 Generate a seeded ~64x40 logical tile map with elevation, water, terrain, forest, fertility and valid settlement start area.
-- [ ] 1.6 Spawn founder households, food stock, land occupancy, an initial shelter and settlement name based on deterministic rules.
+- [ ] 1.6 Spawn aggregate founder households, food stock, land occupancy, an initial shelter and settlement name based on deterministic rules. P1 resident markers represent aggregate population, not simulated named individuals; keep household/population totals consistent. Individual identities and life histories begin in P2.
 - [ ] 1.7 Define inspectable settlement state: population, household count, capacity, food, production, structures, current season.
 
 ### 1C — State-changing simulation loops
 - [ ] 1.8 Advance fixed seasons; weather/fertility adjust harvest production. Every consumed or produced unit is balanced and bounded.
-- [ ] 1.9 Consume food per population; shortages reduce health/growth and may generate migration/death conditions rather than automatic demise.
+- [ ] 1.9 Consume food per population; shortages reduce health/growth and may generate aggregate departure/death conditions rather than automatic demise. If departures are included, define their resource/population accounting; destinations, travel and new settlements remain P4.
 - [ ] 1.10 Add population birth/death aggregate rules initially; growth bounded by food and housing; handle zero-population worlds.
 - [ ] 1.11 Add deterministic construction/removal of huts, fields, stores and visual decay based on actual labor/material constraints.
 - [ ] 1.12 Allow improvement, stagnation, recovery, or natural collapse, with no guaranteed dramatic timeline.
@@ -80,16 +80,18 @@ Cross-cutting tests and documentation advance with each phase. P5 save/replay de
 - [ ] 1.13 Introduce events with tick, type, actor/place IDs, causes, facts, state effects and importance.
 - [ ] 1.14 Publish founding, harvest/surplus/shortage, construction/decay and demographic changes only when the corresponding state/fact actually occurs.
 - [ ] 1.15 Text renderer chooses headline/details from immutable canonical facts. Show causal context (e.g. drought and low stores).
-- [ ] 1.16 Retain an ordered bounded log with full historical records separated from short live-headline presentation.
+- [ ] 1.16 Separate a bounded live-headline window from the canonical archive persisted with local saves. Set explicit archive/storage limits in 0.8; never silently evict causal evidence or imply unlimited history. At a supported limit, pause advancing and explain the limit while preserving the last valid save. A storage failure must not corrupt that save or claim new progress was saved.
 
 ### 1E — Pixel viewer and milestone QA
 - [ ] 1.17 Draw top-down tiles, water/forest, structures, crop fields and lightweight resident markers from simulation state.
 - [ ] 1.18 Support seed input/random seed, New World, pause/play, single step, 1x/4x/16x, year/season, stats, map-pan/zoom as appropriate.
 - [ ] 1.19 Implement live chronicle panel; select event to focus its place and show actual changed values/causes. Provide responsive phone layout and keyboard/touch basics.
+- [ ] 1.19a Add basic browser-local manual save/resume and autosave using IndexedDB, with one recoverable world slot. Save the versioned authoritative state, seed/config, tick, all RNG streams, ID allocator state and canonical archive consistently. Validate before replacing the current world; reject unsupported/corrupt saves clearly and preserve the last good transaction. Explain local-device storage and unsaved progress. No accounts/cloud sync or timeline seeking.
+- [ ] 1.19b Test save/restore/resume against uninterrupted N+M ticks, including RNG/ID continuity, archive/cause integrity, reload, interrupted writes, quota/unavailable storage and unsupported versions. Define autosave cadence and archive limits in 0.8; autosave must not advance ticks or consume simulation RNG.
 - [ ] 1.20 Run unit/property tests of RNG, terrain and resource invariants; same-seed snapshot at 1,000 ticks; speed equivalence; 100-seed non-crash batch; manual mobile/desktop UI smoke tests.
 - [ ] 1.21 Review ten seeds for visible, qualitatively different trajectories; tune rates without special-casing seed stories; demonstrate a meaningful vertical slice and merge.
 
-**Acceptance:** same seed/settings/version yields identical state/event digest; two seeds can differ meaningfully; all visible buildings/stats/headlines agree with state; a real settlement grows or declines; zero-population and exhausted-resource edge cases do not crash. 1,000-tick replay verified. **Fantasy boundary:** underlying environment may include reserved semantic types, but no decorative magical "events" without mechanics.
+**Acceptance:** same seed/settings/version yields identical state/event digest; two seeds can differ meaningfully; all visible buildings/stats/headlines agree with state; a real settlement grows or declines; zero-population and exhausted-resource edge cases do not crash. 1,000-tick deterministic execution and save/resume continuity verified; browser reload restores the saved tick and archive. **Fantasy boundary:** underlying environment may include reserved semantic types, but no decorative magical "events" without mechanics.
 
 **Avoid:** pathfinding tens of thousands of people, multiple nations, AI-written lore, paid runtime services or branching quest logic.
 
@@ -108,9 +110,9 @@ Cross-cutting tests and documentation advance with each phase. P5 save/replay de
 - [ ] 2.6 Create limited social memory: favors, grudges, loyalty, attachments, prior disputes; define decay/retention rules and political/migration influence.
 - [ ] 2.7 Implement state-grounded decisions to stay, leave, cooperate, retaliate or reconcile; no arbitrary scripted character arcs.
 - [ ] 2.8 Capture biography-worthy events with structured actor/cause/effect links; per-person/family timelines, relationship views, passive bookmarks and separately identified **Story Spotlight** activation/deactivation with tick-stamped history.
-- [ ] 2.8a Implement a **bounded variety of additional context-eligible opportunity families for deliberately spotlighted people/families**, evaluated by autonomous decisions. Opportunities can be accepted, rejected, missed, or fail; they never guarantee an event, triumph, tragedy or fame. Same seed/config/version **plus spotlight command log** replays identically. See [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md).
+- [ ] 2.8a Implement a **bounded variety of additional context-eligible opportunity families for deliberately spotlighted people/families**, evaluated by autonomous decisions. Opportunities can be accepted, rejected, missed, or fail; they never guarantee an event, triumph, tragedy or fame. Persist active Spotlights, ordered commands and replay cursor in local saves. Define command ordering at tick boundaries, including multiple commands on the same tick. Same seed/config/version **plus spotlight command log** replays identically. See [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md).
 - [ ] 2.9 Add chronicle filters by person, family, category, importance; include "what led to this?" trace where records exist.
-- [ ] 2.10 Long-run tests: generations, orphan handling, relation integrity, name/ID stability, death effects, bounded per-agent memory and 100-seed story samples.
+- [ ] 2.10 Long-run tests: generations, orphan handling, relation integrity, name/ID stability, death effects, bounded per-agent memory and 100-seed story samples. Verify save/resume equivalence across Spotlight activation/deactivation, including multiple commands at one tick.
 
 **Acceptance:** observable relationships change future decisions; a resident can be followed birth-to-death with verifiable log; families persist across generations. Deliberate spotlight broadens **eligible opportunities** without guaranteeing acceptance/outcomes, and deterministic replay uses the full timestamped spotlight-command history. Mere inspection does not affect the sim. No unbounded memory growth.
 
@@ -169,14 +171,14 @@ Cross-cutting tests and documentation advance with each phase. P5 save/replay de
 **Outcome:** the world is as interesting to study as it is to watch.
 
 ### Ordered increments
-- [ ] 5.1 Version save schemas (world state, seed/RNG state, event history, tick, config); add compatibility/migration policy.
-- [ ] 5.2 Add autosave/manual save, resume, rename, delete and safe recovery from corrupt/partial saves.
-- [ ] 5.3 Add deterministic checkpoints/snapshots and timeline seeking; choose event-log replay plus snapshots according to measured size/performance.
+- [ ] 5.1 Extend P1 save schemas and add the cross-version migration policy. From P2 onward, saves include ordered tick-stamped Spotlight commands, active Spotlight state and replay cursor as well as world state, seed/config, tick, all RNG and ID allocator state, and retained event history.
+- [ ] 5.2 Extend P1 save/resume with multiple named worlds, rename/delete, archive management and richer recovery; preserve the original until migration succeeds.
+- [ ] 5.3 Add deterministic checkpoints and timeline seeking by restoring a complete checkpoint and executing fixed ticks with recorded authoritative commands. Chronicle events are selected historical evidence, not a complete mutation log, and cannot reconstruct state alone. Define supported seek range and measure checkpoint storage/performance.
 - [ ] 5.4 Build multi-scale timeline with periods, region filters, important events and expandable evidence.
 - [ ] 5.5 Build historical dossiers for person, family, settlement, dynasty, law, artifact and conflict; stable historical hyperlinks even after death/destruction.
 - [ ] 5.6 Implement causal navigation: each headline can expose directly recorded causes, precursors and changes; clearly mark when an exact causal explanation is unavailable.
 - [ ] 5.7 Implement **passive bookmarks and filters** that do not mutate world state; enrich followed-subject feeds and notable-event notifications. Replays must distinguish passive inspection from recorded explicit Story Spotlight activations that broaden future eligibility; user annotations stay non-mutating.
-- [ ] 5.8 Build exports/shareable seed+settings+version, selected biographies and historical summaries grounded in records; protect against unsupported claims.
+- [ ] 5.8 Build local exports of seed+settings+version, selected biographies and historical summaries grounded in records. Reproducing an observed history also requires its ordered authoritative command log and target tick (or a compatible full snapshot); label seed-only exports as initial-world recipes. Remote sharing and illustrated documentary formats remain parked.
 - [ ] 5.9 Stress test centuries of history, snapshot equivalence, backwards compatibility, event storage size, UI accessibility, cross-device responsive performance.
 - [ ] 5.10 Conduct spectator UX sessions: a viewer should be able to identify a consequential arc, follow its people, and explain its causes from UI evidence.
 
