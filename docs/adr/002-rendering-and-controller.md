@@ -1,6 +1,6 @@
 # ADR-002 — Canvas map, HTML panels and fixed-tick controller
 
-**Status:** Proposed. **Date:** 2026-10-09. **Decision owner:** repository owner.
+**Status:** Accepted by the repository owner on 2026-10-09. **Date:** 2026-10-09. **Decision owner:** repository owner.
 **Scope:** Phase 0.7 / Q-003.
 
 ## Context
