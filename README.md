@@ -2,7 +2,7 @@
 
 A procedural, simulation-driven pixel world that tells the histories of its societies as they emerge.
 
-**Status:** The weekly settlement engine now runs in a browser viewer with Play/Pause, step, 1x/4x/16x, a factual chronicle and atomic browser-local save/resume. Phase 1 acceptance remains open for balance, selected art and physical-device evidence.
+**Status:** The weekly settlement engine runs in a browser viewer with Play/Pause, step, 1x/4x/16x, a factual chronicle and atomic browser-local save/resume. New worlds use versioned winter/recovery rules; existing v1 saves retain their original behavior. Phase 1 acceptance remains open for selected art, physical devices and human experience review.
 
 ## Vision
 
@@ -21,7 +21,8 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Weekly settlement engine, verification and balance findings](docs/PHASE1_SETTLEMENT.md)
 - [Playback, local saves and browser verification](docs/PHASE1_PLAYBACK.md)
 - [Functional viewer, storage measurements and ten-seed review](docs/PHASE1_VIEWER.md)
-- [Proposed numeric P1 settlement rules](docs/SETTLEMENT_RULES.md)
+- [Winter reserves, small-population recovery and version compatibility](docs/PHASE1_BALANCE.md)
+- [Versioned numeric P1 settlement rules](docs/SETTLEMENT_RULES.md)
 - [Deterministic terrain contract and 100-seed probe](docs/TERRAIN_CONTRACT.md)
 - [Proposed local save/resume and recovery contract](docs/LOCAL_PERSISTENCE_CONTRACT.md)
 - [Approved middle-fantasy tone](docs/WORLD_TONE.md)
@@ -41,7 +42,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 
 ## Current work
 
-**Direction C (Naturalist's Observation Desk) and Illustrated Minimal are selected.** PR #12's weekly engine is merged. D-022 authorizes continued engineering and milestone merges. Controller/persistence, map navigation, phone chronicle and full retained-record inspection are implemented. Real browser storage/continuation measurements cover 1,000 and 10,000 weeks, with a controlled Chromium crash study. Selected reference images remain unavailable, so current drawings are temporary. See the [handoff](docs/PROJECT_HANDOFF.md) and [playback/save record](docs/PHASE1_PLAYBACK.md).
+**Direction C (Naturalist's Observation Desk) and Illustrated Minimal are selected.** Viewer PR #14 is merged. D-022 authorizes continued engineering and milestone merges; D-023 guides winter preparation and recovery. The v2 rules make winter crops dormant and preserve foraging when reserves are low. The viewer shows actual labor and winter evidence. Real v1 browser storage/continuation measurements cover 1,000 and 10,000 weeks, with a controlled Chromium crash study. Selected reference images remain unavailable, so current drawings are temporary. See the [handoff](docs/PROJECT_HANDOFF.md) and [balance record](docs/PHASE1_BALANCE.md).
 
 ## Development
 
@@ -52,7 +53,7 @@ npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite. Enter a seed or generate one, then select map tiles or use the coordinate inspector. Generation failure preserves the current world. This preview stays at tick zero and has no save controls.
+Open the local URL printed by Vite. Enter a seed or generate one, then Play or Step through the settlement. Pan/zoom the map and inspect tiles, events and the last week's work. Save stores one complete world in this browser; Resume restores it paused. Generation failure preserves the current world.
 
 ```sh
 npm run check
@@ -65,4 +66,4 @@ npm run test:browser
 
 The core API exposes `createSettlement(seed)`, `advanceSettlement(snapshot, weeks, limits)` and `simulateSettlement(seed, weeks, limits)` from `src/sim`. Tests include 100 seeds × 1,000 weeks, so the complete unit suite takes several minutes. To write its measurement report, run `STORY_GENERATOR_REPORT=/tmp/settlement-report.json npm test`; timings stay outside canonical state.
 
-Optional desktop diagnostics: `npm run benchmark:storage` measures real browser save/load/continuation; `npm run benchmark:crash` checks a controlled Chromium process interruption using its own temporary profile. See the [viewer evidence](docs/PHASE1_VIEWER.md) for scope and remaining physical-device/art gates.
+Optional diagnostics: `npm run benchmark:balance` writes the same ten seeds' trajectories under both retained rule versions to `docs/evidence/phase1-balance-trajectories.json`. `npm run benchmark:storage` measures real browser save/load/continuation; `npm run benchmark:crash` checks a controlled Chromium process interruption using its own temporary profile. See the [balance](docs/PHASE1_BALANCE.md) and [viewer evidence](docs/PHASE1_VIEWER.md) for scope and remaining physical-device/art gates.

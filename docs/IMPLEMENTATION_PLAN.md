@@ -1,6 +1,6 @@
 # Implementation plan — milestone contracts (v1.1)
 
-**Current status:** Phase 1 engineering authorized under D-020/D-021. Core/terrain/founding PR #11 is merged; the weekly settlement engine PR #12 is merged, and playback/local persistence plus a functional chronicle are implemented under D-022. Remaining balance, selected-art and storage reviews are carried into first-playable acceptance rather than marked complete. See [PHASE1_FOUNDATIONS.md](PHASE1_FOUNDATIONS.md) and [PHASE1_SETTLEMENT.md](PHASE1_SETTLEMENT.md).
+**Current status:** Phase 1 engineering authorized under D-020–023. Core/terrain/founding PR #11, weekly settlement PR #12, playback/persistence PR #13 and functional viewer PR #14 are merged. D-023 guides the implemented `p1-settlement-v2` winter/recovery milestone, preserving v1 saves. Human balance/understandability, selected-art, physical-device and final storage-policy reviews remain first-playable requirements. See [PHASE1_BALANCE.md](PHASE1_BALANCE.md) and [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md).
 
 ## Approved core constraints
 
@@ -72,14 +72,14 @@ The generic reducer-injected `advanceTicks` remains available; it is now supplem
 - [x] 1.6 Spawn aggregate founders (24 residents, six households), food/timber stocks, six huts, two fields and one store, stable occupancy/IDs and a deterministic coordinate-based settlement name. Clearing is recorded and discarded, not free stored timber. Individual identities/life histories remain P2.
 - [x] 1.7 Define inspectable settlement state: population, households, capacity, food, production, structures, season and complete last-tick accounting.
 
-The browser currently inspects founding facts only; advancing-state UI integration remains 1E. Temporary programmatic drawings are not selected-art completion.
+The browser inspects advancing settlement, building, event and last-week labor facts. Temporary programmatic drawings are not selected-art completion; aggregate resident markers remain part of 1.17.
 
 ### 1C — State-changing simulation loops
-- [x] 1.8 Advance fixed seasons; weather/fertility adjust harvest production. Every consumed or produced unit is balanced and bounded.
+- [x] 1.8 Advance fixed seasons; weather/fertility adjust harvest production. V2 winter fields rest, so reserves and limited foraging cover demand. Every consumed or produced unit is balanced and bounded; v1 behavior is retained for old saves.
 - [x] 1.9 Consume food per opening population; shortages reduce health and conditional growth, with aggregate death risks. Departures remain excluded from P1; destinations/travel remain P4.
 - [x] 1.10 Add population birth/death aggregate rules; growth bounded by food and housing; handle zero-population worlds and abandoned projects.
 - [x] 1.11 Add deterministic construction/removal and durability decay for huts, fields and stores from actual opening labor/material budgets. Durability/removal visual integration remains 1.17.
-- [x] 1.12 Allow growth, stagnation, shortage recovery and natural collapse without a scripted timer or revival. A RIVERSIDE long run reaches extinction at week 1,980 from finite resources/decay and demographic rules; balance acceptance remains open.
+- [x] 1.12 Allow growth, stagnation, shortage recovery and natural collapse without a scripted timer or revival. V2 protects a forager below six weeks of reserves and permits bounded work at small populations; controlled depleted starts recover. Both versions preserve natural extinction and history in long runs. The v1 RIVERSIDE extinction at week 1,980 is historical evidence, not a fixed v2 outcome.
 
 ### 1D — Canonical events and chronicle
 - [x] 1.13 Introduce events with tick/phase, type, entity/place IDs, backward causes, immediate facts/effects and importance.
@@ -98,7 +98,9 @@ The browser currently inspects founding facts only; advancing-state UI integrati
 
 Controller/persistence completion covers local transactions, checksum/state validation, session barriers, writer ownership and visible unsaved status. Scheduling and factual chronicle selection are implemented; map crop/pan/zoom, focused records, full archive lookup and phone sheet interactions are implemented; selected-art and physical-device acceptance stay open. Autosave cadence is the documented baseline, with its five-minute 1x loss window shown in the viewer; final Q-006 acceptance is not implied. See [PHASE1_PLAYBACK.md](PHASE1_PLAYBACK.md) and [PHASE1_VIEWER.md](PHASE1_VIEWER.md).
 
-Core 1.20 evidence now includes the 100-seed × 1,000-week battery, forced rules, immutable admission, JSON continuation and Node/browser parity. Live speed/visibility behavior and persistence are tested; full selected-art/device viewer acceptance remains open. The batch has no shortages/extinctions by week 1,000; this is a balance finding, not first-playable acceptance. See [PHASE1_SETTLEMENT.md](PHASE1_SETTLEMENT.md).
+Core 1.20 evidence includes the v2 100-seed × 1,000-week battery, forced rules, immutable admission, JSON continuation, frozen v1 compatibility and Node/browser parity. Live speed/visibility behavior and persistence are tested; full selected-art/device viewer acceptance remains open. The measured batch and ten-seed comparison are balance findings, not human first-playable acceptance. See [PHASE1_BALANCE.md](PHASE1_BALANCE.md).
+
+For 1.21, the same ten seeds are reviewed under v1 and v2 at season/year/long-run milestones. Winter reserves now fall in all ten first winters, and depleted low-population fixtures demonstrate recovery without seed-specific scripts. Automated trajectory review and a merged vertical slice do not substitute for a human understandability/engagement review; keep 1.21 open until that evidence exists.
 
 **Acceptance:** same seed/settings/version yields identical state/event digest; two seeds can differ meaningfully; all visible buildings/stats/headlines agree with state; a real settlement grows or declines; zero-population and exhausted-resource edge cases do not crash. 1,000-tick deterministic execution and save/resume continuity verified; browser reload restores the saved tick and archive. **Fantasy boundary:** underlying environment may include reserved semantic types, but no decorative magical "events" without mechanics.
 

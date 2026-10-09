@@ -1,6 +1,6 @@
 # Functional viewer and storage evidence — 2026-10-09
 
-PR #13 is merged at `96d9614`. D-022 authorizes continued engineering and verified milestone merges. This slice completes functional navigation and older-record access; selected-art fidelity and physical-device acceptance remain separate.
+PR #14 is merged at [af30301](https://github.com/DdraigFawr13/Story-Generator/commit/af30301fc5a60e8a57eeb3d5820097950cb4594e). D-022 authorizes continued engineering and verified milestone merges. This slice completes functional navigation and older-record access; selected-art fidelity and physical-device acceptance remain separate. Storage and trajectory reports below measure `p1-settlement-v1`; the subsequent v2 amendment has its own [balance record](PHASE1_BALANCE.md).
 
 ## Viewer behavior
 
@@ -11,17 +11,15 @@ PR #13 is merged at `96d9614`. D-022 authorizes continued engineering and verifi
 
 ## Browser and core evidence
 
-75 browser checks passed locally across Chromium 156.0.8078.4, Firefox 157.0 and Playwright WebKit 27.2, including navigation/history independence, older archive access, preserved reading position, event focus/map context and 320/390px enlarged-text controls. Prior save/ownership/rollback/visibility/parity checks remain included. Strict types, source boundaries and build pass. Full CI also retains 102 core tests and the long-run seed battery.
+81 browser checks passed locally across Chromium 156.0.8078.4, Firefox 157.0 and Playwright WebKit 27.2, including navigation/history independence, older archive access, preserved reading position, event focus/map context, pointer-focus scroll regressions and 320/390px enlarged-text controls. Prior save/ownership/rollback/visibility/parity checks remain included. PR #14's final hosted verification passed all 102 core and 81 browser tests, formatting, strict types, boundaries and build before merging.
 
 PR #13’s hosted browser job completed all 57 checks with one WebKit mock-clock setup retry (`pauseAt(new Date())` could target the past). This slice anchors the mocked date before loading the page and pauses at a fixed later timestamp; the updated checks pass in all three local engines. This was test scheduling, not an observed simulation catch-up failure.
-
-Resumed verification found PR #14's first hosted browser run passed 74/75 checks but failed Chromium pointer inspection. Focusing a partly visible canvas could scroll the document between pointer-down and pointer-up, selecting a different row. Canvas focus now uses `preventScroll`; a regression clicks a partially visible map and checks both the exact selected tile and unchanged document scroll. The controller tests also replace an iteration-count wait with a bounded time-based poll: asynchronous WebCrypto hashing can outlast 500 immediate callbacks under load. Save queue behavior and assertions are unchanged.
 
 Screenshots in `docs/evidence/phase1-viewer-*.png` record desktop, phone-map and expanded-sheet states. They are functional engineering evidence, not a comparison against the unavailable selected references.
 
 ### Resumed verification: pointer focus scrolling
 
-PR #14's first hosted run passed core verification but failed Chromium's founding pointer check twice: the click expected tile 1290 and selected tile 1226. A controlled short-viewport reproduction showed canvas focus scrolling the document between pointer-down and pointer-up, moving the map under the pointer. The pointer handler now prevents the default focus action and focuses with `preventScroll`; keyboard focus and dragging remain available. A regression deliberately leaves the map partly above the viewport and checks focus, unchanged page scroll and the actual selected tile. Both focused Chromium checks, formatting, strict types, the 26-module boundary check and the production build pass in the resumed workspace. Full hosted verification is required before merging. The resumed local Firefox launch failed before loading the app (profile-folder access); this is not recorded as a passed browser check.
+PR #14's first hosted run passed core verification but failed Chromium's founding pointer check twice: the click expected tile 1290 and selected tile 1226. A controlled short-viewport reproduction showed canvas focus scrolling the document between pointer-down and pointer-up, moving the map under the pointer. The pointer handler now prevents the default focus action and focuses with `preventScroll`; keyboard focus and dragging remain available. Regressions leave the map partly above and below the viewport and check focus, unchanged page scroll and the actual selected tile. The controller tests also replace an iteration-count wait with a bounded time-based poll: asynchronous WebCrypto hashing can outlast 500 immediate callbacks under load. Save queue behavior and assertions are unchanged. Local and hosted suites passed on head `4415d08`; the initial local Firefox profile-launch problem was resolved before full verification.
 
 ## Real storage measurements
 
@@ -77,7 +75,7 @@ The first winter visibly reduces crop output (111–317 food across these seeds)
 ## Remaining first-playable gates
 
 - Recover exact selected desktop/phone images and compare production art at actual source density. Current symbols/layout do not establish that fidelity.
-- Review winter preparation/recovery and the 20-week autosave loss window as experience tradeoffs. They are explicit implemented baselines.
+- Review the 20-week autosave loss window and human winter-preparation experience. D-023 resolves the tuning emphasis; v2 implementation/evidence is recorded in [PHASE1_BALANCE.md](PHASE1_BALANCE.md).
 - Obtain physical Android and installed Safari interaction/performance evidence; desktop emulation and Playwright WebKit do not substitute.
 - Obtain a viewer usability review demonstrating that someone can explain a consequential chain from the interface. No human study was inferred from automated checks.
 

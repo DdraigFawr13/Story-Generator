@@ -3,13 +3,19 @@ import { canonicalJson, isImmutableCanonical } from './canonical';
 import { calendarAtTick } from './clock';
 import { RNG_ALGORITHM, validateRngState } from './rng';
 import { validateSeed } from './seed';
-import { SETTLEMENT_CONFIG, SETTLEMENT_VERSION } from './settlement-config';
-import { fieldYield, foodCapacity, inWorkRadius, rationHealth, shelter } from './settlement-math';
+import { SETTLEMENT_CONFIG, settlementConfig } from './settlement-config';
+import {
+  fieldYield,
+  foodCapacity,
+  inWorkRadius,
+  rationHealth,
+  shelter,
+  workforce,
+  protectedForagers,
+} from './settlement-math';
 import { EVENT_FIELDS, EVENT_PHASES, type SettlementState } from './state';
 import { validateTiles } from './terrain';
 
-const CONFIG = canonicalJson(SETTLEMENT_CONFIG);
-const E = SETTLEMENT_CONFIG.economy;
 const validatedMaps = new WeakSet<object>();
 const validatedEvents = new WeakSet<object>();
 function requireState(condition: unknown, message: string): asserts condition {
@@ -40,12 +46,12 @@ export function validateSettlementState(value: unknown): asserts value is Settle
     'lastTick',
   ]);
   requireState(
-    s.schemaVersion === 2 &&
-      s.simulationVersion === SETTLEMENT_VERSION &&
-      s.rulesVersion === SETTLEMENT_VERSION,
+    s.schemaVersion === 2 && s.rulesVersion === s.simulationVersion,
     'unsupported version',
   );
-  requireState(canonicalJson(s.config) === CONFIG, 'unsupported configuration');
+  const config = settlementConfig(s.simulationVersion);
+  const E = config.economy;
+  requireState(canonicalJson(s.config) === canonicalJson(config), 'unsupported configuration');
   validateSeed(s.seed);
   validateArchive(s);
   keys(s.rng, ['terrain', 'weather', 'demographics']);
@@ -329,6 +335,7 @@ export function validateSettlementState(value: unknown): asserts value is Settle
 }
 
 function validateLedger(s: SettlementState): void {
+  const E = s.config.economy;
   const l = s.lastTick!;
   requireState(l !== null && l.tick === s.tick, 'missing tick ledger');
   keys(l, [
@@ -366,7 +373,7 @@ function validateLedger(s: SettlementState): void {
     'unusedConstruction',
   ]);
   for (const [name, value] of Object.entries(a)) if (name !== 'fields') integer(value as number);
-  requireState(a.workforce === Math.floor(l.opening.population / E.workerDivisor), 'workforce');
+  requireState(a.workforce === workforce(l.opening.population, E), 'workforce');
   requireState(
     a.fields.length + a.foragers + a.repairs + a.builders + a.gatherers + a.unassigned ===
       a.workforce,
@@ -394,6 +401,12 @@ function validateLedger(s: SettlementState): void {
   const calendar = calendarAtTick(s.tick);
   requireState(calendar.kind === 'week', 'ledger calendar');
   const season = Math.floor((s.tick - 1) / 12) % 4;
+  const protectedCount = protectedForagers(l.opening.population, l.opening.food, E);
+  requireState(
+    a.fields.length <= a.workforce - protectedCount && a.foragers >= protectedCount,
+    'recovery labor',
+  );
+  requireState(E.seasonMultipliers[season] !== 0 || a.fields.length === 0, 'dormant field labor');
   requireState(
     p.foraging === a.foragers * E.foodPerForager[season]! &&
       p.gathered <= a.gatherers * E.timberPerGatherer,
@@ -412,7 +425,7 @@ function validateLedger(s: SettlementState): void {
     requireState(
       s.world.entities[b.id - 1]?.kind === 'field' &&
         b.fertility === s.world.map.tiles[s.world.entities[b.id - 1]!.tile]![1] &&
-        b.yield === fieldYield(b, s.world.currentWeather!.multiplier, season),
+        b.yield === fieldYield(b, s.world.currentWeather!.multiplier, season, E),
       'harvest inputs',
     );
   }

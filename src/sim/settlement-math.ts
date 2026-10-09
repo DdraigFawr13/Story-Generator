@@ -1,4 +1,4 @@
-import { SETTLEMENT_CONFIG } from './settlement-config';
+import { SETTLEMENT_CONFIG, type SettlementEconomy } from './settlement-config';
 import type { Building, HarvestField, SettlementSnapshot, WeatherKind } from './state';
 import type { Immutable } from './immutable';
 
@@ -20,21 +20,25 @@ export function inWorkRadius(tile: number, center: number): boolean {
     SETTLEMENT_CONFIG.workRadius
   );
 }
-export function weatherKind(draw: number): WeatherKind {
-  return draw < E.droughtCutoff ? 'drought' : draw < E.wetCutoff ? 'normal' : 'wet';
+export function weatherKind(draw: number, economy: SettlementEconomy = E): WeatherKind {
+  return draw < economy.droughtCutoff ? 'drought' : draw < economy.wetCutoff ? 'normal' : 'wet';
 }
 export function fieldYield(
   field: Pick<HarvestField, 'fertility' | 'tendedWeeks'>,
   weatherMultiplier: number,
   seasonIndex: number,
+  economy: SettlementEconomy = E,
 ): number {
   return Math.floor(
-    (E.harvestBase *
+    (economy.harvestBase *
       field.fertility *
       weatherMultiplier *
-      E.seasonMultipliers[seasonIndex]! *
+      economy.seasonMultipliers[seasonIndex]! *
       field.tendedWeeks) /
-      (E.fertilityScale * E.multiplierScale * E.multiplierScale * SETTLEMENT_CONFIG.weeksPerSeason),
+      (economy.fertilityScale *
+        economy.multiplierScale *
+        economy.multiplierScale *
+        SETTLEMENT_CONFIG.weeksPerSeason),
   );
 }
 export function rationHealth(
@@ -63,4 +67,20 @@ export function settlementTotals(state: SettlementSnapshot) {
     capacity: foodCapacity(state.world.buildings),
     escrow: state.world.project?.escrow ?? 0,
   };
+}
+
+export function workforce(population: number, economy: SettlementEconomy): number {
+  const usual = Math.floor(population / economy.workerDivisor);
+  return 'recovery' in economy
+    ? Math.min(population, Math.max(economy.recovery.minimumWorkforce, usual))
+    : usual;
+}
+export function protectedForagers(
+  population: number,
+  food: number,
+  economy: SettlementEconomy,
+): number {
+  return 'recovery' in economy && population > 0 && food < population * economy.recovery.foodWeeks
+    ? Math.min(workforce(population, economy), economy.recovery.protectedForagers)
+    : 0;
 }

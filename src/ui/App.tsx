@@ -285,11 +285,16 @@ function Viewer({ controller }: { controller: WorldController }) {
                 selectedTile={selectedTile}
                 onSelect={(tile) => select(tile, false)}
                 focusRequest={mapFocus}
+                dormantFields={view.seasonalCropPercent === 0}
               />
               <ul className="legend" aria-label="Map legend">
                 <li>Blue: river</li>
                 <li>Dark green: woodland</li>
-                <li>Gold: fields</li>
+                <li>
+                  {view.seasonalCropPercent === 0
+                    ? 'Dashed plots: fields resting in winter'
+                    : 'Gold: fields'}
+                </li>
                 <li>Orange: huts</li>
                 <li>Brown: store</li>
                 <li>Outline: work in progress</li>
@@ -369,6 +374,51 @@ function Viewer({ controller }: { controller: WorldController }) {
                 weather, fertility and crop care. Food reserve assumes current demand, before future
                 production or spoilage.
               </p>
+              <p className="note">
+                {world.config.economy.seasonMultipliers[3] === 0
+                  ? 'Fields rest in winter. Stored food and limited foraging must cover rations.'
+                  : 'This world retains reduced winter crop production.'}
+              </p>
+              {world.lastTick && (
+                <details className="labor-summary">
+                  <summary>Last week’s work</summary>
+                  <p className="note">Assignments use residents at the start of the week.</p>
+                  <dl>
+                    <div>
+                      <dt>Available workers</dt>
+                      <dd>{world.lastTick.labor.workforce}</dd>
+                    </div>
+                    <div>
+                      <dt>Fields</dt>
+                      <dd>{world.lastTick.labor.fields.length}</dd>
+                    </div>
+                    <div>
+                      <dt>Foraging</dt>
+                      <dd>{world.lastTick.labor.foragers}</dd>
+                    </div>
+                    <div>
+                      <dt>Repairs</dt>
+                      <dd>{world.lastTick.labor.repairs}</dd>
+                    </div>
+                    <div>
+                      <dt>Building</dt>
+                      <dd>{world.lastTick.labor.builders}</dd>
+                    </div>
+                    <div>
+                      <dt>Timber gathering</dt>
+                      <dd>{world.lastTick.labor.gatherers}</dd>
+                    </div>
+                    <div>
+                      <dt>Unassigned</dt>
+                      <dd>{world.lastTick.labor.unassigned}</dd>
+                    </div>
+                    <div>
+                      <dt>Unused building labor</dt>
+                      <dd>{world.lastTick.labor.unusedConstruction}</dd>
+                    </div>
+                  </dl>
+                </details>
+              )}
               <p className="note">
                 Map drawings are temporary. Residents are an aggregate population in this phase.
               </p>
