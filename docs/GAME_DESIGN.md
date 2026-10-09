@@ -77,4 +77,5 @@ Future configurable world profiles might be grounded, low-, medium- or high-fant
 
 ## Next design checkpoint
 
-Direction C layout remains approved. Compare three original simplified art variants per [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md), then confirm proposed [architecture](ARCHITECTURE_REVIEW.md) and Phase 1 engine/rules contracts before coding.
+Direction C layout remains approved. Keep the chosen original first concept with human-shaped people and the approved phone arrangement. Finish actual-size/source-art checks per [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md), then confirm proposed [architecture](ARCHITECTURE_REVIEW.md), [geography](GEOGRAPHY_CONTRACT.md) and [seasonal mechanics](PHASE1_RULES.md) before coding.
+
