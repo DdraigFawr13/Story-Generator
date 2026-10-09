@@ -49,6 +49,28 @@ test('founding facts, invalid-seed recovery and keyboard inspection work', async
   expect(errors).toEqual([]);
 });
 
+test('clicking a partly visible map preserves scroll and selects the pointed tile', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New world', exact: true }).click();
+  await page.getByLabel('Tile X').fill('0');
+  await page.getByLabel('Tile Y').fill('0');
+  await page.getByRole('button', { name: 'Inspect tile' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.tile-facts')).toContainText('Tile 0:');
+  const map = page.locator('canvas');
+  await map.evaluate((canvas) => window.scrollBy(0, canvas.getBoundingClientRect().top + 60));
+  const bounds = (await map.boundingBox())!;
+  expect(bounds.y).toBeLessThan(0);
+  const scroll = await page.evaluate(() => scrollY);
+  await page.mouse.click(bounds.x + (bounds.width - 64 * 12) / 2 + 10.5 * 12, bounds.y + 20.5 * 12);
+  await expect(map).toBeFocused();
+  await expect(page.locator('.tile-facts')).toContainText('Tile 1290:');
+  expect(await page.evaluate(() => scrollY)).toBe(scroll);
+});
+
 for (const width of [320, 390, 768, 1280]) {
   test(`founding preview fits ${width}px and retains usable controls`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });

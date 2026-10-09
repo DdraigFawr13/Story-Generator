@@ -17,6 +17,10 @@ PR #13’s hosted browser job completed all 57 checks with one WebKit mock-clock
 
 Screenshots in `docs/evidence/phase1-viewer-*.png` record desktop, phone-map and expanded-sheet states. They are functional engineering evidence, not a comparison against the unavailable selected references.
 
+### Resumed verification: pointer focus scrolling
+
+PR #14's first hosted run passed core verification but failed Chromium's founding pointer check twice: the click expected tile 1290 and selected tile 1226. A controlled short-viewport reproduction showed canvas focus scrolling the document between pointer-down and pointer-up, moving the map under the pointer. The pointer handler now prevents the default focus action and focuses with `preventScroll`; keyboard focus and dragging remain available. A regression deliberately leaves the map partly above the viewport and checks focus, unchanged page scroll and the actual selected tile. Both focused Chromium checks, formatting, strict types, the 26-module boundary check and the production build pass in the resumed workspace. Full hosted verification is required before merging. The resumed local Firefox launch failed before loading the app (profile-folder access); this is not recorded as a passed browser check.
+
 ## Real storage measurements
 
 The reproducible `npm run benchmark:storage` command generates the same RIVERSIDE snapshots in Node, saves/validates them in real browser IndexedDB, advances restored and original snapshots ten weeks, compares digests, then reloads and resumes through the UI. The [raw report](evidence/phase1-storage-benchmark.json) records exact values. Node 24.19.0 generated the 10,000-week retained world in 98,152ms during concurrent verification.

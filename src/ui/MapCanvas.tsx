@@ -222,7 +222,8 @@ export function MapCanvas({
         }}
         onPointerDown={(event) => {
           if (drag.current || event.button !== 0) return;
-          event.currentTarget.focus();
+          event.preventDefault();
+          event.currentTarget.focus({ preventScroll: true });
           event.currentTarget.setPointerCapture(event.pointerId);
           drag.current = {
             id: event.pointerId,
