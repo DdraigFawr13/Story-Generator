@@ -1,6 +1,6 @@
-# Game design proposal (v0.1)
+# Game design and agreed direction (v0.2)
 
-> **Proposal, not locked canon.** Revisit visual tone, simulation scope, and intervention before Phase 1.
+> **Approved:** living world vision, settlement-first vertical slice, middle-fantasy baseline, initially observer-only. **Still to review:** precise visual treatment and engineering contracts. See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
 ## Core fantasy
 
@@ -56,19 +56,17 @@ Create a unique world from a seed. Press Play. Watch a society inhabit the land,
 
 Each historical entry must link to the actual resources, locations, characters, causes, and changed outcomes in that run.
 
-## Simulated worlds: three tone candidates
+## World tone (approved)
 
-- **Grounded early-medieval:** weather, disease, family ties, labor, local politics, migration, war.
-- **Low fantasy (recommended default to discuss):** all of the above, plus rare supernatural phenomena with economic and political consequences.
-- **Strange/alien civilization:** original biology, cultures and resource rules; large creative potential but a more demanding first build.
+**Middle fantasy:** believable settlements, politics, environment, material economies and intergenerational relationships, with real but unevenly available magic and fantastic creatures. Magical systems must affect the state and have costs/limitations. Do not establish full magic mechanics before their implementation phase.
 
-## Interaction choices still open
+Future configurable world profiles might be grounded, low-, medium- or high-fantasy and alien worlds, but they are not part of the active build. See [WORLD_TONE.md](WORLD_TONE.md).
 
-- **Pure Observer:** no influence; watch and archive histories.
-- **Soft Intervention (candidate):** optional rare nudges such as changing weather or placing an anomaly; every action appears in the world's record.
-- **Full God Sandbox:** edit geography, spawn actors, reshape societies; ambitious, potentially undermines organic storytelling.
+## Viewer interaction: current and parked
 
-Default planning assumption: **Observer first**, optional intervention as a future mode.
+**Approved current model: Pure Observer.** Explore the world, track people and places, inspect causes, bookmark events, and review chronology. These actions do not alter the simulated history.
+
+**Parked idea (no active milestone):** small, optional observer nudges, either offered at natural moments or chosen by the viewer. Future design must explicitly consider causal honesty, limits and replay/versioning. Do not add intervention controls or roadmap commitments now; only avoid architectural coupling that would make valid externally sourced effects impossible later. See [DECISIONS.md](DECISIONS.md).
 
 ## Non-goals for first playable version
 
@@ -79,4 +77,4 @@ Default planning assumption: **Observer first**, optional intervention as a futu
 
 ## Next design checkpoint
 
-Confirm (1) grounded, low-fantasy or alien tone, (2) whether the player is spectator-only, and (3) whether the visual emphasis should be miniature village or continent map. Those decisions should guide the art mockups and first vertical slice.
+Review visual directions for a miniature settlement map and live chronicle, approve one for the first vertical slice, and then confirm Phase 1 engine/rules contracts before coding.
