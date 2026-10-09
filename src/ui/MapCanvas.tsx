@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react';
-import type { FoundingView } from '../controller/founding';
+import type { SettlementSnapshot } from '../controller/world';
 
 export function MapCanvas({
   view,
   selectedTile,
   onSelect,
 }: {
-  view: FoundingView;
+  view: SettlementSnapshot['world']['map'] &
+    Pick<SettlementSnapshot['world'], 'buildings' | 'settlement' | 'project'>;
   selectedTile: number;
   onSelect: (tile: number) => void;
 }) {
@@ -37,6 +38,17 @@ export function MapCanvas({
       context.strokeStyle = '#2a3828';
       context.strokeRect(x + 1.5, y + 1.5, size - 3, size - 3);
     }
+    if (view.project) {
+      context.strokeStyle = '#744e38';
+      context.setLineDash([2, 2]);
+      context.strokeRect(
+        (view.project.tile % view.width) * size + 1.5,
+        Math.floor(view.project.tile / view.width) * size + 1.5,
+        size - 3,
+        size - 3,
+      );
+      context.setLineDash([]);
+    }
     context.strokeStyle = '#ffffff';
     context.lineWidth = 2;
     context.strokeRect(
@@ -53,7 +65,7 @@ export function MapCanvas({
       width={view.width * 12}
       height={view.height * 12}
       role="img"
-      aria-label={`Founding map for ${view.settlement.name}. Use the coordinate controls below to inspect tiles with a keyboard.`}
+      aria-label={`Settlement map for ${view.settlement.name}. Use the coordinate controls below to inspect tiles with a keyboard.`}
       onClick={(event) => {
         const bounds = event.currentTarget.getBoundingClientRect();
         const x = Math.min(

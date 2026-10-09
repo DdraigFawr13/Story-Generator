@@ -2,7 +2,7 @@
 
 A procedural, simulation-driven pixel world that tells the histories of its societies as they emerge.
 
-**Status:** Phase 1's deterministic weekly settlement engine is implemented under D-020/D-021, with labor/resource accounting, construction, demographics and canonical events. The browser still shows the founding preview; playback, the live chronicle and local saves are next. This is not the first playable milestone.
+**Status:** The weekly settlement engine now runs in a browser viewer with Play/Pause, step, 1x/4x/16x, a factual chronicle and atomic browser-local save/resume. Phase 1 acceptance remains open for balance, selected art and physical-device evidence.
 
 ## Vision
 
@@ -19,6 +19,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Project handoff and recovered thread decisions](docs/PROJECT_HANDOFF.md)
 - [Implemented Phase 1 foundations and verification](docs/PHASE1_FOUNDATIONS.md)
 - [Weekly settlement engine, verification and balance findings](docs/PHASE1_SETTLEMENT.md)
+- [Playback, local saves and browser verification](docs/PHASE1_PLAYBACK.md)
 - [Proposed numeric P1 settlement rules](docs/SETTLEMENT_RULES.md)
 - [Deterministic terrain contract and 100-seed probe](docs/TERRAIN_CONTRACT.md)
 - [Proposed local save/resume and recovery contract](docs/LOCAL_PERSISTENCE_CONTRACT.md)
@@ -38,7 +39,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 
 ## Current work
 
-**Direction C (Naturalist's Observation Desk) and Illustrated Minimal are selected.** Architecture is approved (D-013), and D-020/D-021 authorize Phase 1 work. PR #11's core/terrain/founding foundations are merged. The weekly loop now has running-state validation and complete-tick admission; next is the advancing controller and one-slot local persistence. Balance findings, the autosave loss window, selected references and physical-device evidence remain open. The map drawings are temporary. See the [handoff](docs/PROJECT_HANDOFF.md) and [engine record](docs/PHASE1_SETTLEMENT.md).
+**Direction C (Naturalist's Observation Desk) and Illustrated Minimal are selected.** PR #12's weekly engine is merged. D-022 authorizes continued engineering and milestone merges. Controller/persistence and functional chronicle integration are implemented; map navigation/readability and measured long-history save behavior follow. Selected reference images remain unavailable, so current drawings are temporary. See the [handoff](docs/PROJECT_HANDOFF.md) and [playback/save record](docs/PHASE1_PLAYBACK.md).
 
 ## Development
 
