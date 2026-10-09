@@ -33,7 +33,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 
 ## Immediate next decision
 
-**Direction C (Naturalist's Observation Desk) layout is selected.** Refine the visuals toward original, simplified RimWorld-like clarity with slightly more artistic detail. Next, compare art variants, validate desktop/phone presentation, review the proposed Phase 1 mechanics and storage contracts. Architecture is approved (D-013); visual validation remains open. Basic browser-local save/resume is approved for the first playable; timeline seeking remains later. **Do not begin Phase 1 until the pre-build gate is met.**
+**Direction C (Naturalist's Observation Desk) layout is selected.** Refine the visuals toward original, simplified RimWorld-like clarity with slightly more artistic detail. Illustrated Minimal is now selected (D-014), with two phone layout studies prepared. Next, validate desktop/phone interaction and actual-size readability and accept the reviewed Phase 1 mechanics/storage proposals. See [continuation review](docs/CONTINUATION_REVIEW.md) for fixes, evidence and the ordered implementation backlog. Architecture is approved (D-013); visual validation remains open. Basic browser-local save/resume is approved for the first playable; timeline seeking remains later. **Do not begin Phase 1 until the pre-build gate is met.**
 
 ## Development
 

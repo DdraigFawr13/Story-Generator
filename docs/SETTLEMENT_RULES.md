@@ -1,4 +1,4 @@
-# P1 settlement rules — proposal v1
+# P1 settlement rules — proposal v1.1
 
 **Status: proposed, not approved or balance-tested.** This is a concrete candidate for Q-004 and the mechanics portion of Phase 0.8. All numbers below are tuning proposals. No engine, dependency or deployment is introduced. Review alongside [local persistence](LOCAL_PERSISTENCE_CONTRACT.md), [architecture](ARCHITECTURE_REVIEW.md) and [implementation plan](IMPLEMENTATION_PLAN.md). Existing Phase 0 gates remain open.
 
@@ -48,7 +48,9 @@ Rule effects within a phase are visible to later phases. Every event records its
 
 Use the terrain RNG stream. For each tile, in row-major order, draw elevation in 0–99, fertility in 0–100, and forest roll in 0–99, even if a preceding draw makes a later attribute irrelevant. Elevation < 20 means water; 20–84 means grass; 85–99 means rock. Forest exists only on grass with forest roll < 35; its initial timber is 20. Water/rock have no harvestable timber. Forest does not regrow in P1.
 
-Find centers in row-major order where center and its eight neighbors form a 3 × 3 patch of non-forest grass, all fertility ≥ 50. Founding uses these nine tiles. If none exist, carve the fixed patch x=31..33, y=19..21 into non-forest grass with elevation 50 and fertility 70, center (32,20). This is an explicit generation fallback recorded in founding facts, never a hidden regeneration loop or gameplay intervention.
+Consider interior centers only (x=1..62, y=1..38), in row-major order. A valid center and its eight neighbors form a 3 × 3 patch of grass terrain (forest allowed), with at least two tiles of fertility ≥ 50. Founding uses these nine tiles. Clear forest on those nine tiles as explicit initial site preparation: set their timber to zero, recording tile IDs and removed timber in founding facts; do not credit that timber to settlement stock. This is a tick-zero endowment rule, not free clearing during play. Preserve generated elevation/fertility. If no valid center exists, carve the fixed patch x=31..33, y=19..21 into non-forest grass with elevation 50 and fertility 70, center (32,20), with zero tile timber. Record original tiles, removed timber and fallback status in founding facts. No hidden regeneration loop or gameplay intervention.
+
+This v1.1 proposal replaces the overly restrictive requirement that all nine tiles be both forest-free and fertile. Under an independent uniform-draw approximation, the old rule would require fallback on at least 99.78% of maps; that is an analytical warning, not a measured seeded-generator result. Measure fallback frequency across the fixed seed battery before accepting geography balance.
 
 Assign the two highest-fertility patch tiles to fields, tie by tile index; assign the lowest-index remaining tile to the store; the remaining six tiles hold huts. Founding creates resources/structures as initial endowment, not unpaid construction during play. Record all starting amounts and fallback status. Forest outside the patch stays finite and seed-derived; founding does not guarantee long-term timber.
 
@@ -70,7 +72,7 @@ Reservations are exclusive. Unused or blocked workers idle; do not reassign mid-
 
 Each allocated field gains one tended week, capped at 12. Each forager produces 2 food in spring/summer/autumn and 1 in winter; this is an abstract renewable local food source with no persisted depletion in P1. Foraging requires P > 0 but no particular map tile. Document that simplification in the inspector.
 
-Each timber gatherer removes up to 3 units from reachable forest tiles ordered by tile index, continuing across tiles until its allowance or the available supply is exhausted. Timber removed equals timber gained. At zero stock, a forest tile becomes cleared grass; no timber regrowth occurs. Occupied tiles cannot be forest.
+Each timber gatherer removes up to 3 units from eligible forest tiles ordered by tile index, continuing across tiles until its allowance or the available supply is exhausted. In P1, eligible means unoccupied forest at Manhattan distance ≤ 8 from the center with positive timber; intervening water/rock does not block gathering. This is abstract radius-based work, not pathfinding or simulated travel. Describe the abstraction in the inspector. Timber removed equals timber gained. At zero stock, a forest tile becomes cleared grass; no timber regrowth occurs. Occupied tiles cannot be forest.
 
 At season start draw weather uniform in 0..99: 0–19 drought (multiplier 500), 20–79 normal (1000), 80–99 wet (1200). Seasonal crop multiplier is spring 1000, summer 1200, autumn 1000, winter 400. At the final week, a field yields:
 
@@ -92,7 +94,7 @@ Birth eligibility requires S > 0, health ≥ 70, this tick's deficit = 0, and fo
 
 No age model is implied. Death events say aggregate deaths and list modeled health/ration/housing inputs; they must not invent a diagnosis or claim starvation caused the baseline component. Births are an aggregate approximation, not individual parentage.
 
-If population reaches zero, emit extinction once, set health=0, retain terrain, ruins and history, and clear transition flags. No spontaneous revival. Subsequent steps still advance environment/decay and record actual changes, but allocate no labor, production or demographics. Fields cannot yield from earlier accumulated labor after extinction: discard/reset their counters at extinction and record abandoned crop work. Play/pause/step/save/inspection remain available.
+If population reaches zero, emit extinction once, set health=0, retain terrain, ruins and history, and clear transition flags. No spontaneous revival. Subsequent steps still advance environment/decay and record actual changes, but allocate no labor, production or demographics. Fields cannot yield from earlier accumulated labor after extinction: discard/reset their counters at extinction and record abandoned crop work. An unfinished project retains its tile, identity, progress and escrow after extinction; no workers complete it and no material is refunded. Play/pause/step/save/inspection remain available.
 
 ## Building policy, maintenance and decay
 
@@ -104,7 +106,7 @@ One construction project at a time. A project occupies its chosen tile immediate
 
 Within a type, choose the lowest-index unoccupied, cleared grass tile in radius; fields require fertility ≥ 50. No legal site/material/workers means no new project. No automatic deforestation for a site; gathering may clear one. Escrow the entire material cost once when starting, and emit construction_started with cost/location. No cancellation or refunds in P1.
 
-Each reserved construction worker adds one progress unit. Complete at the required total; excess labor idles. A completed hut/store starts with 100 durability; field counter starts at zero. New buildings join the persistent registry and remain historically resolvable after removal.
+Each reserved construction worker adds one progress unit. Complete at the required total; excess labor idles. A completed hut/store starts with 100 durability; field counter starts at zero. Allocate a building entity ID when its project starts, register its identity/location immediately, and keep that same ID on completion and removal. Initial structures reference the founding event; constructed fields reference their construction-completed event for future harvest causes. New buildings join the persistent registry and remain historically resolvable after removal.
 
 Maintenance targets huts/stores with durability ≤ 75, sorted by durability ascending then ID. For each of up to two reserved workers, reserve one opening timber if available and choose the currently lowest-durability eligible target after prior planned repair. One timber/worker restores 10 durability, capped at 100. Do not reserve a worker without a payable repair. After reserving maintenance costs, construction affordability uses the remaining opening timber.
 
@@ -134,7 +136,7 @@ Emit founding; seasonal weather; settlement harvest; food overflow/spoilage when
 
 For first tick transition flags start false. Extinction uses its own record instead of shortage recovery/surplus-ended claims. Final transition events occur after demographics and include their exact criterion; shortages are based on opening demand even if population later changes.
 
-Harvest references current seasonal weather and field creation records. Demographics record health, shortfall, eligible population and draw-success counts; reference this tick's shortage transition if present, otherwise include direct ration facts. Do not manufacture a cause link where only correlation is known. Canonical records need not enumerate every mutation; full snapshots remain necessary.
+Harvest references current seasonal weather and field creation records. Demographics record health, shortfall, eligible population and draw-success counts; include direct ration facts. Shortage transition records are emitted in phase 8, after demographic records in phase 7, so demographics must not reference that later event. A cause ID may reference only a record already emitted with a lower event ID, including earlier phases of this tick; never preallocate a future record to create a causal link. Do not manufacture a cause link where only correlation is known. Canonical records need not enumerate every mutation; full snapshots remain necessary.
 
 ## Worked resource fixtures
 

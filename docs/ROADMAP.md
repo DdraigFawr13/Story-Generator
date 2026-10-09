@@ -5,7 +5,7 @@
 ## Phase 0 — Concept and repository groundwork (current)
 - **Decided:** living-world vision with settlement-first scaling; middle-fantasy starting tone; observer-led experience with later explicit Story Spotlight activation distinct from passive selection and unrelated to deferred manual nudges.
 - **Approved:** Direction C — Naturalist's Observation Desk — for layout/visual baseline; simplify and stylize art toward RimWorld-like readability with slightly richer artistic details and independent original assets.
-- **Pending:** verify tile/phone presentation, confirm technical stack/ADRs and Phase 1 numerical simulation contracts.
+- **Pending:** verify tile/phone presentation and accept Phase 1 numerical simulation/storage contracts. Architecture/ADRs are accepted (D-013); Illustrated Minimal is selected (D-014).
 - Publish design pillars, simulation architecture, proposed UI, and roadmap.
 - Define a small, testable first vertical slice.
 - Establish branch/PR hygiene and automatic merged-branch cleanup where permissions allow.
@@ -86,5 +86,5 @@ Seed `RIVERSIDE`: a small group begins next to a forest and river, clears land, 
 See [PLAN_REVIEW.md](PLAN_REVIEW.md) for the review findings, concrete mechanics checklist and ordered closure of the remaining gates.
 
 - **Decided:** middle fantasy, village-first to continent-scale, observer-led with future explicit opportunity-expanding spotlights (not forced outcomes), browser-first responsive, open-ended history.
-- **Remaining:** compare three simpler, original art treatments (see [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md)), validate Direction C's phone layout, approve [architecture proposal](ARCHITECTURE_REVIEW.md), and define initial numerical sim contracts/acceptance metrics. See [ART_UI_SPEC.md](ART_UI_SPEC.md) and [DECISIONS.md](DECISIONS.md).
+- **Remaining:** validate the selected Illustrated Minimal treatment and Direction C's phone behavior, then accept reviewed numerical mechanics/storage contracts. Architecture is already accepted. See [continuation review](CONTINUATION_REVIEW.md) for concrete remaining checks. See [ART_UI_SPEC.md](ART_UI_SPEC.md) and [DECISIONS.md](DECISIONS.md).
 - **Parked:** **direct** guided/on-demand nudges, alternate fantasy intensity profiles and additional species. See [DECISIONS.md](DECISIONS.md).
