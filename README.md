@@ -24,7 +24,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Narrative spotlights and moral range](docs/NARRATIVE_SPOTLIGHTS.md)
 - [Story Spotlight opportunity expansion](docs/SPOTLIGHT_OPPORTUNITIES.md)
 - [Technical architecture review](docs/ARCHITECTURE_REVIEW.md)
-- [Proposed architecture decision records](docs/adr/README.md)
+- [Accepted architecture decision records](docs/adr/README.md)
 - [Working agreements and branch hygiene](CONTRIBUTING.md)
 
 ## Approved direction
@@ -33,8 +33,8 @@ Start a seeded world, observe a society from founding to transformation or colla
 
 ## Immediate next decision
 
-**Direction C (Naturalist's Observation Desk) layout is selected.** Refine the visuals toward original, simplified RimWorld-like clarity with slightly more artistic detail. Next, compare art variants, validate desktop/phone presentation, review technical architecture, and complete Phase 1 mechanics and storage contracts. Basic browser-local save/resume is approved for the first playable; timeline seeking remains later. **Do not begin Phase 1 until the pre-build gate is met.**
+**Direction C (Naturalist's Observation Desk) layout is selected.** Refine the visuals toward original, simplified RimWorld-like clarity with slightly more artistic detail. Next, compare art variants, validate desktop/phone presentation, review the proposed Phase 1 mechanics and storage contracts. Architecture is approved (D-013); visual validation remains open. Basic browser-local save/resume is approved for the first playable; timeline seeking remains later. **Do not begin Phase 1 until the pre-build gate is met.**
 
 ## Development
 
-Planning documents are versioned and merged using scoped pull requests. Architecture and pixel density proposals are documented, but runtime, package manager, deployment target and production assets remain unimplemented pending Phase 0 approval.
+Planning documents are versioned and merged using scoped pull requests. Architecture is approved: strict TypeScript core, React/Vite, Canvas 2D, Node 24 LTS/npm, IndexedDB and Vitest/Playwright. Exact dependency versions and production assets remain unimplemented pending the overall Phase 0 gate. Hosting remains a milestone decision.
