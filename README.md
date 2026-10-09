@@ -34,6 +34,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Technical architecture review](docs/ARCHITECTURE_REVIEW.md)
 - [Accepted architecture decision records](docs/adr/README.md)
 - [Working agreements and branch hygiene](CONTRIBUTING.md)
+- [Reproducible legacy v1 winter/recovery sensitivity study](docs/PHASE1_BALANCE_STUDY.md) — `npm run benchmark:balance-study`
 
 ## Approved direction
 
