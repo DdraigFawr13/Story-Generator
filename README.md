@@ -16,6 +16,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Detailed ordered implementation plan (Phase 0–6)](docs/IMPLEMENTATION_PLAN.md)
 - [Plan review and remaining mechanics/storage contracts](docs/PLAN_REVIEW.md)
 - [Proposed numeric P1 settlement rules](docs/SETTLEMENT_RULES.md)
+- [Deterministic terrain contract and 100-seed probe](docs/TERRAIN_CONTRACT.md)
 - [Proposed local save/resume and recovery contract](docs/LOCAL_PERSISTENCE_CONTRACT.md)
 - [Approved middle-fantasy tone](docs/WORLD_TONE.md)
 - [Decision register and future ideas](docs/DECISIONS.md)
