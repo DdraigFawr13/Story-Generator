@@ -2,6 +2,12 @@
 
 **Status: proposed for review, not an approved stack.** Written after Direction C was selected. No code has been scaffolded or deployed. Avoid dependency-version or API assumptions until implementation.
 
+## Decision records prepared for review
+
+Review [ADR-001–003](adr/README.md) for concrete proposals on the build/core boundary, rendering/controller, and persistence/test architecture. They propose Node 24 LTS with npm, explain headless history-limit admission, and define browser capability and cross-engine evidence requirements. Their status is proposed; Phase 0.7 remains open pending explicit acceptance.
+
+The numeric [settlement rules](SETTLEMENT_RULES.md) and [local persistence contract](LOCAL_PERSISTENCE_CONTRACT.md) are now documented proposals. Review those separately for Phase 0.8; merged documentation does not establish tested balance or close a gate.
+
 ## Recommendation
 
 A **browser-first TypeScript app with a pure deterministic simulation engine**, built and tested independently of the UI. Use a simple top-down HTML Canvas 2D renderer to begin, and introduce PixiJS only when measured scale, sprite batching and scene management justify it. UI overlays and the chronicle are normal HTML, not drawn as pixel text inside the canvas.
@@ -11,7 +17,7 @@ A **browser-first TypeScript app with a pure deterministic simulation engine**, 
 | Concern | Phase 1 candidate | Reason | Future decision |
 | --- | --- | --- | --- |
 | App language | TypeScript (strict) | One language across core and viewer, explicit data contracts | Keep core framework agnostic |
-| Project build | Vite | Small browser-first build, straightforward dev loop | Pick package manager/versions at scaffold time |
+| Project build | Vite | Small browser-first build, straightforward dev loop | npm proposed in ADR-001; pin compatible versions at approved scaffold time |
 | UI | React | State-driven timeline/inspector/panels, practical responsive components | Confirm UI needs justify dependency |
 | Pixel-world rendering | **Canvas 2D** initially | Few tile types/sprites, simple nearest-neighbor draw and selection | Consider PixiJS if perf/profiling warrants |
 | Core engine | Pure TS modules, fixed-tick state transitions | Headless reproducibility and isolation from frame rate | Optional worker isolation |
@@ -63,7 +69,7 @@ Boundary rules:
 
 ## Deterministic event and time design
 
-- Fixed discrete tick represents a simulation interval (exact duration to be determined in 0.8).
+- Fixed discrete tick represents a simulation interval (one week proposed in SETTLEMENT_RULES.md; pending 0.8 review).
 - Each tick passes through explicit stable phases: environment -> production -> consumption -> construction/demography -> event record/snapshot; detailed ordering to be finalized with rule contracts.
 - RNG streams are named for independent subsystems, and the PRNG algorithm/version and stream derivation must be explicit. Define stable entity iteration, ties, numeric units/rounding and canonical serialization; exclude camera/UI state from digests. Do not use Math.random for sim decisions.
 - Resume restores complete authoritative state. Historical seeking later restores a checkpoint and reruns ticks with recorded commands; chronicle records are not an exhaustive mutation log.
@@ -99,9 +105,9 @@ Boundary rules:
 
 ## Items to approve before moving to engineering
 
-- [ ] Vite + TypeScript + React for app shell; pure TS core.
-- [ ] Canvas 2D first, with clear swap seam for PixiJS later.
-- [ ] Vitest + Playwright for automated checks; manual mobile smoke tests.
+- [ ] Accept ADR-001: Vite + TypeScript + React, pure TS core, Node/npm policy.
+- [ ] Accept ADR-002: Canvas 2D, HTML accessibility and controller-owned fixed ticks.
+- [ ] Accept ADR-003: IndexedDB and headless/browser/manual verification boundaries.
 - [ ] Browser-local simulation, no account, server, LLM or paid service required in Phase 1.
 - [ ] Canonical event records and typed stable IDs; initial seed/config/version formats.
 - [ ] Complete Phase 1 mechanics and storage contracts using [PLAN_REVIEW.md](PLAN_REVIEW.md), including rule ordering, workforce/material accounting, demographics, extinction, retention limits and autosave cadence.
