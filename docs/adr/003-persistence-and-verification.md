@@ -1,6 +1,6 @@
 # ADR-003 — Local persistence and verification boundaries
 
-**Status:** Proposed. **Date:** 2026-10-09. **Decision owner:** repository owner.
+**Status:** Accepted by the repository owner on 2026-10-09. **Date:** 2026-10-09. **Decision owner:** repository owner.
 **Scope:** Phase 0.7 / Q-003; integrates the proposed Q-004/Q-006 contracts.
 
 ## Context
