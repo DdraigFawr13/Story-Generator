@@ -17,16 +17,19 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Approved middle-fantasy tone](docs/WORLD_TONE.md)
 - [Decision register and future ideas](docs/DECISIONS.md)
 - [Approved Direction C visual specification](docs/ART_UI_SPEC.md)
+- [Refined simplified art style](docs/ART_STYLE_REFERENCE.md)
+- [Narrative spotlights and moral range](docs/NARRATIVE_SPOTLIGHTS.md)
+- [Story Spotlight opportunity expansion](docs/SPOTLIGHT_OPPORTUNITIES.md)
 - [Next step: technical architecture review](docs/ARCHITECTURE_REVIEW.md)
 - [Working agreements and branch hygiene](CONTRIBUTING.md)
 
 ## Approved direction
 
-**The Living World:** eventually a continent-scale view with zoomable settlements and inspectable people. Build **one living settlement first**. Start with **middle fantasy**: realistic social/economic causes plus bounded magic, added only when there is a working social model. **Observer-only for current phases**; small optional nudges are deferred as a future idea, not planned implementation.
+**The Living World:** eventually a continent-scale view with zoomable settlements and inspectable people. Build **one living settlement first**. Start with **middle fantasy**: realistic social/economic causes plus bounded magic. Observation is the central experience, with a future deliberately activated **Story Spotlight** that broadens *eligible* opportunities (not guaranteed events/outcomes) for tagged people and societies. Mere inspection/bookmarking never changes world state. Separate direct observer nudges are deferred.
 
 ## Immediate next decision
 
-**Direction C (Naturalist's Observation Desk) is selected.** Next, validate the visual details on desktop/phone, review the proposed technical architecture, and define Phase 1 numeric mechanics contracts. **Do not begin Phase 1 until the pre-build gate is met.**
+**Direction C (Naturalist's Observation Desk) layout is selected.** Refine the visuals toward original, simplified RimWorld-like clarity with slightly more artistic detail. Next, compare art variants, validate desktop/phone presentation, review technical architecture, and define Phase 1 numeric mechanics contracts. **Do not begin Phase 1 until the pre-build gate is met.**
 
 ## Development
 

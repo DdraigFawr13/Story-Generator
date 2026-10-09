@@ -13,20 +13,24 @@ The register distinguishes what was **approved**, what is **pending review**, an
 | D-005 | Detailed phase specs precede engineering | Control scope and avoid rebuilding modules later | P0 approval gate; ordered tasks and tests per phase |
 | D-006 | Scoped PRs + squash merges + merged-branch cleanup | Keep repository navigable | Only main persists between short-lived tasks |
 | D-007 | Responsive browser-first is planning baseline | Start easily on phone or desktop | Final framework selected before Phase 1 scaffolding |
-| D-008 | **Direction C: Naturalist's Observation Desk** approved | Living top-down pixel diorama plus chronicle and historical inspection | Map-first desktop + phone sheet; exact pixel/render settings await validation |
+| D-008 | **Direction C: Naturalist's Observation Desk** approved | Living top-down pixel diorama plus chronicle and historical inspection | Keep UX structure, revise art density/style |
+| D-009 | Broaden **eligible opportunities** for deliberate Story Spotlights | User wants greater scope of potential divergent storylines, not enforced outcomes | Multi-scale spotlight opportunity families gradually introduced P2–P4; preserve autonomous refusal/failure/missed paths |
+| D-010 | Full moral and tonal range | Dark tragedy/cruelty and warm triumph/compassion both deserve equal possibility, grounded in world conditions | No quotas, no chosen-hero protection, no scripted morality outcomes |
+| D-011 | Rework map art: simple, stylized, original, RimWorld-like readability with slightly more detail | Previous images were too dense and intricate | Direction C layout remains; compare simplified graphic treatments before sprites are created |
 
 ## Pending Phase 0 decisions
 
 | ID | Question | Candidate approach | Blocking work |
 | --- | --- | --- | --- |
 | Q-001 (resolved) | Which pixel-world interface presentation? | **C: Naturalist's Observation Desk**, approved (D-008) | Exact art settings + layout validation still pending |
-| Q-002 | Exact pixel art constraints? | Tile density, palette, UI scale, zoom levels, animations | Asset pipeline |
+| Q-002 | Exact pixel art constraints? | Compare minimal graphic, illustrated minimal (preferred), soft illustrative; 16px is no longer prescribed | Asset pipeline |
 | Q-003 | Rendering, app/test/build frameworks? | See [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md): TS + React/Vite + Canvas 2D candidate | Phase 1 scaffolding |
 | Q-004 | Time and simulation resource units? | Explicit tick-to-season conversion and realistic bounded quantities | Phase 1 sim behavior |
+| Q-005 | Spotlight interaction and budgets? | Explicit activated opportunity-expansion vs passive bookmark; cap counts and family complexity | Phase 2 spotlight mechanics; see [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md) |
 
 ## Parked concepts — DO NOT IMPLEMENT
 
-### F-001: Observer nudges
+### F-001: Observer nudges (distinct from approved Spotlight Opportunities concept)
 
 **Origin:** possible future engagement mechanism; user specifically asked to leave the idea open but not implement it as part of the active plan.
 

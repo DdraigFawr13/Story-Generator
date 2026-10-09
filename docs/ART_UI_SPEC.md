@@ -6,8 +6,8 @@
 
 A living **top-down** pixel-world terrarium accompanied by an understated historian's notebook. Watch a place change over decades, see small individuals living in it, select an event and inspect exactly what happened. The log is as important as the map: both read the same simulation state.
 
-- **Mood:** curious, calm, organic, quietly fantastical. Avoid excessive HUD chrome, over-animated effects, neon colors and noisy visual information.
-- **World:** compact, readable top-down pixel sprites with limited shading; river, woodland, farmland, paths, houses, storehouses, and moving people. Darker forests/terrain and modest warm roofs/window lights. Seasonal variation is grounded in state.
+- **Mood:** curious, organic, quietly fantastical but emotionally capable of portraying grim losses and warm communal successes. Avoid excessive HUD chrome, over-animated effects, neon colors and noisy visual information.
+- **World:** **simple, stylized original orthographic sprites**, inspired by RimWorld's map legibility and restraint, with slightly more artistic detail (roof texture, expressive shape, clothing accents, foliage). **Avoid the densely detailed/isometric medieval diorama seen in earlier exploratory mockups.** River, woodland, farmland, paths, houses, storehouses and people reflect actual state. See [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md).
 - **UI:** relatively crisp nonpixel typography for long chronicle entries and inspecting statistical details. Discrete accents may evoke an ink-and-parchment field journal, but prioritize readable contemporary layout.
 - **Fantasy tone:** middle fantasy. First playable world can appear primarily mundane. Later magic/creatures should visually differ from mundane entities because those effects exist in sim rules, not as ungrounded set dressing.
 - **Avoid:** mandatory isometric projection, dense medieval manuscript ornamentation, fake narrative text disconnected from state, unreadably small pixel-font paragraphs, and a continent-level interface before there are multiple settlements.
@@ -50,11 +50,11 @@ A living **top-down** pixel-world terrarium accompanied by an understated histor
 | --- | --- | --- |
 | Camera projection | Orthographic top-down, 2D | Readable map; simple hit testing; matches approved direction |
 | Logical terrain size | ~64 × 40 tiles for Phase 1 | Manageable simulation; first-map constraints from roadmap |
-| Source tile art | **16 × 16 px** base tile; 16/32 px character & roof variants as needed | Deliberate modest pixel density; must view at several scales |
+| Source tile art | **Undecided**; compare 24, 32, 48-pixel candidates or simple vector-like sprite units | Prior 16px suggestion was not approved; choose based on artwork and phone readability |
 | Scale | Integer nearest-neighbor scaling for rendered sprites where practical | Preserve crisp pixel edges; avoid fractional blur |
-| Zoom | Preview at 1×, 2×, 3× art scale, plus fit-to-world | Check phone legibility and selection behavior |
+| Zoom | Preview multiple effective art scales, plus fit-to-world | Zoom must suit selected source-art method, not presume 16px tiles |
 | Motion | Sparse: brief walking cues, water movement, growth/season cues, event highlight | Reduce visual distraction; UI motion does not touch sim RNG |
-| Palette | Forest greens, slate-blue waterways, warm wheat/gold, terracotta roofs, parchment accents | Consistent and restrained, with contrast review |
+| Palette | Restrained olive/forest, slate-blue, warm earth, muted jewel-toned highlights for meaningful fantasy elements | Artistically stylized, limited noise; contrast review |
 | UI text | Readable sans-serif body text, not tiny all-pixel lettering | Efficient continuous reading of histories |
 | Events | Subtle pulse/marker and log entry, persistent selectable object | The chronicle and map must show the same state |
 
@@ -74,14 +74,24 @@ These are **candidate values**. Confirm with a full desktop view and at least on
 - [x] Direction C chosen as baseline
 - [x] Approved direction recorded in repo design and decision docs
 - [ ] Verify pixel complexity and contrast at actual displayed sizes on phone and desktop
-- [ ] Review 16px tile proposal, nearest-neighbor scaling, zoom steps and movement emphasis
+- [ ] Compare three simple original art treatments; decide actual source sprite size, pixel density, zoom and movement emphasis (not a mandatory 16px tile)
 - [ ] Confirm collapsed/expanded chronicle on representative phone width via static layout/prototype
 - [ ] Check event selection, map focus and inspector on desktop and phone
 - [ ] Approve UI specs and resolve any art constraints before generating production sprites
 
+## Following and spotlight indicators (future phases)
+
+- Inspection/selection is purely visual. A passive bookmark can store a user interface preference.
+- When the later deliberate **Story Spotlight** feature arrives, distinguish its explicitly activated **expanded opportunity eligibility** from selection. A subject might encounter more *possible* choices, but can still reject, fail or never act on them. See [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md).
+- Place spotlight badges/markers with restraint; do not overload sprites or suggest outcomes are guaranteed. The first visual prototype need not implement spotlight logic.
+
 ## Out of scope
 
 Full continent views and political overlays arrive in Phase 4. Detailed individual biographies in Phase 2/5. Viewer nudges remain deferred outside approved development milestones.
+
+## Art direction refinement checkpoint
+
+Compare three simplified original treatments of the **same** overhead village composition and chronicle: minimal graphic, illustrated minimal (preferred candidate), and soft illustrative. Only then finalize exact pixel density, silhouette detail and production assets. This does **not** reopen the approved Direction C interface structure.
 
 ## Recommended continuation
 

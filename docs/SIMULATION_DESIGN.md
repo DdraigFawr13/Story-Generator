@@ -75,9 +75,11 @@ Build **interacting mechanics** rather than hundreds of isolated event snippets:
 - Important actors may die, but their actions remain in state and history.
 - Intergenerational consequences should be inspectable without storing every mundane action forever.
 
-## Optional future extension seam (planning only)
+## Explicit Story Spotlight opportunities (future mechanics) and direct-nudge seam
 
-The eventual event pipeline should be responsible for validating and applying any state-changing command, whatever its source. This leaves open the future possibility of constrained **observer nudges** as explicitly tagged, rule-valid external interventions. **There is no nudge API, action, UI, feature flag or implementation requirement in the current milestones.** Observational interactions such as selecting a resident or following a town must have no side effects on the simulation or RNG. Do not optimize for hypothetical future interventions at the expense of Phase 1 simplicity.
+The simulation must separate **passive inspection/bookmark UI** from deliberate **Story Spotlight activation**. When introduced in later phases, active spotlight expands the set of context-valid possible opportunities for the selected person/family/town/kingdom; the agent or institution autonomously accepts, ignores, rejects or fails. Spotlight choices can change later world state, so a reproducible run requires seed/config/version **plus a timestamped spotlight-command history**. No guaranteed plots, moral event quotas or favored outcomes. Purely inspecting, panning, reading a log or passively bookmarking must never consume simulation RNG or change a world's history. See [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md).
+
+A **separate** potential future direct-nudge interface would inject intentional validated external changes. It remains parked: **there is no direct-nudge API, action, UI, flag or implementation milestone in the current roadmap**. Do not over-engineer Phase 1 for these future systems.
 
 ## Performance and determinism
 

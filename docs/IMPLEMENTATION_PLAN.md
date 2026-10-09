@@ -6,7 +6,7 @@
 
 - **Destination:** an observable, open-ended pixel world with personal-to-civilizational histories; **first playable** is one detailed settlement.
 - **World tone:** middle fantasy: grounded causal societies plus bounded, consequential magic; support other intensity profiles *later*, without implementing profile toggles now.
-- **Viewer:** pure observer for the active roadmap. Optional minor "nudges" are **parked for future exploration**, outside all implementation acceptance criteria.
+- **Viewer:** observational world with an explicit **Story Spotlight** opportunity-expansion direction beginning gradually in Phase 2; deliberate spotlight may widen context-valid possibilities but must never force a choice or outcome. Mere selection, camera movement and passive bookmarks must not alter the world. Distinct manual observer "nudges" remain **parked**. See [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md).
 - **Narrative:** state transitions make history. Chronicle prose reports facts; events are never arbitrarily invented by the UI or a language model.
 - **Runs:** deterministic within version + seed + settings, saveable and explainable; societies may thrive, transform, or fail organically, never on a forced countdown.
 - **Delivery:** browser-first, responsive desktop/mobile experience. Simulation engine does not depend on rendering or any hosted service. Stack choices are provisional pending Phase 0 decisions.
@@ -43,7 +43,7 @@ Cross-cutting tests and documentation advance with each phase. P5 save/replay de
 - [x] 0.3 Set viewer baseline: passive observer; possible small nudges are **deferred**.
 - [x] 0.4 Map core subsystems, seeded-world contract, canonical event model, story-quality principles.
 - [x] 0.5 Break P1–P6 into ordered engineering increments with deliverables, tests and exit gates (this document).
-- [ ] 0.6 Direction C has been **approved** for map + chronicle + inspect panel (see [ART_UI_SPEC.md](ART_UI_SPEC.md)). Remaining before closing 0.6: confirm source pixel resolution/zoom/contrast and validate desktop + phone presentation with a static prototype.
+- [ ] 0.6 Direction C **layout** is approved. Refine map art with **simple stylized RimWorld-like legibility (original assets, slightly more detail)**, comparing three detail levels, then confirm scale/contrast and phone layout (see [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md) and [ART_UI_SPEC.md](ART_UI_SPEC.md)).
 - [ ] 0.7 **Architecture proposal documented** in [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md) (TypeScript core, Vite/React, Canvas 2D, testing and persistence seams). Review and record stack decisions as ADRs before marking complete.
 - [ ] 0.8 Set P1 numeric constants as adjustable configuration: tile dimensions, tick-to-season ratio, founder count, food unit, resource bounds, birth/death cadence, building prerequisites; list invariants before coding.
 - [ ] 0.9 Set up engineering issue/checklist backlog in scope-order only after visual/architecture review; no app scaffolding before this phase is signed off.
@@ -107,11 +107,12 @@ Cross-cutting tests and documentation advance with each phase. P5 save/replay de
 - [ ] 2.5 Add births, marriage/partnership, inheritance/guardianship where appropriate, and family succession over generations.
 - [ ] 2.6 Create limited social memory: favors, grudges, loyalty, attachments, prior disputes; define decay/retention rules and political/migration influence.
 - [ ] 2.7 Implement state-grounded decisions to stay, leave, cooperate, retaliate or reconcile; no arbitrary scripted character arcs.
-- [ ] 2.8 Capture biography-worthy events with structured actor/cause/effect links; per-person/family time lines, relationship views and follow/bookmark affordances.
+- [ ] 2.8 Capture biography-worthy events with structured actor/cause/effect links; per-person/family timelines, relationship views, passive bookmarks and separately identified **Story Spotlight** activation/deactivation with tick-stamped history.
+- [ ] 2.8a Implement a **bounded variety of additional context-eligible opportunity families for deliberately spotlighted people/families**, evaluated by autonomous decisions. Opportunities can be accepted, rejected, missed, or fail; they never guarantee an event, triumph, tragedy or fame. Same seed/config/version **plus spotlight command log** replays identically. See [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md).
 - [ ] 2.9 Add chronicle filters by person, family, category, importance; include "what led to this?" trace where records exist.
 - [ ] 2.10 Long-run tests: generations, orphan handling, relation integrity, name/ID stability, death effects, bounded per-agent memory and 100-seed story samples.
 
-**Acceptance:** observable relationships change future decisions; a resident can be followed birth-to-death with verifiable log; families persist across generations; replay stays deterministic; no unbounded memory growth.
+**Acceptance:** observable relationships change future decisions; a resident can be followed birth-to-death with verifiable log; families persist across generations. Deliberate spotlight broadens **eligible opportunities** without guaranteeing acceptance/outcomes, and deterministic replay uses the full timestamped spotlight-command history. Mere inspection does not affect the sim. No unbounded memory growth.
 
 **Scope stop:** no complex full psychological model or deep tactical combat.
 
@@ -131,6 +132,7 @@ Cross-cutting tests and documentation advance with each phase. P5 save/replay de
 - [ ] 3.7 Define **one** optional middle-fantasy resource/phenomenon (e.g., a rare arcane spring): measurable location, discovery conditions, access, depletion/regrowth, benefits, hazards, and political competition.
 - [ ] 3.8 Ensure supernatural effects update ordinary systems (land value, migration, health, crop output or power structures). Record consequences and costs; allow worlds with no observed phenomenon.
 - [ ] 3.9 Surface political timelines and institutional history; inspect leadership changes, law history, cultural memory, supernatural discovery and its causal footprint.
+- [ ] 3.9a Add **settlement-level Story Spotlight** opportunity families tied to actual economic, institutional and social conditions, with autonomous refusal/inaction/failure and bounded per-era candidate budgets.
 - [ ] 3.10 Comparative tests: identical seeds with different governance setups or arcane settings yield coherent results; default middle-fantasy remains rare but real; no forced rebellions; verify rate and bounds across seeds.
 
 **Acceptance:** institutions change incentives and subsequent choices; rulers can be succeeded, challenged or replaced; cultural memory survives individuals; a magical mechanism causally matters when it occurs; no scripted political/fantasy plots.
@@ -152,6 +154,7 @@ Cross-cutting tests and documentation advance with each phase. P5 save/replay de
 - [ ] 4.6 Support splinter factions, annexation, assimilation, conquest, collapse, rebuilding and state succession, retaining ruins and historical claims.
 - [ ] 4.7 Separate regional coarse updates from active settlement detail without making **historical outcomes depend on camera position**.
 - [ ] 4.8 Add level-of-detail region/village map transition, map filters/overlays, route/border visualization and linked chronology by location.
+- [ ] 4.8a Extend Story Spotlight opportunity families to kingdoms/factions and cross-scale relationships; retain cause/effect provenance and explicit activation/replay records.
 - [ ] 4.9 Run headless 100–1000 seed samples across long histories: invariants, normalized resources, civilization diversity, border coherence, no orphaned entities, stable speed/performance.
 - [ ] 4.10 Test detail equivalence: changing viewpoint, viewport resolution or selected settlement changes neither canonical state nor events.
 
@@ -172,14 +175,14 @@ Cross-cutting tests and documentation advance with each phase. P5 save/replay de
 - [ ] 5.4 Build multi-scale timeline with periods, region filters, important events and expandable evidence.
 - [ ] 5.5 Build historical dossiers for person, family, settlement, dynasty, law, artifact and conflict; stable historical hyperlinks even after death/destruction.
 - [ ] 5.6 Implement causal navigation: each headline can expose directly recorded causes, precursors and changes; clearly mark when an exact causal explanation is unavailable.
-- [ ] 5.7 Implement bookmarks, followed subjects, notable-event notifications, adjustable chronicle detail/importance filters, and user annotations that do **not** mutate world state.
+- [ ] 5.7 Implement **passive bookmarks and filters** that do not mutate world state; enrich followed-subject feeds and notable-event notifications. Replays must distinguish passive inspection from recorded explicit Story Spotlight activations that broaden future eligibility; user annotations stay non-mutating.
 - [ ] 5.8 Build exports/shareable seed+settings+version, selected biographies and historical summaries grounded in records; protect against unsupported claims.
 - [ ] 5.9 Stress test centuries of history, snapshot equivalence, backwards compatibility, event storage size, UI accessibility, cross-device responsive performance.
 - [ ] 5.10 Conduct spectator UX sessions: a viewer should be able to identify a consequential arc, follow its people, and explain its causes from UI evidence.
 
 **Acceptance:** loading and seeking preserve history; the same saved simulation resumed matches uninterrupted execution; no fabricated biographies or inaccessible events; archives remain navigable.
 
-**Scope stop:** intervention/nudge mechanics are **not part of P5**. Annotation, follow and selection do not alter the simulation.
+**Scope stop:** direct manual intervention/**nudges** are **not part of P5**. Annotation, passive following and inspection do not alter the simulation. The separately activated Story Spotlight opportunity-expansion mechanic, if approved in Phase 2's rule contracts, may alter future state and is recorded for replay.
 
 ---
 
@@ -189,7 +192,7 @@ Cross-cutting tests and documentation advance with each phase. P5 save/replay de
 
 ### Ordered increments
 - [ ] 6.1 Measure diversity on many seeds: migration, lifespan, polity births/deaths, cultural divergence, event coverage, persistence and recurrence.
-- [ ] 6.2 Diagnose story anti-patterns: death spirals, immortal stagnation, automatic war cycles, overfiring crisis events, lore spam, causal dead ends.
+- [ ] 6.2 Diagnose story anti-patterns: death spirals, immortal stagnation, automatic war cycles, overfiring crisis events, lore spam, causal dead ends, **spotlight always wins/dies** patterns, and lack of ordinary or dark/hopeful diversity across many seeds.
 - [ ] 6.3 Add a **small prioritized content batch per PR**: biome/resource combinations, livelihoods, disease and disasters, technology, diplomacy, settlement specialization.
 - [ ] 6.4 Expand middle-fantasy mechanisms cautiously: uncommon creatures/lineages, arcane resources, discoveries and institutions each with costs and societal effects.
 - [ ] 6.5 Keep fantasy intensity as data configuration/profiles for future variants; **do not treat grounded/high-fantasy support as required for the initial middle-fantasy release**.
@@ -207,7 +210,7 @@ Cross-cutting tests and documentation advance with each phase. P5 save/replay de
 
 ### Optional spectator nudges — exploratory design only
 
-Potential future mechanic: a viewer may sometimes choose from constrained opportunities ("a wandering scholar approaches", "a storm changes course") or make small voluntary interventions. **Do not implement, prototype, add controls, assign a milestone, or create engineering dependencies now.**
+Potential future **direct nudge** mechanic: a viewer may choose from externally proposed changes ("a wandering scholar approaches", "a storm changes course") or make small voluntary interventions. **Do not implement, prototype, add controls, assign a milestone, or create engineering dependencies for direct nudges now.** This is **different** from the approved direction for explicit Story Spotlights, which merely increases eligibility of possible agent-driven opportunities, never selects an outcome.
 
 If reconsidered after observing unassisted histories:
 1. Determine whether passive observation actually needs more engagement; define a concrete player benefit.
@@ -228,6 +231,12 @@ Other future candidates: grounded/high fantasy world-profile packages, varied in
 - Require passing CI where available; squash merge; delete merged branch. GitHub branch-cleanup workflow is backup; GitHub settings may also delete branches automatically. Verify result after each PR.
 - Do not delete unmerged/foreign active branches. Never force-update main to "clean it up."
 - Design approvals and implementation approvals are separate; this documentation PR only covers the plan.
+
+## Narrative and art scope amendments
+
+- [Narrative divergence and moral range](NARRATIVE_SPOTLIGHTS.md)
+- [Story Spotlight opportunity eligibility](SPOTLIGHT_OPPORTUNITIES.md): explicit activation; may alter future outcomes, but no chosen result, mandatory plot or guaranteed event.
+- [Simplified original art direction](ART_STYLE_REFERENCE.md): inspired by RimWorld's readability with slightly more artistic detail; earlier 16px/isometric-heavy art is not locked.
 
 ## First engineering PR (NOT to start yet)
 

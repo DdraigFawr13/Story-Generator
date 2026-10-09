@@ -68,7 +68,7 @@ Boundary rules:
 - RNG streams are named for independent subsystems, and the PRNG algorithm/version must be explicit. Do not use Math.random for sim decisions.
 - Canonical events contain: event ID, tick, type, actor/place IDs, causal references/facts, effects/changed values and importance.
 - Generate narrative headlines by deterministic templates or pure formatters over event facts. Text is not a source of state mutation.
-- Treat controller actions (play, pause, speed, inspect, follow, log filtering) as non-authoritative control/UI choices.
+- Treat controller actions (play, pause, speed, inspect, **passive follow/bookmark**, log filtering) as non-authoritative control/UI choices. **Future explicit Story Spotlight** activation is different: at a deterministic tick boundary it expands eligible opportunity families for the tagged entity, can change future events, and must be included in the run's command history and replay. See [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md).
 
 ## Performance strategy
 

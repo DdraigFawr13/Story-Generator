@@ -1,6 +1,6 @@
 # Game design and agreed direction (v0.2)
 
-> **Approved:** living world vision, settlement-first vertical slice, middle-fantasy baseline, initially observer-only. **Still to review:** final pixel size/mobile static layout and engineering contracts. **Approved visual baseline:** Direction C — Naturalist's Observation Desk; see [ART_UI_SPEC.md](ART_UI_SPEC.md). See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
+> **Approved:** living world vision, settlement-first vertical slice, middle-fantasy baseline, mostly observational play with a separately activated **Story Spotlight** that can widen eligible story opportunities in later phases. Direct manual nudges remain parked. **Still to review:** simplified stylized art treatment (RimWorld-inspired readability with original designs and slightly richer artistic detail), final mobile layout and engineering contracts. **Approved visual baseline:** Direction C — Naturalist's Observation Desk; see [ART_UI_SPEC.md](ART_UI_SPEC.md). See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
 ## Core fantasy
 
@@ -43,7 +43,7 @@ Create a unique world from a seed. Press Play. Watch a society inhabit the land,
 - **Top bar:** world name, seed, year/season, play/pause, speeds, next-event/single-tick, world status.
 - **Bottom/expandable panel:** selected person, family, building, community, faction; relevant statistics and historical connections.
 - **Mobile:** map as primary surface and collapsible chronicle/inspector; large touch targets, no hover-only controls.
-- **Visual default:** restrained, readable pixel art; avoid visual overload and tiny text.
+- **Visual default:** **simple, stylized, true overhead/orthographic art** with RimWorld-like readability and a little more illustrative character; original visuals, no copied sprites; avoid overly dense/isometric village art, overload and tiny text. See [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md).
 - **Later:** pan from continent to settlement via level-of-detail views; history timeline + genealogy + dynasty maps.
 
 ### Example of live chronicle (illustrative, not scripted)
@@ -62,11 +62,11 @@ Each historical entry must link to the actual resources, locations, characters, 
 
 Future configurable world profiles might be grounded, low-, medium- or high-fantasy and alien worlds, but they are not part of the active build. See [WORLD_TONE.md](WORLD_TONE.md).
 
-## Viewer interaction: current and parked
+## Viewer interaction: observation, future story spotlights and parked nudges
 
-**Approved current model: Pure Observer.** Explore the world, track people and places, inspect causes, bookmark events, and review chronology. These actions do not alter the simulated history.
+**Core model:** observe a living world, inspect causes and bookmark histories. **Mere inspection, map selection, opening a panel and passive bookmarks never affect the simulation.** When implemented later (Phase 2 onward), an **explicit Story Spotlight** deliberately widens *context-valid possible opportunities* for a person, family, town or kingdom. Characters/societies still decide autonomously; an opportunity may be ignored, refused, fail or succeed. Activation can affect future outcomes and is recorded for reproducible replay. See [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md).
 
-**Parked idea (no active milestone):** small, optional observer nudges, either offered at natural moments or chosen by the viewer. Future design must explicitly consider causal honesty, limits and replay/versioning. Do not add intervention controls or roadmap commitments now; only avoid architectural coupling that would make valid externally sourced effects impossible later. See [DECISIONS.md](DECISIONS.md).
+**Separately parked idea (no active milestone):** small, direct observer nudges, either offered at natural moments or chosen by the viewer. Future design must explicitly consider causal honesty, limits and replay/versioning. Do not add intervention controls or roadmap commitments now; only avoid architectural coupling that would make valid externally sourced effects impossible later. See [DECISIONS.md](DECISIONS.md).
 
 ## Non-goals for first playable version
 
@@ -77,4 +77,4 @@ Future configurable world profiles might be grounded, low-, medium- or high-fant
 
 ## Next design checkpoint
 
-Direction C has been approved. Validate exact pixel-art, map controls and phone chronicle layout, then confirm proposed [architecture](ARCHITECTURE_REVIEW.md) and Phase 1 engine/rules contracts before coding.
+Direction C layout remains approved. Compare three original simplified art variants per [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md), then confirm proposed [architecture](ARCHITECTURE_REVIEW.md) and Phase 1 engine/rules contracts before coding.
