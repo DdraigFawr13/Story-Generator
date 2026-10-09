@@ -20,6 +20,8 @@ export function headline(event: Immutable<SettlementEvent>): string {
     case 'construction_completed':
       return `A ${f.kind} is completed`;
     case 'harvest':
+      if (f.season === 'winter' && f.seasonMultiplier === 0 && f.total === 0)
+        return 'Winter fields rest; no crop harvest';
       return `${f.season} harvest brings ${f.total} food`;
     case 'food_overflow':
       return `${f.amount} food is lost beyond storage capacity`;

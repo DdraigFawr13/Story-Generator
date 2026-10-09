@@ -1,6 +1,6 @@
-# P1 settlement rules — proposal v1.2
+# P1 settlement rules — versioned engineering contract
 
-**Status:** implemented as the versioned `p1-settlement-v1` engineering baseline under D-020/D-021. All numbers remain provisional balance values; implementation is not final gameplay acceptance. [PHASE1_SETTLEMENT.md](PHASE1_SETTLEMENT.md) records actual forced fixtures, seed-battery results and remaining risks. The browser still shows founding-only terrain; storage and selected-art evidence remain open. Review alongside [local persistence](LOCAL_PERSISTENCE_CONTRACT.md), [architecture](ARCHITECTURE_REVIEW.md) and [implementation plan](IMPLEMENTATION_PLAN.md).
+**Status:** new worlds use `p1-settlement-v2` under D-023. Existing `p1-settlement-v1` saves continue on their exact original configuration and rules. Numeric values are engineering baselines; implementation is not final gameplay acceptance. [PHASE1_BALANCE.md](PHASE1_BALANCE.md) records the winter/recovery amendment and measured trajectories; [PHASE1_SETTLEMENT.md](PHASE1_SETTLEMENT.md) preserves v1 evidence. The browser shows advancing state, history and local saves. Selected-art/device and human experience evidence remain open. Review alongside [local persistence](LOCAL_PERSISTENCE_CONTRACT.md), [architecture](ARCHITECTURE_REVIEW.md) and [implementation plan](IMPLEMENTATION_PLAN.md).
 
 ## Units and scope
 
@@ -12,7 +12,7 @@ One settlement; aggregate residents and household count; no named people, migrat
 | Terrain | 64 × 40 logical tiles, row-major index y × 64 + x |
 | Food | One resident-week ration; whole units |
 | Timber | Whole material units; no stone/metal economy |
-| Labor | One worker-week; workforce floor(opening population / 2) |
+| Labor | One worker-week; v2 workforce min(P, max(2, floor(P/2))); v1 floor(P/2) |
 | Population / households | Residents; households = ceil(population / 4), zero when extinct |
 | Health | Settlement aggregate integer 0–100; initially 100 |
 | Fertility | Integer 0–100 per tile; immutable in P1 |
@@ -34,7 +34,7 @@ Tick zero is founding before the first week of spring. For candidate tick t ≥ 
 Each candidate tick executes these phases in this exact order:
 
 1. **Environment:** on weeks 1, 13, 25, 37, etc., draw and store weather for the new season.
-2. **Opening budgets:** snapshot opening population P and workforce W = floor(P/2). Allocate labor as below; no later births/deaths change this tick's budget.
+2. **Opening budgets:** snapshot opening population P and workforce W = min(P, max(2, floor(P/2))) in v2, or floor(P/2) in v1. Allocate labor as below; no later births/deaths change this tick's budget.
 3. **Production:** tend fields, forage, gather timber; at season end harvest all fields and reset their counters.
 4. **Food:** apply capacity overflow, consume min(food, P), then spoil floor(remaining food/100) on season boundaries only.
 5. **Health:** update from this tick's ration deficit and opening shelter capacity.
@@ -56,9 +56,11 @@ Assign fields/store/huts and IDs under that contract; founding remains an endowm
 
 ## Labor, food and materials
 
-At opening, reserve workers in this priority order:
+At opening in v2, if P > 0 and opening food < 6×P, protect one worker for foraging before assigning fields. Workforce never exceeds P: a one-person settlement has one worker, two people have two, and an extinct settlement has none. This aggregate recovery approximation does not imply individual ages or professions; P2 must replace it with explicit eligibility. V1 has no protected reservation and retains its original workforce formula.
 
-1. One worker for each completed field, sorted by entity ID, while labor remains.
+Reserve workers in this priority order:
+
+1. One worker for each completed field, sorted by entity ID, up to workforce minus the protected forager. V2 winter fields are dormant and receive no labor; v1 fields remain productive in winter.
 2. Up to ceil(P/4) foragers from remaining workers.
 3. Up to two maintenance workers if an opening hut/store has durability ≤ 75 and opening timber ≥ 1.
 4. Up to two construction workers if a project exists, or a new eligible project can be paid from opening timber.
@@ -70,7 +72,7 @@ Each allocated field gains one tended week, capped at 12. Each forager produces 
 
 Each timber gatherer removes up to 3 units from eligible forest tiles ordered by tile index, continuing across tiles until its allowance or the available supply is exhausted. In P1, eligible means unoccupied forest at Manhattan distance ≤ 8 from the center with positive timber; intervening water/rock does not block gathering. This is abstract radius-based work, not pathfinding or simulated travel. Describe the abstraction in the inspector. Timber removed equals timber gained. At zero stock, a forest tile becomes cleared grass; no timber regrowth occurs. Occupied tiles cannot be forest.
 
-At season start draw weather uniform in 0..99: 0–19 drought (multiplier 500), 20–79 normal (1000), 80–99 wet (1200). Seasonal crop multiplier is spring 1000, summer 1200, autumn 1000, winter 400. At the final week, a field yields:
+At season start draw weather uniform in 0..99: 0–19 drought (multiplier 500), 20–79 normal (1000), 80–99 wet (1200). Seasonal crop multiplier is spring 1000, summer 1200, autumn 1000, winter **0 in v2**, **400 in v1**. V2's twelve winter weeks must draw on stored food and the unchanged limited foraging. At the final week, a field yields:
 
 floor(240 × fertility × weatherMultiplier × seasonMultiplier × tendedWeeks / (100 × 1000 × 1000 × 12)).
 
@@ -122,7 +124,7 @@ All non-RNG arithmetic is safe integer arithmetic; positive ratios use floor exc
 
 Allocate monotonically increasing numeric IDs from separate entity and event counters starting at 1; no reuse. Tiles use their fixed row-major indices. Assign settlement first, then initial buildings in tile order. Iterate entities by numeric ID unless a rule explicitly gives another ordering. RNG trials use aggregate index, never UI iteration order.
 
-Canonical payload encoding follows the persistence proposal, with the ASCII seed rule here resolving its seed-normalization question. Operational metadata, camera state, selected IDs, localization and wall time are excluded. Hash UTF-8 canonical bytes using SHA-256. Rule changes require rulesVersion and simulationVersion changes; existing saves are rejected unless an explicit later migration exists.
+Canonical payload encoding follows the persistence contract, with the ASCII seed rule here resolving its seed-normalization question. Operational metadata, camera state, selected IDs, localization and wall time are excluded. Hash UTF-8 canonical bytes using SHA-256. Rule changes require rulesVersion and simulationVersion changes. Recognized versions dispatch to their exact configuration; v1 is retained alongside v2, without migration or rewriting old history. Unsupported versions and mismatched configurations are rejected.
 
 ## Chronicle rules
 
@@ -141,6 +143,8 @@ These are hand-calculated rule fixtures, not simulated playthroughs. Unless stat
 - **Normal spring boundary:** P=24, opening food=100, two fields fertility 75, normal weather, 12 tended weeks each; six foragers produce 12. Each field yields 180. With capacity 800: 100+12+360−0−24−4 spoilage = **444 food**. Health stays 100 if housed. Workforce 12 covers 2 fields+6 foragers+up to 2 builders+2 gatherers without duplication.
 - **Drought spring boundary:** same inputs, multiplier 500: fields yield 90 each; 100+12+180−24−2 spoilage = **266 food**. Lower reserves arise directly from weather.
 - **Winter shortage:** P=24, opening food=0, six foragers, no harvest this week: production 6, consumption 6, deficit 18, closing food 0. Fully housed health 100 falls by ceil(20×18/24)=15 to **85**. No death roll occurs until a season boundary.
+- **V2 winter reserves:** P=24, opening food=200, six foragers, dormant fields: production 6, consumption 24, closing food **182** on a non-boundary week. No crop labor or crop yield occurs. A season-end record still reports the factual zero crop result and retains weather/field causes.
+- **V2 depleted small population:** P=2, opening food=0, spring: W=2, one protected forager, at most one field worker. Foraging produces two rations; both residents eat. V1 has W=1 and fields can consume all labor. These are controlled inputs demonstrating recovery capacity, not guaranteed autonomous outcomes.
 - **Capacity:** food 790 plus 30 production with capacity 800 loses 20, then consumes 24, leaving 776 on a non-boundary tick.
 - **Construction:** an escrowed hut with progress 3 receives two workers: progress completes at 4; one labor unit idles; no second charge for timber; shelter rises by four.
 - **Extinction boundary:** P=1, health=0, demographic draw below 55 yields one death; S=0 means no birth draws. Record extinction and preserve the saved RNG state.
@@ -149,11 +153,11 @@ These are hand-calculated rule fixtures, not simulated playthroughs. Unless stat
 
 Before approval, decide whether weekly ticks, seasonal harvests, finite timber, abstract renewable foraging, aggregate health/demographics and fallback founding represent the intended first playable. Those are product choices, not experimentally validated balance.
 
-After engineering authorization, implement ledger/invariant tests, deterministic Node/browser vectors, seed/hash/RNG golden fixtures, forced weather/shortage/occupancy/extinction fixtures, save restoration at phase boundaries, and candidate-tick rollback. Test 100 fixed seeds to 1,000 ticks; benchmark 10,000 ticks under the persistence budgets; qualitatively review ten seeds without special-casing them.
+Ledger/invariant tests, deterministic Node/browser vectors, seed/hash/RNG golden fixtures, forced weather/shortage/occupancy/extinction fixtures, save restoration at phase boundaries and candidate-tick rollback are implemented. Both profiles have fixed-seed trajectory evidence; v2 runs the 100-seed × 1,000-week battery and a 10,000-week retained-history test. V1 has separate desktop storage benchmarks. Review ten seeds without special-casing them and retain the separate human/device acceptance requirements.
 
 Explicit tuning risks: finite timber may produce eventual maintenance decline; foraging may stabilize low populations; crop labor and fertility may create self-reinforcing growth/decline. Adjust only from multi-seed evidence and version the rule change. A successful arithmetic fixture does not prove a compelling or balanced world.
 
-No Phase 0 checkbox is closed by this draft. Architecture decision records and desktop/phone visual evidence remain separate work.
+D-023 accepts the balance emphasis, with measured implementation documented in PHASE1_BALANCE.md. Human experience, final storage policy and selected-art/device acceptance remain separate work.
 
 ## Engineering clarification in p1-settlement-v1
 

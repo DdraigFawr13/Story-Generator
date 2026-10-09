@@ -7,7 +7,8 @@ import {
   prepareSave,
 } from '../../src/adapters/local-save';
 import { digestCanonical } from '../../src/adapters/crypto';
-import { simulateSettlement } from '../../src/sim/settlement';
+import { simulateSettlement, advanceSettlement } from '../../src/sim/settlement';
+import { createSettlement } from '../../src/sim/settlement-initial';
 
 export async function readSlot() {
   const store = await openLocalStore();
@@ -17,10 +18,11 @@ export async function readSlot() {
     store.close();
   }
 }
-export async function writeFixture(seed: string, tick: number) {
+export async function writeFixture(seed: string, tick: number, version?: string) {
   const store = await openLocalStore();
   try {
-    await store.write(await prepareSave(simulateSettlement(seed, tick).state, 'fixture', 1));
+    const snapshot = advanceSettlement(createSettlement(seed, version), tick).state;
+    await store.write(await prepareSave(snapshot, 'fixture', 1));
   } finally {
     store.close();
   }

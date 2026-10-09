@@ -1,0 +1,5563 @@
+{
+  "trajectories": [
+    {
+      "version": "p1-settlement-v1",
+      "seed": "RIVERSIDE",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 24,
+          "health": 100,
+          "food": 581,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 12,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                8,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 370,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 23,
+          "health": 100,
+          "food": 769,
+          "timber": 168,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 18,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                8,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 493,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 23,
+          "health": 100,
+          "food": 1038,
+          "timber": 196,
+          "fields": 3,
+          "huts": 7,
+          "stores": 2,
+          "events": 24,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 11,
+              "fields": [
+                8,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 411,
+            "foraging": 12,
+            "consumed": 23,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 23,
+          "health": 100,
+          "food": 988,
+          "timber": 224,
+          "fields": 3,
+          "huts": 7,
+          "stores": 3,
+          "events": 30,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 11,
+              "fields": [
+                8,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 163,
+            "foraging": 6,
+            "consumed": 23,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 23,
+          "health": 100,
+          "food": 1915,
+          "timber": 380,
+          "fields": 3,
+          "huts": 7,
+          "stores": 6,
+          "events": 52,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 11,
+              "fields": [
+                8,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 196,
+            "foraging": 6,
+            "consumed": 23,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 31,
+          "health": 100,
+          "food": 4670,
+          "timber": 196,
+          "fields": 4,
+          "huts": 9,
+          "stores": 15,
+          "events": 133,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 15,
+              "fields": [
+                8,
+                10,
+                12,
+                20
+              ],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 211,
+            "foraging": 8,
+            "consumed": 30,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 32,
+          "health": 100,
+          "food": 9349,
+          "timber": 0,
+          "fields": 5,
+          "huts": 10,
+          "stores": 23,
+          "events": 258,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 16,
+              "fields": [
+                8,
+                10,
+                12,
+                20,
+                35
+              ],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 259,
+            "foraging": 8,
+            "consumed": 32,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 39,
+          "health": 100,
+          "food": 9350,
+          "timber": 0,
+          "fields": 5,
+          "huts": 10,
+          "stores": 23,
+          "events": 480,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 19,
+              "fields": [
+                8,
+                10,
+                12,
+                20,
+                35
+              ],
+              "foragers": 10,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 4,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 10,
+            "consumed": 39,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v1",
+      "seed": "TERRAIN_000",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 24,
+          "health": 100,
+          "food": 532,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 12,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                5,
+                8,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 321,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 23,
+          "health": 100,
+          "food": 769,
+          "timber": 168,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 18,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                5,
+                8,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 434,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 23,
+          "health": 100,
+          "food": 990,
+          "timber": 196,
+          "fields": 3,
+          "huts": 7,
+          "stores": 2,
+          "events": 26,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 11,
+              "fields": [
+                5,
+                8,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 362,
+            "foraging": 12,
+            "consumed": 23,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 23,
+          "health": 100,
+          "food": 921,
+          "timber": 224,
+          "fields": 3,
+          "huts": 7,
+          "stores": 3,
+          "events": 32,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 11,
+              "fields": [
+                5,
+                8,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 144,
+            "foraging": 6,
+            "consumed": 23,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 25,
+          "health": 100,
+          "food": 1596,
+          "timber": 372,
+          "fields": 4,
+          "huts": 8,
+          "stores": 5,
+          "events": 58,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                5,
+                8,
+                12,
+                17
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 1,
+              "gatherers": 0,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 210,
+            "foraging": 7,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 29,
+          "health": 100,
+          "food": 3862,
+          "timber": 716,
+          "fields": 4,
+          "huts": 9,
+          "stores": 13,
+          "events": 136,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 14,
+              "fields": [
+                5,
+                8,
+                12,
+                17
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 192,
+            "foraging": 7,
+            "consumed": 28,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 33,
+          "health": 100,
+          "food": 8705,
+          "timber": 352,
+          "fields": 5,
+          "huts": 10,
+          "stores": 29,
+          "events": 283,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 16,
+              "fields": [
+                5,
+                8,
+                12,
+                17,
+                32
+              ],
+              "foragers": 9,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 2,
+              "unusedConstruction": 0
+            },
+            "harvest": 242,
+            "foraging": 9,
+            "consumed": 33,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 47,
+          "health": 100,
+          "food": 16447,
+          "timber": 0,
+          "fields": 6,
+          "huts": 12,
+          "stores": 41,
+          "events": 569,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 23,
+              "fields": [
+                5,
+                8,
+                12,
+                17,
+                32,
+                59
+              ],
+              "foragers": 12,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 5,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 12,
+            "consumed": 47,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v1",
+      "seed": "TERRAIN_001",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 25,
+          "health": 100,
+          "food": 742,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 13,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 533,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 25,
+          "health": 100,
+          "food": 768,
+          "timber": 60,
+          "fields": 4,
+          "huts": 8,
+          "stores": 2,
+          "events": 24,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 1,
+              "gatherers": 0,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 875,
+            "foraging": 14,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 25,
+          "health": 100,
+          "food": 1164,
+          "timber": 96,
+          "fields": 4,
+          "huts": 8,
+          "stores": 2,
+          "events": 29,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 1,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 798,
+            "foraging": 14,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 25,
+          "health": 100,
+          "food": 1253,
+          "timber": 88,
+          "fields": 4,
+          "huts": 8,
+          "stores": 3,
+          "events": 35,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 1,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 317,
+            "foraging": 7,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 27,
+          "health": 100,
+          "food": 3517,
+          "timber": 32,
+          "fields": 4,
+          "huts": 8,
+          "stores": 10,
+          "events": 67,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [
+                9,
+                10,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 317,
+            "foraging": 7,
+            "consumed": 26,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 29,
+          "health": 100,
+          "food": 7937,
+          "timber": 312,
+          "fields": 4,
+          "huts": 9,
+          "stores": 26,
+          "events": 155,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 15,
+              "fields": [
+                9,
+                10,
+                12,
+                14
+              ],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 317,
+            "foraging": 8,
+            "consumed": 30,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 33,
+          "health": 100,
+          "food": 13951,
+          "timber": 199,
+          "fields": 5,
+          "huts": 10,
+          "stores": 46,
+          "events": 315,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 16,
+              "fields": [
+                9,
+                10,
+                12,
+                14,
+                58
+              ],
+              "foragers": 9,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 2,
+              "unusedConstruction": 0
+            },
+            "harvest": 366,
+            "foraging": 9,
+            "consumed": 33,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 40,
+          "health": 100,
+          "food": 21622,
+          "timber": 0,
+          "fields": 5,
+          "huts": 10,
+          "stores": 54,
+          "events": 560,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 20,
+              "fields": [
+                9,
+                10,
+                12,
+                14,
+                58
+              ],
+              "foragers": 10,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 5,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 10,
+            "consumed": 40,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v1",
+      "seed": "TERRAIN_002",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 24,
+          "health": 100,
+          "food": 497,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 12,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                2,
+                3,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 286,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 24,
+          "health": 100,
+          "food": 735,
+          "timber": 168,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 16,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                2,
+                3,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 389,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 24,
+          "health": 100,
+          "food": 1165,
+          "timber": 208,
+          "fields": 3,
+          "huts": 7,
+          "stores": 2,
+          "events": 23,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                2,
+                3,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 649,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 25,
+          "health": 100,
+          "food": 1067,
+          "timber": 248,
+          "fields": 3,
+          "huts": 7,
+          "stores": 3,
+          "events": 30,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                2,
+                3,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 128,
+            "foraging": 6,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 24,
+          "health": 100,
+          "food": 3153,
+          "timber": 184,
+          "fields": 4,
+          "huts": 8,
+          "stores": 8,
+          "events": 66,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                2,
+                3,
+                12,
+                16
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 1,
+              "gatherers": 0,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 349,
+            "foraging": 7,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 28,
+          "health": 100,
+          "food": 8509,
+          "timber": 208,
+          "fields": 4,
+          "huts": 8,
+          "stores": 27,
+          "events": 159,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [
+                2,
+                3,
+                12,
+                16
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 349,
+            "foraging": 7,
+            "consumed": 27,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 42,
+          "health": 100,
+          "food": 17482,
+          "timber": 520,
+          "fields": 6,
+          "huts": 12,
+          "stores": 57,
+          "events": 346,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 20,
+              "fields": [
+                2,
+                3,
+                12,
+                16,
+                58,
+                74
+              ],
+              "foragers": 11,
+              "repairs": 0,
+              "builders": 2,
+              "gatherers": 1,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 464,
+            "foraging": 11,
+            "consumed": 41,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 52,
+          "health": 100,
+          "food": 34245,
+          "timber": 0,
+          "fields": 6,
+          "huts": 13,
+          "stores": 86,
+          "events": 662,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 26,
+              "fields": [
+                2,
+                3,
+                12,
+                16,
+                58,
+                74
+              ],
+              "foragers": 13,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 7,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 13,
+            "consumed": 52,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v1",
+      "seed": "TERRAIN_003",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 24,
+          "health": 100,
+          "food": 769,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 13,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                8,
+                9,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 623,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 24,
+          "health": 100,
+          "food": 1165,
+          "timber": 136,
+          "fields": 3,
+          "huts": 7,
+          "stores": 2,
+          "events": 20,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                8,
+                9,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 702,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 24,
+          "health": 100,
+          "food": 1561,
+          "timber": 176,
+          "fields": 3,
+          "huts": 7,
+          "stores": 3,
+          "events": 27,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                8,
+                9,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 702,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 25,
+          "health": 100,
+          "food": 1562,
+          "timber": 216,
+          "fields": 3,
+          "huts": 7,
+          "stores": 4,
+          "events": 34,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                8,
+                9,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 232,
+            "foraging": 6,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 26,
+          "health": 100,
+          "food": 2869,
+          "timber": 220,
+          "fields": 4,
+          "huts": 8,
+          "stores": 9,
+          "events": 66,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [
+                8,
+                9,
+                12,
+                17
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 300,
+            "foraging": 7,
+            "consumed": 26,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 24,
+          "health": 100,
+          "food": 7098,
+          "timber": 108,
+          "fields": 4,
+          "huts": 8,
+          "stores": 23,
+          "events": 145,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                8,
+                9,
+                12,
+                17
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 2,
+              "gatherers": 0,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 300,
+            "foraging": 6,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 30,
+          "health": 100,
+          "food": 13300,
+          "timber": 251,
+          "fields": 4,
+          "huts": 9,
+          "stores": 44,
+          "events": 305,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 15,
+              "fields": [
+                8,
+                9,
+                12,
+                17
+              ],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 300,
+            "foraging": 8,
+            "consumed": 30,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 40,
+          "health": 100,
+          "food": 26166,
+          "timber": 0,
+          "fields": 5,
+          "huts": 10,
+          "stores": 70,
+          "events": 632,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 20,
+              "fields": [
+                8,
+                9,
+                12,
+                17,
+                77
+              ],
+              "foragers": 10,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 5,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 10,
+            "consumed": 40,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v1",
+      "seed": "TERRAIN_004",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 24,
+          "health": 100,
+          "food": 728,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 12,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                2,
+                3,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 519,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 23,
+          "health": 100,
+          "food": 1158,
+          "timber": 136,
+          "fields": 3,
+          "huts": 7,
+          "stores": 2,
+          "events": 19,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                2,
+                3,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 585,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 23,
+          "health": 100,
+          "food": 1499,
+          "timber": 164,
+          "fields": 3,
+          "huts": 7,
+          "stores": 3,
+          "events": 25,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 11,
+              "fields": [
+                2,
+                3,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 488,
+            "foraging": 12,
+            "consumed": 23,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 24,
+          "health": 100,
+          "food": 1476,
+          "timber": 192,
+          "fields": 3,
+          "huts": 7,
+          "stores": 4,
+          "events": 32,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 11,
+              "fields": [
+                2,
+                3,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 195,
+            "foraging": 6,
+            "consumed": 23,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 24,
+          "health": 100,
+          "food": 2241,
+          "timber": 296,
+          "fields": 4,
+          "huts": 8,
+          "stores": 7,
+          "events": 61,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                2,
+                3,
+                12,
+                18
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 127,
+            "foraging": 6,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 25,
+          "health": 100,
+          "food": 6233,
+          "timber": 300,
+          "fields": 4,
+          "huts": 8,
+          "stores": 20,
+          "events": 139,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                2,
+                3,
+                12,
+                18
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 1,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 127,
+            "foraging": 7,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 34,
+          "health": 100,
+          "food": 11191,
+          "timber": 87,
+          "fields": 5,
+          "huts": 10,
+          "stores": 37,
+          "events": 289,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 16,
+              "fields": [
+                2,
+                3,
+                12,
+                18,
+                50
+              ],
+              "foragers": 9,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 2,
+              "unusedConstruction": 0
+            },
+            "harvest": 389,
+            "foraging": 9,
+            "consumed": 33,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 39,
+          "health": 100,
+          "food": 16478,
+          "timber": 0,
+          "fields": 5,
+          "huts": 10,
+          "stores": 41,
+          "events": 510,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 19,
+              "fields": [
+                2,
+                3,
+                12,
+                18,
+                50
+              ],
+              "foragers": 10,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 4,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 10,
+            "consumed": 39,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v1",
+      "seed": "TERRAIN_005",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 25,
+          "health": 100,
+          "food": 395,
+          "timber": 24,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 13,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                4,
+                7,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 182,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 25,
+          "health": 100,
+          "food": 768,
+          "timber": 8,
+          "fields": 4,
+          "huts": 8,
+          "stores": 1,
+          "events": 24,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                4,
+                7,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 619,
+            "foraging": 14,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 26,
+          "health": 100,
+          "food": 768,
+          "timber": 8,
+          "fields": 4,
+          "huts": 8,
+          "stores": 1,
+          "events": 30,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                4,
+                7,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 568,
+            "foraging": 14,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 26,
+          "health": 100,
+          "food": 645,
+          "timber": 8,
+          "fields": 4,
+          "huts": 8,
+          "stores": 1,
+          "events": 34,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [
+                4,
+                7,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 2,
+              "unusedConstruction": 0
+            },
+            "harvest": 111,
+            "foraging": 7,
+            "consumed": 26,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 26,
+          "health": 100,
+          "food": 756,
+          "timber": 8,
+          "fields": 4,
+          "huts": 8,
+          "stores": 1,
+          "events": 55,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [
+                4,
+                7,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 2,
+              "unusedConstruction": 0
+            },
+            "harvest": 225,
+            "foraging": 7,
+            "consumed": 26,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 29,
+          "health": 100,
+          "food": 618,
+          "timber": 8,
+          "fields": 4,
+          "huts": 8,
+          "stores": 1,
+          "events": 117,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 14,
+              "fields": [
+                4,
+                7,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 111,
+            "foraging": 7,
+            "consumed": 28,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 32,
+          "health": 100,
+          "food": 579,
+          "timber": 0,
+          "fields": 4,
+          "huts": 8,
+          "stores": 1,
+          "events": 224,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 16,
+              "fields": [
+                4,
+                7,
+                12,
+                14
+              ],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 4,
+              "unusedConstruction": 0
+            },
+            "harvest": 111,
+            "foraging": 8,
+            "consumed": 32,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 32,
+          "health": 100,
+          "food": 666,
+          "timber": 0,
+          "fields": 4,
+          "huts": 8,
+          "stores": 1,
+          "events": 440,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 16,
+              "fields": [
+                4,
+                7,
+                12,
+                14
+              ],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 4,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 8,
+            "consumed": 32,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v1",
+      "seed": "TERRAIN_006",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 25,
+          "health": 100,
+          "food": 769,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 13,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 560,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 26,
+          "health": 100,
+          "food": 768,
+          "timber": 60,
+          "fields": 4,
+          "huts": 8,
+          "stores": 2,
+          "events": 25,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 1,
+              "gatherers": 0,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 747,
+            "foraging": 14,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 28,
+          "health": 100,
+          "food": 1163,
+          "timber": 132,
+          "fields": 4,
+          "huts": 8,
+          "stores": 2,
+          "events": 31,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [
+                9,
+                10,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 670,
+            "foraging": 14,
+            "consumed": 26,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 28,
+          "health": 100,
+          "food": 1168,
+          "timber": 172,
+          "fields": 4,
+          "huts": 8,
+          "stores": 3,
+          "events": 39,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 14,
+              "fields": [
+                9,
+                10,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 268,
+            "foraging": 7,
+            "consumed": 28,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 30,
+          "health": 100,
+          "food": 2328,
+          "timber": 314,
+          "fields": 4,
+          "huts": 9,
+          "stores": 7,
+          "events": 68,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 15,
+              "fields": [
+                9,
+                10,
+                12,
+                14
+              ],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 268,
+            "foraging": 8,
+            "consumed": 30,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 28,
+          "health": 100,
+          "food": 6253,
+          "timber": 636,
+          "fields": 4,
+          "huts": 9,
+          "stores": 21,
+          "events": 148,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 14,
+              "fields": [
+                9,
+                10,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 133,
+            "foraging": 7,
+            "consumed": 28,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 35,
+          "health": 100,
+          "food": 12946,
+          "timber": 146,
+          "fields": 5,
+          "huts": 10,
+          "stores": 43,
+          "events": 305,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 17,
+              "fields": [
+                9,
+                10,
+                12,
+                14,
+                52
+              ],
+              "foragers": 9,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 335,
+            "foraging": 9,
+            "consumed": 35,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 44,
+          "health": 100,
+          "food": 19229,
+          "timber": 0,
+          "fields": 5,
+          "huts": 11,
+          "stores": 48,
+          "events": 545,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 22,
+              "fields": [
+                9,
+                10,
+                12,
+                14,
+                52
+              ],
+              "foragers": 11,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 6,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 11,
+            "consumed": 44,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v1",
+      "seed": "TERRAIN_007",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 24,
+          "health": 100,
+          "food": 690,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 12,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 480,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 24,
+          "health": 100,
+          "food": 1165,
+          "timber": 136,
+          "fields": 3,
+          "huts": 7,
+          "stores": 2,
+          "events": 19,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 767,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 25,
+          "health": 100,
+          "food": 1537,
+          "timber": 176,
+          "fields": 3,
+          "huts": 7,
+          "stores": 3,
+          "events": 26,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 531,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 26,
+          "health": 100,
+          "food": 1560,
+          "timber": 140,
+          "fields": 4,
+          "huts": 8,
+          "stores": 4,
+          "events": 38,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12,
+                16
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 1,
+              "gatherers": 0,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 311,
+            "foraging": 7,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 26,
+          "health": 100,
+          "food": 3299,
+          "timber": 164,
+          "fields": 4,
+          "huts": 8,
+          "stores": 10,
+          "events": 67,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [
+                9,
+                10,
+                12,
+                16
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 282,
+            "foraging": 7,
+            "consumed": 26,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 28,
+          "health": 100,
+          "food": 7049,
+          "timber": 180,
+          "fields": 4,
+          "huts": 8,
+          "stores": 23,
+          "events": 145,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 14,
+              "fields": [
+                9,
+                10,
+                12,
+                16
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 139,
+            "foraging": 7,
+            "consumed": 28,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 34,
+          "health": 100,
+          "food": 13937,
+          "timber": 520,
+          "fields": 5,
+          "huts": 10,
+          "stores": 46,
+          "events": 311,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 17,
+              "fields": [
+                9,
+                10,
+                12,
+                16,
+                55
+              ],
+              "foragers": 9,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 172,
+            "foraging": 9,
+            "consumed": 35,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 48,
+          "health": 100,
+          "food": 26341,
+          "timber": 0,
+          "fields": 6,
+          "huts": 12,
+          "stores": 66,
+          "events": 608,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 24,
+              "fields": [
+                9,
+                10,
+                12,
+                16,
+                55,
+                85
+              ],
+              "foragers": 12,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 6,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 12,
+            "consumed": 48,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v1",
+      "seed": "TERRAIN_008",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 25,
+          "health": 100,
+          "food": 670,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 13,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                5,
+                8,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 460,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 25,
+          "health": 100,
+          "food": 768,
+          "timber": 60,
+          "fields": 4,
+          "huts": 8,
+          "stores": 2,
+          "events": 24,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                5,
+                8,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 1,
+              "gatherers": 0,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 754,
+            "foraging": 14,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 25,
+          "health": 100,
+          "food": 1164,
+          "timber": 96,
+          "fields": 4,
+          "huts": 8,
+          "stores": 2,
+          "events": 29,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                5,
+                8,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 1,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 819,
+            "foraging": 14,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 25,
+          "health": 100,
+          "food": 1074,
+          "timber": 88,
+          "fields": 4,
+          "huts": 8,
+          "stores": 3,
+          "events": 35,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                5,
+                8,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 1,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 136,
+            "foraging": 7,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 27,
+          "health": 100,
+          "food": 2573,
+          "timber": 88,
+          "fields": 4,
+          "huts": 8,
+          "stores": 8,
+          "events": 63,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [
+                5,
+                8,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 2,
+              "unusedConstruction": 0
+            },
+            "harvest": 273,
+            "foraging": 7,
+            "consumed": 27,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 27,
+          "health": 100,
+          "food": 5122,
+          "timber": 8,
+          "fields": 4,
+          "huts": 8,
+          "stores": 12,
+          "events": 131,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [
+                5,
+                8,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 2,
+              "unusedConstruction": 0
+            },
+            "harvest": 326,
+            "foraging": 7,
+            "consumed": 27,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 25,
+          "health": 100,
+          "food": 5124,
+          "timber": 0,
+          "fields": 4,
+          "huts": 8,
+          "stores": 12,
+          "events": 238,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                5,
+                8,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 273,
+            "foraging": 7,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 32,
+          "health": 100,
+          "food": 5021,
+          "timber": 0,
+          "fields": 4,
+          "huts": 8,
+          "stores": 12,
+          "events": 466,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 16,
+              "fields": [
+                5,
+                8,
+                12,
+                14
+              ],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 4,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 8,
+            "consumed": 32,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v2",
+      "seed": "RIVERSIDE",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 24,
+          "health": 100,
+          "food": 581,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 12,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                8,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 370,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 23,
+          "health": 100,
+          "food": 769,
+          "timber": 168,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 18,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                8,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 493,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 23,
+          "health": 100,
+          "food": 1038,
+          "timber": 196,
+          "fields": 3,
+          "huts": 7,
+          "stores": 2,
+          "events": 24,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 11,
+              "fields": [
+                8,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 411,
+            "foraging": 12,
+            "consumed": 23,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 23,
+          "health": 100,
+          "food": 826,
+          "timber": 248,
+          "fields": 3,
+          "huts": 7,
+          "stores": 3,
+          "events": 30,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 11,
+              "fields": [],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 6,
+            "consumed": 23,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 23,
+          "health": 100,
+          "food": 1565,
+          "timber": 424,
+          "fields": 3,
+          "huts": 7,
+          "stores": 5,
+          "events": 50,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 11,
+              "fields": [],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 5,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 6,
+            "consumed": 23,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 31,
+          "health": 100,
+          "food": 3758,
+          "timber": 236,
+          "fields": 4,
+          "huts": 9,
+          "stores": 13,
+          "events": 129,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 15,
+              "fields": [],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 7,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 8,
+            "consumed": 30,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 32,
+          "health": 100,
+          "food": 7889,
+          "timber": 0,
+          "fields": 5,
+          "huts": 11,
+          "stores": 22,
+          "events": 261,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 16,
+              "fields": [],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 8,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 8,
+            "consumed": 32,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 40,
+          "health": 100,
+          "food": 8948,
+          "timber": 0,
+          "fields": 5,
+          "huts": 11,
+          "stores": 22,
+          "events": 478,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 20,
+              "fields": [],
+              "foragers": 10,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 10,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 10,
+            "consumed": 40,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v2",
+      "seed": "TERRAIN_000",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 24,
+          "health": 100,
+          "food": 532,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 12,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                5,
+                8,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 321,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 23,
+          "health": 100,
+          "food": 769,
+          "timber": 168,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 18,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                5,
+                8,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 434,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 23,
+          "health": 100,
+          "food": 990,
+          "timber": 196,
+          "fields": 3,
+          "huts": 7,
+          "stores": 2,
+          "events": 26,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 11,
+              "fields": [
+                5,
+                8,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 362,
+            "foraging": 12,
+            "consumed": 23,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 23,
+          "health": 100,
+          "food": 779,
+          "timber": 248,
+          "fields": 3,
+          "huts": 7,
+          "stores": 3,
+          "events": 32,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 11,
+              "fields": [],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 6,
+            "consumed": 23,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 25,
+          "health": 100,
+          "food": 1253,
+          "timber": 488,
+          "fields": 4,
+          "huts": 8,
+          "stores": 4,
+          "events": 56,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 29,
+          "health": 100,
+          "food": 3011,
+          "timber": 776,
+          "fields": 4,
+          "huts": 9,
+          "stores": 10,
+          "events": 130,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 14,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 7,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 28,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 33,
+          "health": 100,
+          "food": 6800,
+          "timber": 474,
+          "fields": 5,
+          "huts": 10,
+          "stores": 23,
+          "events": 270,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 16,
+              "fields": [],
+              "foragers": 9,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 7,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 9,
+            "consumed": 33,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 47,
+          "health": 100,
+          "food": 13271,
+          "timber": 0,
+          "fields": 6,
+          "huts": 13,
+          "stores": 39,
+          "events": 584,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 23,
+              "fields": [],
+              "foragers": 12,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 11,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 12,
+            "consumed": 47,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v2",
+      "seed": "TERRAIN_001",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 25,
+          "health": 100,
+          "food": 742,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 13,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 533,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 25,
+          "health": 100,
+          "food": 768,
+          "timber": 60,
+          "fields": 4,
+          "huts": 8,
+          "stores": 2,
+          "events": 24,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 1,
+              "gatherers": 0,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 875,
+            "foraging": 14,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 25,
+          "health": 100,
+          "food": 1164,
+          "timber": 96,
+          "fields": 4,
+          "huts": 8,
+          "stores": 2,
+          "events": 29,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 1,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 798,
+            "foraging": 14,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 25,
+          "health": 100,
+          "food": 939,
+          "timber": 148,
+          "fields": 4,
+          "huts": 8,
+          "stores": 3,
+          "events": 35,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 27,
+          "health": 100,
+          "food": 2873,
+          "timber": 184,
+          "fields": 4,
+          "huts": 8,
+          "stores": 9,
+          "events": 66,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 4,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 26,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 29,
+          "health": 100,
+          "food": 6548,
+          "timber": 620,
+          "fields": 4,
+          "huts": 9,
+          "stores": 22,
+          "events": 148,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 15,
+              "fields": [],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 5,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 8,
+            "consumed": 30,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 33,
+          "health": 100,
+          "food": 11326,
+          "timber": 362,
+          "fields": 5,
+          "huts": 10,
+          "stores": 38,
+          "events": 298,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 16,
+              "fields": [],
+              "foragers": 9,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 7,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 9,
+            "consumed": 33,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 44,
+          "health": 100,
+          "food": 20813,
+          "timber": 0,
+          "fields": 5,
+          "huts": 11,
+          "stores": 52,
+          "events": 568,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 22,
+              "fields": [],
+              "foragers": 11,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 11,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 11,
+            "consumed": 44,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v2",
+      "seed": "TERRAIN_002",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 24,
+          "health": 100,
+          "food": 497,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 12,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                2,
+                3,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 286,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 24,
+          "health": 100,
+          "food": 735,
+          "timber": 168,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 16,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                2,
+                3,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 389,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 24,
+          "health": 100,
+          "food": 1165,
+          "timber": 208,
+          "fields": 3,
+          "huts": 7,
+          "stores": 2,
+          "events": 23,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                2,
+                3,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 649,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 25,
+          "health": 100,
+          "food": 940,
+          "timber": 260,
+          "fields": 3,
+          "huts": 7,
+          "stores": 3,
+          "events": 30,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 4,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 6,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 24,
+          "health": 100,
+          "food": 2807,
+          "timber": 268,
+          "fields": 4,
+          "huts": 8,
+          "stores": 9,
+          "events": 67,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 28,
+          "health": 100,
+          "food": 7372,
+          "timber": 512,
+          "fields": 4,
+          "huts": 8,
+          "stores": 25,
+          "events": 155,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 4,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 27,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 42,
+          "health": 100,
+          "food": 15250,
+          "timber": 817,
+          "fields": 6,
+          "huts": 12,
+          "stores": 51,
+          "events": 332,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 20,
+              "fields": [],
+              "foragers": 11,
+              "repairs": 0,
+              "builders": 2,
+              "gatherers": 0,
+              "unassigned": 7,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 11,
+            "consumed": 41,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 56,
+          "health": 100,
+          "food": 33833,
+          "timber": 0,
+          "fields": 7,
+          "huts": 14,
+          "stores": 85,
+          "events": 667,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 28,
+              "fields": [],
+              "foragers": 14,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 14,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 14,
+            "consumed": 56,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v2",
+      "seed": "TERRAIN_003",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 24,
+          "health": 100,
+          "food": 769,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 13,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                8,
+                9,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 623,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 24,
+          "health": 100,
+          "food": 1165,
+          "timber": 136,
+          "fields": 3,
+          "huts": 7,
+          "stores": 2,
+          "events": 20,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                8,
+                9,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 702,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 24,
+          "health": 100,
+          "food": 1561,
+          "timber": 176,
+          "fields": 3,
+          "huts": 7,
+          "stores": 3,
+          "events": 27,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                8,
+                9,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 702,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 25,
+          "health": 100,
+          "food": 1332,
+          "timber": 228,
+          "fields": 3,
+          "huts": 7,
+          "stores": 4,
+          "events": 34,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 4,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 6,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 26,
+          "health": 100,
+          "food": 2572,
+          "timber": 280,
+          "fields": 4,
+          "huts": 8,
+          "stores": 9,
+          "events": 66,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 4,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 26,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 24,
+          "health": 100,
+          "food": 6136,
+          "timber": 472,
+          "fields": 4,
+          "huts": 8,
+          "stores": 21,
+          "events": 140,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 4,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 6,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 30,
+          "health": 100,
+          "food": 11224,
+          "timber": 801,
+          "fields": 4,
+          "huts": 9,
+          "stores": 38,
+          "events": 291,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 15,
+              "fields": [],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 7,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 8,
+            "consumed": 30,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 46,
+          "health": 100,
+          "food": 23012,
+          "timber": 0,
+          "fields": 6,
+          "huts": 13,
+          "stores": 66,
+          "events": 662,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 23,
+              "fields": [],
+              "foragers": 12,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 11,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 12,
+            "consumed": 46,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v2",
+      "seed": "TERRAIN_004",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 24,
+          "health": 100,
+          "food": 728,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 12,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                2,
+                3,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 519,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 23,
+          "health": 100,
+          "food": 1158,
+          "timber": 136,
+          "fields": 3,
+          "huts": 7,
+          "stores": 2,
+          "events": 19,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                2,
+                3,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 585,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 23,
+          "health": 100,
+          "food": 1499,
+          "timber": 164,
+          "fields": 3,
+          "huts": 7,
+          "stores": 3,
+          "events": 25,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 11,
+              "fields": [
+                2,
+                3,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 488,
+            "foraging": 12,
+            "consumed": 23,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 24,
+          "health": 100,
+          "food": 1283,
+          "timber": 216,
+          "fields": 3,
+          "huts": 7,
+          "stores": 4,
+          "events": 32,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 11,
+              "fields": [],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 6,
+            "consumed": 23,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 24,
+          "health": 100,
+          "food": 2115,
+          "timber": 344,
+          "fields": 4,
+          "huts": 8,
+          "stores": 7,
+          "events": 61,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 4,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 6,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 25,
+          "health": 100,
+          "food": 5516,
+          "timber": 508,
+          "fields": 4,
+          "huts": 8,
+          "stores": 19,
+          "events": 137,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 5,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 34,
+          "health": 100,
+          "food": 9379,
+          "timber": 188,
+          "fields": 5,
+          "huts": 10,
+          "stores": 32,
+          "events": 280,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 16,
+              "fields": [],
+              "foragers": 9,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 7,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 9,
+            "consumed": 33,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 44,
+          "health": 100,
+          "food": 15665,
+          "timber": 0,
+          "fields": 5,
+          "huts": 11,
+          "stores": 39,
+          "events": 522,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 22,
+              "fields": [],
+              "foragers": 11,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 11,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 11,
+            "consumed": 44,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v2",
+      "seed": "TERRAIN_005",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 25,
+          "health": 100,
+          "food": 395,
+          "timber": 24,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 13,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                4,
+                7,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 182,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 25,
+          "health": 100,
+          "food": 768,
+          "timber": 8,
+          "fields": 4,
+          "huts": 8,
+          "stores": 1,
+          "events": 24,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                4,
+                7,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 619,
+            "foraging": 14,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 26,
+          "health": 100,
+          "food": 768,
+          "timber": 8,
+          "fields": 4,
+          "huts": 8,
+          "stores": 1,
+          "events": 30,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                4,
+                7,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 568,
+            "foraging": 14,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 26,
+          "health": 100,
+          "food": 535,
+          "timber": 8,
+          "fields": 4,
+          "huts": 8,
+          "stores": 1,
+          "events": 34,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 6,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 26,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 26,
+          "health": 100,
+          "food": 533,
+          "timber": 8,
+          "fields": 4,
+          "huts": 8,
+          "stores": 1,
+          "events": 55,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 6,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 26,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 29,
+          "health": 100,
+          "food": 508,
+          "timber": 8,
+          "fields": 4,
+          "huts": 8,
+          "stores": 1,
+          "events": 116,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 14,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 7,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 28,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 32,
+          "health": 100,
+          "food": 469,
+          "timber": 0,
+          "fields": 4,
+          "huts": 8,
+          "stores": 1,
+          "events": 230,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 16,
+              "fields": [],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 8,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 8,
+            "consumed": 32,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 32,
+          "health": 100,
+          "food": 666,
+          "timber": 0,
+          "fields": 4,
+          "huts": 8,
+          "stores": 1,
+          "events": 473,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 16,
+              "fields": [],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 8,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 8,
+            "consumed": 32,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v2",
+      "seed": "TERRAIN_006",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 25,
+          "health": 100,
+          "food": 769,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 13,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 560,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 26,
+          "health": 100,
+          "food": 768,
+          "timber": 60,
+          "fields": 4,
+          "huts": 8,
+          "stores": 2,
+          "events": 25,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 1,
+              "gatherers": 0,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 747,
+            "foraging": 14,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 28,
+          "health": 100,
+          "food": 1163,
+          "timber": 132,
+          "fields": 4,
+          "huts": 8,
+          "stores": 2,
+          "events": 31,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [
+                9,
+                10,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 670,
+            "foraging": 14,
+            "consumed": 26,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 28,
+          "health": 100,
+          "food": 902,
+          "timber": 184,
+          "fields": 4,
+          "huts": 8,
+          "stores": 3,
+          "events": 39,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 14,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 5,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 28,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 30,
+          "health": 100,
+          "food": 1939,
+          "timber": 350,
+          "fields": 4,
+          "huts": 9,
+          "stores": 7,
+          "events": 66,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 15,
+              "fields": [],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 5,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 8,
+            "consumed": 30,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 28,
+          "health": 100,
+          "food": 5228,
+          "timber": 696,
+          "fields": 4,
+          "huts": 9,
+          "stores": 18,
+          "events": 140,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 14,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 7,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 28,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 35,
+          "health": 100,
+          "food": 10632,
+          "timber": 288,
+          "fields": 5,
+          "huts": 10,
+          "stores": 36,
+          "events": 289,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 17,
+              "fields": [],
+              "foragers": 9,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 8,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 9,
+            "consumed": 35,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 48,
+          "health": 100,
+          "food": 18817,
+          "timber": 0,
+          "fields": 6,
+          "huts": 12,
+          "stores": 47,
+          "events": 547,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 24,
+              "fields": [],
+              "foragers": 12,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 12,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 12,
+            "consumed": 48,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v2",
+      "seed": "TERRAIN_007",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 24,
+          "health": 100,
+          "food": 690,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 12,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 480,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 24,
+          "health": 100,
+          "food": 1165,
+          "timber": 136,
+          "fields": 3,
+          "huts": 7,
+          "stores": 2,
+          "events": 19,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 767,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 25,
+          "health": 100,
+          "food": 1537,
+          "timber": 176,
+          "fields": 3,
+          "huts": 7,
+          "stores": 3,
+          "events": 26,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                9,
+                10,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 531,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 26,
+          "health": 100,
+          "food": 1308,
+          "timber": 212,
+          "fields": 4,
+          "huts": 8,
+          "stores": 4,
+          "events": 37,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 26,
+          "health": 100,
+          "food": 2813,
+          "timber": 304,
+          "fields": 4,
+          "huts": 8,
+          "stores": 9,
+          "events": 63,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 4,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 26,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 28,
+          "health": 100,
+          "food": 5901,
+          "timber": 576,
+          "fields": 4,
+          "huts": 8,
+          "stores": 20,
+          "events": 137,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 14,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 5,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 28,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 34,
+          "health": 100,
+          "food": 11982,
+          "timber": 644,
+          "fields": 5,
+          "huts": 10,
+          "stores": 40,
+          "events": 295,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 17,
+              "fields": [],
+              "foragers": 9,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 8,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 9,
+            "consumed": 35,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 52,
+          "health": 100,
+          "food": 25650,
+          "timber": 0,
+          "fields": 6,
+          "huts": 13,
+          "stores": 65,
+          "events": 601,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 26,
+              "fields": [],
+              "foragers": 13,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 13,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 13,
+            "consumed": 52,
+            "deficit": 0
+          }
+        }
+      ]
+    },
+    {
+      "version": "p1-settlement-v2",
+      "seed": "TERRAIN_008",
+      "milestones": [
+        {
+          "tick": 0,
+          "population": 24,
+          "health": 100,
+          "food": 360,
+          "timber": 40,
+          "fields": 2,
+          "huts": 6,
+          "stores": 1,
+          "events": 1,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": null
+        },
+        {
+          "tick": 12,
+          "population": 25,
+          "health": 100,
+          "food": 670,
+          "timber": 96,
+          "fields": 3,
+          "huts": 7,
+          "stores": 1,
+          "events": 13,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                5,
+                8,
+                12
+              ],
+              "foragers": 6,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 1,
+              "unusedConstruction": 0
+            },
+            "harvest": 460,
+            "foraging": 12,
+            "consumed": 24,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 24,
+          "population": 25,
+          "health": 100,
+          "food": 768,
+          "timber": 60,
+          "fields": 4,
+          "huts": 8,
+          "stores": 2,
+          "events": 24,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                5,
+                8,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 1,
+              "gatherers": 0,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 754,
+            "foraging": 14,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 36,
+          "population": 25,
+          "health": 100,
+          "food": 1164,
+          "timber": 96,
+          "fields": 4,
+          "huts": 8,
+          "stores": 2,
+          "events": 29,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [
+                5,
+                8,
+                12,
+                14
+              ],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 1,
+              "unassigned": 0,
+              "unusedConstruction": 0
+            },
+            "harvest": 819,
+            "foraging": 14,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 48,
+          "population": 25,
+          "health": 100,
+          "food": 939,
+          "timber": 148,
+          "fields": 4,
+          "huts": 8,
+          "stores": 3,
+          "events": 35,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 2,
+              "unassigned": 3,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 96,
+          "population": 27,
+          "health": 100,
+          "food": 1941,
+          "timber": 108,
+          "fields": 4,
+          "huts": 8,
+          "stores": 7,
+          "events": 62,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 6,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 27,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 240,
+          "population": 27,
+          "health": 100,
+          "food": 4835,
+          "timber": 8,
+          "fields": 4,
+          "huts": 8,
+          "stores": 12,
+          "events": 129,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 13,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 6,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 27,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 480,
+          "population": 25,
+          "health": 100,
+          "food": 4859,
+          "timber": 0,
+          "fields": 4,
+          "huts": 8,
+          "stores": 12,
+          "events": 230,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 12,
+              "fields": [],
+              "foragers": 7,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 5,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 7,
+            "consumed": 25,
+            "deficit": 0
+          }
+        },
+        {
+          "tick": 1000,
+          "population": 32,
+          "health": 100,
+          "food": 5021,
+          "timber": 0,
+          "fields": 4,
+          "huts": 8,
+          "stores": 12,
+          "events": 452,
+          "shortageStarts": 0,
+          "extinctionTick": null,
+          "lastWeek": {
+            "labor": {
+              "workforce": 16,
+              "fields": [],
+              "foragers": 8,
+              "repairs": 0,
+              "builders": 0,
+              "gatherers": 0,
+              "unassigned": 8,
+              "unusedConstruction": 0
+            },
+            "harvest": 0,
+            "foraging": 8,
+            "consumed": 32,
+            "deficit": 0
+          }
+        }
+      ]
+    }
+  ]
+}

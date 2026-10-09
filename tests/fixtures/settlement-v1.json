@@ -1,0 +1,150 @@
+{
+  "simulationVersion": "p1-settlement-v1",
+  "sourceCommit": "4415d085bdfd0010fb8041f4ab4d1c4537fd8fc9",
+  "outcomes": [
+    {
+      "seed": "RIVERSIDE",
+      "ticks": 0,
+      "digest": "56323faba8fed89feb7363e7666308bd09105642552b6766ad31988f42b897ec",
+      "events": 1,
+      "rng": {
+        "demographics": {
+          "algorithm": "xorshift32-v1",
+          "state": 1107847730
+        },
+        "terrain": {
+          "algorithm": "xorshift32-v1",
+          "state": 2847659418
+        },
+        "weather": {
+          "algorithm": "xorshift32-v1",
+          "state": 3399179196
+        }
+      },
+      "allocators": {
+        "entity": 11,
+        "event": 2
+      }
+    },
+    {
+      "seed": "RIVERSIDE",
+      "ticks": 57,
+      "digest": "d9a4bef5b620bec073664fa0076a22bc40258c748e11e7fc55ba54076d413ffd",
+      "events": 31,
+      "rng": {
+        "terrain": {
+          "algorithm": "xorshift32-v1",
+          "state": 2847659418
+        },
+        "weather": {
+          "algorithm": "xorshift32-v1",
+          "state": 674003531
+        },
+        "demographics": {
+          "algorithm": "xorshift32-v1",
+          "state": 2077481940
+        }
+      },
+      "allocators": {
+        "entity": 15,
+        "event": 32
+      }
+    },
+    {
+      "seed": "RIVERSIDE",
+      "ticks": 137,
+      "digest": "ed6768066810929310aa2c475b3a66d453e538134322aafa9d5240d811d26682",
+      "events": 76,
+      "rng": {
+        "terrain": {
+          "algorithm": "xorshift32-v1",
+          "state": 2847659418
+        },
+        "weather": {
+          "algorithm": "xorshift32-v1",
+          "state": 744610832
+        },
+        "demographics": {
+          "algorithm": "xorshift32-v1",
+          "state": 2107298759
+        }
+      },
+      "allocators": {
+        "entity": 23,
+        "event": 77
+      }
+    },
+    {
+      "seed": "RIVERSIDE",
+      "ticks": 1000,
+      "digest": "19ab0ce4e2186cb775116aa72b1af5c06e3f3bcb9d3ce286c91c361a816269ff",
+      "events": 480,
+      "rng": {
+        "terrain": {
+          "algorithm": "xorshift32-v1",
+          "state": 2847659418
+        },
+        "weather": {
+          "algorithm": "xorshift32-v1",
+          "state": 1540680272
+        },
+        "demographics": {
+          "algorithm": "xorshift32-v1",
+          "state": 2825834263
+        }
+      },
+      "allocators": {
+        "entity": 40,
+        "event": 481
+      }
+    },
+    {
+      "seed": "TERRAIN_000",
+      "ticks": 137,
+      "digest": "ed1d39aacf7387e869c2529454991297acbaf073a4b1aa81da3ba0daebf9a2d2",
+      "events": 80,
+      "rng": {
+        "terrain": {
+          "algorithm": "xorshift32-v1",
+          "state": 441990697
+        },
+        "weather": {
+          "algorithm": "xorshift32-v1",
+          "state": 892752970
+        },
+        "demographics": {
+          "algorithm": "xorshift32-v1",
+          "state": 1631200117
+        }
+      },
+      "allocators": {
+        "entity": 22,
+        "event": 81
+      }
+    },
+    {
+      "seed": "TERRAIN_005",
+      "ticks": 137,
+      "digest": "b1a441dec59143779ba69818359e80821f8bb74265c9d031e660c36fa48351fa",
+      "events": 73,
+      "rng": {
+        "terrain": {
+          "algorithm": "xorshift32-v1",
+          "state": 4106614740
+        },
+        "weather": {
+          "algorithm": "xorshift32-v1",
+          "state": 1494097354
+        },
+        "demographics": {
+          "algorithm": "xorshift32-v1",
+          "state": 1646976433
+        }
+      },
+      "allocators": {
+        "entity": 15,
+        "event": 74
+      }
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import { digestCanonical } from '../../src/adapters/crypto';
 import { canonicalBytes, canonicalJson } from '../../src/sim/canonical';
 import { capture } from '../../src/sim/immutable';
 import { createSettlement } from '../../src/sim/settlement-initial';
+import { SETTLEMENT_VERSION } from '../../src/sim/settlement-config';
 import { advanceSettlement, simulateSettlement } from '../../src/sim/settlement';
 import { validateSettlementState } from '../../src/sim/settlement-validation';
 import type { SettlementState } from '../../src/sim/state';
@@ -21,6 +22,14 @@ interface SeedOutcome {
   bytes: number;
   digest: string;
   elapsedMs: number;
+  firstWinter: {
+    populationBefore: number;
+    populationAfter: number;
+    foodBefore: number;
+    foodAfter: number;
+    healthAfter: number;
+    cropHarvest: number;
+  };
 }
 
 describe('real settlement continuity and seed battery', () => {
@@ -58,8 +67,11 @@ describe('real settlement continuity and seed battery', () => {
     const started = performance.now();
     for (const [index, seed] of seeds.entries()) {
       const before = performance.now();
-      const result = simulateSettlement(seed, 1000);
-      expect(result.advanced).toBe(1000);
+      const autumn = simulateSettlement(seed, 36).state;
+      const winter = advanceSettlement(autumn, 12).state;
+      const result = advanceSettlement(winter, 952);
+      expect(result.advanced).toBe(952);
+      expect(result.state.tick).toBe(1000);
       expect(result.halted).toBeNull();
       expect(() => validateSettlementState(result.state)).not.toThrow();
       const world = result.state.world;
@@ -76,11 +88,19 @@ describe('real settlement continuity and seed battery', () => {
         bytes: canonicalBytes(result.state).byteLength,
         digest: await digestCanonical(result.state),
         elapsedMs: Math.round(performance.now() - before),
+        firstWinter: {
+          populationBefore: autumn.world.settlement.population,
+          populationAfter: winter.world.settlement.population,
+          foodBefore: autumn.world.settlement.food,
+          foodAfter: winter.world.settlement.food,
+          healthAfter: winter.world.settlement.health,
+          cropHarvest: winter.lastTick!.production.harvest,
+        },
       });
       if ((index + 1) % 10 === 0) console.info(`Seed battery: ${index + 1}/100 completed`);
     }
     const report = {
-      version: 'p1-settlement-v1',
+      version: SETTLEMENT_VERSION,
       seeds: 100,
       ticksPerSeed: 1000,
       elapsedMs: Math.round(performance.now() - started),

@@ -1,5 +1,5 @@
 import { capture, type Immutable } from './immutable';
-import type { SETTLEMENT_CONFIG } from './settlement-config';
+import type { SettlementConfig } from './settlement-config';
 import type { BuildingKind, Tile } from './terrain';
 
 export interface JsonRecord {
@@ -211,7 +211,7 @@ export interface SettlementState {
   schemaVersion: number;
   simulationVersion: string;
   rulesVersion: string;
-  config: typeof SETTLEMENT_CONFIG;
+  config: SettlementConfig;
   seed: string;
   tick: number;
   rng: {

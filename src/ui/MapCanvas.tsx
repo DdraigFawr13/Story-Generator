@@ -10,11 +10,13 @@ export function MapCanvas({
   selectedTile,
   onSelect,
   focusRequest,
+  dormantFields,
 }: {
   view: MapView;
   selectedTile: number;
   onSelect: (tile: number) => void;
   focusRequest: { tile: number; revision: number };
+  dormantFields: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState({ width: 768, height: 420 });
@@ -96,7 +98,13 @@ export function MapCanvas({
       context.globalAlpha =
         building.durability === null ? 1 : 0.45 + (0.55 * building.durability) / 100;
       context.fillStyle =
-        building.kind === 'field' ? '#d8b563' : building.kind === 'store' ? '#744e38' : '#c87653';
+        building.kind === 'field'
+          ? dormantFields
+            ? '#aaa797'
+            : '#d8b563'
+          : building.kind === 'store'
+            ? '#744e38'
+            : '#c87653';
       context.fillRect(x + 1, y + 1, tileSize - 2, tileSize - 2);
       context.globalAlpha = 1;
       context.strokeStyle = '#2a3828';
@@ -116,7 +124,9 @@ export function MapCanvas({
         context.lineTo(x + tileSize / 2, y + tileSize - 2);
       }
       context.stroke();
+      if (building.kind === 'field' && dormantFields) context.setLineDash([2, 2]);
       context.strokeRect(x + 1.5, y + 1.5, tileSize - 3, tileSize - 3);
+      context.setLineDash([]);
     }
     if (view.project) {
       const { x, y } = point(view.project.tile);
@@ -129,7 +139,7 @@ export function MapCanvas({
     context.strokeStyle = '#ffffff';
     context.lineWidth = 2;
     context.strokeRect(x + 1, y + 1, tileSize - 2, tileSize - 2);
-  }, [view, selectedTile, camera.x, camera.y, tileSize, size]);
+  }, [view, selectedTile, camera.x, camera.y, tileSize, size, dormantFields]);
   function pan(dx: number, dy: number) {
     setCenter({ x: camera.x + dx, y: camera.y + dy });
   }
