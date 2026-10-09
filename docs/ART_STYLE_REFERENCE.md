@@ -23,12 +23,12 @@ Treat RimWorld as inspiration for **abstraction, silhouettes, clarity at multipl
 
 Earlier `16x16 pixel tiles + integer scaling` was a *proposal*, not a locked constraint. RimWorld's visual abstraction is not synonymous with 16px pixel art. Do not fix 16px as the mandated source-art resolution.
 
-Test three comparable miniature views using **the same seed/map layout and HUD**:
+The completed comparison used three treatments of **the same village layout and HUD**:
 1. **Minimal graphic:** simplest pawn silhouettes and 1–2-tone objects, high map readability.
-2. **Illustrated minimal (preferred):** same shapes with small roof/clothing/foliage accents, limited texture and shadow, stronger distinctiveness.
+2. **Illustrated minimal (selected, D-014):** same shapes with small roof/clothing/foliage accents, limited texture and shadow, stronger distinctiveness.
 3. **Soft illustrative:** gently textured shapes and lighting, a little more color nuance, still notably simpler than the previously shown dense medieval/isometric mockups.
 
-Source resolution, tile size and in-game zoom should be measured against the *displayed* sprite readability, small Android screens, asset throughput and minimum useful world detail. Candidate terrain source sizes: 24/32/48 px, or vector-like sprites rendered to a suitable density; **not** a decision to force a scale now.
+Continue with Illustrated Minimal; the other treatments document the completed comparison. Source resolution, tile size and in-game zoom should be measured against the *displayed* sprite readability, small Android screens, asset throughput and minimum useful world detail. Candidate terrain source sizes: 24/32/48 px, or vector-like sprites rendered to a suitable density; **not** a decision to force a scale now.
 
 ## Art comparison criteria
 

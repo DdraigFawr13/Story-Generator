@@ -36,6 +36,8 @@ A living **top-down** pixel-world terrarium accompanied by an understated histor
 
 ## Phone information hierarchy
 
+The arrangement is user-approved (D-019); the requirements below still need actual-size and interaction evidence. Review desktop composition first while retaining the complete phone flow (D-016).
+
 - Full-width, touch-friendly map is the primary surface.
 - Compact pinned date/seed/time controls (may collapse less common controls).
 - Chronicle via a **user-controlled bottom sheet**, with headline preview when collapsed and scrollable history when expanded.
@@ -77,9 +79,11 @@ Illustrated Minimal is selected (D-014). Desktop comparison and two phone static
 
 - [x] Direction C chosen as baseline
 - [x] Approved direction recorded in repo design and decision docs
+- [x] Three-treatment comparison complete; Illustrated Minimal selected (D-014)
+- [x] Phone arrangement approved: map above expandable chronicle, time controls at top (D-019)
 - [ ] Verify pixel complexity and contrast at actual displayed sizes on phone and desktop
-- [ ] Compare three simple original art treatments; decide actual source sprite size, pixel density, zoom and movement emphasis (not a mandatory 16px tile)
-- [ ] Confirm collapsed/expanded chronicle on representative phone width via static layout/prototype
+- [ ] Decide actual source sprite size, pixel density, zoom and movement emphasis within Illustrated Minimal (not a mandatory 16px tile)
+- [ ] Validate collapsed/expanded chronicle at actual phone widths and enlarged text; static studies do not establish interaction behavior
 - [ ] Check event selection, map focus and inspector on desktop and phone
 - [ ] Approve UI specs and resolve any art constraints before generating production sprites
 
@@ -95,8 +99,8 @@ Full continent views and political overlays arrive in Phase 4. Detailed individu
 
 ## Art direction refinement checkpoint
 
-Compare three simplified original treatments of the **same** overhead village composition and chronicle: minimal graphic, illustrated minimal (preferred candidate), and soft illustrative. Only then finalize exact pixel density, silhouette detail and production assets. This does **not** reopen the approved Direction C interface structure.
+The three-treatment comparison is complete and Illustrated Minimal is selected. Finalize exact pixel density, silhouette detail and production export conventions through actual-size validation of that treatment. Preserve Direction C and the approved phone arrangement.
 
 ## Recommended continuation
 
-Proceed to architecture review in [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md), then confirm numerical simulation rules for Phase 1; static visual verification remains a gate before implementation.
+Architecture is accepted in [ADR-001–003](adr/README.md). Follow [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md): recover selected references, verify actual-size visuals and interaction, and resolve the mechanics/terrain/storage review. These remain gates before implementation.

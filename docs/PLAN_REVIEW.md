@@ -1,6 +1,6 @@
 # Plan review and remaining pre-build contracts
 
-**Review date:** 2026-10-09 UTC. **Status:** documentation revision; Phase 0 remains open. Basic local save/resume in P1 is user-approved (D-012). Architecture and numeric mechanics below remain proposals requiring the existing pre-build review; no application has been implemented or tested.
+**Review date:** 2026-10-09 UTC. **Status:** documentation revision; Phase 0 remains open. Basic local save/resume in P1 is user-approved (D-012), architecture is accepted (D-013), Illustrated Minimal is selected (D-014), and recovered product requirements are D-015–019. Numeric mechanics, terrain and storage policies remain proposals; no application has been implemented or tested.
 
 ## Assessment
 
@@ -24,7 +24,7 @@ The main risks are incomplete rule contracts, loss of early worlds before saves 
 
 Retain TypeScript strict, pure simulation modules, Vite/React for the app shell, Canvas 2D for the map, Vitest and Playwright. Use IndexedDB for the approved local save scope. No server or runtime language model is needed.
 
-Record accepted choices as short architecture decision records after review. Choose a supported runtime, package manager and exact dependency versions during that decision/scaffolding preparation. Do not add PixiJS, workers or backend services without measured need. Architecture acceptance does not by itself close the visual and numeric-rule gates.
+The accepted [ADR-001–003](adr/README.md) select Node 24 LTS/npm and define core, rendering, controller and persistence ownership. Pin exact compatible dependency versions at approved scaffolding. Do not add PixiJS, workers or backend services without measured need. Architecture acceptance does not by itself close the visual and numeric-rule gates.
 
 ## Required P1 mechanics contract
 
@@ -49,9 +49,9 @@ Do not choose final rates from a single attractive seed. Once implementation is 
 
 ## Ordered remaining work
 
-1. Prepare the numeric rules and storage contract above and architecture decision records for review. This is documentation work and can progress alongside visual exploration.
-2. Compare the three original simplified art treatments on the same village composition, then validate chosen density and Direction C's desktop/phone chronicle and inspector per ART_UI_SPEC.md. Visual fixtures may depict future people, but must label them as mockups rather than P1 functionality.
-3. Record the accepted architecture, mechanics, storage budgets and visual evidence. Keep unfinished Phase 0 boxes unchecked; request only outstanding product decisions.
+1. Review the existing [settlement rules](SETTLEMENT_RULES.md), [terrain contract](TERRAIN_CONTRACT.md) and [storage contract](LOCAL_PERSISTENCE_CONTRACT.md) against the recovered [product brief](PRODUCT_BRIEF.md). Weekly versus older daily rules are separate proposals; do not mix their units or constants. Review winter production, low-population labor and autosave wall-clock implications before accepting tuning.
+2. Recover the selected Illustrated Minimal references, then validate chosen density and Direction C's desktop/phone chronicle and inspector per ART_UI_SPEC.md. Art selection and phone arrangement are decided; actual-size and interaction evidence remain open. Visual fixtures may depict future people, but must label them as mockups rather than P1 functionality.
+3. Record accepted mechanics, terrain, storage budgets and visual evidence. Architecture is already accepted. Keep unfinished Phase 0 boxes unchecked; request only outstanding product decisions. See [project handoff](PROJECT_HANDOFF.md) for checkpoint provenance and remaining evidence.
 4. After the existing Phase 0 approval gate, build separate scoped increments: seed/clock and CI → terrain/founders → balanced resource and demographic loops/events → local persistence → integrated viewer and end-to-end acceptance. The numbered implementation checklist defines deliverables, not a requirement to defer persistence until all UI work is finished.
 5. Demonstrate the first playable using multiple seeds, one causal chain visible in both map and chronicle, and save/reload continuation on desktop and phone. No forced catastrophe or seed-specific storyline.
 

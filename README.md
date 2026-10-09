@@ -15,6 +15,8 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Phased roadmap, testing, and acceptance criteria](docs/ROADMAP.md)
 - [Detailed ordered implementation plan (Phase 0–6)](docs/IMPLEMENTATION_PLAN.md)
 - [Plan review and remaining mechanics/storage contracts](docs/PLAN_REVIEW.md)
+- [Product brief and first-session quality bar](docs/PRODUCT_BRIEF.md)
+- [Project handoff and recovered thread decisions](docs/PROJECT_HANDOFF.md)
 - [Proposed numeric P1 settlement rules](docs/SETTLEMENT_RULES.md)
 - [Deterministic terrain contract and 100-seed probe](docs/TERRAIN_CONTRACT.md)
 - [Proposed local save/resume and recovery contract](docs/LOCAL_PERSISTENCE_CONTRACT.md)
@@ -34,7 +36,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 
 ## Immediate next decision
 
-**Direction C (Naturalist's Observation Desk) layout is selected.** Refine the visuals toward original, simplified RimWorld-like clarity with slightly more artistic detail. Illustrated Minimal is now selected (D-014), with two phone layout studies prepared. Next, validate desktop/phone interaction and actual-size readability and accept the reviewed Phase 1 mechanics/storage proposals. See [continuation review](docs/CONTINUATION_REVIEW.md) for fixes, evidence and the ordered implementation backlog. Architecture is approved (D-013); visual validation remains open. Basic browser-local save/resume is approved for the first playable; timeline seeking remains later. **Do not begin Phase 1 until the pre-build gate is met.**
+**Direction C (Naturalist's Observation Desk) and Illustrated Minimal are selected.** Architecture is approved (D-013); the phone arrangement is approved, with two static studies prepared. Next, validate actual-size readability and desktop/phone interaction, then accept the reviewed Phase 1 mechanics, terrain and storage proposals. See [project handoff](docs/PROJECT_HANDOFF.md) for the recovered pacing, seasonal-economy and background-pausing requirements, source provenance and ordered next work. Basic browser-local save/resume is approved for the first playable; timeline seeking remains later. **Do not begin Phase 1 until the pre-build gate is met.**
 
 ## Development
 

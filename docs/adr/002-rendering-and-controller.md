@@ -27,6 +27,14 @@ A controller serializes play, pause, step, new-world, resume and save operations
 
 These are control policies. Equal initial state and equal admitted tick count produce equal canonical outcomes regardless of speed, frame rate, visibility or selected place.
 
+## Normal-speed target and scheduling proposal
+
+D-015 recovers the user-confirmed target of roughly 10–15 minutes per simulated year. For the current proposed weekly calendar (48 ticks/year), 1x therefore needs 12.5–18.75 seconds per tick. **Proposed controller default:** 15,000 ms per tick at 1x (12 minutes/year), 3,750 ms at 4x (3 minutes/year), and 937.5 ms at 16x (45 seconds/year), excluding pauses or inability to sustain the requested rate. This exact default is not approved by the earlier architecture decision. Scheduler fractions are presentation timing; core arithmetic remains integer weekly ticks. The older branch's six-second daily tick belongs to its 120-day/year proposal and must not be reused with the weekly calendar.
+
+Scheduler interval, accumulated presentation time and play state are outside authoritative snapshots/digests. A saved-world Resume restores a committed world paused; Play starts from fresh presentation timing. Hidden/closed time never accrues catch-up work. Review the resulting autosave loss window alongside Q-006 before adopting the exact interval.
+
+Controller acceptance must cover hiding immediately before a due tick, hiding after a committed tick, repeated hidden/visible transitions, and save/resume while paused. Each return stays paused, preserves the committed tick/RNG/IDs and advances only after explicit Play or a foreground Step. These are future tests, not executed browser evidence.
+
 ## Interaction and accessibility
 
 Provide keyboard-operable chronicle entries and an HTML inspector that expose the selected location/entity and its actual facts. Event activation focuses the corresponding place and inspector. Historical records remain inspectable after a building disappears.

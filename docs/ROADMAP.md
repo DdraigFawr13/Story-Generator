@@ -6,6 +6,7 @@
 - **Decided:** living-world vision with settlement-first scaling; middle-fantasy starting tone; observer-led experience with later explicit Story Spotlight activation distinct from passive selection and unrelated to deferred manual nudges.
 - **Approved:** Direction C — Naturalist's Observation Desk — for layout/visual baseline; simplify and stylize art toward RimWorld-like readability with slightly richer artistic details and independent original assets.
 - **Pending:** verify tile/phone presentation and accept Phase 1 numerical simulation/storage contracts. Architecture/ADRs are accepted (D-013); Illustrated Minimal is selected (D-014).
+- **Recovered requirements:** roughly 10–15 minutes/year at normal speed; meaningful seasons/winter preparation; pause while away and return paused without catch-up; desktop-led review with the approved phone arrangement and full phone usability (D-015–019). See [product brief](PRODUCT_BRIEF.md) and [project handoff](PROJECT_HANDOFF.md).
 - Publish design pillars, simulation architecture, proposed UI, and roadmap.
 - Define a small, testable first vertical slice.
 - Establish branch/PR hygiene and automatic merged-branch cleanup where permissions allow.
