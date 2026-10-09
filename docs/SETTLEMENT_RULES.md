@@ -1,6 +1,6 @@
 # P1 settlement rules — proposal v1.2
 
-**Status: proposed, not approved or balance-tested.** This is a concrete candidate for Q-004 and the mechanics portion of Phase 0.8. All numbers below are tuning proposals. No engine, dependency or deployment is introduced. Review alongside [local persistence](LOCAL_PERSISTENCE_CONTRACT.md), [architecture](ARCHITECTURE_REVIEW.md) and [implementation plan](IMPLEMENTATION_PLAN.md). Existing Phase 0 gates remain open.
+**Status:** implemented as the versioned `p1-settlement-v1` engineering baseline under D-020/D-021. All numbers remain provisional balance values; implementation is not final gameplay acceptance. [PHASE1_SETTLEMENT.md](PHASE1_SETTLEMENT.md) records actual forced fixtures, seed-battery results and remaining risks. The browser still shows founding-only terrain; storage and selected-art evidence remain open. Review alongside [local persistence](LOCAL_PERSISTENCE_CONTRACT.md), [architecture](ARCHITECTURE_REVIEW.md) and [implementation plan](IMPLEMENTATION_PLAN.md).
 
 ## Units and scope
 
@@ -154,3 +154,7 @@ After engineering authorization, implement ledger/invariant tests, deterministic
 Explicit tuning risks: finite timber may produce eventual maintenance decline; foraging may stabilize low populations; crop labor and fertility may create self-reinforcing growth/decline. Adjust only from multi-seed evidence and version the rule change. A successful arithmetic fixture does not prove a compelling or balanced world.
 
 No Phase 0 checkbox is closed by this draft. Architecture decision records and desktop/phone visual evidence remain separate work.
+
+## Engineering clarification in p1-settlement-v1
+
+Construction start is a phase 2 event: its tile/ID and opening-timber escrow become authoritative when labor/material reservations are made. Work, completion, repairs and removal occur in phase 6. This makes event order agree with actual resource changes; gathering later in the tick cannot finance an opening reservation. Fields first receive labor the week after completion. Removal-caused capacity losses cite the removal event; extinction cites the already-emitted deaths record. The full last-tick labor/resource ledger is part of schema 2's authoritative state, alongside the archive.

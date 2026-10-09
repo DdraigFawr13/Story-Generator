@@ -48,4 +48,16 @@ describe('canonical JSON and immutable captures', () => {
     expect(() => Reflect.set(saved.record, 'a', 4)).not.toThrow();
     expect(Reflect.set(saved.record, 'a', 4)).toBe(false);
   });
+  it('never treats a shallow freeze as immutable data', () => {
+    const child = { value: 1 },
+      parent = Object.freeze({ child });
+    expect(canonicalJson(parent)).toBe('{"child":{"value":1}}');
+    const captured = capture(parent);
+    child.value = 2;
+    expect(canonicalJson(parent)).toBe('{"child":{"value":2}}');
+    expect(canonicalJson(captured)).toBe('{"child":{"value":1}}');
+    expect(Object.is(capture(Object.freeze({ value: -0 })).value, 0)).toBe(true);
+    const prototypeKey = JSON.parse('{"__proto__":{"value":3}}') as Record<string, unknown>;
+    expect(canonicalJson(capture(prototypeKey))).toBe('{"__proto__":{"value":3}}');
+  });
 });
