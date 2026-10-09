@@ -1,4 +1,4 @@
-# P1 settlement rules — proposal v1.1
+# P1 settlement rules — proposal v1.2
 
 **Status: proposed, not approved or balance-tested.** This is a concrete candidate for Q-004 and the mechanics portion of Phase 0.8. All numbers below are tuning proposals. No engine, dependency or deployment is introduced. Review alongside [local persistence](LOCAL_PERSISTENCE_CONTRACT.md), [architecture](ARCHITECTURE_REVIEW.md) and [implementation plan](IMPLEMENTATION_PLAN.md). Existing Phase 0 gates remain open.
 
@@ -27,7 +27,7 @@ Households are a display aggregate, not persistent kinship groups. Do not narrat
 
 ## Authoritative state and tick order
 
-Persist tick, map, settlement ID/center, population, health, food, timber, all structures and construction progress, seasonal field tended-week counters, current weather, all RNG streams and allocators, shortage/surplus transition flags, canonical events and historical entity records. Persist the current season's weather-event reference and each field's creation reference for causal lookup. No authoritative state may live only in a closure or UI component.
+Persist tick, map (including immutable river-center metadata), settlement ID/center, population, health, food, timber, all structures and construction progress, seasonal field tended-week counters, current weather, all RNG streams and allocators, shortage/surplus transition flags, canonical events and historical entity records. Persist the current season's weather-event reference and each field's creation reference for causal lookup. No authoritative state may live only in a closure or UI component.
 
 Tick zero is founding before the first week of spring. For candidate tick t ≥ 1, season index is floor((t−1)/12) mod 4 and year is floor((t−1)/48)+1. The boundary is t mod 12 = 0. The UI labels the last processed week; at zero display "Founding — before spring."
 
@@ -46,17 +46,13 @@ Rule effects within a phase are visible to later phases. Every event records its
 
 ## Geography and valid founding
 
-Use the terrain RNG stream. For each tile, in row-major order, draw elevation in 0–99, fertility in 0–100, and forest roll in 0–99, even if a preceding draw makes a later attribute irrelevant. Elevation < 20 means water; 20–84 means grass; 85–99 means rock. Forest exists only on grass with forest roll < 35; its initial timber is 20. Water/rock have no harvestable timber. Forest does not regrow in P1.
+The proposed [deterministic terrain contract](TERRAIN_CONTRACT.md) now owns exact geography generation, founding-site ranking and fallback. It supersedes independent per-tile elevation/forest rolls and the fixed center fallback.
 
-Consider interior centers only (x=1..62, y=1..38), in row-major order. A valid center and its eight neighbors form a 3 × 3 patch of grass terrain (forest allowed), with at least two tiles of fertility ≥ 50. Founding uses these nine tiles. Clear forest on those nine tiles as explicit initial site preparation: set their timber to zero, recording tile IDs and removed timber in founding facts; do not credit that timber to settlement stock. This is a tick-zero endowment rule, not free clearing during play. Preserve generated elevation/fertility. If no valid center exists, carve the fixed patch x=31..33, y=19..21 into non-forest grass with elevation 50 and fertility 70, center (32,20), with zero tile timber. Record original tiles, removed timber and fallback status in founding facts. No hidden regeneration loop or gameplay intervention.
+Generate three integer-interpolated 9 × 6 lattices and a cardinally connected three-tile river on the 64 × 40 map using the terrain stream only. Founding selects a dry 3 × 3 grass patch with at least two fertile field tiles, ranking by river distance, map-anchor distance and tile index. Candidate centers keep a radius-eight margin. Forest on the founding patch is cleared with explicit discarded-timber accounting; it does not increase starting stock.
 
-This v1.1 proposal replaces the overly restrictive requirement that all nine tiles be both forest-free and fertile. Under an independent uniform-draw approximation, the old rule would require fallback on at least 99.78% of maps; that is an analytical warning, not a measured seeded-generator result. Measure fallback frequency across the fixed seed battery before accepting geography balance.
+If no naturally valid patch exists, prepare the highest-ranked dry patch without changing river tiles. Invalid all-water input is rejected, replacing the earlier all-water carving fixture. Preserve original patch values and fallback facts. See the terrain contract for exact thresholds, RNG draw order, interpolation, river metadata and generation fixtures.
 
-Assign the two highest-fertility patch tiles to fields, tie by tile index; assign the lowest-index remaining tile to the store; the remaining six tiles hold huts. Founding creates resources/structures as initial endowment, not unpaid construction during play. Record all starting amounts and fallback status. Forest outside the patch stays finite and seed-derived; founding does not guarantee long-term timber.
-
-Generated name is "Settlement x-y" from center coordinates in P1; richer names can be pure presentation later. No random names consume simulation streams.
-
-**Fixture:** all-water generation terminates with the declared nine-tile patch and exactly nine structures. No forest or occupied water remains in that patch. If a future config cannot accommodate this patch, reject config before generation.
+Assign fields/store/huts and IDs under that contract; founding remains an endowment rather than unpaid gameplay construction. Generated name remains "Settlement x-y" from center coordinates, with no simulation RNG used for presentation names. Forest outside the patch is finite and seed-derived, with no guaranteed long-term timber.
 
 ## Labor, food and materials
 
