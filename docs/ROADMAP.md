@@ -1,9 +1,10 @@
 # Phased plan and acceptance gates
 
-**Status: proposal.** Complete and test one phase before expanding the next; do not confuse a polished pixel mockup with a functioning causal simulator.
+**Status: approved strategic scope; implementation steps are documented but not yet started.** The complete ordered implementation checklist, dependencies, and acceptance gates live in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md). Middle fantasy is the starting direction; spectator nudges are an explicitly deferred future idea. Complete and test one phase before expanding the next.
 
 ## Phase 0 — Concept and repository groundwork (current)
-- Decide game scale/tone, spectator model and visual direction.
+- **Decided:** living-world vision with settlement-first scaling; middle-fantasy starting tone; spectator-only initial implementation.
+- **Pending:** approve visual target, technical stack/ADRs and Phase 1 numerical simulation contracts.
 - Publish design pillars, simulation architecture, proposed UI, and roadmap.
 - Define a small, testable first vertical slice.
 - Establish branch/PR hygiene and automatic merged-branch cleanup where permissions allow.
@@ -53,7 +54,7 @@
 
 - Event dependency graphs ("why did this happen?"), timelines, bookmarks, historical era summaries.
 - Replay/scrub and save/load; seed sharing and exportable chronicles.
-- Observer mode and optional intervention mode, clearly separated.
+- Observer-only tools, bookmarks, inspection and non-mutating annotations. **No intervention system in the committed roadmap.**
 
 **Done when:** a viewer can reconstruct a story spanning generations using only the world's events and inspection views.
 
@@ -75,12 +76,8 @@ Seed `RIVERSIDE`: a small group begins next to a forest and river, clears land, 
 - Never delete active/unmerged branches to tidy the list without checking ownership.
 - Document revised rules and invariants alongside the code.
 
-## Open design choices
+## Decisions and remaining Phase 0 gates
 
-1. World tone: grounded / low-fantasy / alien?
-2. Starting view: miniature village / regional map?
-3. Viewer agency: pure observer / occasional interventions / full sandbox?
-4. Session target: short episodic runs / centuries of continuous history?
-5. Starting platform: browser-first responsive / desktop-only?
-
-Pending responses, proposals assume low-fantasy, miniature village first, observer-first, browser-first and open-ended timescale.
+- **Decided:** middle fantasy, village-first to continent-scale, observer-first without current intervention implementation, browser-first responsive, open-ended history.
+- **Remaining:** approve visual composition(s), choose stack/rendering/persistence details, define the initial numerical sim contracts and acceptance metrics. See [DECISIONS.md](DECISIONS.md).
+- **Parked:** guided/on-demand nudges, alternate fantasy intensity profiles and additional species. See [DECISIONS.md](DECISIONS.md).
