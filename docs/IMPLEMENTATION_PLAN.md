@@ -1,6 +1,6 @@
 # Implementation plan — milestone contracts (v1.1)
 
-**Current status:** Phase 1 engineering continues under D-020–022. Core/terrain/founding, weekly settlement, playback/local persistence and functional viewer milestones (PRs #11–14) are merged. A reproducible [winter/recovery study](PHASE1_BALANCE.md) compares candidate settings without changing production rules. Remaining balance, selected-art, storage and device reviews are carried into first-playable acceptance rather than marked complete. See [PHASE1_FOUNDATIONS.md](PHASE1_FOUNDATIONS.md), [PHASE1_SETTLEMENT.md](PHASE1_SETTLEMENT.md) and [PHASE1_VIEWER.md](PHASE1_VIEWER.md).
+**Current status:** Phase 1 engineering authorized under D-020/D-021. Core/terrain/founding PR #11 is merged; the weekly settlement engine PR #12 is merged, and playback/local persistence plus a functional chronicle are implemented under D-022. Remaining balance, selected-art and storage reviews are carried into first-playable acceptance rather than marked complete. See [PHASE1_FOUNDATIONS.md](PHASE1_FOUNDATIONS.md) and [PHASE1_SETTLEMENT.md](PHASE1_SETTLEMENT.md).
 
 ## Approved core constraints
 
@@ -72,7 +72,7 @@ The generic reducer-injected `advanceTicks` remains available; it is now supplem
 - [x] 1.6 Spawn aggregate founders (24 residents, six households), food/timber stocks, six huts, two fields and one store, stable occupancy/IDs and a deterministic coordinate-based settlement name. Clearing is recorded and discarded, not free stored timber. Individual identities/life histories remain P2.
 - [x] 1.7 Define inspectable settlement state: population, households, capacity, food, production, structures, season and complete last-tick accounting.
 
-The viewer inspects founding and advancing facts from authoritative state. Temporary programmatic drawings are not selected-art completion.
+The browser currently inspects founding facts only; advancing-state UI integration remains 1E. Temporary programmatic drawings are not selected-art completion.
 
 ### 1C — State-changing simulation loops
 - [x] 1.8 Advance fixed seasons; weather/fertility adjust harvest production. Every consumed or produced unit is balanced and bounded.
@@ -249,6 +249,6 @@ Other future candidates: grounded/high fantasy world-profile packages, varied in
 - [Story Spotlight opportunity eligibility](SPOTLIGHT_OPPORTUNITIES.md): explicit activation; may alter future outcomes, but no chosen result, mandatory plot or guaranteed event.
 - [Simplified original art direction](ART_STYLE_REFERENCE.md): inspired by RimWorld's readability with slightly more artistic detail; earlier 16px/isometric-heavy art is not locked.
 
-## Foundation engineering checkpoint (complete)
+## First engineering PR (NOT to start yet)
 
-The foundation slice shipped in PR #11 under D-020. Its project skeleton, deterministic PRNG/tick engine, seed/config schema, state/event digest, tests, CI and terrain/founding implementation are recorded in [PHASE1_FOUNDATIONS.md](PHASE1_FOUNDATIONS.md). Continue from the current Phase 1 backlog and [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md); the earlier no-scaffolding restriction is superseded.
+After Phase 0 design/architecture approval: `feat/phase1-engine-seed-clock`: project skeleton, deterministic PRNG/tick engine, seed/config schema, state/event digest, initial tests and CI; no pixel game yet. Close it before proceeding to terrain, resources or UI.

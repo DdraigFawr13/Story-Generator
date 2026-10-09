@@ -10,6 +10,7 @@
     "npm": "11.9.0"
   },
   "scripts": {
+    "benchmark:balance-study": "node scripts/balance-sensitivity-study.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
@@ -21,8 +22,7 @@
     "format:check": "prettier --check .",
     "check": "npm run format:check && npm run typecheck && npm run boundaries && npm test && npm run build",
     "benchmark:storage": "node scripts/storage-benchmark.mjs",
-    "benchmark:crash": "node scripts/crash-study.mjs",
-    "benchmark:balance": "node scripts/balance-study.mjs"
+    "benchmark:crash": "node scripts/crash-study.mjs"
   },
   "dependencies": {
     "react": "19.3.0",

@@ -1,17 +1,17 @@
-# Phase 1 winter and recovery study — 2026-10-09
+# Legacy v1 winter and recovery sensitivity study — 2026-10-09
 
-This is a reproducible diagnostic for the open winter-preparation and low-population questions. It does not select new production rules or close first-playable acceptance. The application still creates and resumes `p1-settlement-v1` worlds with the complete original configuration.
+This diagnostic holds the historical `p1-settlement-v1` labor rules fixed while varying harvest and winter crop settings. It does not select production rules or close first-playable acceptance. The separate [v2 implementation milestone](https://github.com/DdraigFawr13/Story-Generator/pull/16) addresses winter preparation and low-population recovery with new versioned rules; this scalar study does not evaluate that recovery policy.
 
 ## Reproduce
 
 ```sh
 npm ci
-npm run benchmark:balance
+npm run benchmark:balance-study
 ```
 
 The default report path is `/tmp/story-generator-balance-report.json`; `STORY_GENERATOR_BALANCE_REPORT` can select another path. The committed [raw report](evidence/phase1-balance-study.json) records the source revision, complete baseline configuration, candidate parameters, final state digests, seasonal resource accounting and deliberately forced recovery inputs.
 
-The script uses the production pure reducer, invariant validator and whole-week admission inside separate Vite SSR module graphs. Only the diagnostic graph substitutes each candidate's configuration. Experimental worlds receive distinct `p1-balance-study-*` version tags. It never opens IndexedDB, loads the browser application, changes source constants or writes a production save. These candidates are not supported save formats.
+The script uses the retained v1 pure reducer rules, invariant validator and whole-week admission inside separate Vite SSR module graphs. It explicitly selects v1 when the runtime supports both v1 and v2. Only the diagnostic graph substitutes each candidate's configuration. Experimental worlds receive distinct `p1-balance-study-*` version tags. It never opens IndexedDB, loads the browser application, changes source constants or writes a production save. These candidates are not supported save formats.
 
 All profiles use exactly RIVERSIDE and TERRAIN_000–008 for 240 weeks (five years), without selecting seeds for a desired story. The baseline's population/health/food/timber at weeks 48, 96 and 240 must match the previously committed ten-trajectory report. Each profile validates its final states and compares RIVERSIDE's JSON-captured week 57 plus 183 weeks against its uninterrupted result, including RNG, IDs and full events.
 
@@ -19,7 +19,7 @@ All profiles use exactly RIVERSIDE and TERRAIN_000–008 for 240 weeks (five yea
 
 | Diagnostic profile | Harvest base | Winter crop factor | Worlds with shortages / 10 | Total weeks with a food deficit | Minimum health | Week-240 population range |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Production baseline | 240 | 40% | 0 | 0 | 100 | 24–31 |
+| Historical v1 baseline | 240 | 40% | 0 | 0 | 100 | 24–31 |
 | Dormant winter | 240 | 0% | 0 | 0 | 100 | 24–31 |
 | Moderate harvest | 160 | 0% | 0 | 0 | 100 | 24–31 |
 | Lower harvest | 120 | 0% | 0 | 0 | 100 | 24–31 |
@@ -44,11 +44,11 @@ These are **one-week diagnostic phase inputs**, not autonomous trajectories, his
 | 8 | 4 | 3 | 1 | 1 | 7 | 82 |
 | 24 | 12 | 3 | 6 | 6 | 18 | 85 |
 
-All six scalar profiles have the same result: they do not change field-first labor allocation. At populations 2 and 4, tending absorbs every worker, so no one forages, repairs, builds or gathers timber that week. At population 1 there is no worker. A future recovery policy must specify the exclusive worker order, seasonal crop-care cost, food/material tradeoff, RNG use and event/ledger consequences. This study does not silently add a reservation or promise recovery.
+All six scalar profiles have the same result: they do not change v1 field-first labor allocation. At populations 2 and 4, tending absorbs every worker, so no one forages, repairs, builds or gathers timber that week. At population 1 there is no worker. A recovery policy must specify the exclusive worker order, seasonal crop-care cost, food/material tradeoff, RNG use and event/ledger consequences. The separate v2 milestone defines and tests that policy; this scalar study adds no reservation or promise of recovery.
 
 ## Verification and next work
 
 - The complete six-profile study passed: 60 five-year runs, final invariant checks, baseline reference assertions and six full JSON continuation comparisons.
-- The original runtime configuration and save schemas are unchanged. The command is a local diagnostic, outside normal CI and the browser bundle.
-- Next: select the intended preparation/recovery experience, specify a versioned labor/tuning change, and run the 100-seed/long-history battery before adopting it.
+- This milestone changes no runtime configuration or save schema. The command is a local diagnostic, outside normal CI and the browser bundle.
+- Review production balance with its actual versioned labor policy and 100-seed/long-history battery. These historical v1 scalar results cannot establish v2 acceptance.
 - Exact selected-art references, physical Android/installed Safari evidence and a human causal-chain usability review remain open. No individual-agent phase, Spotlight mechanic or deployment is inferred from this study.

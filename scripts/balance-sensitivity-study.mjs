@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 
-// Diagnostic only: an isolated SSR module graph loads each candidate config.
+// Legacy v1 diagnostic only: an isolated SSR module graph loads each candidate config.
 // Browser code, production config and local saves are never changed.
 const seeds = [
   'RIVERSIDE',
@@ -37,16 +37,38 @@ for (const profile of profiles) {
                 const config = structuredClone(baselineConfig);
                 config.economy.harvestBase = profile.harvestBase;
                 config.economy.seasonMultipliers[3] = profile.winterFactor;
-                return `import { capture } from './immutable';\nexport const SETTLEMENT_VERSION = 'p1-balance-study-${profile.id}';\nexport const SETTLEMENT_CONFIG = capture(${JSON.stringify(config)});\n`;
+                return `import { capture } from './immutable';
+export const LEGACY_SETTLEMENT_VERSION = 'p1-settlement-v1';
+export const LEGACY_SETTLEMENT_CONFIG = capture(${JSON.stringify(baselineConfig)});
+export const SETTLEMENT_VERSION = 'p1-balance-study-${profile.id}';
+export const SETTLEMENT_CONFIG = capture(${JSON.stringify(config)});
+export function settlementConfig(version) {
+  if (version === LEGACY_SETTLEMENT_VERSION) return LEGACY_SETTLEMENT_CONFIG;
+  if (version === SETTLEMENT_VERSION) return SETTLEMENT_CONFIG;
+  throw new Error('Unsupported diagnostic version');
+}
+`;
               },
             },
           ],
   });
   try {
-    const { SETTLEMENT_CONFIG } = await server.ssrLoadModule('/src/sim/settlement-config.ts');
-    assert.equal(SETTLEMENT_CONFIG.economy.harvestBase, profile.harvestBase);
-    assert.equal(SETTLEMENT_CONFIG.economy.seasonMultipliers[3], profile.winterFactor);
-    if (profile.id === 'baseline') baselineConfig = structuredClone(SETTLEMENT_CONFIG);
+    const configModule = await server.ssrLoadModule('/src/sim/settlement-config.ts');
+    const config =
+      profile.id === 'baseline'
+        ? (configModule.LEGACY_SETTLEMENT_CONFIG ?? configModule.SETTLEMENT_CONFIG)
+        : configModule.SETTLEMENT_CONFIG;
+    const version =
+      profile.id === 'baseline'
+        ? (configModule.LEGACY_SETTLEMENT_VERSION ?? configModule.SETTLEMENT_VERSION)
+        : configModule.SETTLEMENT_VERSION;
+    assert.equal(
+      version,
+      profile.id === 'baseline' ? 'p1-settlement-v1' : `p1-balance-study-${profile.id}`,
+    );
+    assert.equal(config.economy.harvestBase, profile.harvestBase);
+    assert.equal(config.economy.seasonMultipliers[3], profile.winterFactor);
+    if (profile.id === 'baseline') baselineConfig = structuredClone(config);
     const { createSettlement } = await server.ssrLoadModule('/src/sim/settlement-initial.ts');
     const { advanceSettlement, reduceSettlementWeek } =
       await server.ssrLoadModule('/src/sim/settlement.ts');
@@ -58,7 +80,7 @@ for (const profile of profiles) {
     const { digestCanonical } = await server.ssrLoadModule('/src/adapters/crypto.ts');
     const trajectories = [];
     for (const seed of seeds) {
-      let state = createSettlement(seed),
+      let state = createSettlement(seed, version),
         resumePoint;
       const seasons = [];
       let minHealth = 100,
@@ -132,7 +154,7 @@ for (const profile of profiles) {
     // Forced one-week phase inputs, not autonomous histories or save fixtures.
     // Keep existing three fields, weather and materials; isolate opening population/reserves.
     const recovery = [];
-    let inputBase = createSettlement('RIVERSIDE');
+    let inputBase = createSettlement('RIVERSIDE', version);
     inputBase = advanceSettlement(inputBase, 37).state;
     for (const population of [1, 2, 4, 8, 24]) {
       const input = JSON.parse(canonicalJson(inputBase));
