@@ -1,6 +1,12 @@
 # Phase 0.7 — Architecture proposal and decision checklist
 
-**Status: proposed for review, not an approved stack.** Written after Direction C was selected. No code has been scaffolded or deployed. Avoid dependency-version or API assumptions until implementation.
+**Status: architecture accepted by the user on 2026-10-09 (D-013).** Written after Direction C was selected. No code has been scaffolded or deployed. Avoid dependency-version or API assumptions until implementation.
+
+## Accepted decision records
+
+Review [ADR-001–003](adr/README.md) for concrete proposals on the build/core boundary, rendering/controller, and persistence/test architecture. They propose Node 24 LTS with npm, explain headless history-limit admission, and define browser capability and cross-engine evidence requirements. The repository owner accepted all three records on 2026-10-09; Phase 0.7 is complete. Visual and mechanics/storage gates remain open.
+
+The numeric [settlement rules](SETTLEMENT_RULES.md) and [local persistence contract](LOCAL_PERSISTENCE_CONTRACT.md) are now documented proposals. Review those separately for Phase 0.8; merged documentation does not establish tested balance or close a gate.
 
 ## Recommendation
 
@@ -11,7 +17,7 @@ A **browser-first TypeScript app with a pure deterministic simulation engine**, 
 | Concern | Phase 1 candidate | Reason | Future decision |
 | --- | --- | --- | --- |
 | App language | TypeScript (strict) | One language across core and viewer, explicit data contracts | Keep core framework agnostic |
-| Project build | Vite | Small browser-first build, straightforward dev loop | Pick package manager/versions at scaffold time |
+| Project build | Vite | Small browser-first build, straightforward dev loop | npm proposed in ADR-001; pin compatible versions at approved scaffold time |
 | UI | React | State-driven timeline/inspector/panels, practical responsive components | Confirm UI needs justify dependency |
 | Pixel-world rendering | **Canvas 2D** initially | Few tile types/sprites, simple nearest-neighbor draw and selection | Consider PixiJS if perf/profiling warrants |
 | Core engine | Pure TS modules, fixed-tick state transitions | Headless reproducibility and isolation from frame rate | Optional worker isolation |
@@ -21,7 +27,7 @@ A **browser-first TypeScript app with a pure deterministic simulation engine**, 
 | Persistence | IndexedDB basic local save/resume in P1; complete versioned state + archive | Preserve a settlement between sessions; independent of UI state | P5 adds multiple named worlds, migrations and timeline seeking |
 | Hosting | Static site / Vercel at demonstrable milestone | Simulation runs client-side; no mandatory backend | Measure bundle/load size and mobile memory |
 
-These are planning recommendations, not a claim that a framework has been installed, tested or deployed.
+The accepted records govern the architecture choices. Packages have not been installed and the app has not been tested or deployed.
 
 ## Architecture boundaries
 
@@ -63,7 +69,7 @@ Boundary rules:
 
 ## Deterministic event and time design
 
-- Fixed discrete tick represents a simulation interval (exact duration to be determined in 0.8).
+- Fixed discrete tick represents a simulation interval (one week proposed in SETTLEMENT_RULES.md; pending 0.8 review).
 - Each tick passes through explicit stable phases: environment -> production -> consumption -> construction/demography -> event record/snapshot; detailed ordering to be finalized with rule contracts.
 - RNG streams are named for independent subsystems, and the PRNG algorithm/version and stream derivation must be explicit. Define stable entity iteration, ties, numeric units/rounding and canonical serialization; exclude camera/UI state from digests. Do not use Math.random for sim decisions.
 - Resume restores complete authoritative state. Historical seeking later restores a checkpoint and reruns ticks with recorded commands; chronicle records are not an exhaustive mutation log.
@@ -99,10 +105,10 @@ Boundary rules:
 
 ## Items to approve before moving to engineering
 
-- [ ] Vite + TypeScript + React for app shell; pure TS core.
-- [ ] Canvas 2D first, with clear swap seam for PixiJS later.
-- [ ] Vitest + Playwright for automated checks; manual mobile smoke tests.
-- [ ] Browser-local simulation, no account, server, LLM or paid service required in Phase 1.
+- [x] Accept ADR-001: Vite + TypeScript + React, pure TS core, Node/npm policy.
+- [x] Accept ADR-002: Canvas 2D, HTML accessibility and controller-owned fixed ticks.
+- [x] Accept ADR-003: IndexedDB and headless/browser/manual verification boundaries.
+- [x] Browser-local simulation, no account, server, LLM or paid service required in Phase 1.
 - [ ] Canonical event records and typed stable IDs; initial seed/config/version formats.
 - [ ] Complete Phase 1 mechanics and storage contracts using [PLAN_REVIEW.md](PLAN_REVIEW.md), including rule ordering, workforce/material accounting, demographics, extinction, retention limits and autosave cadence.
 - [ ] Static visual validation per ART_UI_SPEC.md (not yet complete).
