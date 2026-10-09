@@ -22,6 +22,7 @@
 - At least four **state-driven** historical event families: founding, harvest/shortage, construction/decay, population changes.
 - Real-time chronicle, click-to-highlight events, selected-place details.
 - Repeatable seed with 1000-tick test and event-history consistency test.
+- Basic browser-local manual save/resume and autosave; complete versioned state and canonical archive, with recovery from failed writes and clear storage limits.
 
 **Done when:** two seeded runs visibly diverge, same seed replays exactly, and the map and log agree about what changed.
 
@@ -49,7 +50,7 @@
 
 - World map, resource regions, migration trails, roads, trade, alliances, conflicts and borders.
 - Kingdom/faction spotlights with extra possible opportunity families and cross-scale historical links.
-- Nested simulation detail: inspect individual settlements, aggregate less relevant areas.
+- Deterministic regional update schedules independent of camera, zoom and selection; inspection changes rendering detail only.
 - Long-lived ruins, dynasties, successor factions, renamed places, shifting boundaries.
 
 **Done when:** settlements can found, ally, split, conquer, absorb, decline and rebuild without scripted end conditions.
@@ -57,20 +58,20 @@
 ## Phase 5 — Chronicle and spectator depth
 
 - Event dependency graphs ("why did this happen?"), timelines, bookmarks, historical era summaries.
-- Replay/scrub and save/load; seed sharing and exportable chronicles.
+- Replay/scrub and multiple named saves extend P1 local save/resume; local seed/history exports. Remote sharing and illustrated documentary formats remain parked.
 - Passive bookmark/inspection tools and non-mutating annotations; historical replay distinguishes these from recorded deliberate Story Spotlight eligibility changes. **No direct manual observer-nudge system is in the committed roadmap.**
 
 **Done when:** a viewer can reconstruct a story spanning generations using only the world's events and inspection views.
 
 ## Phase 6 — Scope/performance/content expansion
 
-- More biomes, species/cultures, trade goods, professions, diseases, technologies, disasters, diplomacy and lore systems.
+- More biomes/cultures, trade goods, professions, diseases, technologies, disasters, diplomacy and lore systems. Additional intelligent species remain parked pending a separate scope decision.
 - Pixel asset pipeline and layered effects, optimization, accessibility, mod-ready data definitions.
 - Balance tests across thousands of deterministic seeds with metrics: survival, diversity, growth, event density, memory pressure.
 
 ## Suggested first demonstration
 
-Seed `RIVERSIDE`: a small group begins next to a forest and river, clears land, builds huts and farms. Several seasons later the settlement may prosper, contract, relocate or fracture depending on simulated production, weather and demographic changes. The chronicle cites concrete state and relations. **Do not engineer a guaranteed dramatic catastrophe.**
+Seed `RIVERSIDE`: a small group begins next to a forest and river, clears land, builds huts and farms. Several seasons later the settlement may prosper, contract, recover or become empty depending on simulated production, weather and aggregate demographic changes. The chronicle cites concrete resource and population facts. Individual relationships arrive in P2; regional relocation and political fracture are later milestones. **Do not engineer a guaranteed dramatic catastrophe.**
 
 ## Process
 
@@ -81,6 +82,8 @@ Seed `RIVERSIDE`: a small group begins next to a forest and river, clears land, 
 - Document revised rules and invariants alongside the code.
 
 ## Decisions and remaining Phase 0 gates
+
+See [PLAN_REVIEW.md](PLAN_REVIEW.md) for the review findings, concrete mechanics checklist and ordered closure of the remaining gates.
 
 - **Decided:** middle fantasy, village-first to continent-scale, observer-led with future explicit opportunity-expanding spotlights (not forced outcomes), browser-first responsive, open-ended history.
 - **Remaining:** compare three simpler, original art treatments (see [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md)), validate Direction C's phone layout, approve [architecture proposal](ARCHITECTURE_REVIEW.md), and define initial numerical sim contracts/acceptance metrics. See [ART_UI_SPEC.md](ART_UI_SPEC.md) and [DECISIONS.md](DECISIONS.md).

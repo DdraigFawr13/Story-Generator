@@ -13,7 +13,7 @@ Create a unique world from a seed. Press Play. Watch a society inhabit the land,
 1. **Causality:** Every historically significant entry comes from an actual state transition with a clear reason; consequences remain in the world.
 2. **Emergence:** Simple overlapping systems yield unplanned combinations and surprising outcomes, not a long list of disconnected random cutscenes.
 3. **Observe at multiple scales:** A readable pixel map, persistent people and places, a timeline, and an inspectable chronicle all describe the same world.
-4. **Unique and reproducible:** World seed + configuration + simulation version reproduce the same history; store this with the save.
+4. **Unique and reproducible:** World seed + configuration + simulation version, plus ordered tick-stamped Spotlight commands from P2 onward, reproduce the same history. Complete snapshots preserve authoritative state for resume; P1 includes basic local save/resume.
 5. **Legible complexity:** Show what happened and why, with layered detail from major headlines to individual lives.
 6. **Unscripted endings:** No mandatory final collapse or prescribed age order. Extinction, migration, integration, renewal, or enduring stability are all possible.
 
@@ -34,7 +34,7 @@ Create a unique world from a seed. Press Play. Watch a society inhabit the land,
 3. Notice a new headline or visual change, jump to its location.
 4. Open a resident, structure, family, settlement, faction, or event to inspect its history, relationships, and causes.
 5. Bookmark interesting actors/events, follow them through generations, and review the chronicle or timeline.
-6. Export/share a seed and eventually a generated illustrated historical account.
+6. Save locally in P1; export seed/history records in P5. Remote sharing and illustrated historical accounts remain future ideas, not committed delivery.
 
 ## Visual layout direction
 

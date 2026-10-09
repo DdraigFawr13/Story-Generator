@@ -9,7 +9,7 @@ The register distinguishes what was **approved**, what is **pending review**, an
 | D-001 | Simulation first, narration second | Unscripted causal stories rather than random narrative flavor | Every story claim grounded in world history |
 | D-002 | Living World long-term, village-first first playable | Build complete systems at small scale before continental scale | Phase 1 one settlement; Phases 2–6 expand |
 | D-003 | Middle-fantasy baseline | Mix grounded societal histories with meaningful supernatural possibilities | Mundane foundation P1–2; first bounded fantasy rule P3 |
-| D-004 | Current experience is observer-only | World should be compelling without artificial player-driven plots | Inspect, bookmark, follow and study; no gameplay interventions |
+| D-004 | P1 is passive observation; later explicit Story Spotlights are distinct | World should be compelling without artificial player-driven plots | Inspect/bookmark/follow never mutate simulation; deliberate P2+ Spotlights may change trajectories under D-009; direct nudges stay parked |
 | D-005 | Detailed phase specs precede engineering | Control scope and avoid rebuilding modules later | P0 approval gate; ordered tasks and tests per phase |
 | D-006 | Scoped PRs + squash merges + merged-branch cleanup | Keep repository navigable | Only main persists between short-lived tasks |
 | D-007 | Responsive browser-first is planning baseline | Start easily on phone or desktop | Final framework selected before Phase 1 scaffolding |
@@ -17,6 +17,7 @@ The register distinguishes what was **approved**, what is **pending review**, an
 | D-009 | Broaden **eligible opportunities** for deliberate Story Spotlights | User wants greater scope of potential divergent storylines, not enforced outcomes | Multi-scale spotlight opportunity families gradually introduced P2–P4; preserve autonomous refusal/failure/missed paths |
 | D-010 | Full moral and tonal range | Dark tragedy/cruelty and warm triumph/compassion both deserve equal possibility, grounded in world conditions | No quotas, no chosen-hero protection, no scripted morality outcomes |
 | D-011 | Rework map art: simple, stylized, original, RimWorld-like readability with slightly more detail | Previous images were too dense and intricate | Direction C layout remains; compare simplified graphic treatments before sprites are created |
+| D-012 | Basic browser-local save/resume belongs in the first playable (user confirmed 2026-10-09 UTC) | Keep a settlement between sessions | P1 manual save/resume and autosave; P5 retains multiple named worlds, migrations and timeline seeking |
 
 ## Pending Phase 0 decisions
 
@@ -25,8 +26,9 @@ The register distinguishes what was **approved**, what is **pending review**, an
 | Q-001 (resolved) | Which pixel-world interface presentation? | **C: Naturalist's Observation Desk**, approved (D-008) | Exact art settings + layout validation still pending |
 | Q-002 | Exact pixel art constraints? | Compare minimal graphic, illustrated minimal (preferred), soft illustrative; 16px is no longer prescribed | Asset pipeline |
 | Q-003 | Rendering, app/test/build frameworks? | See [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md): TS + React/Vite + Canvas 2D candidate | Phase 1 scaffolding |
-| Q-004 | Time and simulation resource units? | Explicit tick-to-season conversion and realistic bounded quantities | Phase 1 sim behavior |
+| Q-004 | Complete P1 mechanics and numeric units? | Rule contracts covering ordering, workforce/material accounting, demographics, extinction and invariants; checklist in [PLAN_REVIEW.md](PLAN_REVIEW.md) | Phase 1 sim behavior |
 | Q-005 | Spotlight interaction and budgets? | Explicit activated opportunity-expansion vs passive bookmark; cap counts and family complexity | Phase 2 spotlight mechanics; see [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md) |
+| Q-006 | P1 archive/storage limits and autosave cadence? | One local world slot; atomic complete snapshots and archive; visible storage failures; pause at supported archive limit, retain last good save | P1 persistence and long-run acceptance |
 
 ## Parked concepts — DO NOT IMPLEMENT
 
@@ -49,7 +51,7 @@ Future grounded, low-, high-fantasy and nonhuman world presets are possible. Onl
 
 ### F-003: Future interaction/format expansions
 
-Optional full god-mode control, modding, remote seed sharing, documentary exports, extensive magical pantheons and additional intelligent species remain speculative. Review each for fit, cost, performance and causality before adding it to a roadmap.
+Optional full god-mode control, modding, remote seed sharing, illustrated documentary exports, extensive magical pantheons and additional intelligent species remain speculative. Basic local recorded-history exports remain in P5; they do not authorize a publishing service or illustrated documentary pipeline. Review each for fit, cost, performance and causality before adding it to a roadmap.
 
 ## Change control
 
