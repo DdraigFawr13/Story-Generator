@@ -113,6 +113,6 @@ A transient storage failure does not automatically stop a valid simulation. Disp
 
 ## Evidence and remaining decisions
 
-This is a documentation proposal. No runtime, browser, quota or balance tests have run. Check implementation against these scenarios after engineering approval, recording serialization/save latency, peak memory and tick latency at 1,000 and 10,000 ticks on desktop and a physical Android phone.
+This remains a persistence proposal: no IndexedDB, quota or settlement-balance tests have run. D-020 authorizes engineering; the [foundation slice](PHASE1_FOUNDATIONS.md) verifies canonical bytes and immutable history admission, not durable saves. Check the future persistence adapter against these scenarios, recording serialization/save latency, peak memory and tick latency at 1,000 and 10,000 ticks on desktop and a physical Android phone.
 
-Review Q-006 against the table and replacement/concurrency behavior. Numeric mechanics acceptance (Q-004), storage-policy acceptance (Q-006), visual validation and the overall pre-build gate remain outstanding. Architecture (Q-003) is already accepted under D-013; the settlement proposal specifies ASCII seed validation and named-stream determinism. Accepting this document alone does not authorize scaffolding.
+Review Q-006 against the table and replacement/concurrency behavior. Weekly balance acceptance (Q-004), storage-policy acceptance (Q-006) and selected-art validation remain carried first-playable requirements. Architecture (Q-003) is accepted under D-013 and scaffolding authorized under D-020; ASCII seeds and named-stream determinism are implemented in the foundation baseline. The proposed autosave cadence has not become final policy by being documented.

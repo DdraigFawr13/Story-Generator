@@ -1,12 +1,12 @@
 # Plan review and remaining pre-build contracts
 
-**Review date:** 2026-10-09 UTC. **Status:** documentation revision; Phase 0 remains open. Basic local save/resume in P1 is user-approved (D-012), architecture is accepted (D-013), Illustrated Minimal is selected (D-014), and recovered product requirements are D-015–019. Numeric mechanics, terrain and storage policies remain proposals; no application has been implemented or tested.
+**Review date:** 2026-10-09 UTC. **Current status:** D-020 authorizes Phase 1 engineering. The [foundation slice](PHASE1_FOUNDATIONS.md) implements and tests terrain/core/founders; weekly balance, storage and selected-art evidence remain open. This document preserves the earlier review findings. Basic local save/resume is approved (D-012), architecture accepted (D-013), Illustrated Minimal selected (D-014), and recovered product requirements are D-015–019.
 
 ## Assessment
 
 Keep the village-first scope, pure deterministic core, state-grounded chronicle and original simplified Direction C presentation. They support the central experience: watch a society change and inspect why.
 
-The main risks are incomplete rule contracts, loss of early worlds before saves arrive, and promises of replay or unlimited historical retention without sufficient state/storage contracts. Resolve those before scaffolding; do not add more content families to compensate.
+The main risks are incomplete rule contracts, loss of early worlds before saves arrive, and promises of replay or unlimited historical retention without sufficient state/storage contracts. Carry these into first-playable acceptance while building the authorized foundations; do not add more content families to compensate.
 
 ## Changes made in this review
 
@@ -52,9 +52,9 @@ Do not choose final rates from a single attractive seed. Once implementation is 
 1. Review the existing [settlement rules](SETTLEMENT_RULES.md), [terrain contract](TERRAIN_CONTRACT.md) and [storage contract](LOCAL_PERSISTENCE_CONTRACT.md) against the recovered [product brief](PRODUCT_BRIEF.md). Weekly versus older daily rules are separate proposals; do not mix their units or constants. Review winter production, low-population labor and autosave wall-clock implications before accepting tuning.
 2. Recover the selected Illustrated Minimal references, then validate chosen density and Direction C's desktop/phone chronicle and inspector per ART_UI_SPEC.md. Art selection and phone arrangement are decided; actual-size and interaction evidence remain open. Visual fixtures may depict future people, but must label them as mockups rather than P1 functionality.
 3. Record accepted mechanics, terrain, storage budgets and visual evidence. Architecture is already accepted. Keep unfinished Phase 0 boxes unchecked; request only outstanding product decisions. See [project handoff](PROJECT_HANDOFF.md) for checkpoint provenance and remaining evidence.
-4. After the existing Phase 0 approval gate, build separate scoped increments: seed/clock and CI → terrain/founders → balanced resource and demographic loops/events → local persistence → integrated viewer and end-to-end acceptance. The numbered implementation checklist defines deliverables, not a requirement to defer persistence until all UI work is finished.
+4. Under D-020, build separate scoped increments: seed/clock and CI → terrain/founders → balanced resource and demographic loops/events → local persistence → integrated viewer and end-to-end acceptance. The first two now have foundation evidence. The numbered implementation checklist defines deliverables, not a requirement to defer persistence until all UI work is finished.
 5. Demonstrate the first playable using multiple seeds, one causal chain visible in both map and chronicle, and save/reload continuation on desktop and phone. No forced catastrophe or seed-specific storyline.
 
 ## Validation of this revision
 
-This is a documentation review, supported by independent focused reviews of architecture and scope. Check cross-document phase ownership, approval status, replay inputs, archive semantics and changed relative links. Runtime, balance, persistence and browser tests are future acceptance requirements; none has been run against an application because no application exists.
+The original revision was a documentation review, supported by independent focused reviews of architecture and scope. Foundation runtime/browser checks are now recorded separately in [PHASE1_FOUNDATIONS.md](PHASE1_FOUNDATIONS.md); running settlement balance and persistence remain future acceptance requirements. Continue checking cross-document phase ownership, approval status, replay inputs, archive semantics and changed relative links.

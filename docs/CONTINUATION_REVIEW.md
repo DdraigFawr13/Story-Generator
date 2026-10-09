@@ -1,6 +1,6 @@
 # Continuation review — 2026-10-09
 
-**Status:** art treatment selected; mechanics/storage corrections proposed for acceptance. This review does not close the overall Phase 0 gate or claim a running game.
+**Current status:** D-020 authorizes Phase 1 engineering after merging recovery PR #10. Core/terrain/founding are implemented as recorded in [PHASE1_FOUNDATIONS.md](PHASE1_FOUNDATIONS.md). Weekly balance, storage and selected-art evidence remain open. The review below preserves the earlier pre-build findings; its no-scaffolding restriction is superseded by D-020.
 
 ## Resumed-thread checkpoint
 
@@ -70,7 +70,7 @@ These are implementation requirements, not claims that a static image passes the
 - Verify zoom controls, sheet reachability, map dragging versus sheet scrolling, and selected-location visibility with real browser interaction.
 - Source sprite density and zoom thresholds remain to be measured. Reduce foliage/grass texture if it obscures object silhouettes while retaining the chosen Illustrated Minimal direction.
 
-## Ordered implementation backlog after gate closure
+## Ordered implementation backlog (authorized under D-020)
 
 | Slice | Deliverable | Evidence required before merge |
 | --- | --- | --- |
@@ -85,4 +85,4 @@ No production application, runtime dependencies or deployment is included here. 
 
 ## Remaining gate, without repeating completed decisions
 
-Art treatment and architecture are decided. The concrete outstanding items are mechanics/storage proposal acceptance, acceptance and TypeScript port verification of the now-specified terrain contract, source-density/actual-size visual checks and interaction evidence. Source documents still require the overall Phase 0 gate before app scaffolding. This change supplies reviewable corrections and a scoped backlog; it does not mark future verification complete.
+Art treatment and architecture are decided; D-020 permits Phase 1 to proceed. The terrain TypeScript port now has independent fixture checks and browser parity evidence. Remaining items are weekly balance/storage review and complete selected-art source-density/readability/interaction checks. Keep these requirements explicit before accepting the first playable; foundation checks do not establish future verification.

@@ -12,7 +12,7 @@
 ## Roadmap and requirements
 
 - Consult [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for ordered tasks, phase dependencies, tests and exit gates before starting code.
-- Design/visual approval and implementation approval are separate. Do not introduce code or speculative systems before the Phase 0 gate.
+- Design/visual approval and implementation approval are separate. D-020 explicitly authorizes Phase 1 engineering and supersedes the earlier pre-build scaffolding restriction. Retain unfinished visual/balance/storage evidence as milestone requirements; do not infer approval for parked or later-phase systems.
 - New ideas belong in the decision register and must distinguish **approved**, **proposed** and **parked** scope. Deferred spectator nudges must not acquire an implementation milestone by implication.
 
 ## Engineering requirements
@@ -29,3 +29,4 @@
 - Avoid committing generated or temporary build artifacts.
 - Keep art style and simulation mechanics documented separately.
 - Do not add service API keys or paid AI generation as runtime prerequisites.
+- The package is private and marked `UNLICENSED`; no open-source license grant has been selected. Temporary map shapes/colors are original programmatic drawings, not imported sprites or substitutes for the selected visual references. Record provenance before adding production assets.

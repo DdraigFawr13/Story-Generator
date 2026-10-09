@@ -1,6 +1,6 @@
 # Deterministic terrain contract — proposal v1
 
-**Status:** implementation-ready proposal, verified by an offline Python design probe. This replaces the independent-tile geography section of the settlement proposal. It does not implement the production TypeScript engine, close the visual gate or establish gameplay balance.
+**Status:** implemented as the versioned `p1-foundation-v1` baseline under D-020. The TypeScript port reproduces the independent Python probe's 100 terrain fixtures, founding-site accounting and post-generation RNG state. Node/browser evidence and remaining limits are in [PHASE1_FOUNDATIONS.md](PHASE1_FOUNDATIONS.md). This replaces independent-tile geography; it does not establish gameplay balance or close the selected-art review.
 
 ## Scope and intended result
 

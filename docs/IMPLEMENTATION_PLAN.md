@@ -1,6 +1,6 @@
 # Implementation plan — milestone contracts (v1.1)
 
-**Planning status:** approved product direction; engineering proposal awaiting normal milestone reviews. **This document is not authorization to start implementation.** No source code, assets, services, packages or deployments should be added in this documentation-only change.
+**Current status:** Phase 1 engineering authorized under D-020 on 2026-10-09, after the user requested merging PR #10 and continuing to the next phase. The earlier documentation-only scaffolding restriction is superseded. The first core/terrain/founding slice is implemented; remaining balance, selected-art and storage reviews are carried into first-playable acceptance rather than marked complete. See [PHASE1_FOUNDATIONS.md](PHASE1_FOUNDATIONS.md).
 
 ## Approved core constraints
 
@@ -33,7 +33,7 @@ Cross-cutting tests and documentation advance with each phase. Basic local save/
 
 ---
 
-## Phase 0 — Pre-build specification and foundations (CURRENT; documentation only)
+## Phase 0 — Pre-build specification and foundations (review evidence carried forward)
 
 **Outcome:** A decision-ready brief, implementation slices, art target, and architecture rules, without adding a runnable game.
 
@@ -47,28 +47,32 @@ Cross-cutting tests and documentation advance with each phase. Basic local save/
 - [ ] 0.6 Direction C layout, Illustrated Minimal treatment and phone information hierarchy are selected. Recover the selected visual references, then verify source density, actual-size scale/contrast and desktop/phone interaction (see [ART_STYLE_REFERENCE.md](ART_STYLE_REFERENCE.md), [ART_UI_SPEC.md](ART_UI_SPEC.md) and [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md)). Art comparison is complete; visual validation remains open.
 - [x] 0.7 **Architecture accepted on 2026-10-09 (D-013)** in [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md) (TypeScript core, Vite/React, Canvas 2D, testing and persistence seams). Accepted [ADR-001–003](adr/README.md) specify build/core, rendering/controller and persistence/verification choices. Exact compatible dependency versions will be pinned at approved scaffolding.
 - [ ] 0.8 Review the concrete [settlement rules](SETTLEMENT_RULES.md) and [local persistence contract](LOCAL_PERSISTENCE_CONTRACT.md) against [PLAN_REVIEW.md](PLAN_REVIEW.md): adjustable numeric constants, aggregate population/households, workforce and material sourcing, construction priorities, demographic order, extinction behavior, RNG/rounding rules, event retention and storage limits. Each rule must specify inputs, units, preconditions, update order, RNG use, costs/effects, events and invariants; constants alone do not close this gate.
-- [ ] 0.9 Set up engineering issue/checklist backlog in scope-order only after visual/architecture review; no app scaffolding before this phase is signed off.
+- [x] 0.9 Scope-ordered engineering backlog is recorded in [CONTINUATION_REVIEW.md](CONTINUATION_REVIEW.md); D-020 authorizes starting its foundation slices.
 
-**Exit gate:** Direction C is approved, but visual validation is pending; architecture/engine boundaries are accepted; P1 rules must still be approved and recorded, with requirements and tests specific enough to code without improvising critical mechanics.
+**Authorization and evidence:** D-020 permits Phase 1 to start. Direction C and architecture are approved; 0.6 visual evidence and 0.8 balance/storage review remain open. Authorization does not turn missing evidence into a passed gate. Use explicit versioned implementation baselines and retain these reviews before accepting the first playable.
 
 **Risk:** expanding planned content before the small deterministic test-bed works. **Mitigation:** limit P1 to one settlement and a few meaningful resource chains.
 
 ---
 
-## Phase 1 — First playable: the living settlement
+## Phase 1 — First playable: the living settlement (CURRENT)
 
 **Outcome:** seeded pixel terrain, one evolving settlement, seasonal resource cycle, authentic real-time chronicle. This must already be engaging to *watch*.
 
 ### 1A — Project and deterministic engine
-- [ ] 1.1 Initialize browser project, formatting, lint/typecheck, unit test runner, CI (typecheck/tests/build), license and asset provenance policy.
-- [ ] 1.2 Separate `sim-core` pure-state reducers from `ui` renderer and adapters; define simulation version, seed, settings, clock/ticks, stable entity IDs.
-- [ ] 1.3 Implement reproducible named RNG streams; serialize/restore RNG state; document ordering of simulation phases and invariant assertions.
+- [x] 1.1 Initialize browser project, formatting, strict typecheck and boundary/static checks, unit test runner, CI (typecheck/tests/build), private/unlicensed source and asset provenance policy.
+- [x] 1.2 Separate pure simulation state from UI/controller/adapters; define foundation version, seed, versioned constants, clock/ticks and stable founding entity IDs.
+- [x] 1.3 Implement reproducible named RNG streams with explicit serialized integer states, independent golden vectors and rejection-sampling checks. Founding draw order is fixed; future weekly phase order follows the settlement contract and still needs implementation.
 - [ ] 1.4 Provide headless `advanceTicks(seed, config, N)` and canonical state/event digest for regression tests. Define stable entity ordering, tie-breaking, integer/fixed-point units and rounding, stream derivation, and canonical serialization excluding view state. Test Node/browser digest equivalence.
 
+1.4 is partial: canonical encoding and a generic reducer-injected `advanceTicks(initial, N, reducer)` implement immutable complete-tick admission. Founding and 100 terrain fixtures are compared across Node/browser. A running settlement reducer, seed/config convenience runner and long-run state/event digests remain 1C work; fixture-reducer continuity is not a village simulation.
+
 ### 1B — Geography and starting society
-- [ ] 1.5 Generate a seeded ~64x40 logical tile map with elevation, water, terrain, forest, fertility and valid settlement start area.
-- [ ] 1.6 Spawn aggregate founder households, food stock, land occupancy, an initial shelter and settlement name based on deterministic rules. P1 resident markers represent aggregate population, not simulated named individuals; keep household/population totals consistent. Individual identities and life histories begin in P2.
+- [x] 1.5 Generate a seeded 64x40 logical tile map with elevation, connected river, terrain, forest, fertility and valid settlement start area; match the independent Python fixtures and preserve water during forced fallback.
+- [x] 1.6 Spawn aggregate founders (24 residents, six households), food/timber stocks, six huts, two fields and one store, stable occupancy/IDs and a deterministic coordinate-based settlement name. Clearing is recorded and discarded, not free stored timber. Individual identities/life histories remain P2.
 - [ ] 1.7 Define inspectable settlement state: population, household count, capacity, food, production, structures, current season.
+
+1.7 is partial: the founding map, resource/capacity/building facts and keyboard tile inspector are runnable. Production rates and live season changes await 1C. Temporary programmatic drawings are not selected-art completion.
 
 ### 1C — State-changing simulation loops
 - [ ] 1.8 Advance fixed seasons; weather/fertility adjust harvest production. Every consumed or produced unit is balanced and bounded.
