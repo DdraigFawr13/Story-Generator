@@ -25,10 +25,10 @@ The register distinguishes what was **approved**, what is **pending review**, an
 | --- | --- | --- | --- |
 | Q-001 (resolved) | Which pixel-world interface presentation? | **C: Naturalist's Observation Desk**, approved (D-008) | Exact art settings + layout validation still pending |
 | Q-002 | Exact pixel art constraints? | Compare minimal graphic, illustrated minimal (preferred), soft illustrative; 16px is no longer prescribed | Asset pipeline |
-| Q-003 | Rendering, app/test/build frameworks? | See [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md): TS + React/Vite + Canvas 2D candidate | Phase 1 scaffolding |
-| Q-004 | Complete P1 mechanics and numeric units? | Rule contracts covering ordering, workforce/material accounting, demographics, extinction and invariants; checklist in [PLAN_REVIEW.md](PLAN_REVIEW.md) | Phase 1 sim behavior |
+| Q-003 | Rendering, app/test/build frameworks? | Review [ADR-001–003](adr/README.md): strict TS + React/Vite, Canvas 2D, Node 24 LTS/npm, IndexedDB and test boundaries (proposed) | Phase 1 scaffolding |
+| Q-004 | Complete P1 mechanics and numeric units? | Review [SETTLEMENT_RULES.md](SETTLEMENT_RULES.md): concrete numeric/order/RNG proposals; checklist in [PLAN_REVIEW.md](PLAN_REVIEW.md) | Phase 1 sim behavior |
 | Q-005 | Spotlight interaction and budgets? | Explicit activated opportunity-expansion vs passive bookmark; cap counts and family complexity | Phase 2 spotlight mechanics; see [SPOTLIGHT_OPPORTUNITIES.md](SPOTLIGHT_OPPORTUNITIES.md) |
-| Q-006 | P1 archive/storage limits and autosave cadence? | One local world slot; atomic complete snapshots and archive; visible storage failures; pause at supported archive limit, retain last good save | P1 persistence and long-run acceptance |
+| Q-006 | P1 archive/storage limits and autosave cadence? | Review [LOCAL_PERSISTENCE_CONTRACT.md](LOCAL_PERSISTENCE_CONTRACT.md): one-slot atomic snapshots, cadence/budgets, ownership, failures and archive admission (proposed) | P1 persistence and long-run acceptance |
 
 ## Parked concepts — DO NOT IMPLEMENT
 
