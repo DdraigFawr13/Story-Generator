@@ -49,7 +49,8 @@ Do not choose final rates from a single attractive seed. Once implementation is 
 
 ## Candidate specifications prepared after this review
 
-- [Product brief](PRODUCT_BRIEF.md): intended experience, outstanding user questions and first-session acceptance scenarios.
+- [Product brief](PRODUCT_BRIEF.md): intended experience, confirmed product priorities and first-session acceptance scenarios.
+- [Geography contract](GEOGRAPHY_CONTRACT.md): candidate integer terrain generation, bounded attempts and reserved valid starts.
 - [Phase 1 rules](PHASE1_RULES.md): explicit proposed numeric mechanics with worked accounting examples; not empirically balanced.
 - [Technical contract](TECHNICAL_CONTRACT.md): proposed engineering decisions, save semantics and validation budgets; not benchmark results.
 
@@ -66,3 +67,4 @@ These make review concrete. They do not close the pre-build gate or authorize ap
 ## Validation of this revision
 
 This is a documentation review, supported by independent focused reviews of architecture and scope. Check cross-document phase ownership, approval status, replay inputs, archive semantics and changed relative links. Runtime, balance, persistence and browser tests are future acceptance requirements; none has been run against an application because no application exists.
+
