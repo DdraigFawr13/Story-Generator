@@ -43,12 +43,12 @@ Cross-cutting tests and documentation advance with each phase. P5 save/replay de
 - [x] 0.3 Set viewer baseline: passive observer; possible small nudges are **deferred**.
 - [x] 0.4 Map core subsystems, seeded-world contract, canonical event model, story-quality principles.
 - [x] 0.5 Break P1–P6 into ordered engineering increments with deliverables, tests and exit gates (this document).
-- [ ] 0.6 Produce/approve 2–3 visual compositions for map + chronicle + inspect panel; evaluate desktop and phone readability.
-- [ ] 0.7 Confirm technical stack: TypeScript simulation core, dev/test frameworks, pixel renderer, persistence approach, accessibility target and hosting path; write architecture decision records (ADRs).
+- [ ] 0.6 Direction C has been **approved** for map + chronicle + inspect panel (see [ART_UI_SPEC.md](ART_UI_SPEC.md)). Remaining before closing 0.6: confirm source pixel resolution/zoom/contrast and validate desktop + phone presentation with a static prototype.
+- [ ] 0.7 **Architecture proposal documented** in [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md) (TypeScript core, Vite/React, Canvas 2D, testing and persistence seams). Review and record stack decisions as ADRs before marking complete.
 - [ ] 0.8 Set P1 numeric constants as adjustable configuration: tile dimensions, tick-to-season ratio, founder count, food unit, resource bounds, birth/death cadence, building prerequisites; list invariants before coding.
 - [ ] 0.9 Set up engineering issue/checklist backlog in scope-order only after visual/architecture review; no app scaffolding before this phase is signed off.
 
-**Exit gate:** user approves visual target; architecture/engine boundaries and P1 rules recorded; requirements and tests are specific enough to code without improvising critical mechanics.
+**Exit gate:** Direction C is approved, but visual validation is pending; architecture/engine boundaries and P1 rules must still be approved and recorded, with requirements and tests specific enough to code without improvising critical mechanics.
 
 **Risk:** expanding planned content before the small deterministic test-bed works. **Mitigation:** limit P1 to one settlement and a few meaningful resource chains.
 
