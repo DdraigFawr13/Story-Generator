@@ -2,6 +2,8 @@
 
 **Status: proposed for review, not an approved stack.** Written after Direction C was selected. No code has been scaffolded or deployed. Avoid dependency-version or API assumptions until implementation.
 
+Detailed candidate decisions, deterministic formats, save transactions and measurable validation targets are in [TECHNICAL_CONTRACT.md](TECHNICAL_CONTRACT.md). These remain proposed; publishing a specification does not approve the stack or close Phase 0.
+
 ## Recommendation
 
 A **browser-first TypeScript app with a pure deterministic simulation engine**, built and tested independently of the UI. Use a simple top-down HTML Canvas 2D renderer to begin, and introduce PixiJS only when measured scale, sprite batching and scene management justify it. UI overlays and the chronicle are normal HTML, not drawn as pixel text inside the canvas.
