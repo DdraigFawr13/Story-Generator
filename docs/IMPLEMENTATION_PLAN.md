@@ -36,6 +36,8 @@ Cross-cutting tests and documentation advance with each phase. Basic local save/
 
 **Outcome:** A decision-ready brief, implementation slices, art target, and architecture rules, without adding a runnable game.
 
+Candidate closure documents: [product brief](PRODUCT_BRIEF.md), [numeric mechanics](PHASE1_RULES.md), and [technical/persistence contract](TECHNICAL_CONTRACT.md). Review these alongside visual evidence; their existence does not mark tasks 0.6–0.9 complete.
+
 ### Ordered work
 
 - [x] 0.1 Confirm product vision: living world / village-first, simulation-driven chronicle, open-ended histories.
