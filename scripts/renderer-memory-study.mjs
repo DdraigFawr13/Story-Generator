@@ -5,7 +5,7 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { arch, release, tmpdir } from 'node:os';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
-import { build, createServer, preview } from 'vite';
+import { createServer, preview } from 'vite';
 
 assert.equal(process.platform, 'linux', 'This diagnostic needs Linux /proc and Chromium.');
 const port = 4178;
@@ -45,14 +45,22 @@ try {
 } finally {
   await source.close();
 }
-await build({ logLevel: 'warn' });
+// The SSR fixture server initializes NODE_ENV for development. Build in a
+// separate process so that state cannot select React's development runtime.
+execFileSync(process.execPath, ['node_modules/vite/bin/vite.js', 'build', '--mode', 'production'], {
+  env: { ...process.env, NODE_ENV: 'production' },
+  stdio: 'inherit',
+});
 const assets = (await readdir('dist/assets')).filter((name) => name.endsWith('.js'));
 assert.equal(assets.length, 1, 'Record the complete production JS bundle.');
+const bundleBytes = await readFile(path.join('dist/assets', assets[0]));
+assert.equal(bundleBytes.includes(Buffer.from('setstate-in-render')), false);
 const bundle = {
   file: assets[0],
-  sha256: createHash('sha256')
-    .update(await readFile(path.join('dist/assets', assets[0])))
-    .digest('hex'),
+  sha256: createHash('sha256').update(bundleBytes).digest('hex'),
+  bytes: bundleBytes.byteLength,
+  mode: 'production',
+  nodeEnv: 'production',
 };
 const server = await preview({ preview: { host: '127.0.0.1', port, strictPort: true } });
 const measurements = [];
