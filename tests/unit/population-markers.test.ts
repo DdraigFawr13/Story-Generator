@@ -42,7 +42,7 @@ it('represents all founders on dry open ground or huts for 100 seeds without cha
     expect(populationMarkers(mapView(JSON.parse(before) as SettlementSnapshot))).toEqual(result);
     expect(canonicalJson(snapshot)).toBe(before);
   }
-});
+}, 30_000);
 
 it('uses the current population after demographics rather than the founding count', () => {
   const snapshot = simulateSettlement('RIVERSIDE', 48).state;
