@@ -68,7 +68,7 @@ The [phone text-reflow follow-up](PHASE1_VIEWER.md#phone-text-reflow--2026-10-10
 
 ## Next work in order
 
-**Pause under D-027:** finish PR #24, deploy and verify its main revision, then stop. The steps below resume only when the user asks to continue; D-022 does not override this latest instruction.
+**Pause under D-027:** finish PR #24, deploy and verify its main revision, then stop. The steps below resume only when the user asks to continue; D-022 does not override this latest instruction. D-028 adds requested [narrative recaps with linked inspection](NARRATIVE_RECAPS.md) as the next focused product milestone before deeper P2 behavior. The user selected “Next milestone after the pause (Recommended)”; no recap reader or hosted AI service is implemented in PR #24.
 
 1. Under D-025, integrate the resident foundations into a new versioned P2 world/save contract, then connect actual individual life events, health, work and household changes before exposing live biographies. Preserve P1 histories without retroactive people or silent migration. Keep Spotlight families/caps/commands under their separate Q-005 contract.
 2. Review the v2 balance findings and consequential chains with a human viewer. D-023's tuning emphasis and D-024's eight-week autosave interval are implemented; broader storage/device acceptance remains open. Continue only with explicit versioned rule changes and preserved old-save behavior.
