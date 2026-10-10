@@ -33,6 +33,14 @@ The two added regressions exercise 320×568 and 390×650 viewports at 200% text:
 
 Run `npm run test:browser` for the complete suite, or `npx playwright test --grep 'phone evidence stays reachable|phone sheet retains|viewer wraps enlarged|phone chronicle has'` for the focused checks. Local verification used the pinned runtimes and the temporary native-library accommodations described in [PHASE1_FOUNDATIONS.md](PHASE1_FOUNDATIONS.md): extracted Debian libraries linked into the temporary WebKit bundle, its system-cache-only host check skipped after library loading was verified, and Firefox launched outside the nested command sandbox to access its profile. Repository browser configuration is unchanged; hosted CI installs ordinary native dependencies.
 
+### Inspection across world replacement — 2026-10-10
+
+Successful Resume, regeneration and writer takeover start a new viewer session even when the seed and week match the current world. Previously the viewer inferred replacement from a changed seed or an earlier week; loading a different supported rule version at the same week, or a later saved week, could retain a tile/event selection from the previous history. Chronicle lookup text and scroll anchors also survived replacements.
+
+The controller now exposes an in-memory presentation session counter that changes only when it accepts a replacement world. The viewer uses it to return to the settlement center, clear selected evidence and lookup state, and close the phone sheet. Ordinary ticks, playback changes and saves preserve inspection; rejected Resume/New World and denied takeover preserve the existing session. The counter is absent from canonical state and saved envelopes.
+
+Two controller regressions cover accepted and rejected replacements, playback/save stability, v1 Resume and read-only takeover. Four browser regressions cover same-seed Resume at the same/later week across supported versions, same-seed founding regeneration and checksum rejection. Successful Resume followed by saving retains the fixture's complete-world digest. Run `npx vitest run tests/unit/controller.test.ts` and `npx playwright test --grep 'resuming the same seed|rejected Resume retains|regenerating the same founding'` for focused verification; full hosted verification is recorded with the milestone PR.
+
 ## Real storage measurements
 
 The reproducible `npm run benchmark:storage` command generates the same RIVERSIDE snapshots in Node, saves/validates them in real browser IndexedDB, advances restored and original snapshots ten weeks, compares digests, then reloads and resumes through the UI. The [raw report](evidence/phase1-storage-benchmark.json) records exact values. Node 24.19.0 generated the 10,000-week retained world in 98,152ms during concurrent verification.

@@ -317,6 +317,72 @@ test('chronicle selection uses actual facts and locations without changing the w
   await expect(page.getByTestId('tick')).toHaveText('12');
 });
 
+for (const { tick, version } of [
+  { tick: 12, version: 'p1-settlement-v1' },
+  { tick: 24, version: 'p1-settlement-v2' },
+])
+  test(`resuming the same seed at week ${tick} on ${version} resets inspection`, async ({
+    page,
+  }) => {
+    await fresh(page);
+    await save(page, 0);
+    await fixture(page, 'writeFixture', 'RIVERSIDE', 12);
+    await page.getByRole('button', { name: 'Resume local save' }).click();
+    await page.getByLabel('Record number').fill('1');
+    await page.getByRole('button', { name: 'Find record' }).click();
+    await expect(page.getByRole('region', { name: 'Event evidence' })).toContainText('record #1');
+    await page.getByLabel('Tile X').fill('0');
+    await page.getByLabel('Tile Y').fill('0');
+    await page.getByRole('button', { name: 'Inspect tile' }).click();
+    await expect(page.locator('.tile-facts')).toContainText('Tile 0:');
+    await fixture(page, 'writeFixture', 'RIVERSIDE', tick, version);
+    const before = await fixture(page, 'storedDigest');
+    await page.getByRole('button', { name: 'Resume local save' }).click();
+    await expect(page.getByTestId('tick')).toHaveText(String(tick));
+    await expect(page.locator('.tile-facts')).toContainText('Tile 1327:');
+    await expect(page.getByLabel('Record number')).toHaveValue('');
+    await expect(page.getByRole('region', { name: 'Event evidence' })).toContainText(
+      'Select a record',
+    );
+    await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeEnabled();
+    await save(page, tick);
+    expect(await fixture(page, 'storedDigest')).toEqual(before);
+  });
+
+test('rejected Resume retains the current inspection and archive lookup', async ({ page }) => {
+  await fresh(page);
+  await save(page, 0);
+  await page.getByLabel('Record number').fill('1');
+  await page.getByRole('button', { name: 'Find record' }).click();
+  await page.getByLabel('Tile X').fill('0');
+  await page.getByLabel('Tile Y').fill('0');
+  await page.getByRole('button', { name: 'Inspect tile' }).click();
+  await fixture(page, 'damageSlot');
+  await page.getByRole('button', { name: 'Resume local save' }).click();
+  await expect(page.getByRole('alert')).toContainText('checksum');
+  await expect(page.locator('.tile-facts')).toContainText('Tile 0:');
+  await expect(page.getByLabel('Record number')).toHaveValue('1');
+  await expect(page.getByRole('region', { name: 'Event evidence' })).toContainText('record #1');
+  await expect(page.getByTestId('tick')).toHaveText('0');
+});
+
+test('regenerating the same founding seed resets inspection', async ({ page }) => {
+  await fresh(page);
+  await page.getByLabel('Record number').fill('1');
+  await page.getByRole('button', { name: 'Find record' }).click();
+  await page.getByLabel('Tile X').fill('0');
+  await page.getByLabel('Tile Y').fill('0');
+  await page.getByRole('button', { name: 'Inspect tile' }).click();
+  await menu(page);
+  await page.getByRole('button', { name: 'New world', exact: true }).click();
+  await expect(page.locator('.tile-facts')).toContainText('Tile 1327:');
+  await expect(page.getByLabel('Record number')).toHaveValue('');
+  await expect(page.getByRole('region', { name: 'Event evidence' })).toContainText(
+    'Select a record',
+  );
+  await expect(page.getByTestId('tick')).toHaveText('0');
+});
+
 test('phone chronicle has keyboard opening, independent scrolling and focus return', async ({
   page,
 }) => {

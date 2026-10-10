@@ -62,7 +62,7 @@ It reproduced 100 distinct maps, 72 founding centers, zero natural fallbacks, fo
 
 At the recovery checkpoint this was Python generation evidence only. The foundation slice adds exact TypeScript fixture comparison, Node/browser parity and preview interaction checks; see its [verification record](PHASE1_FOUNDATIONS.md). Later settlement, playback, viewer and balance records contain actual runtime/save/browser evidence. Physical-device support remains unverified; historical recovery arithmetic above must not be substituted for those measured tests.
 
-The [phone text-reflow follow-up](PHASE1_VIEWER.md#phone-text-reflow--2026-10-10) fixes inaccessible history/evidence at 200% text on short phone viewports. The sheet keeps its close control visible while its content scrolls, and opening aligns the canvas above it. Browser regressions preserve the saved history digest; this does not replace physical-device or human acceptance.
+The [phone text-reflow follow-up](PHASE1_VIEWER.md#phone-text-reflow--2026-10-10) fixes inaccessible history/evidence at 200% text on short phone viewports. The sheet keeps its close control visible while its content scrolls, and opening aligns the canvas above it. The [world-session follow-up](PHASE1_VIEWER.md#inspection-across-world-replacement--2026-10-10) resets inspection after accepted replacements, including same-seed/same-week Resume, while preserving it after rejected loads. Browser regressions preserve the saved history digest; these checks do not replace physical-device or human acceptance.
 
 ## Next work in order
 

@@ -38,6 +38,7 @@ const browserRuntime: WorldRuntime = {
 
 export class WorldController {
   #world: SettlementSnapshot | null = null;
+  #worldSession = 0;
   #saved: SaveEnvelope | null = null;
   #slotExists = false;
   #loadError = '';
@@ -74,6 +75,7 @@ export class WorldController {
     const world = this.#world;
     return Object.freeze({
       world,
+      worldSession: this.#worldSession,
       mode: this.#mode,
       saved: this.#saved,
       slotExists: this.#slotExists,
@@ -137,7 +139,7 @@ export class WorldController {
         });
       }
       await this.#readSlot();
-      if (this.#mode === 'read-only') this.#world = this.#saved?.payload ?? null;
+      if (this.#mode === 'read-only') this.#replaceWorld(this.#saved?.payload ?? null);
     } catch (error) {
       this.#loadError = message(error);
       // A denied writer lock must never enable unsaved advancement.
@@ -181,7 +183,7 @@ export class WorldController {
       }
       this.#lease = lease;
       await this.#readSlot();
-      this.#world = this.#saved?.payload ?? null;
+      this.#replaceWorld(this.#saved?.payload ?? null);
       this.#mode = 'owner';
       this.#error = '';
       this.#queue = new SaveQueue(this.#store!, this.runtime.clock, this.#publish, (envelope) => {
@@ -208,6 +210,10 @@ export class WorldController {
   #beginSession(savedTick: number | null) {
     this.#queue?.begin(this.runtime.session(), this.#saved?.generation ?? 0, savedTick);
   }
+  #replaceWorld(world: SettlementSnapshot | null) {
+    this.#world = world;
+    this.#worldSession++;
+  }
   async newWorld(seed: string) {
     if (!this.#canControl()) return;
     try {
@@ -219,7 +225,7 @@ export class WorldController {
       this.#publish();
       await this.#queue?.settle();
       if (this.#disposed) return;
-      this.#world = candidate;
+      this.#replaceWorld(candidate);
       this.#replaceRequired = this.#slotExists;
       this.#halted = this.#error = '';
       this.#beginSession(null);
@@ -248,7 +254,7 @@ export class WorldController {
       if (limit) throw new Error(`Saved world exceeds ${limit}.`);
       this.#saved = candidate;
       this.#slotExists = true;
-      this.#world = capture(candidate.payload);
+      this.#replaceWorld(capture(candidate.payload));
       this.#replaceRequired = false;
       this.#halted = this.#error = this.#loadError = '';
       this.#beginSession(candidate.payload.tick);
