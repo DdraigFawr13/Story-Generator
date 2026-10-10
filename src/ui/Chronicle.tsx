@@ -66,133 +66,135 @@ export function Chronicle({
           Back to map
         </button>
       </div>
-      <p className="chronicle-note">
-        Latest {Math.min(200, world.events.length)} of {world.events.length} records. Causes retain
-        access to earlier records.
-      </p>
-      <form
-        className="archive-search"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const id = Number(record);
-          if (record !== '' && Number.isSafeInteger(id) && id > 0 && id <= world.events.length) {
-            setError('');
-            onSelect(id);
-          } else setError(`Choose a record from 1 to ${world.events.length}.`);
-        }}
-      >
-        <label>
-          Record number
-          <input
-            type="number"
-            min="1"
-            max={world.events.length}
-            value={record}
-            onChange={(event) => setRecord(event.target.value)}
-          />
-        </label>
-        <button type="submit" className="secondary">
-          Find record
-        </button>
-      </form>
-      {error && (
-        <p role="alert" className="error">
-          {error}
+      <div className="chronicle-content">
+        <p className="chronicle-note">
+          Latest {Math.min(200, world.events.length)} of {world.events.length} records. Causes
+          retain access to earlier records.
         </p>
-      )}
-      <div className="chronicle-body">
-        <div
-          ref={list}
-          className="event-list"
-          onScroll={rememberAnchor}
-          tabIndex={0}
-          aria-label="Recent events"
+        <form
+          className="archive-search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const id = Number(record);
+            if (record !== '' && Number.isSafeInteger(id) && id > 0 && id <= world.events.length) {
+              setError('');
+              onSelect(id);
+            } else setError(`Choose a record from 1 to ${world.events.length}.`);
+          }}
         >
-          {world.events
-            .slice(-200)
-            .reverse()
-            .map((event) => (
-              <button
-                type="button"
-                key={event.id}
-                data-event-id={event.id}
-                className={`event-button ${selectedId === event.id ? 'selected' : ''}`}
-                aria-pressed={selectedId === event.id}
-                onClick={() => onSelect(event.id)}
-              >
-                <span className="event-date">
-                  {dateLabel(event.tick)} · #{event.id}
-                </span>
-                <span>{headline(event)}</span>
-              </button>
-            ))}
-        </div>
-        <div className="event-details" role="region" aria-label="Event evidence">
-          {selected && details ? (
-            <>
-              <h3>{headline(selected)}</h3>
-              <p>
-                {dateLabel(selected.tick)} · record #{selected.id} · tile {selected.location.tile}
-              </p>
-              <div className="archive-neighbors">
+          <label>
+            Record number
+            <input
+              type="number"
+              min="1"
+              max={world.events.length}
+              value={record}
+              onChange={(event) => setRecord(event.target.value)}
+            />
+          </label>
+          <button type="submit" className="secondary">
+            Find record
+          </button>
+        </form>
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
+        <div className="chronicle-body">
+          <div
+            ref={list}
+            className="event-list"
+            onScroll={rememberAnchor}
+            tabIndex={0}
+            aria-label="Recent events"
+          >
+            {world.events
+              .slice(-200)
+              .reverse()
+              .map((event) => (
                 <button
                   type="button"
-                  className="secondary"
-                  disabled={selected.id === 1}
-                  onClick={() => onSelect(selected.id - 1)}
+                  key={event.id}
+                  data-event-id={event.id}
+                  className={`event-button ${selectedId === event.id ? 'selected' : ''}`}
+                  aria-pressed={selectedId === event.id}
+                  onClick={() => onSelect(event.id)}
                 >
-                  Previous record
+                  <span className="event-date">
+                    {dateLabel(event.tick)} · #{event.id}
+                  </span>
+                  <span>{headline(event)}</span>
                 </button>
-                <button
-                  type="button"
-                  className="secondary"
-                  disabled={selected.id === world.events.length}
-                  onClick={() => onSelect(selected.id + 1)}
-                >
-                  Next record
-                </button>
-              </div>
-              <h4>Recorded facts</h4>
-              <dl>
-                {details.facts.map((fact) => (
-                  <div key={fact.label}>
-                    <dt>{fact.label}</dt>
-                    <dd>{fact.value}</dd>
-                  </div>
-                ))}
-              </dl>
-              <h4>Changes at this event</h4>
-              {details.effects.length ? (
+              ))}
+          </div>
+          <div className="event-details" role="region" aria-label="Event evidence">
+            {selected && details ? (
+              <>
+                <h3>{headline(selected)}</h3>
+                <p>
+                  {dateLabel(selected.tick)} · record #{selected.id} · tile {selected.location.tile}
+                </p>
+                <div className="archive-neighbors">
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={selected.id === 1}
+                    onClick={() => onSelect(selected.id - 1)}
+                  >
+                    Previous record
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={selected.id === world.events.length}
+                    onClick={() => onSelect(selected.id + 1)}
+                  >
+                    Next record
+                  </button>
+                </div>
+                <h4>Recorded facts</h4>
                 <dl>
-                  {details.effects.map((effect) => (
-                    <div key={effect.label}>
-                      <dt>{effect.label}</dt>
-                      <dd>{effect.value}</dd>
+                  {details.facts.map((fact) => (
+                    <div key={fact.label}>
+                      <dt>{fact.label}</dt>
+                      <dd>{fact.value}</dd>
                     </div>
                   ))}
                 </dl>
-              ) : (
-                <p>No direct resource change was recorded.</p>
-              )}
-              <h4>Recorded causes</h4>
-              {selected.causes.length ? (
-                selected.causes.map((id) => (
-                  <button
-                    type="button"
-                    className="secondary cause-button"
-                    key={id}
-                    onClick={() => onSelect(id)}
-                  >
-                    #{id}: {headline(world.events[id - 1]!)}
-                  </button>
-                ))
-              ) : (
-                <p>No earlier causal record is linked.</p>
-              )}
-            </>
-          ) : (
-            <p>Select a record to inspect its location, facts, changes and recorded causes.</p>
-          )}
+                <h4>Changes at this event</h4>
+                {details.effects.length ? (
+                  <dl>
+                    {details.effects.map((effect) => (
+                      <div key={effect.label}>
+                        <dt>{effect.label}</dt>
+                        <dd>{effect.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : (
+                  <p>No direct resource change was recorded.</p>
+                )}
+                <h4>Recorded causes</h4>
+                {selected.causes.length ? (
+                  selected.causes.map((id) => (
+                    <button
+                      type="button"
+                      className="secondary cause-button"
+                      key={id}
+                      onClick={() => onSelect(id)}
+                    >
+                      #{id}: {headline(world.events[id - 1]!)}
+                    </button>
+                  ))
+                ) : (
+                  <p>No earlier causal record is linked.</p>
+                )}
+              </>
+            ) : (
+              <p>Select a record to inspect its location, facts, changes and recorded causes.</p>
+            )}
+          </div>
         </div>
       </div>
     </section>

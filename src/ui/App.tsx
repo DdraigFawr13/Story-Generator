@@ -71,12 +71,15 @@ function Viewer({ controller }: { controller: WorldController }) {
   }
   function openChronicle() {
     setExpanded(true);
-    mapPanel.current?.scrollIntoView({ block: 'start' });
+    scrollToMap();
   }
   function closeChronicle() {
     setExpanded(false);
     opener.current?.focus({ preventScroll: true });
-    mapPanel.current?.scrollIntoView({ block: 'start' });
+    scrollToMap();
+  }
+  function scrollToMap() {
+    mapPanel.current?.querySelector('canvas')?.scrollIntoView({ block: 'start' });
   }
   const canControl = !view.busy && (view.mode === 'owner' || view.mode === 'unavailable');
   const settlement = world?.world.settlement;

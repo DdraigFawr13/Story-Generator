@@ -501,3 +501,59 @@ for (const width of [320, 390])
       expect(box.height).toBeGreaterThanOrEqual(44);
     }
   });
+
+for (const { width, height } of [
+  { width: 320, height: 568 },
+  { width: 390, height: 650 },
+])
+  test(`phone evidence stays reachable at 200% text on ${width}×${height}`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await fresh(page);
+    await steps(page, 12);
+    await save(page, 12);
+    const before = await fixture(page, 'storedDigest');
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = '32px';
+    });
+    const opener = page.getByRole('button', { name: 'Open chronicle' });
+    await opener.click();
+    const sheet = page.getByRole('region', { name: 'Chronicle' });
+    const mapBox = (await page.locator('canvas').boundingBox())!;
+    const sheetBox = (await sheet.boundingBox())!;
+    expect(Math.min(mapBox.y + mapBox.height, sheetBox.y) - Math.max(mapBox.y, 0)).toBeGreaterThan(
+      100,
+    );
+    expect(
+      await page.locator('.event-list').evaluate((element) => element.clientHeight),
+    ).toBeGreaterThanOrEqual(44);
+    await page.getByRole('button', { name: /spring harvest brings/ }).click();
+    const evidence = page.getByRole('region', { name: 'Event evidence' });
+    const cause = evidence.getByRole('button', { name: /^#\d+:/ }).first();
+    const causeId = Number((await cause.textContent())!.match(/^#(\d+):/)![1]);
+    await cause.click();
+    await expect(evidence).toContainText(`record #${causeId}`);
+    await evidence.getByRole('button', { name: 'Next record' }).click();
+    await expect(evidence).toContainText(`record #${causeId + 1}`);
+    await evidence.getByRole('button', { name: 'Previous record' }).click();
+    await expect(evidence).toContainText(`record #${causeId}`);
+    await page.getByLabel('Record number').fill('2');
+    await page.getByRole('button', { name: 'Find record' }).click();
+    await expect(evidence).toContainText('record #2');
+    const back = page.getByRole('button', { name: 'Back to map' });
+    const backBox = (await back.boundingBox())!;
+    expect(backBox.y).toBeGreaterThanOrEqual(sheetBox.y);
+    expect(backBox.y + backBox.height).toBeLessThanOrEqual(sheetBox.y + sheetBox.height);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
+      false,
+    );
+    await back.click();
+    await expect(opener).toBeFocused();
+    await expect(sheet).toBeHidden();
+    await opener.click();
+    await page.keyboard.press('Escape');
+    await expect(opener).toBeFocused();
+    await expect(sheet).toBeHidden();
+    await expect(page.getByTestId('tick')).toHaveText('12');
+    await save(page, 12);
+    expect(await fixture(page, 'storedDigest')).toEqual(before);
+  });
