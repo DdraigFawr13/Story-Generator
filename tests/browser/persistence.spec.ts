@@ -317,6 +317,93 @@ test('chronicle selection uses actual facts and locations without changing the w
   await expect(page.getByTestId('tick')).toHaveText('12');
 });
 
+for (const viewport of [
+  { width: 1200, height: 900, fontSize: '16px' },
+  { width: 390, height: 650, fontSize: '32px' },
+  { width: 320, height: 568, fontSize: '32px' },
+])
+  test(`keyboard cause navigation returns through the chain at ${viewport.width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await fresh(page);
+    await save(page, 0);
+    await fixture(page, 'writeFixture', 'RIVERSIDE', 12);
+    await page.getByRole('button', { name: 'Resume local save' }).click();
+    const before = await fixture(page, 'storedDigest');
+    await page.evaluate((size) => {
+      document.documentElement.style.fontSize = size;
+    }, viewport.fontSize);
+    if (viewport.width < 761) await page.getByRole('button', { name: 'Open chronicle' }).click();
+    const snapshot = simulateSettlement('RIVERSIDE', 12).state;
+    const harvest = snapshot.events.find((event) => event.type === 'harvest')!;
+    const cause = harvest.causes
+      .map((id) => snapshot.events[id - 1]!)
+      .find((event) => event.causes.length > 0)!;
+    const origin = snapshot.events[cause.causes[0]! - 1]!;
+    await page.getByRole('button', { name: /spring harvest brings/ }).click();
+    const evidence = page.getByRole('region', { name: 'Event evidence' });
+    const heading = evidence.getByRole('heading', { level: 3 });
+    async function activate(name: RegExp | string) {
+      await evidence.getByRole('button', { name }).focus();
+      const scroll = await page.evaluate(() => scrollY);
+      await page.keyboard.press('Enter');
+      await expect(heading).toBeFocused();
+      expect(await page.evaluate(() => scrollY)).toBe(scroll);
+      const headingBox = (await heading.boundingBox())!;
+      const scroller = viewport.width < 761 ? page.locator('.chronicle-content') : evidence;
+      const scrollerBox = (await scroller.boundingBox())!;
+      expect(headingBox.y).toBeGreaterThanOrEqual(scrollerBox.y);
+      expect(headingBox.y).toBeLessThan(scrollerBox.y + scrollerBox.height);
+    }
+    await activate(new RegExp(`^#${cause.id}:`));
+    await expect(evidence).toContainText(`record #${cause.id} ·`);
+    await expect(page.locator('.tile-facts')).toContainText(`Tile ${cause.location.tile}:`);
+    await page.keyboard.press('Tab');
+    await expect(
+      evidence.getByRole('button', { name: `Return to record #${harvest.id}` }),
+    ).toBeFocused();
+    await activate(new RegExp(`^#${origin.id}:`));
+    await expect(evidence).toContainText(`record #${origin.id} ·`);
+    await activate(`Return to record #${cause.id}`);
+    await expect(evidence).toContainText(`record #${cause.id} ·`);
+    await activate(`Return to record #${harvest.id}`);
+    await expect(evidence).toContainText(`record #${harvest.id} ·`);
+    await expect(evidence.getByRole('button', { name: /Return to record/ })).toHaveCount(0);
+    await activate(new RegExp(`^#${cause.id}:`));
+    await evidence.getByRole('button', { name: 'Next record' }).click();
+    await expect(evidence.getByRole('button', { name: /Return to record/ })).toHaveCount(0);
+    await page.getByRole('button', { name: /spring harvest brings/ }).click();
+    await activate(new RegExp(`^#${cause.id}:`));
+    await page.getByLabel('Record number').fill('1');
+    await page.getByRole('button', { name: 'Find record' }).click();
+    await expect(evidence.getByRole('button', { name: /Return to record/ })).toHaveCount(0);
+    if (viewport.width < 761) await page.keyboard.press('Escape');
+    await expect(page.getByTestId('tick')).toHaveText('12');
+    await save(page, 12);
+    expect(await fixture(page, 'storedDigest')).toEqual(before);
+  });
+
+test('cause return survives ordinary weeks and resets on accepted Resume', async ({ page }) => {
+  await fresh(page);
+  await save(page, 0);
+  await fixture(page, 'writeFixture', 'RIVERSIDE', 12);
+  await page.getByRole('button', { name: 'Resume local save' }).click();
+  await page.getByRole('button', { name: /spring harvest brings/ }).click();
+  const evidence = page.getByRole('region', { name: 'Event evidence' });
+  await evidence
+    .getByRole('button', { name: /^#\d+:/ })
+    .first()
+    .click();
+  const returnButton = evidence.getByRole('button', { name: /Return to record/ });
+  await expect(returnButton).toBeVisible();
+  await steps(page, 1);
+  await expect(returnButton).toBeVisible();
+  await page.getByRole('button', { name: 'Resume local save' }).click();
+  await expect(page.getByTestId('tick')).toHaveText('12');
+  await expect(returnButton).toHaveCount(0);
+});
+
 for (const { tick, version } of [
   { tick: 12, version: 'p1-settlement-v1' },
   { tick: 24, version: 'p1-settlement-v2' },
