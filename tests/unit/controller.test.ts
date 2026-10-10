@@ -331,6 +331,36 @@ describe('run control and local sessions', () => {
 });
 
 describe('save capture, queue and retry boundaries', () => {
+  it('requests autosave after eight unsaved weeks and resets the interval after a manual save', async () => {
+    const m = memory(),
+      clock = new Clock(),
+      q = new SaveQueue(
+        m.store,
+        clock,
+        () => {},
+        () => {},
+      );
+    q.begin('resumed', 1, 57);
+    q.automatic(simulateSettlement('RIVERSIDE', 64).state);
+    expect(m.state.writes).toHaveLength(0);
+    expect(q.status.automaticPending).toBe(false);
+    q.automatic(simulateSettlement('RIVERSIDE', 65).state);
+    await until(() => !q.status.saving);
+    expect(q.status.savedTick).toBe(65);
+    q.manual(simulateSettlement('RIVERSIDE', 67).state);
+    await until(() => !q.status.saving);
+    q.automatic(simulateSettlement('RIVERSIDE', 74).state);
+    expect(q.status.automaticPending).toBe(false);
+    expect(q.status.savedTick).toBe(67);
+    q.automatic(simulateSettlement('RIVERSIDE', 75).state);
+    expect(q.status.automaticPending).toBe(true);
+    clock.advance(4999);
+    expect(m.state.writes.map((e) => e.payload.tick)).toEqual([65, 67]);
+    clock.advance(1);
+    await until(() => !q.status.saving);
+    expect(m.state.writes.map((e) => e.payload.tick)).toEqual([65, 67, 75]);
+    await q.settle();
+  });
   it('captures the clicked manual tick, coalesces autosaves and reports only committed progress', async () => {
     const m = memory(),
       clock = new Clock();

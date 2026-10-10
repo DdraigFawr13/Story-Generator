@@ -11,7 +11,7 @@ export const browserClock: TimerClock = {
   set: (callback, milliseconds) => setTimeout(callback, milliseconds),
   clear: (timer) => clearTimeout(timer),
 };
-export const SAVE_POLICY = Object.freeze({ interval: 20, throttleMs: 5_000, retryMs: 30_000 });
+export const SAVE_POLICY = Object.freeze({ interval: 8, throttleMs: 5_000, retryMs: 30_000 });
 type Request = { snapshot: SettlementSnapshot; manual: boolean };
 
 export class SaveQueue {

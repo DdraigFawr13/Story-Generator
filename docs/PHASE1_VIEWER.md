@@ -75,7 +75,7 @@ The first winter visibly reduces crop output (111–317 food across these seeds)
 ## Remaining first-playable gates
 
 - Recover exact selected desktop/phone images and compare production art at actual source density. Current symbols/layout do not establish that fidelity.
-- Review the 20-week autosave loss window and human winter-preparation experience. D-023 resolves the tuning emphasis; v2 implementation/evidence is recorded in [PHASE1_BALANCE.md](PHASE1_BALANCE.md).
+- Review broader storage/device behavior and human winter-preparation experience. D-024 selects eight-week autosaves, superseding the original 20-week interval; see [PHASE1_PLAYBACK.md](PHASE1_PLAYBACK.md). D-023 resolves the tuning emphasis; v2 implementation/evidence is recorded in [PHASE1_BALANCE.md](PHASE1_BALANCE.md).
 - Obtain physical Android and installed Safari interaction/performance evidence; desktop emulation and Playwright WebKit do not substitute.
 - Obtain a viewer usability review demonstrating that someone can explain a consequential chain from the interface. No human study was inferred from automated checks.
 

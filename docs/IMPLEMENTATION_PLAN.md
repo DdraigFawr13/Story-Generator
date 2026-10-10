@@ -1,6 +1,6 @@
 # Implementation plan — milestone contracts (v1.1)
 
-**Current status:** Phase 1 engineering authorized under D-020–023. Core/terrain/founding PR #11, weekly settlement PR #12, playback/persistence PR #13 and functional viewer PR #14 are merged. D-023 guides the implemented `p1-settlement-v2` winter/recovery milestone, preserving v1 saves. Human balance/understandability, selected-art, physical-device and final storage-policy reviews remain first-playable requirements. See [PHASE1_BALANCE.md](PHASE1_BALANCE.md) and [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md).
+**Current status:** Phase 1 engineering authorized under D-020–024. Core/terrain/founding PR #11, weekly settlement PR #12, playback/persistence PR #13, functional viewer PR #14, winter/recovery PR #16, population display PR #17 and idempotent pause PR #18 are merged. D-023 guides `p1-settlement-v2`, preserving v1 saves; D-024 selects eight-week autosaves. Human balance/understandability, selected-art, physical-device and broader storage-policy reviews remain first-playable requirements. See [PHASE1_BALANCE.md](PHASE1_BALANCE.md) and [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md).
 
 ## Approved core constraints
 
@@ -96,7 +96,7 @@ The browser inspects advancing settlement, building, event and last-week labor f
 - [ ] 1.20 Run unit/property tests of RNG, terrain and resource invariants; same-seed snapshot at 1,000 ticks; speed equivalence; 100-seed non-crash batch; manual mobile/desktop UI smoke tests.
 - [ ] 1.21 Review ten seeds for visible, qualitatively different trajectories; tune rates without special-casing seed stories; demonstrate a meaningful vertical slice and merge.
 
-Controller/persistence completion covers local transactions, checksum/state validation, session barriers, writer ownership and visible unsaved status. Scheduling and factual chronicle selection are implemented; map crop/pan/zoom, focused records, full archive lookup and phone sheet interactions are implemented; selected-art and physical-device acceptance stay open. Autosave cadence is the documented baseline, with its five-minute 1x loss window shown in the viewer; final Q-006 acceptance is not implied. See [PHASE1_PLAYBACK.md](PHASE1_PLAYBACK.md) and [PHASE1_VIEWER.md](PHASE1_VIEWER.md).
+Controller/persistence completion covers local transactions, checksum/state validation, session barriers, writer ownership and visible unsaved status. Scheduling and factual chronicle selection are implemented; map crop/pan/zoom, focused records, full archive lookup and phone sheet interactions are implemented; selected-art and physical-device acceptance stay open. D-024 selects an eight-week autosave trigger, with its two-active-minute 1x interval shown in the viewer; write delays/failures can extend unsaved progress. Broader Q-006 budget/device acceptance is not implied. See [PHASE1_PLAYBACK.md](PHASE1_PLAYBACK.md) and [PHASE1_VIEWER.md](PHASE1_VIEWER.md).
 
 Core 1.20 evidence includes the v2 100-seed × 1,000-week battery, forced rules, immutable admission, JSON continuation, frozen v1 compatibility and Node/browser parity. Live speed/visibility behavior and persistence are tested; full selected-art/device viewer acceptance remains open. The measured batch and ten-seed comparison are balance findings, not human first-playable acceptance. See [PHASE1_BALANCE.md](PHASE1_BALANCE.md).
 

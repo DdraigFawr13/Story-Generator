@@ -239,6 +239,40 @@ test('missing locking capability allows explicit unsaved play with no save claim
   await expect(page.getByRole('button', { name: 'Save world', exact: true })).toBeDisabled();
 });
 
+for (const [speed, weekMs] of [
+  [1, 15000],
+  [4, 3750],
+  [16, 938],
+] as const)
+  test(`eight-week autosave at ${speed}x commits complete state and resumes paused`, async ({
+    page,
+  }) => {
+    await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
+    await page.clock.pauseAt(new Date('2026-01-01T00:01:00Z'));
+    await fresh(page);
+    await expect(page.locator('.save-status')).toContainText('Saved through week 0.');
+    await expect(page.locator('.save-status')).toContainText(
+      'Autosave requests every 8 weeks (two active minutes at 1x)',
+    );
+    await page.getByRole('button', { name: `${speed}x`, exact: true }).click();
+    await page.getByRole('button', { name: 'Play', exact: true }).click();
+    await page.clock.runFor(weekMs * 7);
+    await expect(page.getByTestId('tick')).toHaveText('7');
+    expect((await fixture<{ tick: number }>(page, 'storedDigest')).tick).toBe(0);
+    await page.clock.runFor(weekMs);
+    await page.getByRole('button', { name: 'Pause', exact: true }).click();
+    await expect(page.locator('.save-status')).toContainText('Saved through week 8.');
+    expect(await fixture(page, 'storedDigest')).toEqual({
+      tick: 8,
+      seed: 'RIVERSIDE',
+      digest: await digestCanonical(simulateSettlement('RIVERSIDE', 8).state),
+    });
+    await page.reload();
+    await page.getByRole('button', { name: 'Resume local save', exact: true }).click();
+    await expect(page.getByTestId('tick')).toHaveText('8');
+    await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeEnabled();
+  });
+
 test('playback and repeated hidden returns stay paused without catch-up', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
   await page.clock.pauseAt(new Date('2026-01-01T00:01:00Z'));

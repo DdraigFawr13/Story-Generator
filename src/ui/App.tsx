@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
 import { dateLabel } from '../controller/chronicle';
+import { SAVE_POLICY } from '../controller/save-queue';
 import { WorldController } from '../controller/world';
 import { MapCanvas } from './MapCanvas';
 import { Chronicle } from './Chronicle';
@@ -242,9 +243,9 @@ function Viewer({ controller }: { controller: WorldController }) {
           </>
         )}
         <p>
-          Saves stay in this browser on this device. Autosave requests every 20 weeks (five active
-          minutes at 1x); use Save world to keep recent progress. Closing a page does not guarantee
-          a save.
+          Saves stay in this browser on this device. Autosave requests every {SAVE_POLICY.interval}{' '}
+          weeks (two active minutes at 1x); use Save world to keep recent progress. Closing a page
+          does not guarantee a save.
         </p>
         {view.mode === 'read-only' && (
           <button
