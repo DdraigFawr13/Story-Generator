@@ -9,7 +9,7 @@ import {
 } from '../../src/adapters/local-save';
 import { digestCanonical } from '../../src/adapters/crypto';
 import { canonicalJson } from '../../src/sim/canonical';
-import { simulateSettlement } from '../../src/sim/settlement';
+import { advanceSettlement, simulateSettlement } from '../../src/sim/settlement';
 import { createSettlement } from '../../src/sim/settlement-initial';
 import { headline } from '../../src/controller/chronicle';
 
@@ -107,6 +107,57 @@ it('validates full envelopes, checksums and independently checksummed invalid st
 });
 
 describe('run control and local sessions', () => {
+  it('changes the viewer session only when a replacement world is accepted', async () => {
+    const legacy = advanceSettlement(createSettlement('RIVERSIDE', 'p1-settlement-v1'), 12).state;
+    const m = memory(await prepareSave(legacy, 'legacy', 1));
+    const r = runtime(m.store),
+      c = new WorldController(r.value);
+    await c.initialize();
+    await c.newWorld('RIVERSIDE');
+    const first = c.view.worldSession;
+    await c.newWorld('RIVERSIDE');
+    expect(c.view.worldSession).not.toBe(first);
+    const current = c.view.worldSession;
+    for (let i = 0; i < 12; i++) c.step();
+    c.speed(16);
+    c.play();
+    c.pause();
+    expect(c.view.worldSession).toBe(current);
+    await c.resume();
+    expect(c.view.worldSession).not.toBe(current);
+    expect(canonicalJson(c.view.world)).toBe(canonicalJson(legacy));
+    const resumed = c.view.worldSession,
+      before = c.view.world;
+    c.save();
+    await until(() => !c.view.save.manualPending && !c.view.save.saving);
+    expect(c.view.worldSession).toBe(resumed);
+    await c.newWorld('bad seed');
+    expect(c.view.worldSession).toBe(resumed);
+    expect(c.view.world).toBe(before);
+    m.state.value = { envelopeVersion: 99 };
+    await c.resume();
+    expect(c.view.worldSession).toBe(resumed);
+    expect(c.view.world).toBe(before);
+    await c.dispose();
+  });
+
+  it('replaces the read-only viewer session only after taking ownership', async () => {
+    const snapshot = simulateSettlement('RIVERSIDE', 12).state;
+    const m = memory(await prepareSave(snapshot, 'owner', 1)),
+      r = runtime(m.store);
+    r.owner(false);
+    const c = new WorldController(r.value);
+    await c.initialize();
+    const before = c.view.worldSession;
+    await c.takeOwnership();
+    expect(c.view.worldSession).toBe(before);
+    r.owner(true);
+    await c.takeOwnership();
+    expect(c.view.worldSession).not.toBe(before);
+    expect(canonicalJson(c.view.world)).toBe(canonicalJson(snapshot));
+    await c.dispose();
+  });
+
   it('keeps idle pause notifications silent while a real pause cancels playback', async () => {
     const m = memory(),
       r = runtime(m.store);

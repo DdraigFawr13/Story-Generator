@@ -47,16 +47,18 @@ function Viewer({ controller }: { controller: WorldController }) {
   const opener = useRef<HTMLButtonElement>(null);
   const mapPanel = useRef<HTMLDivElement>(null);
   const world = view.world;
-  const previousWorld = useRef(world);
+  const previousSession = useRef(-1);
   useEffect(() => {
-    const previous = previousWorld.current;
-    if (world && (!previous || world.seed !== previous.seed || world.tick < previous.tick)) {
+    if (previousSession.current === view.worldSession) return;
+    previousSession.current = view.worldSession;
+    if (world) {
       setSeed(world.seed);
       select(world.world.settlement.center);
       setEventId(null);
+      setError('');
+      setExpanded(false);
     }
-    previousWorld.current = world;
-  }, [world]);
+  }, [world, view.worldSession]);
   function select(tile: number, focus = true) {
     setSelectedTile(tile);
     if (focus) setMapFocus((previous) => ({ tile, revision: previous.revision + 1 }));
@@ -490,6 +492,7 @@ function Viewer({ controller }: { controller: WorldController }) {
             </p>
           </section>
           <Chronicle
+            key={view.worldSession}
             world={world}
             selectedId={eventId}
             expanded={expanded}
