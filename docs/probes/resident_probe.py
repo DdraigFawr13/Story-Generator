@@ -1,6 +1,8 @@
 """Independent founding-identity vector; does not import or execute TypeScript."""
 
+import argparse
 import json
+from pathlib import Path
 
 GIVEN_NAMES = "Ader Alin Anwen Bera Bran Carys Dara Delyn Eira Elan Emrys Fara Galen Halen Idris Iona Jory Kira Lina Loren Mara Meri Neri Orin Rian Rona Sera Tarin Tegan Toma Vara Wren".split()
 HOUSEHOLD_NAMES = "Alder Ash Brook Cedar Fern Flint Grove Hazel Hearth Hill Moss Reed Rowan Stone Vale Willow".split()
@@ -46,4 +48,13 @@ def vector(seed):
 
 
 if __name__ == "__main__":
-    print(json.dumps([vector(seed) for seed in ["RIVERSIDE", "PEOPLE_0", "OTHER_SEED"]], indent=2))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check", type=Path, help="Check a committed JSON fixture instead of printing vectors")
+    args = parser.parse_args()
+    vectors = [vector(seed) for seed in ["RIVERSIDE", "PEOPLE_0", "OTHER_SEED"]]
+    if args.check:
+        if json.loads(args.check.read_text()) != vectors:
+            raise SystemExit("Resident founding fixture does not match the independent probe.")
+        print("Three independent resident founding vectors match the fixture.")
+    else:
+        print(json.dumps(vectors, indent=2))

@@ -28,6 +28,7 @@ Browser parity compares complete component bytes for RIVERSIDE and PEOPLE_0–9 
 
 ```sh
 python3 docs/probes/resident_probe.py
+python3 docs/probes/resident_probe.py --check tests/fixtures/residents.json
 npx vitest run tests/unit/residents.test.ts tests/unit/determinism.test.ts
 npx playwright test tests/browser/residents.spec.ts
 ```

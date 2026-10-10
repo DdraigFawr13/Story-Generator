@@ -25,6 +25,7 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: python3 docs/probes/terrain_probe.py
+      - run: python3 docs/probes/resident_probe.py --check tests/fixtures/residents.json
   browser:
     runs-on: ubuntu-latest
     steps:
