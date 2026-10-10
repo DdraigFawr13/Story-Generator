@@ -38,6 +38,8 @@ All six continued histories matched. Week 1,000 has P=39 and 480 events; week 10
 
 These are single observational desktop Linux measurements in the managed environment, with concurrent verification and local browser accommodations recorded in PHASE1_FOUNDATIONS.md. They are not percentile/phone budgets. Chromium’s post-measurement used-heap observations were 45,851,268 and 117,660,825 bytes; those include multiple comparison snapshots and UI/runtime overhead and are **not** isolated payload memory or measured peak heap. Firefox/WebKit expose no equivalent value here.
 
+The subsequent [production renderer memory study](PHASE1_MEMORY.md) uses fresh single-world Chromium processes and kernel-reported peak RSS through validation, paused Resume and the completed eight-week autosave. It records both supported rule versions without retaining comparison fixtures in the measured renderer. RSS remains a different metric from peak JavaScript heap or total browser memory; physical-device and maximum-budget validation remain open.
+
 Run after installing Playwright browsers/dependencies:
 
 ```sh

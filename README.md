@@ -23,6 +23,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Functional viewer, storage measurements and ten-seed review](docs/PHASE1_VIEWER.md)
 - [Winter reserves, small-population recovery and version compatibility](docs/PHASE1_BALANCE.md)
 - [Aggregate population display and observer verification](docs/PHASE1_POPULATION.md)
+- [Isolated production renderer memory study](docs/PHASE1_MEMORY.md) — `npm run benchmark:memory` (Linux/Chromium)
 - [Versioned numeric P1 settlement rules](docs/SETTLEMENT_RULES.md)
 - [Deterministic terrain contract and 100-seed probe](docs/TERRAIN_CONTRACT.md)
 - [Proposed local save/resume and recovery contract](docs/LOCAL_PERSISTENCE_CONTRACT.md)
