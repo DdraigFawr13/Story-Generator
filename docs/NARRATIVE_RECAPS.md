@@ -1,6 +1,6 @@
 # Narrative recaps and linked inspection
 
-The user requested actual narrative prose on 2026-10-10, rather than relying on bullet-like event headlines: periodic weekly/monthly/yearly recaps that pause the game for reading and link to interesting people or things. D-028 records this product direction. This document defines the next proposed implementation slice; PR #24 does not add a recap reader or an AI dependency. The user selected “Next milestone after the pause (Recommended)”; finish PR #24 and its Vercel verification, then stop before implementing this slice.
+D-029 records the approved next milestone and the user's instruction to merge and begin executing it on 2026-10-10. This implements D-028's requested connected narrative prose using the existing settlement archive. Settlement and building histories come first; real individual stories depend on the later versioned P2 integration. PR #24 is merged and its live main deployment verified.
 
 ## The reading experience
 
@@ -10,7 +10,9 @@ For example, a formatter could produce: “During spring, work on [the new field
 
 At a completed recap boundary, playback pauses and the reader opens with its date range. Reading a link keeps the world paused and focuses the corresponding map location, event evidence or available biography. A Back to recap control preserves the reading position. Continuing playback is an explicit action; closing the reader, following a link or returning from a backgrounded tab must not implicitly restart it. Manual recap reading from an already paused game stays paused.
 
-Weekly, every-four-week and yearly schedules correspond to 1, 4 and 48 committed weeks in the current calendar. “Every four weeks” provides the requested monthly frequency without inventing calendar dates or changing simulation units. Annual reading is the proposed initial default, with frequency and an off setting available; that default is an implementation proposal, not a user-selected cadence. A Read recap action should also let a viewer inspect the latest completed period while paused.
+**Yearly is the user-selected default**, pausing after 48 complete weeks; **Seasonal** pauses every 12 weeks; **Off** disables automatic reading pauses. At 1x these intervals are 12 and three active minutes. Manual **Read history** offers every completed year or season with previous, next, latest and a number jump. Before the first year it opens the latest completed season; before week 12 it is disabled. Step commits one week without forcing a reader. Reload/Resume stay paused without replaying past reading boundaries. Weekly and four-week schedules are outside this milestone.
+
+The approved voice is a historian with restrained flair: usually two to four annual paragraphs or one to two seasonal paragraphs, shorter for quiet periods. The cadence preference lives in browser-local preference storage outside canonical saves. Unavailable preference storage falls back to yearly and does not prevent play.
 
 ## Facts, identities and links
 
@@ -26,7 +28,13 @@ Implement a deterministic formatter for the current settlement events, with conn
 
 Verify complete-world digests remain unchanged by recap reading and links; equal admitted ticks at different playback speeds retain identical histories. Exercise exact interval boundaries, new-world/Resume handling, quiet intervals, shortage/recovery, winter and extinction. Browser checks should cover keyboard focus/return, long paragraphs, phone scrolling, 200% text, and saved-world continuation. A human should judge whether a real seed's recap is readable and creates curiosity; automated factual checks cannot establish writing quality.
 
-This should become the next focused product milestone before deeper P2 individual behavior, once the requested pause ends. The user explicitly selected that timing; this contract does not override D-027.
+D-029 supersedes D-027's earlier pause for this approved plan. Implement the recap milestone before deeper P2 individual behavior. See [verification and real prose samples](NARRATIVE_RECAPS_VERIFICATION.md) for implementation evidence; automated factual checks do not establish the user's final experience acceptance.
+
+`src/controller/recaps.ts` formats immutable interval records as a read-only `historian-v1` presentation projection. It groups harvest/weather, construction/loss, reserve/ration changes and aggregate births/deaths. Supporting records expose every contributor to a combined total. Positive field yield requires both the recorded field yield and completion cause; decay links require the removal's recorded cause. A dormant winter crop harvest does not imply there was no foraging.
+
+P1 saves retain events but only the latest weekly ledger. Older recaps do not borrow current stocks/population as historical endpoints or invent historical foraging totals. They do not reconstruct or advance the world. Equal historical intervals produce equal prose after later events are added; P1 v1/v2 saves retain their original rules and continuation behavior.
+
+The controller checks automatic boundaries after the whole week commits and pauses before another timer is scheduled. The reader remains mounted during evidence inspection so period, sources, scroll and focused link can be restored. Phone reading uses a scrolling sheet below the map with a sticky close control. Accepted replacements synchronously invalidate the old reading session, including same-seed/same-week replacements; rejected loads preserve it.
 
 ## Optional AI narration
 

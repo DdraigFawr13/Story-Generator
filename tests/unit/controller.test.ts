@@ -75,6 +75,8 @@ function runtime(store: SaveStore, clock = new Clock()) {
     acquire: async () => ({ owner, release() {} }),
     visible: () => visible,
     session: () => `session-${++session}`,
+    // These scheduling/storage tests advance across years without a reading interruption.
+    recapPreference: () => 'off',
   };
   return {
     value,

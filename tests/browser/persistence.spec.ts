@@ -587,6 +587,8 @@ test('reading an older live record preserves its scroll position while new weeks
   await menu(page);
   await page.getByRole('button', { name: 'Resume local save' }).click();
   await expect(page.getByTestId('tick')).toHaveText('1000');
+  // This test measures live-list anchoring across a year boundary without a reading pause.
+  await page.getByLabel('Automatic recaps').selectOption('off');
   await page.locator('.event-list').evaluate((element) => {
     element.scrollTop = 600;
     element.dispatchEvent(new Event('scroll'));

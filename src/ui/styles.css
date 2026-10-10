@@ -54,17 +54,176 @@ header {
   gap: 8px;
 }
 input,
-button {
+button,
+select {
   font: inherit;
   min-height: 45px;
   border-radius: 6px;
   border: 1px solid #789078;
 }
-input {
+input,
+select {
   padding: 9px 12px;
   color: #283b2e;
   background: #fff;
   min-width: 0;
+}
+.recap-controls,
+.recap-navigation,
+.recap-navigation form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+}
+.recap-controls {
+  margin-top: 16px;
+}
+.recap-controls label,
+.recap-navigation label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.recap-controls small {
+  flex-basis: 100%;
+}
+.recap-reader {
+  margin-top: 20px;
+  border: 1px solid #c6d0bd;
+  border-radius: 10px;
+  background: #fafbf6;
+  overflow: hidden;
+}
+.recap-reader[hidden] {
+  display: none;
+}
+.recap-heading,
+.recap-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+}
+.recap-heading h2 {
+  font-family: Georgia, serif;
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 6px 0;
+}
+.recap-range,
+.recap-footer p {
+  font-size: 0.85rem;
+}
+.recap-range {
+  padding: 0 20px 16px;
+}
+.recap-navigation {
+  padding: 0 20px 16px;
+}
+.recap-history > summary {
+  cursor: pointer;
+  min-height: 45px;
+  padding: 8px 20px;
+}
+.recap-navigation input {
+  width: 110px;
+}
+.recap-body {
+  max-height: 520px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 20px;
+  border-block: 1px solid #c6d0bd;
+}
+.recap-prose {
+  max-width: 68ch;
+  margin-inline: auto;
+  font-family: Georgia, serif;
+  font-size: 1.1rem;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+.recap-prose p + p {
+  margin-top: 20px;
+}
+.recap-link {
+  display: inline;
+  padding: 9px 2px;
+  min-width: 44px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: #315d40;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+.recap-sources {
+  margin-top: 24px;
+}
+.recap-sources summary {
+  min-height: 44px;
+  padding-block: 10px;
+  cursor: pointer;
+}
+.recap-sources ul {
+  padding-left: 20px;
+}
+.recap-sources button {
+  text-align: left;
+  margin-bottom: 8px;
+}
+.chronicle.recap-evidence .back-map {
+  display: block;
+}
+.phone-recap-opener {
+  display: none;
+}
+@media (max-width: 760px) {
+  .desktop-recap-opener {
+    display: none;
+  }
+  .phone-recap-opener {
+    display: block;
+    margin: 4px 16px 8px;
+    width: calc(100% - 32px);
+  }
+  .recap-reader:not([hidden]) {
+    position: fixed;
+    z-index: 4;
+    inset: auto 0 0;
+    max-height: 56dvh;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 24px #283b2e22;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  .recap-heading {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #fafbf6;
+    padding: 8px 16px;
+  }
+  .recap-heading h2 {
+    font-size: 1.15rem;
+  }
+  .recap-heading .eyebrow {
+    display: none;
+  }
+  .recap-body {
+    max-height: none;
+    overflow: visible;
+    padding: 16px;
+  }
+  .recap-navigation {
+    padding-inline: 16px;
+  }
 }
 .seed-controls input {
   flex: 1;

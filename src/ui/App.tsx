@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
 import { dateLabel } from '../controller/chronicle';
 import { SAVE_POLICY } from '../controller/save-queue';
-import { WorldController } from '../controller/world';
+import { WorldController, type RecapCadence } from '../controller/world';
+import { completedPeriods, periodWeeks, type RecapPeriod } from '../controller/recaps';
 import { MapCanvas } from './MapCanvas';
 import { Chronicle } from './Chronicle';
+import { RecapReader } from './RecapReader';
 
 export function App() {
   const [controller, setController] = useState<WorldController | null>(null);
@@ -44,6 +46,12 @@ function Viewer({ controller }: { controller: WorldController }) {
   const [error, setError] = useState('');
   const [eventId, setEventId] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [reading, setReading] = useState<{ period: RecapPeriod; session: number } | null>(null);
+  const recap = reading?.session === view.worldSession ? reading.period : null;
+  const [recapInspecting, setRecapInspecting] = useState(false);
+  const [evidenceFocus, setEvidenceFocus] = useState(0);
+  const recapOpener = useRef<HTMLButtonElement>(null);
+  const phoneRecapOpener = useRef<HTMLButtonElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
   const mapPanel = useRef<HTMLDivElement>(null);
   const world = view.world;
@@ -51,6 +59,8 @@ function Viewer({ controller }: { controller: WorldController }) {
   useEffect(() => {
     if (previousSession.current === view.worldSession) return;
     previousSession.current = view.worldSession;
+    setReading(null);
+    setRecapInspecting(false);
     if (world) {
       setSeed(world.seed);
       select(world.world.settlement.center);
@@ -59,6 +69,17 @@ function Viewer({ controller }: { controller: WorldController }) {
       setExpanded(false);
     }
   }, [world, view.worldSession]);
+  useEffect(() => {
+    const request = view.recapRequest;
+    if (!request) return;
+    setReading({
+      period: { kind: request.kind, endTick: request.endTick },
+      session: view.worldSession,
+    });
+    setRecapInspecting(false);
+    setExpanded(false);
+    scrollToMap();
+  }, [view.recapRequest]);
   function select(tile: number, focus = true) {
     setSelectedTile(tile);
     if (focus) setMapFocus((previous) => ({ tile, revision: previous.revision + 1 }));
@@ -83,6 +104,29 @@ function Viewer({ controller }: { controller: WorldController }) {
   function scrollToMap() {
     mapPanel.current?.querySelector('canvas')?.scrollIntoView({ block: 'start' });
   }
+  function closeRecap() {
+    setReading(null);
+    setRecapInspecting(false);
+    setExpanded(false);
+    scrollToMap();
+    const target = window.matchMedia('(max-width: 760px)').matches
+      ? phoneRecapOpener.current
+      : recapOpener.current;
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: 'nearest' });
+  }
+  function returnToRecap() {
+    setRecapInspecting(false);
+    setExpanded(false);
+    scrollToMap();
+  }
+  function readLatestRecap() {
+    if (!world) return;
+    let kind = view.recapCadence === 'seasonal' ? ('seasonal' as const) : ('yearly' as const);
+    if (completedPeriods(world.tick, kind) === 0) kind = 'seasonal';
+    const count = completedPeriods(world.tick, kind);
+    if (count) controller.readRecap({ kind, endTick: count * periodWeeks(kind) });
+  }
   const canControl = !view.busy && (view.mode === 'owner' || view.mode === 'unavailable');
   const settlement = world?.world.settlement;
   const tile = world?.world.map.tiles[selectedTile];
@@ -97,7 +141,8 @@ function Viewer({ controller }: { controller: WorldController }) {
       onKeyDown={(event) => {
         if (event.key === 'Escape' && expanded) {
           event.preventDefault();
-          closeChronicle();
+          if (recapInspecting) returnToRecap();
+          else closeChronicle();
         }
       }}
     >
@@ -119,7 +164,7 @@ function Viewer({ controller }: { controller: WorldController }) {
         <div className="control-row">
           <button
             type="button"
-            disabled={!canControl || !world || !!view.halted}
+            disabled={!canControl || !world || !!view.halted || recap !== null}
             onClick={() => (view.playing ? controller.pause() : controller.play())}
           >
             {view.playing ? 'Pause' : 'Play'}
@@ -127,7 +172,7 @@ function Viewer({ controller }: { controller: WorldController }) {
           <button
             type="button"
             className="secondary"
-            disabled={!canControl || !world || view.playing || !!view.halted}
+            disabled={!canControl || !world || view.playing || !!view.halted || recap !== null}
             onClick={() => controller.step()}
           >
             Step one week
@@ -153,6 +198,36 @@ function Viewer({ controller }: { controller: WorldController }) {
           At 1x, a week takes 15 seconds and a year takes 12 minutes. Returning to this page stays
           paused.
         </small>
+        <div className="recap-controls">
+          <label>
+            Automatic recaps
+            <select
+              value={view.recapCadence}
+              onChange={(event) => controller.recapCadence(event.target.value as RecapCadence)}
+            >
+              <option value="yearly">Yearly</option>
+              <option value="seasonal">Seasonal</option>
+              <option value="off">Off</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            className="secondary desktop-recap-opener"
+            ref={recapOpener}
+            disabled={!world || world.tick < 12 || view.busy}
+            onClick={readLatestRecap}
+          >
+            Read history
+          </button>
+          <small>
+            {view.recapCadence === 'off'
+              ? 'Automatic reading pauses are off. Completed periods remain available in Read history.'
+              : `Playback pauses ${view.recapCadence === 'yearly' ? 'every 48 weeks (12 active minutes at 1x)' : 'every 12 weeks (3 active minutes at 1x)'} for a recap.`}
+            {world && world.tick < 12
+              ? ' The first seasonal recap is available after week 12.'
+              : ''}
+          </small>
+        </div>
       </section>
       <details className="world-menu" open={!world}>
         <summary>World</summary>
@@ -306,6 +381,15 @@ function Viewer({ controller }: { controller: WorldController }) {
                 <li>Outline: work in progress</li>
                 <li>Dots: residents (illustrative placement)</li>
               </ul>
+              <button
+                type="button"
+                className="secondary phone-recap-opener"
+                ref={phoneRecapOpener}
+                disabled={world.tick < 12 || view.busy}
+                onClick={readLatestRecap}
+              >
+                Read history
+              </button>
               <button
                 type="button"
                 ref={opener}
@@ -491,12 +575,36 @@ function Viewer({ controller }: { controller: WorldController }) {
               {project ? `, unfinished ${project.kind} #${project.id}` : ''}.
             </p>
           </section>
+          {recap && (
+            <RecapReader
+              world={world}
+              period={recap}
+              visible={!recapInspecting}
+              canContinue={canControl && !view.halted}
+              onChoose={(period) => controller.readRecap(period)}
+              onInspect={(id) => {
+                const event = world.events[id - 1]!;
+                setEventId(id);
+                select(event.location.tile);
+                setRecapInspecting(true);
+                setEvidenceFocus((revision) => revision + 1);
+                openChronicle();
+              }}
+              onClose={closeRecap}
+              onContinue={() => {
+                closeRecap();
+                controller.play();
+              }}
+            />
+          )}
           <Chronicle
             key={view.worldSession}
             world={world}
             selectedId={eventId}
             expanded={expanded}
-            onClose={closeChronicle}
+            onClose={recapInspecting ? returnToRecap : closeChronicle}
+            backToRecap={recapInspecting}
+            focusRequest={recapInspecting ? evidenceFocus : 0}
             onSelect={(id) => {
               const event = world.events[id - 1]!;
               setEventId(id);

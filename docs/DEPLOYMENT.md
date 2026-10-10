@@ -1,6 +1,6 @@
 # Vercel hosting — main only
 
-D-026 authorizes playable Vercel hosting with updates only from commits on `main` by default. It supersedes the earlier visual-milestone preview rule. D-027 limits this session to PR #24's merge and deployment verification, followed by a pause.
+D-026 authorizes playable Vercel hosting with updates only from commits on `main` by default. It supersedes the earlier visual-milestone preview rule. D-029 explicitly resumes work after D-027's pause and authorizes the approved recap milestone.
 
 Play at **[story-generator-opal.vercel.app](https://story-generator-opal.vercel.app)**. The GitHub repository `DdraigFawr13/Story-Generator` is linked to the `story-generator` Vercel project in Golden Goose Engineering Group. The project ID is `prj_oqKFNAkqmbzLBkMoxldzVAF5PYNv`; its production branch is `main`. Preview deployments are disabled in project settings. These identifiers are project metadata, not credentials.
 
@@ -17,3 +17,9 @@ After the merge, verify Vercel's reported source SHA equals the main merge commi
 The hosted viewer remains P1. The deterministic P2 resident/household component is a foundation for later versioned world/save integration. Hosting does not close the outstanding selected-art, physical-device, storage-policy or human experience reviews.
 
 Configuration reference: [Vercel Git configuration](https://vercel.com/docs/project-configuration/git-configuration).
+
+## PR #24 production verification — 2026-10-10
+
+PR #24 merged as `2b2cd40040be4ca1a604e9fc901f58472c80a26a`. Vercel deployment `dpl_5JSKjVVHVRiVzyACLBmoEs1JZRX6` reported that exact main SHA, production target and READY status; the stable alias resolved to the same deployment. A real Firefox session on the stable domain returned HTTP 200, generated RIVERSIDE, exercised Step and Play/Pause, saved through the UI, compared the IndexedDB save digest to Node at week four, reloaded, resumed paused and continued to week five. Desktop and phone chronicle/evidence inspection produced no page or console errors. The temporary browser profile trusted the environment's configured proxy CA with TLS verification enabled; no machine-wide trust settings were changed.
+
+Exact pre-merge local validation passed 129 core tests and 129 browser checks (43 each in Chromium, Firefox and WebKit), formatting, strict types, module boundaries, build and both independent Python probes. GitHub Actions could not start because the account's billing/spending limit rejected the jobs; these local results are not hosted CI results.

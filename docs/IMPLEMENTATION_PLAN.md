@@ -110,6 +110,18 @@ For 1.21, the same ten seeds are reviewed under v1 and v2 at season/year/long-ru
 
 ---
 
+## Approved recap milestone before deeper Phase 2 — D-029
+
+The user approved settlement/building recaps first, yearly default with seasonal/off options, completed-period browsing, a restrained historian voice and local deterministic formatting. The explicit instruction to merge and begin executing this plan supersedes D-027's earlier pause. PR #24 is merged and its exact main deployment verified.
+
+- [x] R.1 Define the approved period, evidence, save-compatibility and explicit-continuation contract in [NARRATIVE_RECAPS.md](NARRATIVE_RECAPS.md).
+- [x] R.2 Add the read-only historical formatter, source links and quiet/extinction handling; preserve simulation bytes, RNG and existing v1/v2 saves.
+- [x] R.3 Add yearly/seasonal/off preferences, pause after a whole committed boundary week and manual browsing without replaying old pauses on Resume.
+- [x] R.4 Add desktop/phone reading, period navigation, historical evidence/causes and return with preserved scroll/focus. Closing stays paused; continuing is explicit.
+- [ ] R.5 Complete core and three-engine browser regressions, inspect real seed prose and phone text reflow, merge the scoped PR and verify its exact main production flow. Record results in [NARRATIVE_RECAPS_VERIFICATION.md](NARRATIVE_RECAPS_VERIFICATION.md).
+
+Individual stories and hosted AI remain later work. Human experience acceptance, selected art and physical-device review remain open.
+
 ## Phase 2 — Individuals, families, memory and consequences (FOUNDATIONS AUTHORIZED)
 
 **Outcome:** the first genuine personal stories, causally connected to settlement conditions.

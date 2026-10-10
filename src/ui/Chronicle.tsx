@@ -8,12 +8,16 @@ export function Chronicle({
   onSelect,
   expanded,
   onClose,
+  focusRequest = 0,
+  backToRecap = false,
 }: {
   world: SettlementSnapshot;
   selectedId: number | null;
   onSelect: (id: number) => void;
   expanded: boolean;
   onClose: () => void;
+  focusRequest?: number;
+  backToRecap?: boolean;
 }) {
   const list = useRef<HTMLDivElement>(null);
   const back = useRef<HTMLButtonElement>(null);
@@ -21,12 +25,13 @@ export function Chronicle({
   const evidence = useRef<HTMLDivElement>(null);
   const evidenceHeading = useRef<HTMLHeadingElement>(null);
   const focusEvidence = useRef(false);
+  const previousFocusRequest = useRef(0);
   const anchor = useRef<{ id: string; offset: number } | null>(null);
   const [record, setRecord] = useState('');
   const [error, setError] = useState('');
   const [causeTrail, setCauseTrail] = useState<number[]>([]);
   useEffect(() => {
-    if (expanded) back.current?.focus({ preventScroll: true });
+    if (expanded && focusRequest === 0) back.current?.focus({ preventScroll: true });
   }, [expanded]);
   function rememberAnchor() {
     const element = list.current;
@@ -53,7 +58,10 @@ export function Chronicle({
   }, [world.events.length]);
   useLayoutEffect(() => {
     const heading = evidenceHeading.current;
-    if (!focusEvidence.current || !heading) return;
+    const requested = focusRequest > 0 && previousFocusRequest.current !== focusRequest;
+    previousFocusRequest.current = focusRequest;
+    if ((!focusEvidence.current && !requested) || !heading) return;
+    if (requested) setCauseTrail([]);
     focusEvidence.current = false;
     if (evidence.current) evidence.current.scrollTop = 0;
     if (content.current) {
@@ -61,7 +69,7 @@ export function Chronicle({
         heading.getBoundingClientRect().top - content.current.getBoundingClientRect().top - 16;
     }
     heading.focus({ preventScroll: true });
-  }, [selectedId]);
+  }, [selectedId, focusRequest]);
   function selectRecord(id: number) {
     setCauseTrail([]);
     onSelect(id);
@@ -85,7 +93,7 @@ export function Chronicle({
   return (
     <section
       id="chronicle"
-      className={`chronicle ${expanded ? 'expanded' : ''}`}
+      className={`chronicle ${expanded ? 'expanded' : ''} ${backToRecap ? 'recap-evidence' : ''}`}
       aria-label="Chronicle"
       onKeyDown={(event) => {
         if (event.key === 'Escape' && expanded) {
@@ -97,7 +105,7 @@ export function Chronicle({
       <div className="map-heading">
         <h2>The chronicle</h2>
         <button type="button" className="secondary back-map" ref={back} onClick={onClose}>
-          Back to map
+          {backToRecap ? 'Back to recap' : 'Back to map'}
         </button>
       </div>
       <div className="chronicle-content" ref={content}>

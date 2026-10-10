@@ -1,0 +1,140 @@
+[
+  {
+    "seed": "RIVERSIDE",
+    "simulationVersion": "p1-settlement-v2",
+    "period": {
+      "kind": "yearly",
+      "endTick": 48
+    },
+    "title": "Settlement 47-20 · Year 1",
+    "paragraphs": [
+      "Under ordinary weather, the spring harvest brought 370 food into the settlement’s accounts. Under ordinary weather, the summer harvest brought 493 food into the settlement’s accounts. Under ordinary weather, the autumn harvest brought 411 food into the settlement’s accounts. Winter marked a change in the rhythm of the fields: the winter harvest record reports dormant crops and no crop food.",
+      "Work reached a milestone when hut #11 was completed in week 2. Work reached a milestone when field #12 was completed in week 4. At the following recorded harvest, that field contributed 83 food. Another 2 construction projects were completed; their records remain in the archive.",
+      "In week 1, reserves reached twelve weeks of current demand. In week 7, reserves fell below twelve weeks of current demand. In week 12, reserves reached twelve weeks of current demand. Storage limits took their own toll: 154 food was lost beyond capacity across this period. The accounts also record 30 stored food lost to spoilage.",
+      "The population records give the period a human measure: 1 death was recorded."
+    ],
+    "sourceIds": [
+      2,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10,
+      12,
+      13,
+      14,
+      15,
+      16,
+      18,
+      19,
+      21,
+      22,
+      23,
+      27,
+      28,
+      29
+    ]
+  },
+  {
+    "seed": "THIMBLE",
+    "simulationVersion": "p1-settlement-v2",
+    "period": {
+      "kind": "yearly",
+      "endTick": 96
+    },
+    "title": "Settlement 25-19 · Year 2",
+    "paragraphs": [
+      "Under ordinary weather, the spring harvest brought 438 food into the settlement’s accounts. Under ordinary weather, the summer harvest brought 526 food into the settlement’s accounts. Under ordinary weather, the autumn harvest brought 438 food into the settlement’s accounts. Winter marked a change in the rhythm of the fields: the winter harvest record reports dormant crops and no crop food.",
+      "Work reached a milestone when store #15 was completed in week 76. Work reached a milestone when store #16 was completed in week 80. Another 1 construction project was completed; their records remain in the archive.",
+      "Storage limits took their own toll: 14 food was lost beyond capacity across this period. The accounts also record 60 stored food lost to spoilage.",
+      "The population records give the period a human measure: 1 birth and 1 death were recorded."
+    ],
+    "sourceIds": [
+      31,
+      32,
+      33,
+      35,
+      36,
+      37,
+      38,
+      40,
+      41,
+      43,
+      45,
+      46,
+      47,
+      51,
+      52,
+      53,
+      55
+    ]
+  },
+  {
+    "seed": "RIVERSIDE",
+    "simulationVersion": "p1-settlement-v2",
+    "period": {
+      "kind": "seasonal",
+      "endTick": 48
+    },
+    "title": "Settlement 47-20 · Winter · Year 1",
+    "paragraphs": [
+      "Winter marked a change in the rhythm of the fields: the winter harvest record reports dormant crops and no crop food. Work reached a milestone when store #14 was completed in week 40.",
+      "The accounts also record 8 stored food lost to spoilage."
+    ],
+    "sourceIds": [
+      27,
+      28,
+      29
+    ]
+  },
+  {
+    "seed": "RIVERSIDE",
+    "simulationVersion": "p1-settlement-v1",
+    "period": {
+      "kind": "seasonal",
+      "endTick": 48
+    },
+    "title": "Settlement 47-20 · Winter · Year 1",
+    "paragraphs": [
+      "Under ordinary weather, the winter harvest brought 163 food into the settlement’s accounts. Work reached a milestone when store #14 was completed in week 40.",
+      "The accounts also record 9 stored food lost to spoilage."
+    ],
+    "sourceIds": [
+      25,
+      27,
+      28,
+      29
+    ]
+  },
+  {
+    "seed": "RIVERSIDE",
+    "simulationVersion": "p1-settlement-v1",
+    "period": {
+      "kind": "yearly",
+      "endTick": 2016
+    },
+    "title": "Settlement 47-20 · Year 42",
+    "paragraphs": [
+      "Under wet weather, the spring harvest brought 0 food into the settlement’s accounts. Under drought weather, the summer harvest brought 0 food into the settlement’s accounts. Under ordinary weather, the autumn harvest brought 0 food into the settlement’s accounts. Under drought weather, the winter harvest brought 0 food into the settlement’s accounts.",
+      "The accounts also record 12 stored food lost to spoilage.",
+      "The population records give the period a human measure: 1 death was recorded. The settlement’s inhabited history reached its end in week 1980, when no residents remained. Its earlier history is still here to be read."
+    ],
+    "sourceIds": [
+      940,
+      941,
+      942,
+      943,
+      944,
+      945,
+      946,
+      947,
+      948,
+      949,
+      950,
+      951,
+      952,
+      953
+    ]
+  }
+]
