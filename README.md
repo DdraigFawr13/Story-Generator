@@ -4,6 +4,8 @@ A procedural, simulation-driven pixel world that tells the histories of its soci
 
 **Status:** The weekly settlement engine runs in a browser viewer with Play/Pause, step, 1x/4x/16x, a factual chronicle and atomic browser-local save/resume. New worlds use versioned winter/recovery rules; existing v1 saves retain their original behavior. Phase 1 acceptance remains open for selected art, physical devices and human experience review.
 
+[Play Story Generator](https://story-generator-opal.vercel.app). Saves stay in this browser on this site; start a seeded world, then Play or Step to observe its history. Production updates only from commits on `main` by default.
+
 ## Vision
 
 Start a seeded world, observe a society from founding to transformation or collapse, and follow its emergent history through a synchronized map and chronicle. The underlying simulation determines what happens; the narrative layer reports events, their causes, and their consequences. Neither fixed plotlines nor independent random flavor messages substitute for simulated state.
@@ -36,6 +38,8 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Technical architecture review](docs/ARCHITECTURE_REVIEW.md)
 - [Accepted architecture decision records](docs/adr/README.md)
 - [Working agreements and branch hygiene](CONTRIBUTING.md)
+- [Vercel hosting and main-only deployment rule](docs/DEPLOYMENT.md)
+- [Requested narrative recaps and linked inspection](docs/NARRATIVE_RECAPS.md)
 - [Reproducible legacy v1 winter/recovery sensitivity study](docs/PHASE1_BALANCE_STUDY.md) — `npm run benchmark:balance-study`
 
 ## Approved direction
@@ -64,7 +68,7 @@ npx playwright install --with-deps chromium firefox webkit
 npm run test:browser
 ```
 
-`check` verifies formatting, strict types, module/runtime boundaries, core tests and the production build. Browser checks compare canonical fixtures with Node and exercise the preview at 320/390/768/1280 CSS pixels. CI runs both suites. No hosted service or API key is required; deployment remains a milestone decision.
+`check` verifies formatting, strict types, module/runtime boundaries, core tests and the production build. Browser checks compare canonical fixtures with Node and exercise the local viewer at 320/390/768/1280 CSS pixels. CI runs both suites. No service API key is required. Vercel production is linked to `main`; updates follow commits on `main` only by default, with branch previews disabled. See [deployment setup](docs/DEPLOYMENT.md).
 
 The core API exposes `createSettlement(seed)`, `advanceSettlement(snapshot, weeks, limits)` and `simulateSettlement(seed, weeks, limits)` from `src/sim`. Tests include 100 seeds × 1,000 weeks, so the complete unit suite takes several minutes. To write its measurement report, run `STORY_GENERATOR_REPORT=/tmp/settlement-report.json npm test`; timings stay outside canonical state.
 

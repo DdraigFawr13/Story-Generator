@@ -21,7 +21,7 @@
 - Deterministic seeds, explicit simulation version, persistent IDs, and reproducible event streams.
 - Model-driven histories: chronicle prose must not invent new facts.
 - Add regression tests for every simulation rule change; run stress tests for long histories.
-- Confirm deployed previews only at meaningful milestones, not every internal commit.
+- Vercel updates only from commits on `main` by default (D-026). Keep production linked to `main`, branch previews disabled, and `vercel.json`'s main-only Git rule intact. Verify the exact main revision and live flow after deployment; see [deployment setup](docs/DEPLOYMENT.md).
 
 ## Source code vs assets
 
