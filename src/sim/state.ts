@@ -41,6 +41,8 @@ export interface Entity {
 export const EVENT_PHASES = capture({
   founding: [0],
   weather: [1],
+  work_changed: [2],
+  home_changed: [7],
   construction_started: [2],
   harvest: [3],
   food_overflow: [4, 6],
@@ -71,6 +73,8 @@ export const EVENT_FIELDS = capture({
     ],
     effects: ['population', 'food', 'timber'],
   },
+  work_changed: { facts: ['count', 'assignments'], effects: ['activity'] },
+  home_changed: { facts: ['count', 'assignments'], effects: ['home'] },
   weather: { facts: ['kind', 'multiplier', 'startTick', 'year', 'season'], effects: [] },
   construction_started: {
     facts: ['kind', 'cost', 'requiredLabor', 'population', 'shelter', 'fields', 'food', 'capacity'],
