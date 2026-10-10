@@ -118,7 +118,7 @@ The user approved settlement/building recaps first, yearly default with seasonal
 - [x] R.2 Add the read-only historical formatter, source links and quiet/extinction handling; preserve simulation bytes, RNG and existing v1/v2 saves.
 - [x] R.3 Add yearly/seasonal/off preferences, pause after a whole committed boundary week and manual browsing without replaying old pauses on Resume.
 - [x] R.4 Add desktop/phone reading, period navigation, historical evidence/causes and return with preserved scroll/focus. Closing stays paused; continuing is explicit.
-- [ ] R.5 Complete core and three-engine browser regressions, inspect real seed prose and phone text reflow, merge the scoped PR and verify its exact main production flow. Record results in [NARRATIVE_RECAPS_VERIFICATION.md](NARRATIVE_RECAPS_VERIFICATION.md).
+- [x] R.5 Complete core and three-engine browser regressions, inspect real seed prose and phone text reflow, merge the scoped PR and verify its exact main production flow. [PR #25](https://github.com/DdraigFawr13/Story-Generator/pull/25) merged as `216ccf3`; 140 core tests, 159 browser checks, GitHub CI and the actual production reading/save/continuation flow passed. See [NARRATIVE_RECAPS_VERIFICATION.md](NARRATIVE_RECAPS_VERIFICATION.md).
 
 Individual stories and hosted AI remain later work. Human experience acceptance, selected art and physical-device review remain open.
 

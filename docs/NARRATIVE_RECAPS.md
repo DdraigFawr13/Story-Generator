@@ -22,13 +22,13 @@ The running P1 viewer models aggregate population, buildings and settlement cond
 
 Generating, opening, navigating and dismissing a recap must not consume simulation RNG, admit authoritative commands or change canonical world bytes. Pausing affects scheduling only. New World and accepted Resume reset the reader's session; rejected loads preserve the current inspection. Resume stays paused and must not automatically replay every recap boundary in the saved history.
 
-## First local milestone
+## Implemented local milestone
 
-Implement a deterministic formatter for the current settlement events, with connected prose and linked source records. Keep the output bounded and prioritize consequential changes and their recorded causes over routine repetition. A quiet interval should get a short, truthful account rather than invented drama. Add the accessible recap reader, interval controls, pause boundary, return-to-reading navigation and manual reading through the existing controller/inspection seams.
+PR #25 implements a deterministic formatter for the current settlement events, with connected prose and linked source records. Output is bounded and prioritizes consequential changes and their recorded causes over routine repetition. A quiet interval gets a short, truthful account rather than invented drama. The accessible recap reader, interval controls, pause boundary, return-to-reading navigation and manual reading use the existing controller/inspection seams.
 
 Verify complete-world digests remain unchanged by recap reading and links; equal admitted ticks at different playback speeds retain identical histories. Exercise exact interval boundaries, new-world/Resume handling, quiet intervals, shortage/recovery, winter and extinction. Browser checks should cover keyboard focus/return, long paragraphs, phone scrolling, 200% text, and saved-world continuation. A human should judge whether a real seed's recap is readable and creates curiosity; automated factual checks cannot establish writing quality.
 
-D-029 supersedes D-027's earlier pause for this approved plan. Implement the recap milestone before deeper P2 individual behavior. See [verification and real prose samples](NARRATIVE_RECAPS_VERIFICATION.md) for implementation evidence; automated factual checks do not establish the user's final experience acceptance.
+D-029 supersedes D-027's earlier pause for this approved plan. The recap milestone is merged and verified in production before deeper P2 individual behavior. See [verification and real prose samples](NARRATIVE_RECAPS_VERIFICATION.md) for implementation evidence; automated factual checks do not establish the user's final experience acceptance.
 
 `src/controller/recaps.ts` formats immutable interval records as a read-only `historian-v1` presentation projection. It groups harvest/weather, construction/loss, reserve/ration changes and aggregate births/deaths. Supporting records expose every contributor to a combined total. Positive field yield requires both the recorded field yield and completion cause; decay links require the removal's recorded cause. A dormant winter crop harvest does not imply there was no foraging.
 
