@@ -292,6 +292,7 @@ export class WorldController {
     this.#publish();
   }
   pause() {
+    if (!this.#playing && this.#timer === null) return;
     this.#playing = false;
     if (this.#timer !== null) this.runtime.clock.clear(this.#timer);
     this.#timer = null;

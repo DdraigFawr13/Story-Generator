@@ -20,6 +20,14 @@ PR #12 is merged at `2c1e4de`. D-022 authorizes continued work and milestone mer
 - Fresh Firefox checks explicitly reject browser console errors; desktop/phone screenshot captures also had no console/page errors or horizontal overflow. Development warnings seen during hot edits did not reproduce in fresh checks.
 - Desktop/phone screenshots at spring week 12 are recorded as engineering evidence in `docs/evidence/`. They use temporary drawings and are not comparisons against the unavailable selected images.
 
+## Idempotent pause follow-up — 2026-10-10
+
+The population milestone exposed an intermittent Firefox React development warning during context teardown. A captured stack traced a hidden-page event through `visibilityChanged → pause → #publish → useSyncExternalStore`: calling Pause on an already paused controller created a new view and notified subscribers despite no playback change. The warning was also reproduced with the viewer from `4aeb121`, before population markers.
+
+Pause now returns without publishing when playback is already stopped and no timer remains. A real pause still cancels its timer and publishes the stopped state, including when the due callback has already removed its timer. New World, Resume, admitted steps and save completion continue to publish their own state changes. This changes controller notifications only; simulation rules, versions, save envelopes and autosave policy stay the same.
+
+The regression failed before the fix with six unnecessary notifications. All **17 controller tests** now pass: repeated explicit/hidden idle pauses preserve the same view with no notifications; hiding immediately before a due tick publishes once, clears the timer and produces no catch-up; a subsequent manual step and fresh Play match the two-week headless world. Formatting, strict types, 27-module boundaries and the production build also pass. A separate real Firefox check closed **16 fresh contexts**, eight paused and eight playing, with no browser errors or Vite-forwarded React warnings. That sample verifies the observed follow-up; it does not claim to rule out every possible development warning or establish physical-device support.
+
 ## Remaining acceptance
 
 Real browser transactions establish atomic replacement in the tested cases. Injected quota failure is not a measurement of actual device quota; a test does not guarantee protection from eviction, clearing browser data or device loss. A process-kill/crash durability study, long-history write/load/memory measurements, installed Safari and a physical Android phone are still open.

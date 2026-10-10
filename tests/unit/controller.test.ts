@@ -107,6 +107,55 @@ it('validates full envelopes, checksums and independently checksummed invalid st
 });
 
 describe('run control and local sessions', () => {
+  it('keeps idle pause notifications silent while a real pause cancels playback', async () => {
+    const m = memory(),
+      r = runtime(m.store);
+    r.value.available = () => false;
+    const c = new WorldController(r.value);
+    await c.initialize();
+    await c.newWorld('RIVERSIDE');
+    let notifications = 0;
+    const unsubscribe = c.subscribe(() => notifications++);
+    const idleView = c.getView();
+    for (let i = 0; i < 3; i++) {
+      c.pause();
+      r.hide();
+      c.visibilityChanged();
+      r.show();
+      c.visibilityChanged();
+    }
+    expect(notifications).toBe(0);
+    expect(c.getView()).toBe(idleView);
+
+    c.play();
+    expect(c.view.playing).toBe(true);
+    r.clock.advance(NORMAL_WEEK_MS - 1);
+    notifications = 0;
+    r.hide();
+    c.visibilityChanged();
+    expect(notifications).toBe(1);
+    expect(c.view.playing).toBe(false);
+    expect(r.clock.jobs.size).toBe(0);
+    const pausedView = c.getView();
+    c.pause();
+    c.visibilityChanged();
+    r.clock.advance(NORMAL_WEEK_MS * 10);
+    r.show();
+    c.visibilityChanged();
+    expect(notifications).toBe(1);
+    expect(c.getView()).toBe(pausedView);
+    expect(c.view.world!.tick).toBe(0);
+
+    c.step();
+    expect(c.view.world!.tick).toBe(1);
+    c.play();
+    r.clock.advance(NORMAL_WEEK_MS);
+    expect(canonicalJson(c.view.world)).toBe(
+      canonicalJson(simulateSettlement('RIVERSIDE', 2).state),
+    );
+    unsubscribe();
+    await c.dispose();
+  });
   it.each([1, 4, 16] as const)('same weeks at %ix equal the headless world', async (speed) => {
     const m = memory(),
       r = runtime(m.store);
