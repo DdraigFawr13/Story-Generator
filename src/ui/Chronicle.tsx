@@ -17,9 +17,14 @@ export function Chronicle({
 }) {
   const list = useRef<HTMLDivElement>(null);
   const back = useRef<HTMLButtonElement>(null);
+  const content = useRef<HTMLDivElement>(null);
+  const evidence = useRef<HTMLDivElement>(null);
+  const evidenceHeading = useRef<HTMLHeadingElement>(null);
+  const focusEvidence = useRef(false);
   const anchor = useRef<{ id: string; offset: number } | null>(null);
   const [record, setRecord] = useState('');
   const [error, setError] = useState('');
+  const [causeTrail, setCauseTrail] = useState<number[]>([]);
   useEffect(() => {
     if (expanded) back.current?.focus({ preventScroll: true });
   }, [expanded]);
@@ -46,6 +51,35 @@ export function Chronicle({
       element.scrollTop +=
         item.getBoundingClientRect().top - element.getBoundingClientRect().top - reading.offset;
   }, [world.events.length]);
+  useLayoutEffect(() => {
+    const heading = evidenceHeading.current;
+    if (!focusEvidence.current || !heading) return;
+    focusEvidence.current = false;
+    if (evidence.current) evidence.current.scrollTop = 0;
+    if (content.current) {
+      content.current.scrollTop +=
+        heading.getBoundingClientRect().top - content.current.getBoundingClientRect().top - 16;
+    }
+    heading.focus({ preventScroll: true });
+  }, [selectedId]);
+  function selectRecord(id: number) {
+    setCauseTrail([]);
+    onSelect(id);
+  }
+  function followCause(id: number) {
+    if (selectedId === null) return;
+    // Canonical causes point strictly backward, bounding this trail by the retained archive.
+    setCauseTrail((trail) => [...trail, selectedId]);
+    focusEvidence.current = true;
+    onSelect(id);
+  }
+  function returnToRecord() {
+    const id = causeTrail.at(-1);
+    if (id === undefined) return;
+    setCauseTrail((trail) => trail.slice(0, -1));
+    focusEvidence.current = true;
+    onSelect(id);
+  }
   const selected = selectedId === null ? null : world.events[selectedId - 1];
   const details = selected ? eventDetails(selected) : null;
   return (
@@ -66,7 +100,7 @@ export function Chronicle({
           Back to map
         </button>
       </div>
-      <div className="chronicle-content">
+      <div className="chronicle-content" ref={content}>
         <p className="chronicle-note">
           Latest {Math.min(200, world.events.length)} of {world.events.length} records. Causes
           retain access to earlier records.
@@ -78,7 +112,7 @@ export function Chronicle({
             const id = Number(record);
             if (record !== '' && Number.isSafeInteger(id) && id > 0 && id <= world.events.length) {
               setError('');
-              onSelect(id);
+              selectRecord(id);
             } else setError(`Choose a record from 1 to ${world.events.length}.`);
           }}
         >
@@ -119,7 +153,7 @@ export function Chronicle({
                   data-event-id={event.id}
                   className={`event-button ${selectedId === event.id ? 'selected' : ''}`}
                   aria-pressed={selectedId === event.id}
-                  onClick={() => onSelect(event.id)}
+                  onClick={() => selectRecord(event.id)}
                 >
                   <span className="event-date">
                     {dateLabel(event.tick)} · #{event.id}
@@ -128,19 +162,26 @@ export function Chronicle({
                 </button>
               ))}
           </div>
-          <div className="event-details" role="region" aria-label="Event evidence">
+          <div className="event-details" role="region" aria-label="Event evidence" ref={evidence}>
             {selected && details ? (
               <>
-                <h3>{headline(selected)}</h3>
+                <h3 ref={evidenceHeading} tabIndex={-1}>
+                  {headline(selected)}
+                </h3>
                 <p>
                   {dateLabel(selected.tick)} · record #{selected.id} · tile {selected.location.tile}
                 </p>
                 <div className="archive-neighbors">
+                  {causeTrail.length > 0 && (
+                    <button type="button" className="secondary" onClick={returnToRecord}>
+                      Return to record #{causeTrail.at(-1)}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="secondary"
                     disabled={selected.id === 1}
-                    onClick={() => onSelect(selected.id - 1)}
+                    onClick={() => selectRecord(selected.id - 1)}
                   >
                     Previous record
                   </button>
@@ -148,7 +189,7 @@ export function Chronicle({
                     type="button"
                     className="secondary"
                     disabled={selected.id === world.events.length}
-                    onClick={() => onSelect(selected.id + 1)}
+                    onClick={() => selectRecord(selected.id + 1)}
                   >
                     Next record
                   </button>
@@ -182,7 +223,7 @@ export function Chronicle({
                       type="button"
                       className="secondary cause-button"
                       key={id}
-                      onClick={() => onSelect(id)}
+                      onClick={() => followCause(id)}
                     >
                       #{id}: {headline(world.events[id - 1]!)}
                     </button>

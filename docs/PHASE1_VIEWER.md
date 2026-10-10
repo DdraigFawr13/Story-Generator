@@ -41,6 +41,18 @@ The controller now exposes an in-memory presentation session counter that change
 
 Two controller regressions cover accepted and rejected replacements, playback/save stability, v1 Resume and read-only takeover. Four browser regressions cover same-seed Resume at the same/later week across supported versions, same-seed founding regeneration and checksum rejection. Successful Resume followed by saving retains the fixture's complete-world digest. Run `npx vitest run tests/unit/controller.test.ts` and `npx playwright test --grep 'resuming the same seed|rejected Resume retains|regenerating the same founding'` for focused verification; full hosted verification is recorded with the milestone PR.
 
+### Keyboard cause inspection and return — 2026-10-10
+
+Following a recorded cause could remove the focused cause button and leave keyboard focus on the page body. The new evidence heading now receives focus after following or returning through a cause. Only the evidence/content scrollers move to reveal that heading; the document and map stay in place. Tab from the heading reaches a **Return to record #…** control, which walks the actual visited cause chain back to its starting record.
+
+The trail contains only record IDs from deliberate inspection. Canonical causes point strictly backward, so its depth is bounded by the retained archive. Selecting a headline, looking up a record or choosing a chronological neighbor starts a new inspection; ordinary simulation weeks retain the trail, and accepted world replacement clears it. No trail is serialized or used by simulation rules.
+
+Three browser regressions exercise a two-link chain and both returns on desktop and 320×568/390×650 phones at 200% text, including focus, heading visibility, unchanged page scroll, cleared trails after direct selection and unchanged complete-world save digests. A fourth case checks that ordinary advancement preserves the trail while Resume resets it. Run `npx playwright test --grep 'keyboard cause navigation|cause return survives'` for focused verification; full hosted verification is recorded with the milestone PR.
+
+For a concrete experience review, create **RIVERSIDE**, step to week 12 and select the spring harvest. Follow its completed-field cause, then that construction's start. Use the return control twice to get back to the harvest. The evidence should let a viewer explain how the built field contributed to the recorded yield, while distinguishing its historical location from the current map. Try the same path on a phone and with only the keyboard. Automated checks establish access and factual consistency; a human still needs to judge whether that explanation is understandable and interesting.
+
+The [390×650 phone screenshot](evidence/phase1-cause-return-phone.png) shows keyboard focus on the return control at 200% text after following the completed-field cause. The map and Back to map control remain visible. It records the functional UI with temporary drawings; physical-device and selected-art acceptance remain open.
+
 ## Real storage measurements
 
 The reproducible `npm run benchmark:storage` command generates the same RIVERSIDE snapshots in Node, saves/validates them in real browser IndexedDB, advances restored and original snapshots ten weeks, compares digests, then reloads and resumes through the UI. The [raw report](evidence/phase1-storage-benchmark.json) records exact values. Node 24.19.0 generated the 10,000-week retained world in 98,152ms during concurrent verification.
