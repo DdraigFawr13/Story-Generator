@@ -416,6 +416,7 @@ aside dd {
   .chronicle.expanded {
     display: flex;
     flex-direction: column;
+    overflow: clip;
     position: fixed;
     z-index: 3;
     inset: auto 0 0;
@@ -434,15 +435,16 @@ aside dd {
   .chronicle.expanded .archive-search {
     padding-bottom: 8px;
   }
-  .chronicle.expanded .chronicle-body {
+  .chronicle.expanded .chronicle-content {
     overflow: auto;
     min-height: 0;
+    overscroll-behavior: contain;
   }
   .chronicle.expanded .event-list {
+    height: 20dvh;
     max-height: 20dvh;
-    flex: 0 0 auto;
   }
   .chronicle.expanded .event-details {
-    max-height: 26dvh;
+    max-height: none;
   }
 }
