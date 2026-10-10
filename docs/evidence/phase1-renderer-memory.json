@@ -1,0 +1,580 @@
+{
+  "measuredAt": "2026-10-10T03:21:35.673Z",
+  "sourceCommit": "38a8e455b99b6a76f3337a9f84210993a8dc02b0",
+  "sourceTreeDirty": false,
+  "platform": {
+    "os": "linux",
+    "kernel": "6.18.44",
+    "arch": "x64",
+    "node": "v24.19.0"
+  },
+  "bundle": {
+    "file": "index-DTIgXAAG.js",
+    "sha256": "7a43921386baed3aacd3ed078c8354c1b3ea0c2a9fb069fb5adadfe9c0c9c2ae",
+    "bytes": 289670,
+    "mode": "production",
+    "nodeEnv": "production"
+  },
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "repetitions": 3,
+  "method": {
+    "peak": "Linux /proc renderer VmHWM: peak resident set since process birth through each checkpoint",
+    "isolation": "One page and one saved world in each fresh Chromium process/profile; preparation browser fully closed first",
+    "workload": "Production landing/validation, paused Resume, eight manual weeks and completed automatic save",
+    "jsHeap": "Runtime.getHeapUsage usedSize at checkpoints; neither retained-after-GC nor peak JS heap",
+    "included": "App startup, shared mappings, renderer libraries, DOM/canvas/fonts and ordinary controller/save copies of the same world; PID identification tracing overhead",
+    "excluded": "Node/Vite processes, browser/GPU/utility processes, fixture preparation browser and post-measurement digest inspection",
+    "limits": "Three desktop Linux samples/case, not percentiles, total browser memory, phone budgets, maximum-payload proof or other-engine evidence"
+  },
+  "measurements": [
+    {
+      "case": "empty-landing",
+      "repetition": 1,
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "startingTick": null,
+      "payloadBytes": null,
+      "events": null,
+      "population": null,
+      "resumeMs": null,
+      "checkpoints": {
+        "landing": {
+          "pid": 30376,
+          "startTicks": "2119451",
+          "rssBytes": 117960704,
+          "peakRssBytes": 117960704,
+          "usedJsHeapBytes": 3144100
+        }
+      },
+      "stored": null,
+      "errors": []
+    },
+    {
+      "case": "empty-landing",
+      "repetition": 2,
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "startingTick": null,
+      "payloadBytes": null,
+      "events": null,
+      "population": null,
+      "resumeMs": null,
+      "checkpoints": {
+        "landing": {
+          "pid": 30450,
+          "startTicks": "2119479",
+          "rssBytes": 118042624,
+          "peakRssBytes": 118042624,
+          "usedJsHeapBytes": 3178688
+        }
+      },
+      "stored": null,
+      "errors": []
+    },
+    {
+      "case": "empty-landing",
+      "repetition": 3,
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "startingTick": null,
+      "payloadBytes": null,
+      "events": null,
+      "population": null,
+      "resumeMs": null,
+      "checkpoints": {
+        "landing": {
+          "pid": 30521,
+          "startTicks": "2119503",
+          "rssBytes": 118501376,
+          "peakRssBytes": 118501376,
+          "usedJsHeapBytes": 3068552
+        }
+      },
+      "stored": null,
+      "errors": []
+    },
+    {
+      "case": "p1-settlement-v1-1000",
+      "repetition": 1,
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "startingTick": 1000,
+      "payloadBytes": 374096,
+      "events": 480,
+      "population": 39,
+      "resumeMs": 412.50664600002347,
+      "checkpoints": {
+        "landing": {
+          "pid": 30660,
+          "startTicks": "2119583",
+          "rssBytes": 150970368,
+          "peakRssBytes": 150970368,
+          "usedJsHeapBytes": 10660036
+        },
+        "resumed": {
+          "pid": 30660,
+          "startTicks": "2119583",
+          "rssBytes": 181174272,
+          "peakRssBytes": 181407744,
+          "usedJsHeapBytes": 17211156
+        },
+        "autosaved": {
+          "pid": 30660,
+          "startTicks": "2119583",
+          "rssBytes": 228761600,
+          "peakRssBytes": 237744128,
+          "usedJsHeapBytes": 30529424
+        }
+      },
+      "stored": {
+        "tick": 1008,
+        "version": "p1-settlement-v1",
+        "digest": "c97d58bc5336a14daacbe5463d4e3e7c06d6c7b04ebf22d5b50527e53599ecff"
+      },
+      "errors": []
+    },
+    {
+      "case": "p1-settlement-v1-1000",
+      "repetition": 2,
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "startingTick": 1000,
+      "payloadBytes": 374096,
+      "events": 480,
+      "population": 39,
+      "resumeMs": 366.7872749999806,
+      "checkpoints": {
+        "landing": {
+          "pid": 30789,
+          "startTicks": "2119731",
+          "rssBytes": 150638592,
+          "peakRssBytes": 150638592,
+          "usedJsHeapBytes": 9962540
+        },
+        "resumed": {
+          "pid": 30789,
+          "startTicks": "2119731",
+          "rssBytes": 180899840,
+          "peakRssBytes": 180899840,
+          "usedJsHeapBytes": 16772404
+        },
+        "autosaved": {
+          "pid": 30789,
+          "startTicks": "2119731",
+          "rssBytes": 226668544,
+          "peakRssBytes": 235483136,
+          "usedJsHeapBytes": 31447888
+        }
+      },
+      "stored": {
+        "tick": 1008,
+        "version": "p1-settlement-v1",
+        "digest": "c97d58bc5336a14daacbe5463d4e3e7c06d6c7b04ebf22d5b50527e53599ecff"
+      },
+      "errors": []
+    },
+    {
+      "case": "p1-settlement-v1-1000",
+      "repetition": 3,
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "startingTick": 1000,
+      "payloadBytes": 374096,
+      "events": 480,
+      "population": 39,
+      "resumeMs": 404.2336200000136,
+      "checkpoints": {
+        "landing": {
+          "pid": 30936,
+          "startTicks": "2119875",
+          "rssBytes": 150765568,
+          "peakRssBytes": 150765568,
+          "usedJsHeapBytes": 10747332
+        },
+        "resumed": {
+          "pid": 30936,
+          "startTicks": "2119875",
+          "rssBytes": 179810304,
+          "peakRssBytes": 179810304,
+          "usedJsHeapBytes": 22600072
+        },
+        "autosaved": {
+          "pid": 30936,
+          "startTicks": "2119875",
+          "rssBytes": 225574912,
+          "peakRssBytes": 231489536,
+          "usedJsHeapBytes": 23097724
+        }
+      },
+      "stored": {
+        "tick": 1008,
+        "version": "p1-settlement-v1",
+        "digest": "c97d58bc5336a14daacbe5463d4e3e7c06d6c7b04ebf22d5b50527e53599ecff"
+      },
+      "errors": []
+    },
+    {
+      "case": "p1-settlement-v1-10000",
+      "repetition": 1,
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "startingTick": 10000,
+      "payloadBytes": 1211545,
+      "events": 2438,
+      "population": 0,
+      "resumeMs": 734.0789010000008,
+      "checkpoints": {
+        "landing": {
+          "pid": 31067,
+          "startTicks": "2120092",
+          "rssBytes": 180629504,
+          "peakRssBytes": 188366848,
+          "usedJsHeapBytes": 11651412
+        },
+        "resumed": {
+          "pid": 31067,
+          "startTicks": "2120092",
+          "rssBytes": 242343936,
+          "peakRssBytes": 242343936,
+          "usedJsHeapBytes": 25029720
+        },
+        "autosaved": {
+          "pid": 31067,
+          "startTicks": "2120092",
+          "rssBytes": 322416640,
+          "peakRssBytes": 331202560,
+          "usedJsHeapBytes": 54855836
+        }
+      },
+      "stored": {
+        "tick": 10008,
+        "version": "p1-settlement-v1",
+        "digest": "2322d0a1126837461fca1cffc74b0bd70759f3e52d0c2b7fa77e1f7ceb0cc3ac"
+      },
+      "errors": []
+    },
+    {
+      "case": "p1-settlement-v1-10000",
+      "repetition": 2,
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "startingTick": 10000,
+      "payloadBytes": 1211545,
+      "events": 2438,
+      "population": 0,
+      "resumeMs": 611.4804440000153,
+      "checkpoints": {
+        "landing": {
+          "pid": 31210,
+          "startTicks": "2120343",
+          "rssBytes": 183603200,
+          "peakRssBytes": 191459328,
+          "usedJsHeapBytes": 11694220
+        },
+        "resumed": {
+          "pid": 31210,
+          "startTicks": "2120343",
+          "rssBytes": 246132736,
+          "peakRssBytes": 246132736,
+          "usedJsHeapBytes": 28438040
+        },
+        "autosaved": {
+          "pid": 31210,
+          "startTicks": "2120343",
+          "rssBytes": 323809280,
+          "peakRssBytes": 333987840,
+          "usedJsHeapBytes": 65744220
+        }
+      },
+      "stored": {
+        "tick": 10008,
+        "version": "p1-settlement-v1",
+        "digest": "2322d0a1126837461fca1cffc74b0bd70759f3e52d0c2b7fa77e1f7ceb0cc3ac"
+      },
+      "errors": []
+    },
+    {
+      "case": "p1-settlement-v1-10000",
+      "repetition": 3,
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "startingTick": 10000,
+      "payloadBytes": 1211545,
+      "events": 2438,
+      "population": 0,
+      "resumeMs": 732.4065570000093,
+      "checkpoints": {
+        "landing": {
+          "pid": 31350,
+          "startTicks": "2120594",
+          "rssBytes": 183062528,
+          "peakRssBytes": 189767680,
+          "usedJsHeapBytes": 11693156
+        },
+        "resumed": {
+          "pid": 31350,
+          "startTicks": "2120594",
+          "rssBytes": 244051968,
+          "peakRssBytes": 244051968,
+          "usedJsHeapBytes": 30512164
+        },
+        "autosaved": {
+          "pid": 31350,
+          "startTicks": "2120594",
+          "rssBytes": 323108864,
+          "peakRssBytes": 333156352,
+          "usedJsHeapBytes": 65946736
+        }
+      },
+      "stored": {
+        "tick": 10008,
+        "version": "p1-settlement-v1",
+        "digest": "2322d0a1126837461fca1cffc74b0bd70759f3e52d0c2b7fa77e1f7ceb0cc3ac"
+      },
+      "errors": []
+    },
+    {
+      "case": "p1-settlement-v2-1000",
+      "repetition": 1,
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "startingTick": 1000,
+      "payloadBytes": 370128,
+      "events": 478,
+      "population": 40,
+      "resumeMs": 411.04720400000224,
+      "checkpoints": {
+        "landing": {
+          "pid": 31485,
+          "startTicks": "2120791",
+          "rssBytes": 151232512,
+          "peakRssBytes": 151232512,
+          "usedJsHeapBytes": 9975684
+        },
+        "resumed": {
+          "pid": 31485,
+          "startTicks": "2120791",
+          "rssBytes": 180137984,
+          "peakRssBytes": 180301824,
+          "usedJsHeapBytes": 16599772
+        },
+        "autosaved": {
+          "pid": 31485,
+          "startTicks": "2120791",
+          "rssBytes": 227037184,
+          "peakRssBytes": 235896832,
+          "usedJsHeapBytes": 31245668
+        }
+      },
+      "stored": {
+        "tick": 1008,
+        "version": "p1-settlement-v2",
+        "digest": "af481c7ff3f7817f477f522f72becee58ce93af36065bc50e535379ac110c82b"
+      },
+      "errors": []
+    },
+    {
+      "case": "p1-settlement-v2-1000",
+      "repetition": 2,
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "startingTick": 1000,
+      "payloadBytes": 370128,
+      "events": 478,
+      "population": 40,
+      "resumeMs": 393.63441800000146,
+      "checkpoints": {
+        "landing": {
+          "pid": 31628,
+          "startTicks": "2120943",
+          "rssBytes": 151396352,
+          "peakRssBytes": 151396352,
+          "usedJsHeapBytes": 9944216
+        },
+        "resumed": {
+          "pid": 31628,
+          "startTicks": "2120943",
+          "rssBytes": 181202944,
+          "peakRssBytes": 181202944,
+          "usedJsHeapBytes": 15334044
+        },
+        "autosaved": {
+          "pid": 31628,
+          "startTicks": "2120943",
+          "rssBytes": 227909632,
+          "peakRssBytes": 235462656,
+          "usedJsHeapBytes": 29931188
+        }
+      },
+      "stored": {
+        "tick": 1008,
+        "version": "p1-settlement-v2",
+        "digest": "af481c7ff3f7817f477f522f72becee58ce93af36065bc50e535379ac110c82b"
+      },
+      "errors": []
+    },
+    {
+      "case": "p1-settlement-v2-1000",
+      "repetition": 3,
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "startingTick": 1000,
+      "payloadBytes": 370128,
+      "events": 478,
+      "population": 40,
+      "resumeMs": 357.71753200000967,
+      "checkpoints": {
+        "landing": {
+          "pid": 31765,
+          "startTicks": "2121094",
+          "rssBytes": 151937024,
+          "peakRssBytes": 151937024,
+          "usedJsHeapBytes": 10161656
+        },
+        "resumed": {
+          "pid": 31765,
+          "startTicks": "2121094",
+          "rssBytes": 178552832,
+          "peakRssBytes": 178552832,
+          "usedJsHeapBytes": 15308692
+        },
+        "autosaved": {
+          "pid": 31765,
+          "startTicks": "2121094",
+          "rssBytes": 226168832,
+          "peakRssBytes": 235065344,
+          "usedJsHeapBytes": 29931864
+        }
+      },
+      "stored": {
+        "tick": 1008,
+        "version": "p1-settlement-v2",
+        "digest": "af481c7ff3f7817f477f522f72becee58ce93af36065bc50e535379ac110c82b"
+      },
+      "errors": []
+    },
+    {
+      "case": "p1-settlement-v2-10000",
+      "repetition": 1,
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "startingTick": 10000,
+      "payloadBytes": 1230160,
+      "events": 2493,
+      "population": 0,
+      "resumeMs": 693.0237649999908,
+      "checkpoints": {
+        "landing": {
+          "pid": 31902,
+          "startTicks": "2121300",
+          "rssBytes": 184152064,
+          "peakRssBytes": 190980096,
+          "usedJsHeapBytes": 11817652
+        },
+        "resumed": {
+          "pid": 31902,
+          "startTicks": "2121300",
+          "rssBytes": 245604352,
+          "peakRssBytes": 245604352,
+          "usedJsHeapBytes": 29655580
+        },
+        "autosaved": {
+          "pid": 31902,
+          "startTicks": "2121300",
+          "rssBytes": 318676992,
+          "peakRssBytes": 328970240,
+          "usedJsHeapBytes": 65495676
+        }
+      },
+      "stored": {
+        "tick": 10008,
+        "version": "p1-settlement-v2",
+        "digest": "156fff1358c7a69f2233958b25f2b5314cac7c9d001202b023d8e72ca84e5cff"
+      },
+      "errors": []
+    },
+    {
+      "case": "p1-settlement-v2-10000",
+      "repetition": 2,
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "startingTick": 10000,
+      "payloadBytes": 1230160,
+      "events": 2493,
+      "population": 0,
+      "resumeMs": 682.0491619999812,
+      "checkpoints": {
+        "landing": {
+          "pid": 32044,
+          "startTicks": "2121545",
+          "rssBytes": 183263232,
+          "peakRssBytes": 191488000,
+          "usedJsHeapBytes": 11815840
+        },
+        "resumed": {
+          "pid": 32044,
+          "startTicks": "2121545",
+          "rssBytes": 245182464,
+          "peakRssBytes": 245182464,
+          "usedJsHeapBytes": 34375180
+        },
+        "autosaved": {
+          "pid": 32044,
+          "startTicks": "2121545",
+          "rssBytes": 318619648,
+          "peakRssBytes": 327323648,
+          "usedJsHeapBytes": 82953776
+        }
+      },
+      "stored": {
+        "tick": 10008,
+        "version": "p1-settlement-v2",
+        "digest": "156fff1358c7a69f2233958b25f2b5314cac7c9d001202b023d8e72ca84e5cff"
+      },
+      "errors": []
+    },
+    {
+      "case": "p1-settlement-v2-10000",
+      "repetition": 3,
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "startingTick": 10000,
+      "payloadBytes": 1230160,
+      "events": 2493,
+      "population": 0,
+      "resumeMs": 641.5149190000084,
+      "checkpoints": {
+        "landing": {
+          "pid": 32175,
+          "startTicks": "2121792",
+          "rssBytes": 181825536,
+          "peakRssBytes": 189956096,
+          "usedJsHeapBytes": 11818432
+        },
+        "resumed": {
+          "pid": 32175,
+          "startTicks": "2121792",
+          "rssBytes": 242626560,
+          "peakRssBytes": 242626560,
+          "usedJsHeapBytes": 29929764
+        },
+        "autosaved": {
+          "pid": 32175,
+          "startTicks": "2121792",
+          "rssBytes": 318021632,
+          "peakRssBytes": 328339456,
+          "usedJsHeapBytes": 65478788
+        }
+      },
+      "stored": {
+        "tick": 10008,
+        "version": "p1-settlement-v2",
+        "digest": "156fff1358c7a69f2233958b25f2b5314cac7c9d001202b023d8e72ca84e5cff"
+      },
+      "errors": []
+    }
+  ]
+}
