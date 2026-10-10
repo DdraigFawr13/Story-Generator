@@ -43,7 +43,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 
 ## Current work
 
-**Direction C (Naturalist's Observation Desk) and Illustrated Minimal are selected.** Viewer PR #14 is merged. D-022 authorizes continued engineering and milestone merges; D-023 guides winter preparation and recovery. The v2 rules make winter crops dormant and preserve foraging when reserves are low. The viewer shows actual labor and winter evidence. Real v1 browser storage/continuation measurements cover 1,000 and 10,000 weeks, with a controlled Chromium crash study. Selected reference images remain unavailable, so current drawings are temporary. See the [handoff](docs/PROJECT_HANDOFF.md) and [balance record](docs/PHASE1_BALANCE.md).
+**Direction C (Naturalist's Observation Desk) and Illustrated Minimal are selected.** D-022 authorizes continued engineering and milestone merges; D-023 guides winter preparation and recovery. The v2 rules make winter crops dormant and preserve foraging when reserves are low. The viewer shows actual labor, winter evidence and illustrative resident dots. D-024 selects autosave every eight unsaved weeks: about two active minutes at 1x, before write delays/failures; manual Save remains available. Real v1 browser storage/continuation measurements cover 1,000 and 10,000 weeks, with a controlled Chromium crash study. Selected reference images remain unavailable, so current drawings are temporary. See the [handoff](docs/PROJECT_HANDOFF.md) and [balance record](docs/PHASE1_BALANCE.md).
 
 ## Development
 

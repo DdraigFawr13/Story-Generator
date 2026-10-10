@@ -1,6 +1,6 @@
 # P1 local persistence contract — proposal v1
 
-**Status: implemented engineering baseline under D-022; final storage-policy/device acceptance remains open.** D-012 approves local save/resume and D-013 accepts IndexedDB. The adapter/controller implement the budgets below without changing canonical simulation rules. See [PHASE1_PLAYBACK.md](PHASE1_PLAYBACK.md) for tests and remaining measurements.
+**Status: implemented engineering baseline under D-022; eight-week cadence selected under D-024; broader storage-policy/device acceptance remains open.** D-012 approves local save/resume and D-013 accepts IndexedDB. The adapter/controller implement the budgets below without changing canonical simulation rules. See [PHASE1_PLAYBACK.md](PHASE1_PLAYBACK.md) for tests and remaining measurements.
 
 Related: [plan review](PLAN_REVIEW.md), [accepted architecture](ARCHITECTURE_REVIEW.md), [implementation plan](IMPLEMENTATION_PLAN.md), [decision register](DECISIONS.md).
 
@@ -12,9 +12,9 @@ A saved chronicle is evidence, not a mutation log. Resumption restores full auth
 
 ## Proposed budgets
 
-| Setting | Initial proposal | Exact meaning |
+| Setting | Current baseline | Exact meaning |
 | --- | --- | --- |
-| Autosave interval | 20 committed ticks | Request a snapshot when current tick minus last successfully saved tick reaches 20 |
+| Autosave interval | 8 committed ticks, selected under D-024 | Request a snapshot when current tick minus last successfully saved tick reaches 8 |
 | Wall-clock throttle | 5 seconds | Minimum between automatic write starts; use an adapter monotonic clock, outside canonical state |
 | Retry after automatic failure | 30 seconds | No repeated write loop; manual Save may retry immediately |
 | Live chronicle window | 200 headlines | Presentation only; filtering/grouping does not remove canonical records |
@@ -23,9 +23,9 @@ A saved chronicle is evidence, not a mutation log. Resumption restores full auth
 | Supported-run validation horizon | 10,000 ticks | Required benchmark fixture, not a forced stop or unlimited-history promise |
 | Proposed target browsers | Current stable Chromium, Firefox and Safari; Android Chrome | Record exact tested versions and physical phone model at acceptance |
 
-These are starting budgets, not measured capacity guarantees. An archive can reach its limit before the validation horizon. Browser quota may also be lower than the payload budget. Final approval should use measured results when implementation is authorized.
+Apart from the selected cadence, these remain starting budgets, not measured capacity guarantees. An archive can reach its limit before the validation horizon. Browser quota may also be lower than the payload budget. Final approval should use measured device results.
 
-Review cadence against D-015's 10–15-minute/year target. With the proposed 48-week calendar, 20 ticks represent roughly 4 minutes 10 seconds–6 minutes 15 seconds of active 1x viewing; the five-second throttle is only a minimum write interval, not a five-second save guarantee. The proposed 15-second tick in ADR-002 makes that interval five minutes. Decide whether this loss window is acceptable before approving Q-006; no cadence change is approved here.
+D-024 replaces the former 20-week/five-minute baseline with eight weeks. At the implemented 15-second week, a request becomes due after two active minutes at 1x, 30 seconds at 4x or 7.5 seconds at 16x. These are trigger times since the last successful saved tick, not guaranteed recovery windows: scheduling, an in-flight write, throttling or storage failure can delay completion. The five-second throttle is a minimum between automatic write starts, not a five-second save guarantee. Manual Save remains available. This cadence selection does not close the remaining Q-006 budget/device review.
 
 ## Payload and envelope
 
@@ -59,7 +59,7 @@ Use an exclusive same-origin writer lock for the application lifetime (proposed 
 
 ## Autosave and replacement behavior
 
-- The 20-tick trigger is measured from the last successful save, not the last attempt. If throttled, retain one pending request. Pausing with such a request does not discard it.
+- The eight-tick trigger is measured from the last successful save, not the last attempt. A successful manual save also resets the interval. If throttled, retain one pending request. Pausing with such a request does not discard it.
 - Manual Save bypasses the automatic throttle and snapshots the current committed tick.
 - New World creates an unsaved in-memory candidate. If a slot exists, keep autosave for the candidate disabled until the user explicitly chooses to replace that saved world. Explain that the slot holds only one world.
 - The old slot remains intact until the replacement transaction completes. If replacement fails, the candidate remains in memory and the old save remains resumable.
@@ -109,7 +109,7 @@ A transient storage failure does not automatically stop a valid simulation. Disp
 5. **World replacement:** world A is saved; world B is created. Until replacement is chosen, neither autosave nor a stale queued write replaces A. An unsuccessful replacement still resumes A.
 6. **Integrity:** alter a stored resource or remove a referenced event. Reject both checksum failures and independently checksummed but structurally invalid fixtures without changing the current world.
 7. **Concurrency:** tab A holds the writer lock; tab B cannot advance/save. After takeover, B reloads the slot before continuing.
-8. **Throttling:** 20 ticks elapse before five seconds; exactly one request remains pending. Failed autosaves observe 30-second backoff; manual retry is immediate.
+8. **Throttling:** eight ticks elapse before five seconds, for example by manual stepping; exactly one request remains pending. Failed autosaves observe 30-second backoff; manual retry is immediate.
 9. **Byte boundary:** test ASCII and multibyte text just below, at and above 16 MiB. Payload byte count, not JavaScript string length, determines admission.
 10. **Extinction:** save a zero-population world, resume and step according to its mechanics contract; no new founders or unsolicited reset.
 
@@ -117,4 +117,4 @@ A transient storage failure does not automatically stop a valid simulation. Disp
 
 The implemented adapter passes complete-state resume, real IndexedDB abort-after-request-success rollback, injected quota failure, corrupt/unsupported data, replacement and two-tab handoff checks. The save queue also passes clicked-tick capture, coalescing, throttle/backoff and session barriers. Injected quota errors do not measure actual quota capacity; browser transactions do not guarantee crash/eviction durability. Real desktop IndexedDB measurements at 1,000/10,000 weeks and one controlled Chromium process-crash point now supplement those checks. Physical Android/installed Safari and isolated peak-memory evidence remain required. See [PHASE1_PLAYBACK.md](PHASE1_PLAYBACK.md).
 
-Review Q-006 against the table and replacement/concurrency behavior. Weekly balance acceptance (Q-004), storage-policy acceptance (Q-006) and selected-art validation remain carried first-playable requirements. Architecture (Q-003) is accepted under D-013 and scaffolding authorized under D-020; ASCII seeds and named-stream determinism are implemented in the foundation baseline. The proposed autosave cadence has not become final policy by being documented.
+Review the remaining Q-006 budgets/device evidence against the table and replacement/concurrency behavior. Weekly balance acceptance (Q-004), broader storage-policy acceptance (Q-006) and selected-art validation remain carried first-playable requirements. Architecture (Q-003) is accepted under D-013 and scaffolding authorized under D-020; ASCII seeds and named-stream determinism are implemented in the foundation baseline. The eight-week cadence is an explicit user selection under D-024, rather than acceptance inferred from documentation or tests.
