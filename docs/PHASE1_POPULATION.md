@@ -28,8 +28,10 @@ Local full verification passes **118 core tests** and **87 browser checks** acro
 
 [Desktop](evidence/phase1-population-desktop.png) and [phone](evidence/phase1-population-phone.png) screenshots show the actual RIVERSIDE founding world with 24 dots, at the 18px zoom level. Both captures were inspected; the capture flows reported no page or console errors. Browser checks also exercise the default 12px view, zoom changes, 320/390/768/1280px layouts and 44px controls. These are desktop-browser engineering observations, not physical-device or selected-art acceptance.
 
-## Existing development warning and remaining gates
+## Development warning follow-up and remaining gates
 
 The local Firefox suite emitted an intermittent React development warning through Vite's console forwarding around context teardown; browser console assertions and all functional checks passed. An isolated five-context, ten-step comparison reproduced the warning with the original viewer from `4aeb121`; the marker viewer had no warning in that comparison. This identifies a pre-existing viewer lifecycle follow-up, without claiming that every occurrence or its root cause is resolved. The controlled comparison did not modify production source files.
+
+The subsequent investigation captured the hidden-page event publishing an unnecessary new view through an already paused controller. Pause is now idempotent when idle, with a failing-before/passing-after regression and a real sixteen-context Firefox teardown check. See the [playback follow-up](PHASE1_PLAYBACK.md#idempotent-pause-follow-up--2026-10-10) for the fix and evidence scope.
 
 Task 1.17's functional state-derived rendering is complete. Selected Illustrated Minimal references remain unavailable, and gate 0.6 stays open. Physical Android/installed Safari evidence, human understandability/engagement review and final autosave-policy acceptance are still required before accepting Phase 1 and entering P2. See [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md).
