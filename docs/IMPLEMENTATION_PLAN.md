@@ -24,7 +24,7 @@ D-025 now authorizes Phase 2 resident/household foundations while the remaining 
 6. Log/highlight accessibility, mobile readability, simulation speed, memory, and determinism are release criteria, not post-launch extras.
 7. Each milestone closes with tests, a qualitative story review across multiple seeds, doc updates, a scoped PR, and branch cleanup.
 8. Work in small independently mergeable PRs. Do not create speculative multi-phase branches or merge failing changes.
-9. **No scheduled, automatic or manual Vercel deployments at every commit:** preview at demonstrable visual milestones only.
+9. **Vercel updates only from commits on `main` by default (D-026):** production follows `main`; branch previews are disabled. Verify the deployed main revision and live flow. This supersedes the earlier visual-milestone preview rule; see [DEPLOYMENT.md](DEPLOYMENT.md).
 10. Integration test evidence should link to actual commands/results when engineering begins; documentation alone is not a tested application.
 
 ## Dependency map
