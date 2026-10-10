@@ -4,6 +4,8 @@ A procedural, simulation-driven pixel world that tells the histories of its soci
 
 **Status:** The weekly settlement engine runs in a browser viewer with Play/Pause, step, 1x/4x/16x, a factual chronicle and atomic browser-local save/resume. New worlds use versioned winter/recovery rules; existing v1 saves retain their original behavior. Phase 1 acceptance remains open for selected art, physical devices and human experience review.
 
+[Play Story Generator](https://story-generator-opal.vercel.app). Saves stay in this browser on this site; start a seeded world, then Play or Step to observe its history. Production updates only from commits on `main` by default.
+
 ## Vision
 
 Start a seeded world, observe a society from founding to transformation or collapse, and follow its emergent history through a synchronized map and chronicle. The underlying simulation determines what happens; the narrative layer reports events, their causes, and their consequences. Neither fixed plotlines nor independent random flavor messages substitute for simulated state.
