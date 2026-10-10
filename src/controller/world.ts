@@ -1,5 +1,10 @@
 import { randomSeed } from '../adapters/crypto';
 import {
+  readRecapPreference,
+  writeRecapPreference,
+  type RecapCadence,
+} from '../adapters/reader-preferences';
+import {
   acquireWriter,
   decodeSave,
   openLocalStore,
@@ -16,6 +21,7 @@ import { foodCapacity, shelter } from '../sim/settlement-math';
 import { advanceSettlement } from '../sim/settlement';
 import type { SettlementSnapshot } from '../sim/state';
 import { browserClock, SaveQueue, type TimerClock } from './save-queue';
+import { completedPeriods, periodWeeks, type RecapPeriod, type RecapRequest } from './recaps';
 
 export const NORMAL_WEEK_MS = 15_000;
 export type Speed = 1 | 4 | 16;
@@ -26,6 +32,8 @@ export interface WorldRuntime {
   open(): Promise<SaveStore>;
   visible(): boolean;
   session(): string;
+  recapPreference?(): RecapCadence;
+  storeRecapPreference?(cadence: RecapCadence): void;
 }
 const browserRuntime: WorldRuntime = {
   clock: browserClock,
@@ -34,6 +42,8 @@ const browserRuntime: WorldRuntime = {
   open: openLocalStore,
   visible: () => document.visibilityState !== 'hidden',
   session: () => crypto.randomUUID(),
+  recapPreference: readRecapPreference,
+  storeRecapPreference: writeRecapPreference,
 };
 
 export class WorldController {
@@ -45,6 +55,9 @@ export class WorldController {
   #error = '';
   #mode: 'loading' | 'owner' | 'read-only' | 'unavailable' = 'loading';
   #playing = false;
+  #recapCadence: RecapCadence = 'yearly';
+  #recapRequest: RecapRequest | null = null;
+  #recapRevision = 0;
   #speed: Speed = 1;
   #halted = '';
   #busy = false;
@@ -60,7 +73,11 @@ export class WorldController {
   constructor(
     readonly runtime: WorldRuntime = browserRuntime,
     readonly limits: HistoryLimits = DEFAULT_HISTORY_LIMITS,
-  ) {}
+  ) {
+    const preference = runtime.recapPreference?.();
+    if (preference === 'seasonal' || preference === 'off') this.#recapCadence = preference;
+    this.#view = this.#present();
+  }
   get view() {
     return this.#view;
   }
@@ -82,6 +99,8 @@ export class WorldController {
       loadError: this.#loadError,
       error: this.#error,
       playing: this.#playing,
+      recapCadence: this.#recapCadence,
+      recapRequest: this.#recapRequest,
       speed: this.#speed,
       halted: this.#halted,
       busy: this.#busy,
@@ -212,6 +231,7 @@ export class WorldController {
   }
   #replaceWorld(world: SettlementSnapshot | null) {
     this.#world = world;
+    this.#recapRequest = null;
     this.#worldSession++;
   }
   async newWorld(seed: string) {
@@ -278,6 +298,7 @@ export class WorldController {
   }
   #advance() {
     try {
+      const previousTick = this.#world!.tick;
       const next = advanceSettlement(this.#world!, 1, this.limits);
       this.#world = next.state;
       if (next.halted) {
@@ -285,10 +306,38 @@ export class WorldController {
         this.pause();
       }
       if (!this.#replaceRequired) this.#queue?.automatic(this.#world);
+      if (
+        this.#playing &&
+        this.#recapCadence !== 'off' &&
+        this.#world.tick > previousTick &&
+        this.#world.tick % periodWeeks(this.#recapCadence) === 0
+      ) {
+        this.readRecap({ kind: this.#recapCadence, endTick: this.#world.tick });
+      }
     } catch (error) {
       this.#error = message(error);
       this.pause();
     }
+    this.#publish();
+  }
+  recapCadence(cadence: RecapCadence) {
+    if (!['yearly', 'seasonal', 'off'].includes(cadence)) throw new Error('Unknown recap cadence.');
+    this.#recapCadence = cadence;
+    this.runtime.storeRecapPreference?.(cadence);
+    this.#publish();
+  }
+  readRecap(period: RecapPeriod) {
+    if (!this.#world || this.#disposed) return;
+    const size = periodWeeks(period.kind);
+    if (
+      !Number.isSafeInteger(period.endTick) ||
+      period.endTick <= 0 ||
+      period.endTick % size !== 0 ||
+      period.endTick / size > completedPeriods(this.#world.tick, period.kind)
+    )
+      throw new Error('That recap period is not complete.');
+    this.pause();
+    this.#recapRequest = Object.freeze({ ...period, revision: ++this.#recapRevision });
     this.#publish();
   }
   play() {
@@ -339,3 +388,4 @@ function message(error: unknown) {
 }
 export type WorldView = WorldController['view'];
 export type { SettlementSnapshot, SaveEnvelope };
+export type { RecapCadence };
