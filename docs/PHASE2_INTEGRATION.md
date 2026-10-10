@@ -2,7 +2,7 @@
 
 D-025 and D-030 authorize these scoped increments while the remaining P1 reviews stay open. Each increment ends with verification, a scoped squash merge, main-only deployment verification and an updated handoff.
 
-## I.1 — Complete founding world and save foundation
+## I.1 — Complete founding world and save foundation (implemented)
 
 The internal `p2-world-foundation-v1` world uses schema 3. It is deliberately tick-zero only; the advancing viewer remains P1 until I.2 and I.3 are ready. It cannot be passed to the P1 loader or reducer. This is a fresh-world factory, never a P1 save migration.
 
@@ -27,4 +27,6 @@ Partnership/guardianship, social memory and autonomous social decisions remain s
 
 ## Current compact handoff
 
-I.1 implementation and validation are in progress on `feat/resident-world-save`, based on main `1dfa235`. I.2 and I.3 are next; the public viewer still runs `p1-settlement-v2`. Update this checkpoint with actual merge/test/deployment evidence at milestone completion.
+I.1 is implemented in [PR #27](https://github.com/DdraigFawr13/Story-Generator/pull/27), based on main `1dfa235`. Full local verification passed: 147 core tests in 13 files (562.18 seconds), 162 browser checks (54 each in Chromium, Firefox and WebKit), formatting, strict types, 35-module boundaries, production build, the independent 100-map terrain probe and all three resident identity vectors. The browser run includes P2 payload/checksum parity and the existing P1 local-save, recap, evidence and phone regressions. The PR records exact reviewed-head CI and main deployment/live verification when merged.
+
+I.2 and I.3 are next. The public viewer still runs `p1-settlement-v2`; P1 acceptance gaps remain open. No P2 world is advanced or presented as a playable resident simulation by I.1. Preserve the founding-only codec and original P1 versions when introducing the evolving successor.

@@ -70,7 +70,7 @@ The [phone text-reflow follow-up](PHASE1_VIEWER.md#phone-text-reflow--2026-10-10
 
 ## Active continuation — D-030
 
-The user explicitly requested continued building, milestone merges and compact conversation checkpoints. Follow [PHASE2_INTEGRATION.md](PHASE2_INTEGRATION.md) through world/save foundations, advancing individuals and factual personal inspection. Keep only genuinely blocking questions for the user.
+The user explicitly requested continued building, milestone merges and compact conversation checkpoints. Follow [PHASE2_INTEGRATION.md](PHASE2_INTEGRATION.md) through world/save foundations, advancing individuals and factual personal inspection. The complete P2 founding world/save foundation in [PR #27](https://github.com/DdraigFawr13/Story-Generator/pull/27) has passed 147 local core tests and 162 three-engine browser checks; its PR records CI and production verification. The next increment is actual advancing life/work with direct evolving-state validation. Keep only genuinely blocking questions for the user.
 
 ## Next work in order
 
