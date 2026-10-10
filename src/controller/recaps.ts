@@ -1,6 +1,7 @@
+import type { WorldSnapshot } from '../sim/world';
 import { SEASONS, validateTick, WEEKS_PER_SEASON, WEEKS_PER_YEAR } from '../sim/clock';
 import type { Immutable } from '../sim/immutable';
-import type { SettlementEvent, SettlementSnapshot } from '../sim/state';
+import type { SettlementEvent } from '../sim/state';
 
 export type RecapKind = 'yearly' | 'seasonal';
 export interface RecapPeriod {
@@ -92,19 +93,19 @@ function paragraph(sentences: readonly Sentence[]): RecapParagraph {
     sourceIds: unique(sentences.flatMap((entry) => entry.sourceIds)),
   };
 }
-function buildingId(event: Event, world: SettlementSnapshot): number {
+function buildingId(event: Event, world: WorldSnapshot): number {
   const id = event.entityIds.find((value) => value !== world.world.settlement.id);
   if (id === undefined) throw new Error('Historical building record has no building identity.');
   return id;
 }
-function buildingName(event: Event, world: SettlementSnapshot): string {
+function buildingName(event: Event, world: WorldSnapshot): string {
   const kind = textFact(event, 'kind');
   if (!['hut', 'field', 'store'].includes(kind)) throw new Error('Unknown historical building.');
   return `${kind} #${buildingId(event, world)}`;
 }
 
 /** A presentation projection of admitted history; never advances or reconstructs the world. */
-export function buildRecap(world: SettlementSnapshot, period: RecapPeriod): Recap {
+export function buildRecap(world: WorldSnapshot, period: RecapPeriod): Recap {
   const title = periodTitle(period);
   if (period.endTick > world.tick) throw new Error('That period has not finished yet.');
   const startTick = period.endTick - periodWeeks(period.kind) + 1;

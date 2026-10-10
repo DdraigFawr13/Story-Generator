@@ -6,20 +6,17 @@ import {
 } from '../adapters/reader-preferences';
 import {
   acquireWriter,
-  decodeSave,
   openLocalStore,
   persistenceAvailable,
-  type SaveEnvelope,
   type SaveStore,
   type WriterLease,
 } from '../adapters/local-save';
 import { DEFAULT_HISTORY_LIMITS, historyLimitReason, type HistoryLimits } from '../sim/admission';
 import { calendarAtTick } from '../sim/clock';
 import { capture } from '../sim/immutable';
-import { createSettlement } from '../sim/settlement-initial';
+import { decodeWorldSave, type WorldSaveEnvelope } from '../adapters/world-save';
+import { advanceWorld, createWorld, worldEconomy, type WorldSnapshot } from '../sim/world';
 import { foodCapacity, shelter } from '../sim/settlement-math';
-import { advanceSettlement } from '../sim/settlement';
-import type { SettlementSnapshot } from '../sim/state';
 import { browserClock, SaveQueue, type TimerClock } from './save-queue';
 import { completedPeriods, periodWeeks, type RecapPeriod, type RecapRequest } from './recaps';
 
@@ -47,9 +44,9 @@ const browserRuntime: WorldRuntime = {
 };
 
 export class WorldController {
-  #world: SettlementSnapshot | null = null;
+  #world: WorldSnapshot | null = null;
   #worldSession = 0;
-  #saved: SaveEnvelope | null = null;
+  #saved: WorldSaveEnvelope | null = null;
   #slotExists = false;
   #loadError = '';
   #error = '';
@@ -116,8 +113,8 @@ export class WorldController {
       housing: world ? shelter(world.world.buildings) : 0,
       foodCapacity: world ? foodCapacity(world.world.buildings) : 0,
       seasonalCropPercent: world
-        ? world.config.economy.seasonMultipliers[
-            Math.floor((Math.max(1, world.tick) - 1) / world.config.weeksPerSeason) % 4
+        ? worldEconomy(world).economy.seasonMultipliers[
+            Math.floor((Math.max(1, world.tick) - 1) / worldEconomy(world).weeksPerSeason) % 4
           ]! / 10
         : 100,
     });
@@ -180,7 +177,7 @@ export class WorldController {
     this.#loadError = '';
     if (this.#slotExists) {
       try {
-        this.#saved = await decodeSave(value);
+        this.#saved = await decodeWorldSave(value);
       } catch (error) {
         this.#loadError = message(error);
       }
@@ -229,7 +226,7 @@ export class WorldController {
   #beginSession(savedTick: number | null) {
     this.#queue?.begin(this.runtime.session(), this.#saved?.generation ?? 0, savedTick);
   }
-  #replaceWorld(world: SettlementSnapshot | null) {
+  #replaceWorld(world: WorldSnapshot | null) {
     this.#world = world;
     this.#recapRequest = null;
     this.#worldSession++;
@@ -237,7 +234,7 @@ export class WorldController {
   async newWorld(seed: string) {
     if (!this.#canControl()) return;
     try {
-      const candidate = createSettlement(seed);
+      const candidate = createWorld(seed);
       const limit = historyLimitReason(candidate, this.limits);
       if (limit) throw new Error(`Founding world exceeds ${limit}.`);
       this.pause();
@@ -268,7 +265,7 @@ export class WorldController {
     try {
       await this.#queue?.settle();
       const value = await this.#store!.read();
-      const candidate = await decodeSave(value);
+      const candidate = await decodeWorldSave(value);
       if (this.#disposed) return;
       const limit = historyLimitReason(candidate.payload, this.limits);
       if (limit) throw new Error(`Saved world exceeds ${limit}.`);
@@ -299,7 +296,7 @@ export class WorldController {
   #advance() {
     try {
       const previousTick = this.#world!.tick;
-      const next = advanceSettlement(this.#world!, 1, this.limits);
+      const next = advanceWorld(this.#world!, 1, this.limits);
       this.#world = next.state;
       if (next.halted) {
         this.#halted = `History limit reached (${next.halted}). The last complete week can still be inspected and saved.`;
@@ -387,5 +384,7 @@ function message(error: unknown) {
   return error instanceof Error ? error.message : 'The operation failed.';
 }
 export type WorldView = WorldController['view'];
-export type { SettlementSnapshot, SaveEnvelope };
+export type { WorldSnapshot, WorldSaveEnvelope };
 export type { RecapCadence };
+
+export { worldEconomy, isIndividualWorld } from '../sim/world';

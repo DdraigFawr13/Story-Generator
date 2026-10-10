@@ -1,12 +1,14 @@
+import { advanceWorld, createWorld } from '../../src/sim/world';
+import {
+  decodeWorldSave,
+  prepareWorldSave,
+  type WorldSaveEnvelope,
+} from '../../src/adapters/world-save';
+import { simulateLivingSettlement } from '../../src/sim/living';
 import { describe, expect, it } from 'vitest';
 import { WorldController, NORMAL_WEEK_MS, type WorldRuntime } from '../../src/controller/world';
 import { SaveQueue, type TimerClock } from '../../src/controller/save-queue';
-import {
-  decodeSave,
-  prepareSave,
-  type SaveEnvelope,
-  type SaveStore,
-} from '../../src/adapters/local-save';
+import { decodeSave, prepareSave, type SaveStore } from '../../src/adapters/local-save';
 import { digestCanonical } from '../../src/adapters/crypto';
 import { canonicalJson } from '../../src/sim/canonical';
 import { advanceSettlement, simulateSettlement } from '../../src/sim/settlement';
@@ -44,7 +46,7 @@ async function until(predicate: () => boolean) {
 function memory(value: unknown = undefined) {
   const state = {
     value,
-    writes: [] as SaveEnvelope[],
+    writes: [] as WorldSaveEnvelope[],
     failure: false,
     hold: false,
     finish: null as (() => void) | null,
@@ -204,7 +206,7 @@ describe('run control and local sessions', () => {
     c.play();
     r.clock.advance(NORMAL_WEEK_MS);
     expect(canonicalJson(c.view.world)).toBe(
-      canonicalJson(simulateSettlement('RIVERSIDE', 2).state),
+      canonicalJson(simulateLivingSettlement('RIVERSIDE', 2).state),
     );
     unsubscribe();
     await c.dispose();
@@ -221,7 +223,7 @@ describe('run control and local sessions', () => {
     r.clock.advance((NORMAL_WEEK_MS / speed) * 57);
     expect(c.view.world!.tick).toBe(57);
     expect(canonicalJson(c.view.world)).toBe(
-      canonicalJson(simulateSettlement('RIVERSIDE', 57).state),
+      canonicalJson(simulateLivingSettlement('RIVERSIDE', 57).state),
     );
     c.pause();
     r.clock.advance(100000);
@@ -281,21 +283,29 @@ describe('run control and local sessions', () => {
     expect(c.view.halted).toContain('event-limit');
     await c.dispose();
   });
-  it('resumes the stored RNG, IDs and archive paused: 57+80 equals 137', async () => {
-    const m = memory(await prepareSave(simulateSettlement('RIVERSIDE', 57).state, 'older', 4));
-    const r = runtime(m.store),
-      c = new WorldController(r.value);
-    await c.initialize();
-    expect(c.view.world).toBeNull();
-    await c.resume();
-    expect(c.view.playing).toBe(false);
-    expect(c.view.save.savedTick).toBe(57);
-    for (let i = 0; i < 80; i++) c.step();
-    expect(canonicalJson(c.view.world)).toBe(
-      canonicalJson(simulateSettlement('RIVERSIDE', 137).state),
-    );
-    await c.dispose();
-  });
+  it.each(['p1-settlement-v1', 'p1-settlement-v2', 'p2-settlement-v1'])(
+    'resumes %s RNG, IDs and archive paused: 57+80 equals 137',
+    async (version) => {
+      const initial =
+        version === 'p2-settlement-v1'
+          ? createWorld('RIVERSIDE')
+          : createSettlement('RIVERSIDE', version);
+      const m = memory(await prepareWorldSave(advanceWorld(initial, 57).state, 'older', 4));
+      const r = runtime(m.store),
+        c = new WorldController(r.value);
+      await c.initialize();
+      expect(c.view.world).toBeNull();
+      await c.resume();
+      expect(c.view.playing).toBe(false);
+      expect(c.view.save.savedTick).toBe(57);
+      for (let i = 0; i < 80; i++) c.step();
+      expect(canonicalJson(c.view.world)).toBe(canonicalJson(advanceWorld(initial, 137).state));
+      c.save();
+      await until(() => c.view.save.savedTick === 137);
+      expect((await decodeWorldSave(m.state.value)).payload.simulationVersion).toBe(version);
+      await c.dispose();
+    },
+  );
   it('protects the previous slot while a new candidate advances and replacement fails', async () => {
     const original = await prepareSave(createSettlement('WORLD_A'), 'older', 1),
       m = memory(original),
@@ -336,7 +346,7 @@ describe('run control and local sessions', () => {
     expect(c.view.replaceRequired).toBe(true);
     c.save(true);
     await until(() => !c.view.save.saving);
-    expect((await decodeSave(m.state.value)).payload.tick).toBe(1);
+    expect((await decodeWorldSave(m.state.value)).payload.tick).toBe(1);
     await c.dispose();
   });
   it.each([undefined, { envelopeVersion: 99 }])(

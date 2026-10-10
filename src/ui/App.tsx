@@ -1,11 +1,17 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
 import { dateLabel } from '../controller/chronicle';
 import { SAVE_POLICY } from '../controller/save-queue';
-import { WorldController, type RecapCadence } from '../controller/world';
+import {
+  WorldController,
+  worldEconomy,
+  isIndividualWorld,
+  type RecapCadence,
+} from '../controller/world';
 import { completedPeriods, periodWeeks, type RecapPeriod } from '../controller/recaps';
 import { MapCanvas } from './MapCanvas';
 import { Chronicle } from './Chronicle';
 import { RecapReader } from './RecapReader';
+import { Residents } from './Residents';
 
 export function App() {
   const [controller, setController] = useState<WorldController | null>(null);
@@ -49,6 +55,11 @@ function Viewer({ controller }: { controller: WorldController }) {
   const [reading, setReading] = useState<{ period: RecapPeriod; session: number } | null>(null);
   const recap = reading?.session === view.worldSession ? reading.period : null;
   const [recapInspecting, setRecapInspecting] = useState(false);
+  const [peopleSession, setPeopleSession] = useState<number | null>(null);
+  const peopleOpen = peopleSession === view.worldSession;
+  const [peopleEvidence, setPeopleInspecting] = useState(false);
+  const peopleInspecting = peopleOpen && peopleEvidence;
+  const residentsOpener = useRef<HTMLButtonElement>(null);
   const [evidenceFocus, setEvidenceFocus] = useState(0);
   const recapOpener = useRef<HTMLButtonElement>(null);
   const phoneRecapOpener = useRef<HTMLButtonElement>(null);
@@ -61,6 +72,8 @@ function Viewer({ controller }: { controller: WorldController }) {
     previousSession.current = view.worldSession;
     setReading(null);
     setRecapInspecting(false);
+    setPeopleSession(null);
+    setPeopleInspecting(false);
     if (world) {
       setSeed(world.seed);
       select(world.world.settlement.center);
@@ -72,6 +85,8 @@ function Viewer({ controller }: { controller: WorldController }) {
   useEffect(() => {
     const request = view.recapRequest;
     if (!request) return;
+    setPeopleSession(null);
+    setPeopleInspecting(false);
     setReading({
       period: { kind: request.kind, endTick: request.endTick },
       session: view.worldSession,
@@ -120,6 +135,27 @@ function Viewer({ controller }: { controller: WorldController }) {
     setExpanded(false);
     scrollToMap();
   }
+  function openResidents() {
+    setReading(null);
+    setRecapInspecting(false);
+    setPeopleSession(view.worldSession);
+    setPeopleInspecting(false);
+    setExpanded(false);
+    scrollToMap();
+  }
+  function closeResidents() {
+    setPeopleSession(null);
+    setPeopleInspecting(false);
+    setExpanded(false);
+    scrollToMap();
+    residentsOpener.current?.focus({ preventScroll: true });
+    residentsOpener.current?.scrollIntoView({ block: 'nearest' });
+  }
+  function returnToResident() {
+    setPeopleInspecting(false);
+    setExpanded(false);
+    scrollToMap();
+  }
   function readLatestRecap() {
     if (!world) return;
     let kind = view.recapCadence === 'seasonal' ? ('seasonal' as const) : ('yearly' as const);
@@ -142,6 +178,7 @@ function Viewer({ controller }: { controller: WorldController }) {
         if (event.key === 'Escape' && expanded) {
           event.preventDefault();
           if (recapInspecting) returnToRecap();
+          else if (peopleInspecting) returnToResident();
           else closeChronicle();
         }
       }}
@@ -263,7 +300,8 @@ function Viewer({ controller }: { controller: WorldController }) {
             </button>
           </div>
           <small id="seed-hint">
-            1–64 letters, numbers, underscores or hyphens. A new world begins paused.
+            1–64 letters, numbers, underscores or hyphens. New worlds begin paused with named
+            residents.
           </small>
         </form>
         <div className="control-row">
@@ -362,6 +400,7 @@ function Viewer({ controller }: { controller: WorldController }) {
                   settlement,
                   project: world.world.project,
                   entities: world.world.entities,
+                  ...(isIndividualWorld(world) ? { residents: world.world.residents } : {}),
                 }}
                 selectedTile={selectedTile}
                 onSelect={(tile) => select(tile, false)}
@@ -379,8 +418,23 @@ function Viewer({ controller }: { controller: WorldController }) {
                 <li>Orange: huts</li>
                 <li>Brown: store</li>
                 <li>Outline: work in progress</li>
-                <li>Dots: residents (illustrative placement)</li>
+                <li>
+                  {isIndividualWorld(world)
+                    ? 'Dots: recorded resident homes'
+                    : 'Dots: residents (illustrative placement)'}
+                </li>
               </ul>
+              {isIndividualWorld(world) && (
+                <button
+                  type="button"
+                  className="secondary residents-opener"
+                  ref={residentsOpener}
+                  aria-expanded={peopleOpen}
+                  onClick={openResidents}
+                >
+                  Read residents
+                </button>
+              )}
               <button
                 type="button"
                 className="secondary phone-recap-opener"
@@ -466,7 +520,7 @@ function Viewer({ controller }: { controller: WorldController }) {
                 production or spoilage.
               </p>
               <p className="note">
-                {world.config.economy.seasonMultipliers[3] === 0
+                {worldEconomy(world).economy.seasonMultipliers[3] === 0
                   ? 'Fields rest in winter. Stored food and limited foraging must cover rations.'
                   : 'This world retains reduced winter crop production.'}
               </p>
@@ -511,7 +565,9 @@ function Viewer({ controller }: { controller: WorldController }) {
                 </details>
               )}
               <p className="note">
-                Map drawings are temporary. Residents are an aggregate population in this phase.
+                {isIndividualWorld(world)
+                  ? 'Residents have recorded identities, homes and weekly assignments. Read residents to follow a life.'
+                  : 'This saved world records population totals. Named residents begin in fresh worlds.'}
               </p>
             </aside>
           </section>
@@ -575,6 +631,26 @@ function Viewer({ controller }: { controller: WorldController }) {
               {project ? `, unfinished ${project.kind} #${project.id}` : ''}.
             </p>
           </section>
+          {isIndividualWorld(world) && (
+            <Residents
+              key={`residents-${view.worldSession}`}
+              world={world}
+              visible={peopleOpen && !peopleInspecting}
+              onClose={closeResidents}
+              onFocusHome={(tile) => {
+                select(tile);
+                scrollToMap();
+              }}
+              onInspect={(id) => {
+                const event = world.events[id - 1]!;
+                setEventId(id);
+                select(event.location.tile);
+                setPeopleInspecting(true);
+                setEvidenceFocus((revision) => revision + 1);
+                openChronicle();
+              }}
+            />
+          )}
           {recap && (
             <RecapReader
               world={world}
@@ -598,13 +674,16 @@ function Viewer({ controller }: { controller: WorldController }) {
             />
           )}
           <Chronicle
-            key={view.worldSession}
+            key={`chronicle-${view.worldSession}`}
             world={world}
             selectedId={eventId}
             expanded={expanded}
-            onClose={recapInspecting ? returnToRecap : closeChronicle}
+            onClose={
+              recapInspecting ? returnToRecap : peopleInspecting ? returnToResident : closeChronicle
+            }
             backToRecap={recapInspecting}
-            focusRequest={recapInspecting ? evidenceFocus : 0}
+            backToResident={peopleInspecting}
+            focusRequest={recapInspecting || peopleInspecting ? evidenceFocus : 0}
             onSelect={(id) => {
               const event = world.events[id - 1]!;
               setEventId(id);

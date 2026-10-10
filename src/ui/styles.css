@@ -607,3 +607,113 @@ aside dd {
     max-height: none;
   }
 }
+
+.residents-opener {
+  margin: 12px 16px;
+}
+.resident-reader {
+  margin-top: 20px;
+  border: 1px solid #c6d0bd;
+  border-radius: 10px;
+  background: #fafbf6;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+.resident-reader[hidden] {
+  display: none;
+}
+.resident-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 16px;
+}
+.resident-content {
+  padding: 16px;
+  max-height: 600px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+}
+.resident-content summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 10px;
+}
+.resident-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+.resident-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 100%;
+}
+.resident-filters input,
+.resident-filters select {
+  max-width: 100%;
+}
+.resident-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 8px;
+  margin-block: 12px;
+}
+.resident-list button {
+  text-align: left;
+}
+.resident-list button[aria-pressed='true'] {
+  border: 2px solid #315d40;
+}
+.resident-profile h3 {
+  font-family: Georgia, serif;
+  font-size: 1.4rem;
+  font-weight: 400;
+}
+.resident-profile dl div {
+  flex-wrap: wrap;
+}
+.resident-profile dd {
+  overflow-wrap: anywhere;
+}
+.resident-prose {
+  max-width: 68ch;
+  font-family: Georgia, serif;
+  line-height: 1.85;
+}
+.resident-prose p + p {
+  margin-top: 16px;
+}
+.resident-relations {
+  padding-left: 20px;
+}
+.personal-records {
+  list-style: none;
+  padding: 0;
+}
+.personal-records button {
+  width: 100%;
+  text-align: left;
+  margin-bottom: 8px;
+}
+@media (max-width: 760px) {
+  .resident-reader:not([hidden]) {
+    position: fixed;
+    z-index: 4;
+    inset: auto 0 0;
+    height: 56dvh;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 24px #283b2e22;
+  }
+  .resident-content {
+    min-height: 0;
+    max-height: none;
+  }
+}

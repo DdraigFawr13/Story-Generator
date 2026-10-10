@@ -8,7 +8,7 @@ import {
   type RecapPeriod,
 } from '../controller/recaps';
 import { dateLabel, headline } from '../controller/chronicle';
-import type { SettlementSnapshot } from '../controller/world';
+import type { WorldSnapshot } from '../controller/world';
 
 export function RecapReader({
   world,
@@ -20,7 +20,7 @@ export function RecapReader({
   onClose,
   onContinue,
 }: {
-  world: SettlementSnapshot;
+  world: WorldSnapshot;
   period: RecapPeriod;
   visible: boolean;
   canContinue: boolean;

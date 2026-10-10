@@ -1,3 +1,4 @@
+import { simulateLivingSettlement } from '../../src/sim/living';
 import { test, expect, type Page } from '@playwright/test';
 import { digestCanonical } from '../../src/adapters/crypto';
 import { simulateSettlement } from '../../src/sim/settlement';
@@ -265,7 +266,7 @@ for (const [speed, weekMs] of [
     expect(await fixture(page, 'storedDigest')).toEqual({
       tick: 8,
       seed: 'RIVERSIDE',
-      digest: await digestCanonical(simulateSettlement('RIVERSIDE', 8).state),
+      digest: await digestCanonical(simulateLivingSettlement('RIVERSIDE', 8).state),
     });
     await page.reload();
     await page.getByRole('button', { name: 'Resume local save', exact: true }).click();
@@ -531,7 +532,7 @@ test('resident dots follow a saved population and remain read-only through reloa
 }) => {
   await fresh(page);
   await expect(page.locator('#population-help')).toContainText('24 of 24 residents');
-  await expect(page.locator('#population-help')).toContainText('Placement is illustrative.');
+  await expect(page.locator('#population-help')).toContainText('Dots use recorded home tiles');
   await fixture(page, 'writeFixture', 'RIVERSIDE', 48);
   await menu(page);
   await page.getByRole('button', { name: 'Resume local save' }).click();
