@@ -128,6 +128,8 @@ Individual stories and hosted AI remain later work. Human experience acceptance,
 
 D-025 explicitly permits beginning these foundations while the remaining P1 reviews stay open. The [resident foundation](PHASE2_RESIDENTS.md) supplies deterministic founding identities, household/home links, initial ages/traits and validation. It is not yet part of an advancing world/save or a live biography; 2.1–2.2 remain open until integration, coherent life histories and relations are verified. Preserve P1 rule/save compatibility and do not infer completion of its art/device/human acceptance.
 
+D-030 continues scoped execution and milestone merges. The detailed [integration checkpoints](PHASE2_INTEGRATION.md) order I.1 world/save foundations, I.2 actual individual life/work, then I.3 observable personal history.
+
 ### Ordered increments
 - [ ] 2.1 Replace/augment population totals with a bounded agent population; define age, life stage, health, needs, profession, location, household and relationships; aggregate where practical.
 - [ ] 2.2 Deterministically generate names, traits/temperaments and kinship; ensure uniqueness of IDs, stable relation references and coherent lifespans.

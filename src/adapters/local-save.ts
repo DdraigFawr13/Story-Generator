@@ -1,78 +1,21 @@
-import { DEFAULT_HISTORY_LIMITS, historyLimitReason } from '../sim/admission';
-import { canonicalBytes } from '../sim/canonical';
-import { capture } from '../sim/immutable';
 import { validateSettlementState } from '../sim/settlement-validation';
-import type { SettlementSnapshot, SettlementState } from '../sim/state';
-import { digestCanonical } from './crypto';
+import { saveCodec, type SaveEnvelope } from './save-envelope';
+export type { SaveEnvelope } from './save-envelope';
 
 export const SAVE_DATABASE = 'story-generator-local-v1';
 export const SAVE_STORE = 'world';
 export const SAVE_KEY = 'slot';
 export const WRITER_LOCK = 'story-generator-world-writer-v1';
 
-export interface SaveEnvelope {
-  envelopeVersion: 1;
-  payload: SettlementSnapshot;
-  digest: string;
-  savedAt: string;
-  session: string;
-  generation: number;
-}
 export interface SaveStore {
   read(): Promise<unknown>;
   write(envelope: SaveEnvelope): Promise<void>;
   close(): void;
 }
 
-export async function prepareSave(
-  snapshot: SettlementSnapshot,
-  session: string,
-  generation: number,
-): Promise<SaveEnvelope> {
-  validateSettlementState(snapshot);
-  const rejected = historyLimitReason(snapshot, DEFAULT_HISTORY_LIMITS);
-  if (rejected) throw new Error(`Cannot save: ${rejected}.`);
-  const payload = capture(snapshot);
-  return {
-    envelopeVersion: 1,
-    payload,
-    digest: await digestCanonical(payload),
-    savedAt: new Date().toISOString(),
-    session,
-    generation,
-  };
-}
-
-export async function decodeSave(value: unknown): Promise<SaveEnvelope> {
-  if (!value || typeof value !== 'object')
-    throw new Error('The local save is not a complete envelope.');
-  const envelope = value as Partial<SaveEnvelope>;
-  if (envelope.envelopeVersion !== 1)
-    throw new Error('This local save uses an unsupported envelope version.');
-  if (
-    Object.keys(envelope).sort().join(',') !==
-      'digest,envelopeVersion,generation,payload,savedAt,session' ||
-    typeof envelope.digest !== 'string' ||
-    !/^[a-f0-9]{64}$/.test(envelope.digest) ||
-    typeof envelope.savedAt !== 'string' ||
-    !Number.isFinite(Date.parse(envelope.savedAt)) ||
-    typeof envelope.session !== 'string' ||
-    envelope.session.length < 1 ||
-    envelope.session.length > 128 ||
-    !Number.isSafeInteger(envelope.generation) ||
-    envelope.generation! < 1
-  )
-    throw new Error('The local save has invalid metadata.');
-  if (canonicalBytes(envelope.payload).byteLength > DEFAULT_HISTORY_LIMITS.maxBytes)
-    throw new Error('The local save exceeds the supported payload limit.');
-  if ((await digestCanonical(envelope.payload)) !== envelope.digest)
-    throw new Error('The local save checksum does not match. The stored record was retained.');
-  validateSettlementState(envelope.payload as SettlementState);
-  const payload = capture(envelope.payload as SettlementState);
-  if (historyLimitReason(payload, DEFAULT_HISTORY_LIMITS))
-    throw new Error('The local save exceeds the history limit.');
-  return { ...envelope, payload } as SaveEnvelope;
-}
+const codec = saveCodec(validateSettlementState);
+export const prepareSave = codec.prepare;
+export const decodeSave = codec.decode;
 
 export function openLocalStore(): Promise<SaveStore> {
   return new Promise((resolve, reject) => {

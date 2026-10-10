@@ -42,6 +42,10 @@ PR #10 was merged at [cefd9da](https://github.com/DdraigFawr13/Story-Generator/c
 
 **D-029:** The user selected “Make yearly default but also maybe make seasonally an option,” requested “a little bit of flare to it as if it's a historian writing,” accepted the recommended remaining choices, then explicitly instructed “Yes. Merge and begin executing the plan.” This supersedes D-027's pause for the approved plan: merge PR #24, then implement local settlement/building recaps with yearly default, seasonal/off, completed-period browsing, factual historian prose, linked evidence and explicit continuation. Preserve P1 saves; individual stories and hosted AI remain later work. D-022's verified milestone merges and D-026's main-only deployments continue to apply. See [NARRATIVE_RECAPS.md](NARRATIVE_RECAPS.md).
 
+## Continued Phase 2 execution — 2026-10-10
+
+**D-030:** The user instructed “Ok keep building to the plan. Merge at milestones. Compact conversations after merging. Keep going unless you have critical questions for me.” Continue D-025's scoped Phase 2 integration under D-022's verified milestone merges and D-026's main-only deployments. Preserve a compact, concrete handoff after each merge so conversation compaction retains completed work and the next increment. Ask only genuinely blocking questions; keep the existing art, physical-device and human acceptance gaps explicit. The next sequence is P2 world/save foundations, advancing individual life/work/household rules, then factual resident inspection and personal history. Q-005 Spotlight contracts and parked nudges are unchanged.
+
 ## Art selection — 2026-10-09
 
 **D-014:** The user selected **Illustrated Minimal**, option 2 of the final three-image comparison. This retains Direction C and chooses its map-art treatment. Collapsed and expanded phone chronicle studies were subsequently generated. This is art selection, not evidence that source sprite size, actual-device readability, interactions, numeric mechanics or the entire pre-build gate are approved. See [continuation review](CONTINUATION_REVIEW.md) for the exact selected artifact and outstanding checks.
