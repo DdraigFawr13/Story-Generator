@@ -298,6 +298,7 @@ function Viewer({ controller }: { controller: WorldController }) {
                 <li>Orange: huts</li>
                 <li>Brown: store</li>
                 <li>Outline: work in progress</li>
+                <li>Dots: residents (illustrative placement)</li>
               </ul>
               <button
                 type="button"

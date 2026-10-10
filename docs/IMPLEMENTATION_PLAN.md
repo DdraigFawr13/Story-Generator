@@ -72,7 +72,7 @@ The generic reducer-injected `advanceTicks` remains available; it is now supplem
 - [x] 1.6 Spawn aggregate founders (24 residents, six households), food/timber stocks, six huts, two fields and one store, stable occupancy/IDs and a deterministic coordinate-based settlement name. Clearing is recorded and discarded, not free stored timber. Individual identities/life histories remain P2.
 - [x] 1.7 Define inspectable settlement state: population, households, capacity, food, production, structures, season and complete last-tick accounting.
 
-The browser inspects advancing settlement, building, event and last-week labor facts. Temporary programmatic drawings are not selected-art completion; aggregate resident markers remain part of 1.17.
+The browser inspects advancing settlement, building, event and last-week labor facts. Aggregate resident dots now derive from the current population; their placement is explicitly illustrative. Temporary programmatic drawings are not selected-art completion.
 
 ### 1C — State-changing simulation loops
 - [x] 1.8 Advance fixed seasons; weather/fertility adjust harvest production. V2 winter fields rest, so reserves and limited foraging cover demand. Every consumed or produced unit is balanced and bounded; v1 behavior is retained for old saves.
@@ -88,7 +88,7 @@ The browser inspects advancing settlement, building, event and last-week labor f
 - [x] 1.16 Separate a bounded live-headline window from the canonical archive persisted with local saves. Set explicit archive/storage limits in 0.8; never silently evict causal evidence or imply unlimited history. At a supported limit, pause advancing and explain the limit while preserving the last valid save. A storage failure must not corrupt that save or claim new progress was saved.
 
 ### 1E — Pixel viewer and milestone QA
-- [ ] 1.17 Draw top-down tiles, water/forest, structures, crop fields and lightweight resident markers from simulation state.
+- [x] 1.17 Draw top-down tiles, water/forest, structures, crop fields and lightweight resident markers from simulation state. Functional rendering is complete with temporary programmatic symbols; selected production-art comparison remains open under 0.6. See [PHASE1_POPULATION.md](PHASE1_POPULATION.md).
 - [x] 1.18 Support seed input/random seed, New World, pause/play, single step, 1x/4x/16x, year/season, stats and map-pan/zoom. Meet the roughly 10–15-minute/year 1x target; review the weekly-calendar scheduling proposal in ADR-002. On hidden/closed return and saved-world Resume, remain paused without elapsed-time catch-up.
 - [x] 1.19 Implement live chronicle panel; select event to focus its place and show actual changed values/causes. Provide responsive phone layout and keyboard/touch basics.
 - [x] 1.19a Add basic browser-local manual save/resume and autosave using IndexedDB, with one recoverable world slot. Save the versioned authoritative state, seed/config, tick, all RNG streams, ID allocator state and canonical archive consistently. Validate before replacing the current world; reject unsupported/corrupt saves clearly and preserve the last good transaction. Explain local-device storage and unsaved progress. No accounts/cloud sync or timeline seeking.
