@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { SettlementSnapshot } from '../controller/world';
+import type { WorldSnapshot } from '../controller/world';
 import { boundCamera, tileAt } from '../controller/map-camera';
 import { populationMarkers, type PopulationMapView } from '../controller/population-markers';
 
 const ZOOM = [8, 12, 18, 24, 32] as const;
-type MapView = PopulationMapView & Pick<SettlementSnapshot['world'], 'entities'>;
+type MapView = PopulationMapView & Pick<WorldSnapshot['world'], 'entities'>;
 export function MapCanvas({
   view,
   selectedTile,
@@ -22,10 +22,19 @@ export function MapCanvas({
   const [size, setSize] = useState({ width: 768, height: 420 });
   const [zoom, setZoom] = useState(1);
   const [showPopulation, setShowPopulation] = useState(true);
-  const { tiles, width, height, buildings, settlement, project } = view;
+  const { tiles, width, height, buildings, settlement, project, residents } = view;
   const population = useMemo(
-    () => populationMarkers({ tiles, width, height, buildings, settlement, project }),
-    [tiles, width, height, buildings, settlement, project],
+    () =>
+      populationMarkers({
+        tiles,
+        width,
+        height,
+        buildings,
+        settlement,
+        project,
+        ...(residents ? { residents } : {}),
+      }),
+    [tiles, width, height, buildings, settlement, project, residents],
   );
   const [center, setCenter] = useState({
     x: (view.settlement.center % view.width) + 0.5,
@@ -88,7 +97,9 @@ export function MapCanvas({
     });
     const occupied = new Set(view.buildings.map((b) => b.tile));
     if (view.project) occupied.add(view.project.tile);
-    for (const entity of view.entities.filter((e) => e.retired && !occupied.has(e.tile))) {
+    for (const entity of view.entities.filter(
+      (e) => e.retired && ['hut', 'field', 'store'].includes(e.kind) && !occupied.has(e.tile),
+    )) {
       const { x, y } = point(entity.tile);
       context.strokeStyle = '#675e50';
       context.lineWidth = 1;
@@ -321,7 +332,7 @@ export function MapCanvas({
         {population.population === 0
           ? 'No residents remain.'
           : showPopulation
-            ? `${population.markers.length} of ${population.population} residents represented by dots. Placement is illustrative.`
+            ? `${population.markers.length} of ${population.population} residents represented by dots. ${residents ? 'Dots use recorded home tiles; spacing within a tile is illustrative.' : 'Placement is illustrative.'}`
             : `Population: ${population.population}. Resident dots are hidden.`}
       </p>
       <p id="map-help" className="map-help">

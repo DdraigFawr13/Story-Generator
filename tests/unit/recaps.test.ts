@@ -1,3 +1,4 @@
+import { simulateLivingSettlement } from '../../src/sim/living';
 import { afterEach, expect, it, vi } from 'vitest';
 import { buildRecap, completedPeriods, periodTitle } from '../../src/controller/recaps';
 import { WorldController, NORMAL_WEEK_MS, type WorldRuntime } from '../../src/controller/world';
@@ -189,7 +190,7 @@ it.each([1, 4, 16] as const)(
     expect(c.view.playing).toBe(false);
     expect(c.view.recapRequest).toMatchObject({ kind: 'yearly', endTick: 48 });
     expect(canonicalJson(c.view.world)).toBe(
-      canonicalJson(simulateSettlement('RIVERSIDE', 48).state),
+      canonicalJson(simulateLivingSettlement('RIVERSIDE', 48).state),
     );
     vi.advanceTimersByTime(NORMAL_WEEK_MS * 100);
     expect(c.view.world!.tick).toBe(48);

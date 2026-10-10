@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { dateLabel, eventDetails, headline } from '../controller/chronicle';
-import type { SettlementSnapshot } from '../controller/world';
+import type { WorldSnapshot } from '../controller/world';
 
 export function Chronicle({
   world,
@@ -10,14 +10,16 @@ export function Chronicle({
   onClose,
   focusRequest = 0,
   backToRecap = false,
+  backToResident = false,
 }: {
-  world: SettlementSnapshot;
+  world: WorldSnapshot;
   selectedId: number | null;
   onSelect: (id: number) => void;
   expanded: boolean;
   onClose: () => void;
   focusRequest?: number;
   backToRecap?: boolean;
+  backToResident?: boolean;
 }) {
   const list = useRef<HTMLDivElement>(null);
   const back = useRef<HTMLButtonElement>(null);
@@ -93,7 +95,7 @@ export function Chronicle({
   return (
     <section
       id="chronicle"
-      className={`chronicle ${expanded ? 'expanded' : ''} ${backToRecap ? 'recap-evidence' : ''}`}
+      className={`chronicle ${expanded ? 'expanded' : ''} ${backToRecap || backToResident ? 'recap-evidence' : ''}`}
       aria-label="Chronicle"
       onKeyDown={(event) => {
         if (event.key === 'Escape' && expanded) {
@@ -105,7 +107,7 @@ export function Chronicle({
       <div className="map-heading">
         <h2>The chronicle</h2>
         <button type="button" className="secondary back-map" ref={back} onClick={onClose}>
-          {backToRecap ? 'Back to recap' : 'Back to map'}
+          {backToRecap ? 'Back to recap' : backToResident ? 'Back to resident' : 'Back to map'}
         </button>
       </div>
       <div className="chronicle-content" ref={content}>

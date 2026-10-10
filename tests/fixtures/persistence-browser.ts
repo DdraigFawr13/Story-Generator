@@ -1,9 +1,10 @@
+import { decodeWorldSave, prepareWorldSave } from '../../src/adapters/world-save';
+import { simulateLivingSettlement } from '../../src/sim/living';
 import {
   SAVE_DATABASE,
   SAVE_KEY,
   SAVE_STORE,
   openLocalStore,
-  decodeSave,
   prepareSave,
 } from '../../src/adapters/local-save';
 import { digestCanonical } from '../../src/adapters/crypto';
@@ -27,8 +28,18 @@ export async function writeFixture(seed: string, tick: number, version?: string)
     store.close();
   }
 }
+export async function writeNamedFixture(seed: string, tick: number) {
+  const store = await openLocalStore();
+  try {
+    await store.write(
+      await prepareWorldSave(simulateLivingSettlement(seed, tick).state, 'named-fixture', 1),
+    );
+  } finally {
+    store.close();
+  }
+}
 export async function storedDigest() {
-  const saved = await decodeSave(await readSlot());
+  const saved = await decodeWorldSave(await readSlot());
   return {
     tick: saved.payload.tick,
     digest: await digestCanonical(saved.payload),
@@ -38,7 +49,7 @@ export async function storedDigest() {
 export async function damageSlot(checksummed = false) {
   const store = await openLocalStore();
   try {
-    const saved = await decodeSave(await store.read());
+    const saved = await decodeWorldSave(await store.read());
     const changed = structuredClone(saved);
     (changed.payload.world.settlement as { food: number }).food++;
     if (checksummed) changed.digest = await digestCanonical(changed.payload);

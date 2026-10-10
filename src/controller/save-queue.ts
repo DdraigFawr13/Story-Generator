@@ -1,5 +1,6 @@
-import { prepareSave, type SaveEnvelope, type SaveStore } from '../adapters/local-save';
-import type { SettlementSnapshot } from '../sim/state';
+import type { SaveStore } from '../adapters/local-save';
+import { prepareWorldSave, type WorldSaveEnvelope } from '../adapters/world-save';
+import type { WorldSnapshot } from '../sim/world';
 
 export interface TimerClock {
   now(): number;
@@ -12,7 +13,7 @@ export const browserClock: TimerClock = {
   clear: (timer) => clearTimeout(timer),
 };
 export const SAVE_POLICY = Object.freeze({ interval: 8, throttleMs: 5_000, retryMs: 30_000 });
-type Request = { snapshot: SettlementSnapshot; manual: boolean };
+type Request = { snapshot: WorldSnapshot; manual: boolean };
 
 export class SaveQueue {
   #pendingAuto: Request | null = null;
@@ -32,7 +33,7 @@ export class SaveQueue {
     readonly store: SaveStore,
     readonly clock: TimerClock,
     readonly changed: () => void,
-    readonly committed: (envelope: SaveEnvelope) => void,
+    readonly committed: (envelope: WorldSaveEnvelope) => void,
   ) {}
 
   get status() {
@@ -54,7 +55,7 @@ export class SaveQueue {
     this.#lastAutomaticStart = -Infinity;
     this.#stopped = false;
   }
-  automatic(snapshot: SettlementSnapshot, initial = false) {
+  automatic(snapshot: WorldSnapshot, initial = false) {
     if (
       this.#stopped ||
       (!initial && snapshot.tick - (this.#savedTick ?? 0) < SAVE_POLICY.interval)
@@ -64,7 +65,7 @@ export class SaveQueue {
     this.#pump();
     this.changed();
   }
-  manual(snapshot: SettlementSnapshot) {
+  manual(snapshot: WorldSnapshot) {
     if (this.#stopped || this.status.manualPending) return;
     this.#pendingManual = { snapshot, manual: true };
     if (this.#pendingAuto && this.#pendingAuto.snapshot.tick <= snapshot.tick)
@@ -112,7 +113,7 @@ export class SaveQueue {
       try {
         if (this.#generation === Number.MAX_SAFE_INTEGER)
           throw new Error('Local save generation exhausted.');
-        const envelope = await prepareSave(request.snapshot, session, this.#generation + 1);
+        const envelope = await prepareWorldSave(request.snapshot, session, this.#generation + 1);
         await this.store.write(envelope);
         this.#generation = envelope.generation;
         this.#savedTick = envelope.payload.tick;

@@ -1,3 +1,4 @@
+import type { WorldState } from '../sim/world';
 import { validateSettlementState } from '../sim/settlement-validation';
 import { saveCodec, type SaveEnvelope } from './save-envelope';
 export type { SaveEnvelope } from './save-envelope';
@@ -9,7 +10,7 @@ export const WRITER_LOCK = 'story-generator-world-writer-v1';
 
 export interface SaveStore {
   read(): Promise<unknown>;
-  write(envelope: SaveEnvelope): Promise<void>;
+  write(envelope: SaveEnvelope<WorldState>): Promise<void>;
   close(): void;
 }
 

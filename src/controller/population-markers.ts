@@ -4,7 +4,13 @@ export type PopulationMapView = Pick<
   SettlementSnapshot['world']['map'],
   'tiles' | 'width' | 'height'
 > &
-  Pick<SettlementSnapshot['world'], 'buildings' | 'settlement' | 'project'>;
+  Pick<SettlementSnapshot['world'], 'buildings' | 'settlement' | 'project'> & {
+    residents?: readonly {
+      readonly id: number;
+      readonly tile: number;
+      readonly deathEventId: number | null;
+    }[];
+  };
 export interface PopulationMarker {
   tile: number;
   x: number;
@@ -21,6 +27,21 @@ export function populationMarkers(view: PopulationMapView) {
   const population = view.settlement.population;
   const markers: PopulationMarker[] = [];
   if (population === 0) return { population, markers };
+  if (view.residents) {
+    const slots = new Map<number, number>();
+    for (const person of view.residents
+      .filter((person) => person.deathEventId === null)
+      .slice(0, POPULATION_MARKER_LIMIT)) {
+      const slot = slots.get(person.tile) ?? 0;
+      slots.set(person.tile, slot + 1);
+      markers.push({
+        tile: person.tile,
+        x: (person.tile % view.width) + OFFSETS[slot % 2]!,
+        y: Math.floor(person.tile / view.width) + OFFSETS[Math.floor(slot / 2) % 2]!,
+      });
+    }
+    return { population, markers };
+  }
   const count = Math.min(population, POPULATION_MARKER_LIMIT);
   const centerX = view.settlement.center % view.width;
   const centerY = Math.floor(view.settlement.center / view.width);
