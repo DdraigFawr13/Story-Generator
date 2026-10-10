@@ -1,0 +1,746 @@
+[
+  {
+    "seed": "RIVERSIDE",
+    "initialRng": 2228252637,
+    "finalRng": 2376917106,
+    "householdNames": ["Hazel", "Willow", "Hill", "Flint", "Grove", "Vale"],
+    "residents": [
+      {
+        "givenName": "Rian",
+        "householdName": "Hazel",
+        "ageWeeksAtFounding": 2279,
+        "traits": {
+          "sociability": 47,
+          "caution": 45,
+          "persistence": 71
+        }
+      },
+      {
+        "givenName": "Mara",
+        "householdName": "Hazel",
+        "ageWeeksAtFounding": 2213,
+        "traits": {
+          "sociability": 57,
+          "caution": 80,
+          "persistence": 32
+        }
+      },
+      {
+        "givenName": "Eira",
+        "householdName": "Hazel",
+        "ageWeeksAtFounding": 2137,
+        "traits": {
+          "sociability": 36,
+          "caution": 27,
+          "persistence": 59
+        }
+      },
+      {
+        "givenName": "Neri",
+        "householdName": "Hazel",
+        "ageWeeksAtFounding": 2418,
+        "traits": {
+          "sociability": 63,
+          "caution": 59,
+          "persistence": 54
+        }
+      },
+      {
+        "givenName": "Vara",
+        "householdName": "Willow",
+        "ageWeeksAtFounding": 1379,
+        "traits": {
+          "sociability": 90,
+          "caution": 77,
+          "persistence": 38
+        }
+      },
+      {
+        "givenName": "Rian",
+        "householdName": "Willow",
+        "ageWeeksAtFounding": 1484,
+        "traits": {
+          "sociability": 67,
+          "caution": 57,
+          "persistence": 75
+        }
+      },
+      {
+        "givenName": "Idris",
+        "householdName": "Willow",
+        "ageWeeksAtFounding": 1258,
+        "traits": {
+          "sociability": 54,
+          "caution": 5,
+          "persistence": 68
+        }
+      },
+      {
+        "givenName": "Fara",
+        "householdName": "Willow",
+        "ageWeeksAtFounding": 1655,
+        "traits": {
+          "sociability": 64,
+          "caution": 26,
+          "persistence": 69
+        }
+      },
+      {
+        "givenName": "Kira",
+        "householdName": "Hill",
+        "ageWeeksAtFounding": 1910,
+        "traits": {
+          "sociability": 61,
+          "caution": 43,
+          "persistence": 40
+        }
+      },
+      {
+        "givenName": "Anwen",
+        "householdName": "Hill",
+        "ageWeeksAtFounding": 2445,
+        "traits": {
+          "sociability": 38,
+          "caution": 4,
+          "persistence": 22
+        }
+      },
+      {
+        "givenName": "Iona",
+        "householdName": "Hill",
+        "ageWeeksAtFounding": 2194,
+        "traits": {
+          "sociability": 42,
+          "caution": 74,
+          "persistence": 84
+        }
+      },
+      {
+        "givenName": "Orin",
+        "householdName": "Hill",
+        "ageWeeksAtFounding": 1767,
+        "traits": {
+          "sociability": 17,
+          "caution": 69,
+          "persistence": 11
+        }
+      },
+      {
+        "givenName": "Halen",
+        "householdName": "Flint",
+        "ageWeeksAtFounding": 2077,
+        "traits": {
+          "sociability": 65,
+          "caution": 73,
+          "persistence": 88
+        }
+      },
+      {
+        "givenName": "Ader",
+        "householdName": "Flint",
+        "ageWeeksAtFounding": 1873,
+        "traits": {
+          "sociability": 88,
+          "caution": 42,
+          "persistence": 6
+        }
+      },
+      {
+        "givenName": "Carys",
+        "householdName": "Flint",
+        "ageWeeksAtFounding": 2182,
+        "traits": {
+          "sociability": 67,
+          "caution": 10,
+          "persistence": 55
+        }
+      },
+      {
+        "givenName": "Loren",
+        "householdName": "Flint",
+        "ageWeeksAtFounding": 2176,
+        "traits": {
+          "sociability": 78,
+          "caution": 56,
+          "persistence": 59
+        }
+      },
+      {
+        "givenName": "Carys",
+        "householdName": "Grove",
+        "ageWeeksAtFounding": 1297,
+        "traits": {
+          "sociability": 66,
+          "caution": 91,
+          "persistence": 56
+        }
+      },
+      {
+        "givenName": "Tegan",
+        "householdName": "Grove",
+        "ageWeeksAtFounding": 1064,
+        "traits": {
+          "sociability": 39,
+          "caution": 15,
+          "persistence": 77
+        }
+      },
+      {
+        "givenName": "Iona",
+        "householdName": "Grove",
+        "ageWeeksAtFounding": 1967,
+        "traits": {
+          "sociability": 80,
+          "caution": 56,
+          "persistence": 20
+        }
+      },
+      {
+        "givenName": "Meri",
+        "householdName": "Grove",
+        "ageWeeksAtFounding": 1862,
+        "traits": {
+          "sociability": 58,
+          "caution": 59,
+          "persistence": 46
+        }
+      },
+      {
+        "givenName": "Anwen",
+        "householdName": "Vale",
+        "ageWeeksAtFounding": 1722,
+        "traits": {
+          "sociability": 74,
+          "caution": 42,
+          "persistence": 89
+        }
+      },
+      {
+        "givenName": "Bera",
+        "householdName": "Vale",
+        "ageWeeksAtFounding": 1783,
+        "traits": {
+          "sociability": 77,
+          "caution": 44,
+          "persistence": 78
+        }
+      },
+      {
+        "givenName": "Orin",
+        "householdName": "Vale",
+        "ageWeeksAtFounding": 2421,
+        "traits": {
+          "sociability": 49,
+          "caution": 27,
+          "persistence": 9
+        }
+      },
+      {
+        "givenName": "Idris",
+        "householdName": "Vale",
+        "ageWeeksAtFounding": 2267,
+        "traits": {
+          "sociability": 42,
+          "caution": 19,
+          "persistence": 73
+        }
+      }
+    ]
+  },
+  {
+    "seed": "PEOPLE_0",
+    "initialRng": 4137431448,
+    "finalRng": 3785398144,
+    "householdNames": ["Vale", "Hearth", "Reed", "Flint", "Stone", "Cedar"],
+    "residents": [
+      {
+        "givenName": "Orin",
+        "householdName": "Vale",
+        "ageWeeksAtFounding": 1586,
+        "traits": {
+          "sociability": 12,
+          "caution": 45,
+          "persistence": 85
+        }
+      },
+      {
+        "givenName": "Fara",
+        "householdName": "Vale",
+        "ageWeeksAtFounding": 1571,
+        "traits": {
+          "sociability": 3,
+          "caution": 38,
+          "persistence": 54
+        }
+      },
+      {
+        "givenName": "Rona",
+        "householdName": "Vale",
+        "ageWeeksAtFounding": 1144,
+        "traits": {
+          "sociability": 72,
+          "caution": 87,
+          "persistence": 52
+        }
+      },
+      {
+        "givenName": "Alin",
+        "householdName": "Vale",
+        "ageWeeksAtFounding": 2207,
+        "traits": {
+          "sociability": 93,
+          "caution": 3,
+          "persistence": 37
+        }
+      },
+      {
+        "givenName": "Eira",
+        "householdName": "Hearth",
+        "ageWeeksAtFounding": 1935,
+        "traits": {
+          "sociability": 35,
+          "caution": 49,
+          "persistence": 18
+        }
+      },
+      {
+        "givenName": "Bera",
+        "householdName": "Hearth",
+        "ageWeeksAtFounding": 1722,
+        "traits": {
+          "sociability": 49,
+          "caution": 75,
+          "persistence": 16
+        }
+      },
+      {
+        "givenName": "Idris",
+        "householdName": "Hearth",
+        "ageWeeksAtFounding": 2197,
+        "traits": {
+          "sociability": 59,
+          "caution": 51,
+          "persistence": 73
+        }
+      },
+      {
+        "givenName": "Vara",
+        "householdName": "Hearth",
+        "ageWeeksAtFounding": 1683,
+        "traits": {
+          "sociability": 57,
+          "caution": 63,
+          "persistence": 2
+        }
+      },
+      {
+        "givenName": "Galen",
+        "householdName": "Reed",
+        "ageWeeksAtFounding": 2366,
+        "traits": {
+          "sociability": 39,
+          "caution": 73,
+          "persistence": 15
+        }
+      },
+      {
+        "givenName": "Sera",
+        "householdName": "Reed",
+        "ageWeeksAtFounding": 1538,
+        "traits": {
+          "sociability": 76,
+          "caution": 59,
+          "persistence": 93
+        }
+      },
+      {
+        "givenName": "Bran",
+        "householdName": "Reed",
+        "ageWeeksAtFounding": 1645,
+        "traits": {
+          "sociability": 65,
+          "caution": 50,
+          "persistence": 27
+        }
+      },
+      {
+        "givenName": "Orin",
+        "householdName": "Reed",
+        "ageWeeksAtFounding": 2202,
+        "traits": {
+          "sociability": 69,
+          "caution": 90,
+          "persistence": 40
+        }
+      },
+      {
+        "givenName": "Sera",
+        "householdName": "Flint",
+        "ageWeeksAtFounding": 2022,
+        "traits": {
+          "sociability": 34,
+          "caution": 20,
+          "persistence": 67
+        }
+      },
+      {
+        "givenName": "Galen",
+        "householdName": "Flint",
+        "ageWeeksAtFounding": 2281,
+        "traits": {
+          "sociability": 7,
+          "caution": 45,
+          "persistence": 49
+        }
+      },
+      {
+        "givenName": "Neri",
+        "householdName": "Flint",
+        "ageWeeksAtFounding": 1755,
+        "traits": {
+          "sociability": 67,
+          "caution": 13,
+          "persistence": 48
+        }
+      },
+      {
+        "givenName": "Carys",
+        "householdName": "Flint",
+        "ageWeeksAtFounding": 1429,
+        "traits": {
+          "sociability": 16,
+          "caution": 90,
+          "persistence": 97
+        }
+      },
+      {
+        "givenName": "Orin",
+        "householdName": "Stone",
+        "ageWeeksAtFounding": 1275,
+        "traits": {
+          "sociability": 42,
+          "caution": 27,
+          "persistence": 58
+        }
+      },
+      {
+        "givenName": "Galen",
+        "householdName": "Stone",
+        "ageWeeksAtFounding": 2144,
+        "traits": {
+          "sociability": 1,
+          "caution": 0,
+          "persistence": 65
+        }
+      },
+      {
+        "givenName": "Ader",
+        "householdName": "Stone",
+        "ageWeeksAtFounding": 2309,
+        "traits": {
+          "sociability": 99,
+          "caution": 53,
+          "persistence": 11
+        }
+      },
+      {
+        "givenName": "Tarin",
+        "householdName": "Stone",
+        "ageWeeksAtFounding": 1600,
+        "traits": {
+          "sociability": 41,
+          "caution": 81,
+          "persistence": 98
+        }
+      },
+      {
+        "givenName": "Galen",
+        "householdName": "Cedar",
+        "ageWeeksAtFounding": 1053,
+        "traits": {
+          "sociability": 40,
+          "caution": 44,
+          "persistence": 32
+        }
+      },
+      {
+        "givenName": "Bran",
+        "householdName": "Cedar",
+        "ageWeeksAtFounding": 1642,
+        "traits": {
+          "sociability": 14,
+          "caution": 22,
+          "persistence": 73
+        }
+      },
+      {
+        "givenName": "Tegan",
+        "householdName": "Cedar",
+        "ageWeeksAtFounding": 1777,
+        "traits": {
+          "sociability": 99,
+          "caution": 16,
+          "persistence": 100
+        }
+      },
+      {
+        "givenName": "Dara",
+        "householdName": "Cedar",
+        "ageWeeksAtFounding": 1140,
+        "traits": {
+          "sociability": 98,
+          "caution": 82,
+          "persistence": 54
+        }
+      }
+    ]
+  },
+  {
+    "seed": "OTHER_SEED",
+    "initialRng": 2609810778,
+    "finalRng": 4255561768,
+    "householdNames": ["Hazel", "Hearth", "Alder", "Brook", "Stone", "Cedar"],
+    "residents": [
+      {
+        "givenName": "Lina",
+        "householdName": "Hazel",
+        "ageWeeksAtFounding": 1617,
+        "traits": {
+          "sociability": 72,
+          "caution": 77,
+          "persistence": 41
+        }
+      },
+      {
+        "givenName": "Jory",
+        "householdName": "Hazel",
+        "ageWeeksAtFounding": 1103,
+        "traits": {
+          "sociability": 3,
+          "caution": 37,
+          "persistence": 63
+        }
+      },
+      {
+        "givenName": "Alin",
+        "householdName": "Hazel",
+        "ageWeeksAtFounding": 1090,
+        "traits": {
+          "sociability": 24,
+          "caution": 61,
+          "persistence": 89
+        }
+      },
+      {
+        "givenName": "Loren",
+        "householdName": "Hazel",
+        "ageWeeksAtFounding": 1952,
+        "traits": {
+          "sociability": 20,
+          "caution": 96,
+          "persistence": 92
+        }
+      },
+      {
+        "givenName": "Tarin",
+        "householdName": "Hearth",
+        "ageWeeksAtFounding": 1067,
+        "traits": {
+          "sociability": 49,
+          "caution": 81,
+          "persistence": 93
+        }
+      },
+      {
+        "givenName": "Lina",
+        "householdName": "Hearth",
+        "ageWeeksAtFounding": 1199,
+        "traits": {
+          "sociability": 47,
+          "caution": 73,
+          "persistence": 24
+        }
+      },
+      {
+        "givenName": "Vara",
+        "householdName": "Hearth",
+        "ageWeeksAtFounding": 1583,
+        "traits": {
+          "sociability": 93,
+          "caution": 26,
+          "persistence": 20
+        }
+      },
+      {
+        "givenName": "Tegan",
+        "householdName": "Hearth",
+        "ageWeeksAtFounding": 1134,
+        "traits": {
+          "sociability": 24,
+          "caution": 74,
+          "persistence": 55
+        }
+      },
+      {
+        "givenName": "Fara",
+        "householdName": "Alder",
+        "ageWeeksAtFounding": 868,
+        "traits": {
+          "sociability": 42,
+          "caution": 73,
+          "persistence": 59
+        }
+      },
+      {
+        "givenName": "Halen",
+        "householdName": "Alder",
+        "ageWeeksAtFounding": 1243,
+        "traits": {
+          "sociability": 46,
+          "caution": 2,
+          "persistence": 41
+        }
+      },
+      {
+        "givenName": "Neri",
+        "householdName": "Alder",
+        "ageWeeksAtFounding": 1329,
+        "traits": {
+          "sociability": 86,
+          "caution": 43,
+          "persistence": 23
+        }
+      },
+      {
+        "givenName": "Bera",
+        "householdName": "Alder",
+        "ageWeeksAtFounding": 1729,
+        "traits": {
+          "sociability": 5,
+          "caution": 29,
+          "persistence": 21
+        }
+      },
+      {
+        "givenName": "Sera",
+        "householdName": "Brook",
+        "ageWeeksAtFounding": 2254,
+        "traits": {
+          "sociability": 78,
+          "caution": 15,
+          "persistence": 68
+        }
+      },
+      {
+        "givenName": "Ader",
+        "householdName": "Brook",
+        "ageWeeksAtFounding": 1477,
+        "traits": {
+          "sociability": 19,
+          "caution": 32,
+          "persistence": 72
+        }
+      },
+      {
+        "givenName": "Neri",
+        "householdName": "Brook",
+        "ageWeeksAtFounding": 1534,
+        "traits": {
+          "sociability": 21,
+          "caution": 92,
+          "persistence": 29
+        }
+      },
+      {
+        "givenName": "Bera",
+        "householdName": "Brook",
+        "ageWeeksAtFounding": 2319,
+        "traits": {
+          "sociability": 23,
+          "caution": 13,
+          "persistence": 67
+        }
+      },
+      {
+        "givenName": "Iona",
+        "householdName": "Stone",
+        "ageWeeksAtFounding": 2392,
+        "traits": {
+          "sociability": 18,
+          "caution": 19,
+          "persistence": 7
+        }
+      },
+      {
+        "givenName": "Mara",
+        "householdName": "Stone",
+        "ageWeeksAtFounding": 1693,
+        "traits": {
+          "sociability": 86,
+          "caution": 29,
+          "persistence": 76
+        }
+      },
+      {
+        "givenName": "Delyn",
+        "householdName": "Stone",
+        "ageWeeksAtFounding": 1215,
+        "traits": {
+          "sociability": 86,
+          "caution": 63,
+          "persistence": 92
+        }
+      },
+      {
+        "givenName": "Eira",
+        "householdName": "Stone",
+        "ageWeeksAtFounding": 2396,
+        "traits": {
+          "sociability": 51,
+          "caution": 32,
+          "persistence": 77
+        }
+      },
+      {
+        "givenName": "Carys",
+        "householdName": "Cedar",
+        "ageWeeksAtFounding": 2195,
+        "traits": {
+          "sociability": 75,
+          "caution": 33,
+          "persistence": 66
+        }
+      },
+      {
+        "givenName": "Meri",
+        "householdName": "Cedar",
+        "ageWeeksAtFounding": 2224,
+        "traits": {
+          "sociability": 28,
+          "caution": 61,
+          "persistence": 27
+        }
+      },
+      {
+        "givenName": "Iona",
+        "householdName": "Cedar",
+        "ageWeeksAtFounding": 1310,
+        "traits": {
+          "sociability": 42,
+          "caution": 23,
+          "persistence": 58
+        }
+      },
+      {
+        "givenName": "Halen",
+        "householdName": "Cedar",
+        "ageWeeksAtFounding": 2020,
+        "traits": {
+          "sociability": 25,
+          "caution": 86,
+          "persistence": 93
+        }
+      }
+    ]
+  }
+]

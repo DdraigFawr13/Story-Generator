@@ -2,6 +2,8 @@
 
 **Current status:** Phase 1 engineering authorized under D-020–024. Core/terrain/founding PR #11, weekly settlement PR #12, playback/persistence PR #13, functional viewer PR #14, winter/recovery PR #16, population display PR #17 and idempotent pause PR #18 are merged. D-023 guides `p1-settlement-v2`, preserving v1 saves; D-024 selects eight-week autosaves. Human balance/understandability, selected-art, physical-device and broader storage-policy reviews remain first-playable requirements. See [PHASE1_BALANCE.md](PHASE1_BALANCE.md) and [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md).
 
+D-025 now authorizes Phase 2 resident/household foundations while the remaining P1 reviews stay explicitly open. The running viewer/save baseline remains P1 until new-version individual behavior is integrated; see [PHASE2_RESIDENTS.md](PHASE2_RESIDENTS.md).
+
 ## Approved core constraints
 
 - **Destination:** an observable, open-ended pixel world with personal-to-civilizational histories; **first playable** is one detailed settlement.
@@ -55,7 +57,7 @@ Cross-cutting tests and documentation advance with each phase. Basic local save/
 
 ---
 
-## Phase 1 — First playable: the living settlement (CURRENT)
+## Phase 1 — First playable: the living settlement (RUNNING VIEWER; ACCEPTANCE OPEN)
 
 **Outcome:** seeded pixel terrain, one evolving settlement, seasonal resource cycle, authentic real-time chronicle. This must already be engaging to *watch*.
 
@@ -108,9 +110,11 @@ For 1.21, the same ten seeds are reviewed under v1 and v2 at season/year/long-ru
 
 ---
 
-## Phase 2 — Individuals, families, memory and consequences
+## Phase 2 — Individuals, families, memory and consequences (FOUNDATIONS AUTHORIZED)
 
 **Outcome:** the first genuine personal stories, causally connected to settlement conditions.
+
+D-025 explicitly permits beginning these foundations while the remaining P1 reviews stay open. The [resident foundation](PHASE2_RESIDENTS.md) supplies deterministic founding identities, household/home links, initial ages/traits and validation. It is not yet part of an advancing world/save or a live biography; 2.1–2.2 remain open until integration, coherent life histories and relations are verified. Preserve P1 rule/save compatibility and do not infer completion of its art/device/human acceptance.
 
 ### Ordered increments
 - [ ] 2.1 Replace/augment population totals with a bounded agent population; define age, life stage, health, needs, profession, location, household and relationships; aggregate where practical.
