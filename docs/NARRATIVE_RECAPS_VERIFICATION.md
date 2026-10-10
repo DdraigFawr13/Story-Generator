@@ -6,7 +6,7 @@ This milestone implements the approved [recap contract](NARRATIVE_RECAPS.md) und
 
 The recap unit cases cover exact year/season ranges, incomplete/unsafe-period rejection, historical output independence from later events/current stocks, interval source IDs, real canonical building identities, summed demographic counts, field contribution only with its recorded cause, removed structures, decay, extinction and honest quiet intervals. Controlled archive cases exercise rare formatter inputs; they are not claims about seed trajectories.
 
-Controller checks compare the complete committed world to headless simulation after automatic pauses at week 48 at 1x/4x/16x. They verify seasonal/off, manual reading without canonical changes, no automatic reading during Step, preference changes applying to future boundaries, preserved reading on rejected replacement and cleared reading on accepted replacement. Existing uninterrupted controller scheduling tests explicitly select Off so they still test their intended long-run behavior.
+Controller checks compare the complete committed world to headless simulation after automatic pauses at week 48 at 1x/4x/16x. They verify seasonal/off, manual reading without canonical changes, no automatic reading during Step, preference changes applying to future boundaries, preserved reading on rejected replacement and cleared reading on accepted replacement. Existing uninterrupted controller scheduling and live-list anchoring tests explicitly select Off so they still test their intended long-run behavior across year boundaries.
 
 ## Browser and visual checks
 
