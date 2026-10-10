@@ -116,6 +116,7 @@ test('earlier years and seasons use historical records while the current world s
   await openAt(page, 144);
   const before = await fixture(page, 'storedDigest');
   await page.getByRole('button', { name: 'Read history', exact: true }).click();
+  await page.locator('.recap-history > summary').click();
   await page.getByRole('button', { name: 'Previous period', exact: true }).click();
   await page.getByRole('button', { name: 'Previous period', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Year 1', exact: true })).toBeFocused();
@@ -144,6 +145,7 @@ test('retained v1 saves read their own winter crop history and continue under th
   const original = await fixture(page, 'storedDigest');
   await page.getByRole('button', { name: 'Read history', exact: true }).click();
   const reader = page.getByRole('region', { name: 'Historical recap', exact: true });
+  await reader.locator('.recap-history > summary').click();
   await reader.getByLabel('Recap period').selectOption('seasonal');
   await expect(page.locator('.recap-prose')).toContainText('the winter harvest');
   await expect(page.locator('.recap-prose')).not.toContainText('dormant crops');
@@ -223,6 +225,7 @@ for (const [width, height] of [
     const reader = page.getByRole('region', { name: 'Historical recap', exact: true });
     const close = reader.getByRole('button', { name: 'Close recap', exact: true });
     await expect(close).toBeInViewport();
+    await expect(page.locator('.recap-prose > p').first()).toBeInViewport();
     const canvas = await page.locator('canvas').boundingBox();
     const sheet = await reader.boundingBox();
     expect(canvas!.y).toBeLessThan(sheet!.y);

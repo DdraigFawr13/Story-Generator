@@ -14,7 +14,7 @@ The browser suite exercises yearly boundaries at three speeds, explicit continua
 
 Phone cases at 320×568 and 390×650 with 200% root text verify a visible close control, map context above the sheet, no horizontal overflow, keyboard activation and return to the same reading position, close-focus restoration and unchanged saved history. Pointer-based desktop evidence inspection separately checks return through causes. These are browser viewport/text checks, not physical Android or installed Safari evidence.
 
-Implementation screenshots were inspected at 1280×900, 390×650 and 320×568 with 200% text. The desktop uses a bounded prose scroller and separate continuation controls. On phones the sheet scrolls while its compact heading/close control remains visible above the prose. Current map art remains temporary under the existing P1 review.
+Implementation screenshots were inspected at 1280×900, 390×650 and 320×568 with 200% text. The desktop uses a bounded prose scroller and separate continuation controls. On phones the sheet scrolls while its compact heading/close control remains visible above the prose. Browse history discloses the precise week range and navigation controls, leaving prose visible immediately on short phone screens; browser checks cover that initial visibility at 200% text. Current map art remains temporary under the existing P1 review.
 
 ## Real prose review
 

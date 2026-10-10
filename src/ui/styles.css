@@ -123,6 +123,11 @@ select {
 .recap-navigation {
   padding: 0 20px 16px;
 }
+.recap-history > summary {
+  cursor: pointer;
+  min-height: 45px;
+  padding: 8px 20px;
+}
 .recap-navigation input {
   width: 110px;
 }

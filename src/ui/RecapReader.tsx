@@ -98,83 +98,87 @@ export function RecapReader({
           Close recap
         </button>
       </div>
-      <p className="recap-range">
-        Completed weeks {recap.startTick}–{recap.endTick}. The world is paused at week {world.tick}.
-      </p>
-      <div className="recap-navigation" aria-label="Recap history">
-        <label>
-          Recap period
-          <select
-            value={period.kind}
-            onChange={(event) => {
-              const kind = event.target.value as RecapKind;
-              choose(
-                kind,
-                Math.max(
-                  1,
-                  Math.min(
-                    completedPeriods(world.tick, kind),
-                    Math.floor(period.endTick / periodWeeks(kind)),
+      <details className="recap-history">
+        <summary>Browse history</summary>
+        <p className="recap-range">
+          Completed weeks {recap.startTick}–{recap.endTick}. The world is paused at week{' '}
+          {world.tick}.
+        </p>
+        <div className="recap-navigation" aria-label="Recap history">
+          <label>
+            Recap period
+            <select
+              value={period.kind}
+              onChange={(event) => {
+                const kind = event.target.value as RecapKind;
+                choose(
+                  kind,
+                  Math.max(
+                    1,
+                    Math.min(
+                      completedPeriods(world.tick, kind),
+                      Math.floor(period.endTick / periodWeeks(kind)),
+                    ),
                   ),
-                ),
-              );
+                );
+              }}
+            >
+              <option value="yearly" disabled={completedPeriods(world.tick, 'yearly') === 0}>
+                Yearly
+              </option>
+              <option value="seasonal">Seasonal</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            className="secondary"
+            disabled={number === 1}
+            onClick={() => choose(period.kind, number - 1)}
+          >
+            Previous period
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={number === maximum}
+            onClick={() => choose(period.kind, number + 1)}
+          >
+            Next period
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={number === maximum}
+            onClick={() => choose(period.kind, maximum)}
+          >
+            Latest period
+          </button>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const index = Number(jump);
+              if (jump && Number.isSafeInteger(index) && index >= 1 && index <= maximum) {
+                setError('');
+                choose(period.kind, index);
+              } else setError(`Choose a period from 1 to ${maximum}.`);
             }}
           >
-            <option value="yearly" disabled={completedPeriods(world.tick, 'yearly') === 0}>
-              Yearly
-            </option>
-            <option value="seasonal">Seasonal</option>
-          </select>
-        </label>
-        <button
-          type="button"
-          className="secondary"
-          disabled={number === 1}
-          onClick={() => choose(period.kind, number - 1)}
-        >
-          Previous period
-        </button>
-        <button
-          type="button"
-          className="secondary"
-          disabled={number === maximum}
-          onClick={() => choose(period.kind, number + 1)}
-        >
-          Next period
-        </button>
-        <button
-          type="button"
-          className="secondary"
-          disabled={number === maximum}
-          onClick={() => choose(period.kind, maximum)}
-        >
-          Latest period
-        </button>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            const index = Number(jump);
-            if (jump && Number.isSafeInteger(index) && index >= 1 && index <= maximum) {
-              setError('');
-              choose(period.kind, index);
-            } else setError(`Choose a period from 1 to ${maximum}.`);
-          }}
-        >
-          <label>
-            {period.kind === 'yearly' ? 'Year number' : 'Season number'}
-            <input
-              type="number"
-              min="1"
-              max={maximum}
-              value={jump}
-              onChange={(event) => setJump(event.target.value)}
-            />
-          </label>
-          <button type="submit" className="secondary">
-            Read period
-          </button>
-        </form>
-      </div>
+            <label>
+              {period.kind === 'yearly' ? 'Year number' : 'Season number'}
+              <input
+                type="number"
+                min="1"
+                max={maximum}
+                value={jump}
+                onChange={(event) => setJump(event.target.value)}
+              />
+            </label>
+            <button type="submit" className="secondary">
+              Read period
+            </button>
+          </form>
+        </div>
+      </details>
       {error && <p role="alert">{error}</p>}
       <div className="recap-body" ref={body} tabIndex={0} aria-label="Recap prose and sources">
         <div className="recap-prose">
