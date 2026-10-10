@@ -68,6 +68,10 @@ At the recovery checkpoint this was Python generation evidence only. The foundat
 
 The [phone text-reflow follow-up](PHASE1_VIEWER.md#phone-text-reflow--2026-10-10) fixes inaccessible history/evidence at 200% text on short phone viewports. The sheet keeps its close control visible while its content scrolls, and opening aligns the canvas above it. The [world-session follow-up](PHASE1_VIEWER.md#inspection-across-world-replacement--2026-10-10) resets inspection after accepted replacements, including same-seed/same-week Resume, while preserving it after rejected loads. [Keyboard cause inspection](PHASE1_VIEWER.md#keyboard-cause-inspection-and-return--2026-10-10) keeps focus on the selected evidence and provides a return path through linked records. It also includes a concrete RIVERSIDE experience-review sequence. Browser regressions preserve the saved history digest; these checks do not replace physical-device or human acceptance.
 
+## Active continuation — D-030
+
+The user explicitly requested continued building, milestone merges and compact conversation checkpoints. Follow [PHASE2_INTEGRATION.md](PHASE2_INTEGRATION.md) through world/save foundations, advancing individuals and factual personal inspection. Keep only genuinely blocking questions for the user.
+
 ## Next work in order
 
 **D-029's approved recap plan is complete:** PR #24, the [narrative recap milestone](NARRATIVE_RECAPS.md) in PR #25 and both live main verifications are complete. The deeper P2 and experience-review work below remains separate increments; the recap milestone does not authorize inventing individual biographies or adding hosted AI.
