@@ -92,10 +92,15 @@ function paragraph(sentences: readonly Sentence[]): RecapParagraph {
     sourceIds: unique(sentences.flatMap((entry) => entry.sourceIds)),
   };
 }
-function buildingName(event: Event): string {
+function buildingId(event: Event, world: SettlementSnapshot): number {
+  const id = event.entityIds.find((value) => value !== world.world.settlement.id);
+  if (id === undefined) throw new Error('Historical building record has no building identity.');
+  return id;
+}
+function buildingName(event: Event, world: SettlementSnapshot): string {
   const kind = textFact(event, 'kind');
   if (!['hut', 'field', 'store'].includes(kind)) throw new Error('Unknown historical building.');
-  return `${kind} #${event.entityIds[0]}`;
+  return `${kind} #${buildingId(event, world)}`;
 }
 
 /** A presentation projection of admitted history; never advances or reconstructs the world. */
@@ -169,12 +174,14 @@ export function buildRecap(world: SettlementSnapshot, period: RecapPeriod): Reca
     const fields = contribution?.facts.fields;
     const field = Array.isArray(fields)
       ? (fields.find((item: unknown) =>
-          item && typeof item === 'object' && 'id' in item ? item.id === event.entityIds[0] : false,
+          item && typeof item === 'object' && 'id' in item
+            ? item.id === buildingId(event, world)
+            : false,
         ) as { yield?: unknown } | undefined)
       : undefined;
     const tokens = [
       words('Work reached a milestone when '),
-      record(buildingName(event), event),
+      record(buildingName(event, world), event),
       words(` was completed in week ${event.tick}.`),
     ];
     if (contribution && field && typeof field.yield === 'number' && field.yield > 0) {
@@ -190,7 +197,9 @@ export function buildRecap(world: SettlementSnapshot, period: RecapPeriod): Reca
     work.push(
       sentence(
         [
-          words(`Another ${completed.length - 2} construction projects were completed; `),
+          words(
+            `Another ${completed.length - 2} construction ${completed.length === 3 ? 'project was' : 'projects were'} completed; `,
+          ),
           record('their records', completed[2]!),
           words(' remain in the archive.'),
         ],
@@ -198,14 +207,14 @@ export function buildRecap(world: SettlementSnapshot, period: RecapPeriod): Reca
       ),
     );
   const unfinished = started.filter(
-    (event) => !completed.some((done) => done.entityIds[0] === event.entityIds[0]),
+    (event) => !completed.some((done) => buildingId(done, world) === buildingId(event, world)),
   );
   if (unfinished.length)
     work.push(
       sentence(
         [
           words('New work also began on '),
-          record(buildingName(unfinished[0]!), unfinished[0]!),
+          record(buildingName(unfinished[0]!, world), unfinished[0]!),
           words(
             unfinished.length > 1
               ? ` and ${unfinished.length - 1} other projects; their completion was not recorded during this period.`
@@ -224,7 +233,7 @@ export function buildRecap(world: SettlementSnapshot, period: RecapPeriod): Reca
       words(
         `The built landscape also lost ${removed.length} ${removed.length === 1 ? 'structure' : 'structures'}, including `,
       ),
-      record(buildingName(event), event),
+      record(buildingName(event, world), event),
       words('.'),
     ];
     if (decay)

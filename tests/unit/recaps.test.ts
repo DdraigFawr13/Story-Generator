@@ -68,6 +68,17 @@ it.each(['RIVERSIDE', 'THIMBLE'])(
     expect(seasonal.startTick).toBe(37);
     expect(seasonal.paragraphs.length).toBeLessThanOrEqual(2);
     expect(prose(seasonal)).toContain('dormant crops and no crop food');
+    for (const token of recap.paragraphs.flatMap((paragraph) => paragraph.tokens)) {
+      if (token.kind !== 'record') continue;
+      const event = later.events[token.eventId - 1]!;
+      if (
+        (event.type === 'construction_completed' || event.type === 'building_removed') &&
+        /^(hut|field|store) #/.test(token.text)
+      ) {
+        const id = event.entityIds.find((value) => value !== later.world.settlement.id)!;
+        expect(token.text).toBe(`${event.facts.kind} #${id}`);
+      }
+    }
     expect(canonicalJson(later)).toBe(before);
   },
 );
@@ -89,7 +100,7 @@ it('combines demographic counts without assigning lives or making co-occurrence 
 
 it('links a field contribution only when its harvest records both the field and its completion cause', () => {
   const entries: Parameters<typeof projection>[0] = [
-    { type: 'construction_completed', tick: 13, facts: { kind: 'field' }, entityIds: [11] },
+    { type: 'construction_completed', tick: 13, facts: { kind: 'field' }, entityIds: [1, 11] },
     {
       type: 'harvest',
       tick: 24,

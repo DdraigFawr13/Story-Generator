@@ -2,7 +2,7 @@
 
 A procedural, simulation-driven pixel world that tells the histories of its societies as they emerge.
 
-**Status:** The weekly settlement engine runs in a browser viewer with Play/Pause, step, 1x/4x/16x, a factual chronicle and atomic browser-local save/resume. New worlds use versioned winter/recovery rules; existing v1 saves retain their original behavior. Phase 1 acceptance remains open for selected art, physical devices and human experience review.
+**Status:** The weekly settlement engine runs in a browser viewer with Play/Pause, step, 1x/4x/16x, linked historical recaps, a factual chronicle and atomic browser-local save/resume. Yearly recaps are the default, with seasonal/off options. New worlds use versioned winter/recovery rules; existing v1 saves retain their original behavior. Phase 1 acceptance remains open for selected art, physical devices and human experience review.
 
 [Play Story Generator](https://story-generator-opal.vercel.app). Saves stay in this browser on this site; start a seeded world, then Play or Step to observe its history. Production updates only from commits on `main` by default.
 
@@ -39,7 +39,8 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Accepted architecture decision records](docs/adr/README.md)
 - [Working agreements and branch hygiene](CONTRIBUTING.md)
 - [Vercel hosting and main-only deployment rule](docs/DEPLOYMENT.md)
-- [Requested narrative recaps and linked inspection](docs/NARRATIVE_RECAPS.md)
+- [Narrative recaps and linked inspection](docs/NARRATIVE_RECAPS.md)
+- [Recap verification and real prose samples](docs/NARRATIVE_RECAPS_VERIFICATION.md)
 - [Reproducible legacy v1 winter/recovery sensitivity study](docs/PHASE1_BALANCE_STUDY.md) — `npm run benchmark:balance-study`
 
 ## Approved direction
@@ -60,6 +61,8 @@ npm run dev
 ```
 
 Open the local URL printed by Vite. Enter a seed or generate one, then Play or Step through the settlement. Pan/zoom the map and inspect tiles, events and the last week's work. The Residents button controls illustrative population dots; it changes only the display. Save stores one complete world in this browser; Resume restores it paused. Generation failure preserves the current world.
+
+Playback pauses at the end of each year for a historian's recap. Choose Seasonal or Off under Automatic recaps. Read history browses any completed year or season without changing the world; the first season is available after week 12. Follow underlined passages to inspect their evidence and causes, then Back to recap to return to the same reading position. Close keeps playback paused; Continue watching explicitly resumes. Step never forces an automatic recap.
 
 ```sh
 npm run check

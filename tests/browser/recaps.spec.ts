@@ -1,7 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { digestCanonical } from '../../src/adapters/crypto';
 import { buildRecap } from '../../src/controller/recaps';
-import { simulateSettlement } from '../../src/sim/settlement';
+import { advanceSettlement, simulateSettlement } from '../../src/sim/settlement';
+import { createSettlement } from '../../src/sim/settlement-initial';
 
 const errors = new WeakMap<Page, string[]>();
 test.beforeEach(({ page }) => {
@@ -136,6 +137,29 @@ test('earlier years and seasons use historical records while the current world s
   expect(await save(page, 144)).toEqual(before);
 });
 
+test('retained v1 saves read their own winter crop history and continue under their original rules', async ({
+  page,
+}) => {
+  await openAt(page, 48, 'p1-settlement-v1');
+  const original = await fixture(page, 'storedDigest');
+  await page.getByRole('button', { name: 'Read history', exact: true }).click();
+  const reader = page.getByRole('region', { name: 'Historical recap', exact: true });
+  await reader.getByLabel('Recap period').selectOption('seasonal');
+  await expect(page.locator('.recap-prose')).toContainText('the winter harvest');
+  await expect(page.locator('.recap-prose')).not.toContainText('dormant crops');
+  expect(await fixture(page, 'storedDigest')).toEqual(original);
+  await reader.getByRole('button', { name: 'Close recap', exact: true }).click();
+  await page.getByRole('button', { name: 'Step one week', exact: true }).click();
+  const saved = await save(page, 49);
+  expect(saved).toEqual({
+    seed: 'RIVERSIDE',
+    tick: 49,
+    digest: await digestCanonical(
+      advanceSettlement(createSettlement('RIVERSIDE', 'p1-settlement-v1'), 49).state,
+    ),
+  });
+});
+
 test('recap evidence and causal inspection return to the same prose, scroll and keyboard link', async ({
   page,
 }) => {
@@ -208,7 +232,7 @@ for (const [width, height] of [
     const link = page.locator('.recap-prose .recap-link').last();
     await link.focus();
     const scroll = await reader.evaluate((el) => el.scrollTop);
-    await link.click();
+    await link.press('Enter');
     await expect(page.locator('.event-details h3')).toBeFocused();
     await page.getByRole('button', { name: 'Back to recap', exact: true }).click();
     await expect(link).toBeFocused();
