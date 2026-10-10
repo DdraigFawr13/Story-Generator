@@ -3,7 +3,7 @@ import { canonicalJson, isImmutableCanonical } from './canonical';
 import { calendarAtTick } from './clock';
 import { RNG_ALGORITHM, validateRngState } from './rng';
 import { validateSeed } from './seed';
-import { SETTLEMENT_CONFIG, settlementConfig } from './settlement-config';
+import { SETTLEMENT_CONFIG, settlementConfig, type SettlementConfig } from './settlement-config';
 import {
   fieldYield,
   foodCapacity,
@@ -13,11 +13,17 @@ import {
   workforce,
   protectedForagers,
 } from './settlement-math';
-import { EVENT_FIELDS, EVENT_PHASES, type SettlementState } from './state';
+import {
+  EVENT_FIELDS,
+  EVENT_PHASES,
+  type SettlementState,
+  type Entity,
+  type SettlementEvent,
+} from './state';
 import { validateTiles } from './terrain';
 
 const validatedMaps = new WeakSet<object>();
-const validatedEvents = new WeakSet<object>();
+const validatedEvents = new WeakMap<object, Set<string>>();
 function requireState(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`Invalid settlement state: ${message}`);
 }
@@ -28,8 +34,33 @@ function keys(value: object, names: string[]): void {
   requireState(Object.keys(value).sort().join(',') === names.sort().join(','), 'record shape');
 }
 
+export interface EconomicValidation {
+  version: string;
+  schemaVersion: number;
+  config: object;
+  economicConfig: SettlementConfig;
+  rngNames: string[];
+  worldFields: string[];
+  householdCount: number;
+  foundingAllocator: number;
+  identity(entity: Entity, created: SettlementEvent): boolean;
+  eventFields(event: SettlementEvent): { facts: readonly string[]; effects: readonly string[] };
+  ledger: {
+    workforce: number;
+    healthAfterFood: number;
+    closingHealth: number;
+    demographics(state: SettlementState): void;
+  } | null;
+}
+
 // Validate saved state directly. Do not regenerate a running world from its seed.
 export function validateSettlementState(value: unknown): asserts value is SettlementState {
+  validateEconomicState(value);
+}
+
+// Used only with a trusted version contract by the P2 validator. The public P1
+// validator above never accepts an individual contract from saved input.
+export function validateEconomicState(value: unknown, individual?: EconomicValidation): void {
   canonicalJson(value);
   const s = value as SettlementState;
   keys(s, [
@@ -46,15 +77,20 @@ export function validateSettlementState(value: unknown): asserts value is Settle
     'lastTick',
   ]);
   requireState(
-    s.schemaVersion === 2 && s.rulesVersion === s.simulationVersion,
+    s.schemaVersion === (individual?.schemaVersion ?? 2) &&
+      s.rulesVersion === s.simulationVersion &&
+      (!individual || s.simulationVersion === individual.version),
     'unsupported version',
   );
-  const config = settlementConfig(s.simulationVersion);
+  const config = individual?.economicConfig ?? settlementConfig(s.simulationVersion);
   const E = config.economy;
-  requireState(canonicalJson(s.config) === canonicalJson(config), 'unsupported configuration');
+  requireState(
+    canonicalJson(s.config) === canonicalJson(individual?.config ?? config),
+    'unsupported configuration',
+  );
   validateSeed(s.seed);
   validateArchive(s);
-  keys(s.rng, ['terrain', 'weather', 'demographics']);
+  keys(s.rng, ['terrain', 'weather', 'demographics', ...(individual?.rngNames ?? [])]);
   for (const stream of Object.values(s.rng)) {
     keys(stream, ['algorithm', 'state']);
     requireState(stream.algorithm === RNG_ALGORITHM, 'RNG algorithm');
@@ -75,6 +111,7 @@ export function validateSettlementState(value: unknown): asserts value is Settle
     'currentWeather',
     'currentWeatherEventId',
     'entities',
+    ...(individual?.worldFields ?? []),
   ]);
   if (!validatedMaps.has(m)) {
     keys(m, ['width', 'height', 'river', 'tiles']);
@@ -120,7 +157,9 @@ export function validateSettlementState(value: unknown): asserts value is Settle
   integer(v.food);
   integer(v.timber);
   requireState(
-    v.households === Math.ceil(v.population / SETTLEMENT_CONFIG.peoplePerHousehold),
+    v.households ===
+      (individual?.householdCount ??
+        Math.ceil(v.population / SETTLEMENT_CONFIG.peoplePerHousehold)),
     'household count',
   );
   requireState(
@@ -138,12 +177,15 @@ export function validateSettlementState(value: unknown): asserts value is Settle
     requireState(
       index === 0
         ? entity.kind === 'settlement' && entity.tile === v.center && !entity.retired
-        : ['hut', 'field', 'store'].includes(entity.kind),
+        : ['hut', 'field', 'store'].includes(entity.kind) ||
+            !!individual?.identity(entity, s.events[entity.creationEventId - 1]!),
       'entity type',
     );
     const created = s.events[entity.creationEventId - 1]!;
     requireState(
-      (created.type === 'founding' || created.type === 'construction_started') &&
+      (created.type === 'founding' ||
+        created.type === 'construction_started' ||
+        !!individual?.identity(entity, created)) &&
         created.entityIds.includes(entity.id),
       'entity creation reference',
     );
@@ -157,7 +199,7 @@ export function validateSettlementState(value: unknown): asserts value is Settle
     requireState(event.tick !== tick || event.phase >= phase, 'event phase order');
     tick = event.tick;
     phase = event.phase;
-    if (validatedEvents.has(event)) {
+    if (validatedEvents.get(event)?.has(s.simulationVersion)) {
       requireState(
         event.entityIds.every((id) => identities.has(id)),
         'event entity reference',
@@ -178,7 +220,8 @@ export function validateSettlementState(value: unknown): asserts value is Settle
       'importance',
     ]);
     requireState(
-      Object.hasOwn(EVENT_PHASES, event.type) &&
+      (individual || !['work_changed', 'home_changed'].includes(event.type)) &&
+        Object.hasOwn(EVENT_PHASES, event.type) &&
         (EVENT_PHASES[event.type] as readonly number[]).includes(event.phase),
       'event type/phase',
     );
@@ -197,8 +240,9 @@ export function validateSettlementState(value: unknown): asserts value is Settle
         !Array.isArray(event.effects),
       'event data',
     );
-    keys(event.facts, [...EVENT_FIELDS[event.type].facts]);
-    keys(event.effects, [...EVENT_FIELDS[event.type].effects]);
+    const fields = individual?.eventFields(event) ?? EVENT_FIELDS[event.type];
+    keys(event.facts, [...fields.facts]);
+    keys(event.effects, [...fields.effects]);
     let previous = 0;
     for (const id of event.entityIds) {
       integer(id, 1);
@@ -212,7 +256,11 @@ export function validateSettlementState(value: unknown): asserts value is Settle
         event.location.y === Math.floor(event.location.tile / m.width),
       'event location',
     );
-    if (isImmutableCanonical(event)) validatedEvents.add(event);
+    if (isImmutableCanonical(event)) {
+      const versions = validatedEvents.get(event) ?? new Set<string>();
+      versions.add(s.simulationVersion);
+      validatedEvents.set(event, versions);
+    }
   }
   const occupied = new Set<number>(),
     active = new Set<number>();
@@ -271,7 +319,9 @@ export function validateSettlementState(value: unknown): asserts value is Settle
       'project reference',
     );
   }
-  for (const entity of w.entities.slice(1)) {
+  for (const entity of w.entities
+    .slice(1)
+    .filter((entity) => ['hut', 'field', 'store'].includes(entity.kind))) {
     requireState(entity.retired === !active.has(entity.id), 'registry lifecycle');
     if (entity.retired)
       requireState(
@@ -296,7 +346,7 @@ export function validateSettlementState(value: unknown): asserts value is Settle
         !v.surplus &&
         w.buildings.length === 9 &&
         w.project === null &&
-        s.allocators.entity === 11,
+        s.allocators.entity === (individual?.foundingAllocator ?? 11),
       'founding endowment',
     );
   } else {
@@ -318,7 +368,7 @@ export function validateSettlementState(value: unknown): asserts value is Settle
         evidence.facts.multiplier === weather.multiplier,
       'weather reference',
     );
-    validateLedger(s);
+    validateLedger(s, individual);
     requireState(
       v.shortage === (v.population > 0 && s.lastTick!.food.deficit > 0) &&
         v.surplus === (v.population > 0 && v.food >= E.surplusFoodWeeks * v.population),
@@ -334,8 +384,8 @@ export function validateSettlementState(value: unknown): asserts value is Settle
     );
 }
 
-function validateLedger(s: SettlementState): void {
-  const E = s.config.economy;
+function validateLedger(s: SettlementState, individual?: EconomicValidation): void {
+  const E = (individual?.economicConfig ?? s.config).economy;
   const l = s.lastTick!;
   requireState(l !== null && l.tick === s.tick, 'missing tick ledger');
   keys(l, [
@@ -350,6 +400,7 @@ function validateLedger(s: SettlementState): void {
     'construction',
     'demographics',
     'closing',
+    ...(individual ? ['people'] : []),
   ]);
   for (const totals of [l.opening, l.closing]) {
     keys(totals, ['population', 'food', 'timber', 'health', 'shelter', 'capacity', 'escrow']);
@@ -373,7 +424,10 @@ function validateLedger(s: SettlementState): void {
     'unusedConstruction',
   ]);
   for (const [name, value] of Object.entries(a)) if (name !== 'fields') integer(value as number);
-  requireState(a.workforce === workforce(l.opening.population, E), 'workforce');
+  requireState(
+    a.workforce === (individual?.ledger?.workforce ?? workforce(l.opening.population, E)),
+    'workforce',
+  );
   requireState(
     a.fields.length + a.foragers + a.repairs + a.builders + a.gatherers + a.unassigned ===
       a.workforce,
@@ -401,7 +455,10 @@ function validateLedger(s: SettlementState): void {
   const calendar = calendarAtTick(s.tick);
   requireState(calendar.kind === 'week', 'ledger calendar');
   const season = Math.floor((s.tick - 1) / 12) % 4;
-  const protectedCount = protectedForagers(l.opening.population, l.opening.food, E);
+  const protectedCount = Math.min(
+    a.workforce,
+    protectedForagers(l.opening.population, l.opening.food, E),
+  );
   requireState(
     a.fields.length <= a.workforce - protectedCount && a.foragers >= protectedCount,
     'recovery labor',
@@ -490,7 +547,8 @@ function validateLedger(s: SettlementState): void {
   );
   requireState(
     l.healthAfterFood ===
-      rationHealth(l.opening.population, l.opening.health, f.deficit, l.opening.shelter),
+      (individual?.ledger?.healthAfterFood ??
+        rationHealth(l.opening.population, l.opening.health, f.deficit, l.opening.shelter)),
     'health ledger',
   );
   keys(d, [
@@ -504,36 +562,46 @@ function validateLedger(s: SettlementState): void {
   ]);
   for (const [name, value] of Object.entries(d))
     if (name !== 'birthEligible') integer(value as number);
-  requireState(
-    typeof d.birthEligible === 'boolean' &&
-      d.deathTrials === (calendar.seasonBoundary ? l.opening.population : 0) &&
-      d.deaths <= d.deathTrials,
-    'death trials',
-  );
-  requireState(
-    d.deathThreshold ===
-      E.baseDeathThreshold + Math.floor((100 - l.healthAfterFood) / E.deathHealthDivisor),
-    'death threshold',
-  );
-  const survivors = l.opening.population - d.deaths;
-  const eligible =
-    calendar.seasonBoundary &&
-    survivors > 0 &&
-    l.healthAfterFood >= E.birthHealth &&
-    f.deficit === 0 &&
-    l.closing.food >= E.birthFoodWeeks * survivors;
-  requireState(
-    d.birthEligible === eligible &&
-      d.birthTrials === (eligible ? survivors : 0) &&
-      d.birthSuccesses <= d.birthTrials &&
-      d.births === Math.min(d.birthSuccesses, Math.max(0, l.closing.shelter - survivors)),
-    'birth accounting',
-  );
-  requireState(
-    l.closing.population === survivors + d.births &&
-      l.closing.health === (l.closing.population === 0 ? 0 : l.healthAfterFood),
-    'closing population/health',
-  );
+  if (individual) {
+    requireState(individual.ledger !== null, 'missing individual ledger contract');
+    individual.ledger.demographics(s);
+    requireState(
+      l.closing.population === l.opening.population - d.deaths + d.births &&
+        l.closing.health === individual.ledger.closingHealth,
+      'individual closing census',
+    );
+  } else {
+    requireState(
+      typeof d.birthEligible === 'boolean' &&
+        d.deathTrials === (calendar.seasonBoundary ? l.opening.population : 0) &&
+        d.deaths <= d.deathTrials,
+      'death trials',
+    );
+    requireState(
+      d.deathThreshold ===
+        E.baseDeathThreshold + Math.floor((100 - l.healthAfterFood) / E.deathHealthDivisor),
+      'death threshold',
+    );
+    const survivors = l.opening.population - d.deaths;
+    const eligible =
+      calendar.seasonBoundary &&
+      survivors > 0 &&
+      l.healthAfterFood >= E.birthHealth &&
+      f.deficit === 0 &&
+      l.closing.food >= E.birthFoodWeeks * survivors;
+    requireState(
+      d.birthEligible === eligible &&
+        d.birthTrials === (eligible ? survivors : 0) &&
+        d.birthSuccesses <= d.birthTrials &&
+        d.births === Math.min(d.birthSuccesses, Math.max(0, l.closing.shelter - survivors)),
+      'birth accounting',
+    );
+    requireState(
+      l.closing.population === survivors + d.births &&
+        l.closing.health === (l.closing.population === 0 ? 0 : l.healthAfterFood),
+      'closing population/health',
+    );
+  }
   const v = s.world.settlement;
   requireState(
     l.closing.population === v.population &&

@@ -7,7 +7,7 @@ import {
 import { calendarAtTick, nextTick } from './clock';
 import { capture } from './immutable';
 import { uniform } from './rng';
-import { SETTLEMENT_CONFIG } from './settlement-config';
+import { SETTLEMENT_CONFIG, type SettlementConfig } from './settlement-config';
 import { createSettlement } from './settlement-initial';
 import {
   fieldYield,
@@ -32,16 +32,50 @@ import type {
   TickLedger,
 } from './state';
 
+export type WeekEmitter = (
+  type: EventType,
+  phase: number,
+  facts: object,
+  effects?: object,
+  ids?: number[],
+  tile?: number,
+  causes?: number[],
+  importance?: 'major' | 'ordinary' | 'minor',
+) => number;
+export type WeekDraw = (stream: 'weather' | 'demographics', range: number) => number;
+
+// Trusted versioned mechanics only. The P1 public runner always uses its
+// original rules; the P2 runner supplies individual accounting and validation.
+export interface IndividualWeekPolicy {
+  config: SettlementConfig;
+  workforce: number;
+  initialize(state: SettlementState, ledger: TickLedger): void;
+  assignWork(
+    state: SettlementState,
+    ledger: TickLedger,
+    repairs: Repair[],
+    emit: WeekEmitter,
+  ): void;
+  health(state: SettlementState, ledger: TickLedger): void;
+  demographics(state: SettlementState, ledger: TickLedger, emit: WeekEmitter, draw: WeekDraw): void;
+  households(state: SettlementState, ledger: TickLedger, emit: WeekEmitter): void;
+  validate(state: SettlementState): void;
+}
+
 // A pure candidate reducer. Callers supply a validated immutable snapshot and
 // must admit the entire result before publishing it. Developer fixtures can
 // inject valid phase inputs; production cannot inject weather or outcomes.
-export function reduceSettlementWeek(committed: SettlementSnapshot): SettlementState {
-  const E = committed.config.economy;
+export function reduceSettlementWeek(
+  committed: SettlementSnapshot,
+  individual?: IndividualWeekPolicy,
+): SettlementState {
+  const E = (individual?.config ?? committed.config).economy;
   // Own every record we mutate. Frozen map/history records can be shared;
   // admission still isolates all newly produced mutable data.
   const s = {
     ...committed,
     rng: {
+      ...committed.rng,
       terrain: { ...committed.rng.terrain },
       weather: { ...committed.rng.weather },
       demographics: { ...committed.rng.demographics },
@@ -67,7 +101,7 @@ export function reduceSettlementWeek(committed: SettlementSnapshot): SettlementS
     tick: s.tick,
     opening,
     labor: {
-      workforce: workforce(opening.population, E),
+      workforce: individual?.workforce ?? workforce(opening.population, E),
       fields: [],
       foragers: 0,
       repairs: 0,
@@ -140,6 +174,8 @@ export function reduceSettlementWeek(committed: SettlementSnapshot): SettlementS
     );
   }
 
+  individual?.initialize(s, ledger);
+
   // 1. Environment. Extinct settlements retain seasonal weather and history.
   if (calendar.week === 1) {
     const kind = weatherKind(draw('weather', E.weatherRange), E);
@@ -156,7 +192,10 @@ export function reduceSettlementWeek(committed: SettlementSnapshot): SettlementS
   // 2. Reserve exclusive labor and opening materials; no mid-tick reassignment.
   let remaining = ledger.labor.workforce;
   const fields = w.buildings.filter((b) => b.kind === 'field');
-  const protectedCount = protectedForagers(opening.population, opening.food, E);
+  const protectedCount = Math.min(
+    ledger.labor.workforce,
+    protectedForagers(opening.population, opening.food, E),
+  );
   ledger.labor.fields =
     E.seasonMultipliers[seasonIndex] === 0
       ? []
@@ -267,6 +306,7 @@ export function reduceSettlementWeek(committed: SettlementSnapshot): SettlementS
     remaining -= ledger.labor.gatherers;
   }
   ledger.labor.unassigned = remaining;
+  individual?.assignWork(s, ledger, repairs, emit);
 
   // 3. Work and production. Later completions cannot participate this week.
   for (const field of fields)
@@ -331,7 +371,14 @@ export function reduceSettlementWeek(committed: SettlementSnapshot): SettlementS
       );
     }
   }
-  v.health = rationHealth(opening.population, opening.health, ledger.food.deficit, opening.shelter);
+  if (individual) individual.health(s, ledger);
+  else
+    v.health = rationHealth(
+      opening.population,
+      opening.health,
+      ledger.food.deficit,
+      opening.shelter,
+    );
   ledger.healthAfterFood = v.health;
 
   // 6. Reserved repairs, construction and seasonal decay/removal.
@@ -435,93 +482,98 @@ export function reduceSettlementWeek(committed: SettlementSnapshot): SettlementS
   }
 
   // 7. All death draws precede conditionally consumed birth draws.
-  const d = ledger.demographics;
-  d.deathThreshold = E.baseDeathThreshold + Math.floor((100 - v.health) / E.deathHealthDivisor);
-  if (calendar.seasonBoundary && opening.population > 0) {
-    d.deathTrials = opening.population;
-    for (let i = 0; i < opening.population; i++)
-      if (draw('demographics', E.demographicRange) < d.deathThreshold) d.deaths++;
-    v.population = opening.population - d.deaths;
-    const deathEventId =
-      d.deaths > 0
-        ? emit(
-            'deaths',
+  if (individual) {
+    individual.demographics(s, ledger, emit, draw);
+    individual.households(s, ledger, emit);
+  } else {
+    const d = ledger.demographics;
+    d.deathThreshold = E.baseDeathThreshold + Math.floor((100 - v.health) / E.deathHealthDivisor);
+    if (calendar.seasonBoundary && opening.population > 0) {
+      d.deathTrials = opening.population;
+      for (let i = 0; i < opening.population; i++)
+        if (draw('demographics', E.demographicRange) < d.deathThreshold) d.deaths++;
+      v.population = opening.population - d.deaths;
+      const deathEventId =
+        d.deaths > 0
+          ? emit(
+              'deaths',
+              7,
+              {
+                count: d.deaths,
+                openingPopulation: opening.population,
+                health: v.health,
+                shortfall: ledger.food.deficit,
+                openingShelter: opening.shelter,
+                threshold: d.deathThreshold,
+                trials: d.deathTrials,
+              },
+              { population: { before: opening.population, after: v.population } },
+              [],
+              v.center,
+              [],
+              'major',
+            )
+          : null;
+      const survivors = v.population;
+      d.birthEligible =
+        survivors > 0 &&
+        v.health >= E.birthHealth &&
+        ledger.food.deficit === 0 &&
+        v.food >= E.birthFoodWeeks * survivors;
+      if (d.birthEligible) {
+        d.birthTrials = survivors;
+        for (let i = 0; i < survivors; i++)
+          if (draw('demographics', E.demographicRange) < E.birthThreshold) d.birthSuccesses++;
+        d.births = Math.min(d.birthSuccesses, Math.max(0, shelter(w.buildings) - survivors));
+        v.population += d.births;
+        if (d.births > 0)
+          emit(
+            'births',
             7,
             {
-              count: d.deaths,
-              openingPopulation: opening.population,
+              count: d.births,
+              survivors,
               health: v.health,
+              food: v.food,
               shortfall: ledger.food.deficit,
-              openingShelter: opening.shelter,
-              threshold: d.deathThreshold,
-              trials: d.deathTrials,
+              shelter: shelter(w.buildings),
+              trials: d.birthTrials,
+              successes: d.birthSuccesses,
             },
-            { population: { before: opening.population, after: v.population } },
+            { population: { before: survivors, after: v.population } },
             [],
             v.center,
             [],
             'major',
-          )
-        : null;
-    const survivors = v.population;
-    d.birthEligible =
-      survivors > 0 &&
-      v.health >= E.birthHealth &&
-      ledger.food.deficit === 0 &&
-      v.food >= E.birthFoodWeeks * survivors;
-    if (d.birthEligible) {
-      d.birthTrials = survivors;
-      for (let i = 0; i < survivors; i++)
-        if (draw('demographics', E.demographicRange) < E.birthThreshold) d.birthSuccesses++;
-      d.births = Math.min(d.birthSuccesses, Math.max(0, shelter(w.buildings) - survivors));
-      v.population += d.births;
-      if (d.births > 0)
+          );
+      }
+      if (v.population === 0) {
+        const abandoned = w.buildings
+          .filter((b) => b.kind === 'field' && b.tendedWeeks > 0)
+          .map((b) => ({ id: b.id, tendedWeeks: b.tendedWeeks }));
+        for (const field of w.buildings.filter((b) => b.kind === 'field')) field.tendedWeeks = 0;
+        const before = v.health;
+        v.health = 0;
+        v.shortage = false;
+        v.surplus = false;
         emit(
-          'births',
+          'extinction',
           7,
+          { population: 0, abandonedCropWork: abandoned, unfinishedProject: w.project },
           {
-            count: d.births,
-            survivors,
-            health: v.health,
-            food: v.food,
-            shortfall: ledger.food.deficit,
-            shelter: shelter(w.buildings),
-            trials: d.birthTrials,
-            successes: d.birthSuccesses,
+            health: { before, after: 0 },
+            shortage: { before: committed.world.settlement.shortage, after: false },
+            surplus: { before: committed.world.settlement.surplus, after: false },
           },
-          { population: { before: survivors, after: v.population } },
-          [],
+          abandoned.map((b) => b.id),
           v.center,
-          [],
+          [deathEventId!],
           'major',
         );
+      }
     }
-    if (v.population === 0) {
-      const abandoned = w.buildings
-        .filter((b) => b.kind === 'field' && b.tendedWeeks > 0)
-        .map((b) => ({ id: b.id, tendedWeeks: b.tendedWeeks }));
-      for (const field of w.buildings.filter((b) => b.kind === 'field')) field.tendedWeeks = 0;
-      const before = v.health;
-      v.health = 0;
-      v.shortage = false;
-      v.surplus = false;
-      emit(
-        'extinction',
-        7,
-        { population: 0, abandonedCropWork: abandoned, unfinishedProject: w.project },
-        {
-          health: { before, after: 0 },
-          shortage: { before: committed.world.settlement.shortage, after: false },
-          surplus: { before: committed.world.settlement.surplus, after: false },
-        },
-        abandoned.map((b) => b.id),
-        v.center,
-        [deathEventId!],
-        'major',
-      );
-    }
+    v.households = Math.ceil(v.population / SETTLEMENT_CONFIG.peoplePerHousehold);
   }
-  v.households = Math.ceil(v.population / SETTLEMENT_CONFIG.peoplePerHousehold);
 
   // 8. Transition evidence follows demographics and never becomes a forward cause.
   if (v.population > 0) {
@@ -559,7 +611,8 @@ export function reduceSettlementWeek(committed: SettlementSnapshot): SettlementS
   }
   ledger.closing = settlementTotals(s);
   s.lastTick = ledger;
-  validateSettlementState(s);
+  if (individual) individual.validate(s);
+  else validateSettlementState(s);
   return s;
 }
 

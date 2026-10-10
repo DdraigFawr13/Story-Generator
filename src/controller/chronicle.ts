@@ -11,6 +11,10 @@ export function dateLabel(tick: number): string {
 export function headline(event: Immutable<SettlementEvent>): string {
   const f = event.facts;
   switch (event.type) {
+    case 'work_changed':
+      return `${f.count} ${f.count === 1 ? 'resident changes' : 'residents change'} weekly work`;
+    case 'home_changed':
+      return `${f.count} ${f.count === 1 ? 'resident moves' : 'residents move'} to available housing`;
     case 'founding':
       return `${f.population} residents found a settlement`;
     case 'weather':
