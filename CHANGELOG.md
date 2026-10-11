@@ -2,6 +2,10 @@
 
 Newest first. One short entry per merged milestone.
 
+## Phase 1 — World generation
+
+- **M1.1 Terrain.** `generateWorld(seed, params)` builds a 256×256 heightmap in about 0.1 s: paired continental plates (inland ranges where they collide), oceanic plates (coastal ranges, island arcs, rifts), noise-warped plate borders, fractal coasts, ridged interior hills and an ocean margin. Sea level is set to hit `params.landFraction` (default 0.35); `params.continents` defaults to 4. Typed-array layers round-trip through saves. Added the `implementer` (Sonnet) and `test-runner` (Haiku) agents and the model-routing rules in `AGENTS.md`.
+
 ## Phase 0 — Reset and skeleton
 
 - **M0.3 Engine review, sfc32 and saves.** The RNG is now `sfc32` (four 32-bit words per named stream, seeded with cyrb128 and checked against an independent reference vector). New `src/platform/save-store.ts` keeps named saves in IndexedDB with a SHA-256 checksum and one-transaction writes. `/?next` has Save, Load and Delete, and the Chromium smoke covers save → reload → load → continue.

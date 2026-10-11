@@ -109,6 +109,31 @@ export interface WorldParams {
   width: number;
   height: number;
   historyYears: number;
+  /** Continental plates; the default 3–5 gives a few continents plus islands. */
+  continents: number;
+  /** Share of cells above sea level (0–1). */
+  landFraction: number;
+}
+
+/** A tectonic plate from world-gen. Motion is in tenths of a cell per step. */
+export interface Plate {
+  id: number;
+  cx: number;
+  cy: number;
+  vx: number;
+  vy: number;
+  continental: boolean;
+}
+
+/** Per-cell world layers (index = y * width + x). Integer typed arrays keep maths exact. */
+export interface WorldCells {
+  width: number;
+  height: number;
+  /** Metres; sea and lake floors are at or below 0. */
+  elevation: Int16Array;
+  /** Owning plate id. */
+  plate: Uint8Array;
+  plates: Plate[];
 }
 
 export interface WorldState {
@@ -119,11 +144,13 @@ export interface WorldState {
   /** Named RNG stream states, created lazily from the seed (core/rng.ts). */
   rng: Record<string, RngState>;
   nextId: Record<EntityKind, Id>;
+  /** World-gen layers; null until the world is generated. */
+  cells: WorldCells | null;
   people: Map<Id, Person>;
   events: SimEvent[];
   commands: Command[];
   /** Demo climate state for the scaffold; Phase 1 moves weather to per-cell climate. */
   weather: { current: string; sinceDay: number; causeEvent: Id | null };
-  // Phase 1 adds `cells`; Phase 2 adds `civs`, `sites`, `creatures`, `items`;
+  // Phase 2 adds `civs`, `sites`, `creatures`, `items`;
   // Phase 3 adds `activeSite`.
 }

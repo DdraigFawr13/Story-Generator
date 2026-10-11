@@ -8,6 +8,16 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md), then [docs/REBOOT_PLAN.md](docs/REBOOT_
 - Merge at milestones when CI is green; ask the user on design forks. End each phase with the playtest check-in from REBOOT_PLAN §1E.
 - When the plan is silent, follow REBOOT_PLAN §1B: connect more systems, prefer data over code, make consequences visible.
 
+## Model routing (cost)
+
+The user asked agents to save money by orchestrating cheaper models. The main session (the most capable model) plans, writes specs, reviews diffs, commits and merges. It delegates:
+
+- **Bulk coding** to the `implementer` agent (Sonnet; `.claude/agents/implementer.md`): one bounded milestone task at a time, with a written spec (files, data shapes, behaviour, tests, acceptance criteria). Run it in a git worktree when the main tree is busy.
+- **Routine check runs** to the `test-runner` agent (Haiku; `.claude/agents/test-runner.md`): `npm run check`, browser smoke, reruns after fixes.
+- If a session started before these agents existed, use the `general-purpose` agent with `model: sonnet` or `model: haiku` and tell it to follow the agent file.
+
+Don't delegate when it costs more than it saves. Every subagent starts cold and re-reads the repo (about 20–60k tokens), so keep small edits, one-line fixes and quick filtered checks in the main session. Delegate when a task needs many file reads or writes, or produces long logs. The orchestrator always reviews delegated diffs before committing; cheaper models make plausible mistakes.
+
 ## Local checks (run before pushing)
 
 - Every push: `npm run check` (format, typecheck, boundaries, unit tests, build).
