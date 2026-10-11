@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { canonicalJson } from '../../src/sim/canonical';
 import { advanceWorld, createWorld, isIndividualWorld, worldEconomy } from '../../src/sim/world';
 import { createSettlement } from '../../src/sim/settlement-initial';
-import { simulateLivingSettlement } from '../../src/sim/living';
+import { simulateLivingSettlement, advanceLivingSettlement } from '../../src/sim/living';
+import { validateLivingSettlement } from '../../src/sim/living-validation';
+import { capture } from '../../src/sim/immutable';
+import { uniform } from '../../src/sim/rng';
+import type { LivingSettlementSnapshot } from '../../src/sim/living-state';
 import { createResidentWorld } from '../../src/sim/resident-world';
 import { decodeResidentSave, prepareResidentSave } from '../../src/adapters/resident-save';
 import { decodeWorldSave, prepareWorldSave } from '../../src/adapters/world-save';
@@ -11,6 +15,47 @@ import { buildRecap } from '../../src/controller/recaps';
 import { populationMarkers } from '../../src/controller/population-markers';
 
 const sample = simulateLivingSettlement('RIVERSIDE', 1000).state;
+
+function controlledDeaths(
+  initial: LivingSettlementSnapshot,
+  victims: number[],
+  survivors: number[] = [],
+) {
+  const offset = 12 - (initial.tick % 12);
+  const candidate = structuredClone(advanceLivingSettlement(initial, offset - 1).state);
+  const living = candidate.world.residents.filter((person) => person.deathEventId === null);
+  for (let start = 1; start <= 1_000_000; start++) {
+    let rng = start;
+    const draws = new Map<number, number>();
+    for (const person of living) {
+      const result = uniform(rng, 1000);
+      rng = result.state;
+      draws.set(person.id, result.value);
+    }
+    if (
+      victims.every((id) => draws.get(id)! < 5) &&
+      survivors.every((id) => draws.get(id)! >= 500)
+    ) {
+      // A controlled saved RNG input; all deaths are emitted by the actual reducer.
+      (candidate.rng.demographics as { state: number }).state = start;
+      validateLivingSettlement(candidate);
+      return advanceLivingSettlement(capture(candidate), 1).state;
+    }
+  }
+  throw new Error('No controlled family-death fixture found.');
+}
+
+function livingPair() {
+  const child = sample.world.residents.find(
+    (person) =>
+      person.deathEventId === null &&
+      person.parentIds.length === 1 &&
+      sample.world.residents.find((parent) => parent.id === person.parentIds[0])!.deathEventId ===
+        null,
+  )!;
+  expect(child).toBeDefined();
+  return { child, parentId: child.parentIds[0]! };
+}
 describe('playable world versions', () => {
   it.each(['p1-settlement-v1', 'p1-settlement-v2', 'p2-settlement-v1'])(
     'routes complete %s saves and continued weeks without migration',
@@ -139,4 +184,91 @@ describe('factual resident histories', () => {
     }
     expect(canonicalJson(sample)).toBe(before);
   });
+
+  it('grounds the latest parent/child death prose in retained identities and explicit chronology', () => {
+    const before = canonicalJson(sample);
+    let observed = 0;
+    for (const person of sample.world.residents) {
+      const dossier = residentDossier(sample, person.id)!;
+      expect(dossier.formatterVersion).toBe('resident-historian-v2');
+      const relatives = [...dossier.parents, ...dossier.children].filter(
+        (relative) => relative.deathEventId !== null,
+      );
+      if (!relatives.length) continue;
+      observed++;
+      const latestId = Math.max(...relatives.map((relative) => relative.deathEventId!));
+      const latest = sample.events[latestId - 1]!;
+      const prose = dossier.paragraphs.find(
+        (paragraph) =>
+          paragraph.sourceIds.includes(latestId) &&
+          paragraph.tokens.some(
+            (token) => token.kind === 'text' && /known (parent|child) .*\(#\d+\)/.test(token.text),
+          ),
+      )!;
+      expect(prose).toBeDefined();
+      expect(prose.sourceIds).toEqual([latestId]);
+      const text = prose.tokens.map((token) => token.text).join('');
+      for (const relative of relatives.filter((relative) => relative.deathEventId === latestId)) {
+        expect(text).toContain(`#${relative.id}`);
+        expect(latest.entityIds).toContain(relative.id);
+      }
+      if (dossier.death && latest.tick > dossier.death.tick) {
+        expect(text).toContain(`After ${person.givenName} ${person.householdName}'s death`);
+        expect(dossier.paragraphs.indexOf(prose)).toBeGreaterThan(
+          dossier.paragraphs.findIndex((paragraph) =>
+            paragraph.tokens.some((token) => token.text.startsWith('This recorded life ends')),
+          ),
+        );
+      } else if (dossier.death && latest.tick < dossier.death.tick) {
+        expect(dossier.paragraphs.indexOf(prose)).toBeLessThan(
+          dossier.paragraphs.findIndex((paragraph) =>
+            paragraph.tokens.some((token) => token.text.startsWith('This recorded life ends')),
+          ),
+        );
+      }
+    }
+    expect(observed).toBeGreaterThan(0);
+    expect(canonicalJson(sample)).toBe(before);
+  });
+
+  it('retains both own and known-relative deaths when the actual reducer groups them in one record', () => {
+    const { child, parentId } = livingPair();
+    const world = controlledDeaths(sample, [parentId, child.id]);
+    const parent = residentDossier(world, parentId)!;
+    const born = residentDossier(world, child.id)!;
+    expect(parent.death!.id).toBe(born.death!.id);
+    for (const [subject, relation, relativeId] of [
+      [parent, 'child', child.id],
+      [born, 'parent', parentId],
+    ] as const) {
+      const records = subject.records.filter((record) => record.eventId === subject.death!.id);
+      expect(records).toHaveLength(1);
+      expect(records[0]!.text).toContain('Died aged');
+      expect(records[0]!.text).toContain(`Death recorded for known ${relation}`);
+      expect(records[0]!.text).toContain(`#${relativeId}`);
+      const paragraph = subject.paragraphs.at(-1)!;
+      expect(paragraph.sourceIds).toEqual([subject.death!.id]);
+      const text = paragraph.tokens.map((token) => token.text).join('');
+      expect(text).toContain('The same death record');
+      expect(text).not.toContain('After ');
+    }
+  }, 30_000);
+
+  it('distinguishes a later child death from events within the already-ended parent life', () => {
+    const { child, parentId } = livingPair();
+    const parentDies = controlledDeaths(sample, [parentId], [child.id]);
+    const later = controlledDeaths(parentDies, [child.id]);
+    const parent = residentDossier(later, parentId)!;
+    const born = residentDossier(later, child.id)!;
+    expect(born.death!.tick).toBeGreaterThan(parent.death!.tick);
+    expect(
+      parent.paragraphs
+        .at(-1)!
+        .tokens.map((token) => token.text)
+        .join(''),
+    ).toContain(`After ${parent.person.givenName} ${parent.person.householdName}'s death`);
+    expect(parent.paragraphs.at(-1)!.sourceIds).toEqual([born.death!.id]);
+    expect(born.paragraphs.at(-2)!.sourceIds).toEqual([parent.death!.id]);
+    expect(born.paragraphs.at(-1)!.sourceIds).toEqual([born.death!.id]);
+  }, 30_000);
 });

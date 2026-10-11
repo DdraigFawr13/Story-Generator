@@ -39,6 +39,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Accepted architecture decision records](docs/adr/README.md)
 - [Complete CI verification and parallel coverage gates](docs/CI_VERIFICATION.md)
 - [Passive resident and household reading bookmarks](docs/PHASE2_BOOKMARKS.md)
+- [Recorded parent and child deaths in personal prose](docs/PHASE2_RECORDED_FAMILY_DEATHS.md)
 - [Complete named-world seed and saved-continuation battery](docs/PHASE2_LONG_RUN.md)
 - [Working agreements and branch hygiene](CONTRIBUTING.md)
 - [Vercel hosting and main-only deployment rule](docs/DEPLOYMENT.md)
