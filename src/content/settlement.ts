@@ -36,6 +36,8 @@ export const SETTLEMENT: SettlementRules = {
     port: 1.25,
     ford: 1.1,
     road: 1.1,
+    foreignBiome: 0.5,
+    raceFeature: { dvergar: { deposit: 2 } },
   },
   suitability: { fertility: 1, preferredBiome: 25, preference: 30, routeNode: 20, jitter: 10 },
   capitalPop: [150, 300],

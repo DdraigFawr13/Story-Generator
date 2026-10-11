@@ -1,13 +1,16 @@
-// World stats per seed: npm run drama -- --seeds 5 [--size 256] [--seed NAME]
+// World stats per seed: npm run drama -- --seeds 5 [--size 256] [--years 250] [--seed NAME]
 import { loadEngine, parseArgs } from './load-engine.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 const size = Number(args.size || 256);
 const count = Number(args.seeds || 5);
+const years = Number(args.years || 250);
 const seeds = args.seed ? [args.seed] : Array.from({ length: count }, (_, i) => `S${i + 1}`);
 
 const {
   generateWorld,
+  runHistory,
+  DAYS_PER_YEAR,
   checkWorldCells,
   checkRegions,
   checkRoutes,
@@ -26,13 +29,55 @@ function stats(seed) {
   let stage = null;
   // Each callback reports the stage about to run (or just finished); charge elapsed time to
   // whichever stage was last announced.
-  const world = generateWorld(seed, { width: size, height: size }, DEFAULT_CONTENT, (name) => {
-    const now = performance.now();
-    if (stage) ms[stage] = (ms[stage] ?? 0) + now - last;
-    stage = name;
-    last = now;
-  });
+  // The history stage runs below, so the start population can be read first.
+  const world = generateWorld(
+    seed,
+    { width: size, height: size, historyYears: 0 },
+    DEFAULT_CONTENT,
+    (name) => {
+      const now = performance.now();
+      if (stage) ms[stage] = (ms[stage] ?? 0) + now - last;
+      stage = name;
+      last = now;
+    },
+  );
   if (stage) ms[stage] = (ms[stage] ?? 0) + performance.now() - last;
+  const livePop = () => {
+    let n = 0;
+    for (const site of world.sites.values()) n += sitePopulation(site);
+    return n;
+  };
+  const startPop = livePop();
+  let peakPop = startPop;
+  world.params.historyYears = years;
+  const historyStart = performance.now();
+  runHistory(world, DEFAULT_CONTENT, () => {
+    peakPop = Math.max(peakPop, livePop());
+  });
+  ms.history = performance.now() - historyStart;
+  const finalPop = livePop();
+  peakPop = Math.max(peakPop, finalPop);
+  const typeCount = {};
+  for (const e of world.events) {
+    // Settle's second sites are dated day 0; history founds from year 1 on.
+    if (e.type === 'site_founded' && e.day < DAYS_PER_YEAR) continue;
+    typeCount[e.type] = (typeCount[e.type] ?? 0) + 1;
+  }
+  // Longest chain of causes: events are in id order and causes are older, so one pass works.
+  const depth = new Map();
+  let chain = 0;
+  for (const e of world.events) {
+    const d = 1 + Math.max(0, ...e.causes.map((id) => depth.get(id) ?? 0));
+    depth.set(e.id, d);
+    chain = Math.max(chain, d);
+  }
+  let liveSites = 0,
+    ruinedSites = 0;
+  for (const site of world.sites.values()) {
+    if (site.ruinedYear === undefined) liveSites += 1;
+    else ruinedSites += 1;
+  }
+  const fallen = [...world.civs.values()].filter((civ) => civ.fell !== undefined).length;
   const c = world.cells;
   const kinds = {};
   for (const region of world.regions.values()) kinds[region.kind] = (kinds[region.kind] ?? 0) + 1;
@@ -183,11 +228,13 @@ function stats(seed) {
     siteCount: world.sites.size,
     siteKinds,
     population,
+    raceTotals,
     raceShares: Object.entries(raceTotals).map(
       ([id, v]) => `${id} ${pct(v, population).toFixed(0)}`,
     ),
     meanCapacity: world.sites.size ? capacitySum / world.sites.size : 0,
     claimed: pct(claimed, land),
+    history: { startPop, peakPop, finalPop, typeCount, chain, liveSites, ruinedSites, fallen },
     problems:
       checkSites(world).length +
       checkWorldCells(c).length +
@@ -208,11 +255,13 @@ for (const r of rows) {
         name !== 'rest' &&
         name !== 'regions' &&
         name !== 'routes' &&
-        name !== 'settle',
+        name !== 'settle' &&
+        name !== 'history',
     )
     .reduce((a, [, v]) => a + v, 0);
 }
 stages.push('rest', 'regions', 'routes', 'settle');
+const pct = (v, of) => (of ? (100 * v) / of : 0);
 const f = (v, w, d = 0) => v.toFixed(d).padStart(w);
 const head = [
   'seed',
@@ -301,7 +350,7 @@ process.stdout.write(
 );
 
 process.stdout.write(
-  '\nsettlement: seed civs sites kinds population races meanCap claimed% settlems\n',
+  '\nsettlement (after history): seed civs sites kinds population races meanCap claimed% settlems\n',
 );
 for (const r of rows) {
   const kinds = Object.entries(r.siteKinds)
@@ -312,3 +361,21 @@ for (const r of rows) {
       `${r.raceShares.join(' ')}  cap ${r.meanCapacity.toFixed(0)}  claimed ${r.claimed.toFixed(0)}%  ${r.ms.settle.toFixed(0)}ms\n`,
   );
 }
+
+process.stdout.write(
+  '\nhistory: seed ms live ruined fell | pop start>peak>final | famine plague migr founded | races % | chain\n',
+);
+let lopsided = 0;
+for (const r of rows) {
+  const h = r.history;
+  const total = Object.values(r.raceTotals).reduce((a, b) => a + b, 0);
+  const shares = Object.entries(r.raceTotals).map(([id, v]) => [id, Math.round(pct(v, total))]);
+  if (shares.some(([, share]) => share > 70)) lopsided += 1;
+  const n = (type) => String(h.typeCount[type] ?? 0).padStart(5);
+  process.stdout.write(
+    `${r.seed.padEnd(4)} ${r.ms.history.toFixed(0).padStart(5)}ms ${String(h.liveSites).padStart(4)} ${String(h.ruinedSites).padStart(4)} ${String(h.fallen).padStart(2)} | ` +
+      `${h.startPop}>${h.peakPop}>${h.finalPop} | ${n('famine')}${n('plague')}${n('migration')}${n('site_founded')} | ` +
+      `${shares.map(([id, share]) => `${id} ${share}`).join(' ')} | ${h.chain}\n`,
+  );
+}
+process.stdout.write(`races > 70%: ${lopsided} of ${rows.length} seeds\n`);

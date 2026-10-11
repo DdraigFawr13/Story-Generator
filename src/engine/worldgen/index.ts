@@ -3,6 +3,7 @@
 
 import type { ContentBundle } from '../core/content-types';
 import { streamFor } from '../core/rng';
+import { runHistory } from '../history';
 import { settleWorld } from '../history/settle';
 import type { WorldParams, WorldState } from '../core/types';
 import { createWorld } from '../core/world';
@@ -30,6 +31,7 @@ export type WorldgenContent = Pick<
   | 'cultures'
   | 'eventTypes'
   | 'settlement'
+  | 'history'
 >;
 
 export type WorldgenStage =
@@ -44,9 +46,18 @@ export type WorldgenStage =
   | 'habitat'
   | 'regions'
   | 'routes'
-  | 'settle';
-/** Called as each stage starts: (stage, stages already done, total stages). */
-export type ProgressCallback = (stage: WorldgenStage, done: number, total: number) => void;
+  | 'settle'
+  | 'history';
+/**
+ * Called as each stage starts: (stage, stages already done, total stages). The history stage
+ * also reports each decade with `fraction` (0-1 of the stage).
+ */
+export type ProgressCallback = (
+  stage: WorldgenStage,
+  done: number,
+  total: number,
+  fraction?: number,
+) => void;
 
 const STAGES: readonly WorldgenStage[] = [
   'terrain',
@@ -61,6 +72,7 @@ const STAGES: readonly WorldgenStage[] = [
   'regions',
   'routes',
   'settle',
+  'history',
 ];
 
 export function generateWorld(
@@ -192,5 +204,10 @@ export function generateWorld(
 
   start('settle');
   settleWorld(world, content);
+
+  start('history');
+  runHistory(world, content, (year, years) =>
+    onProgress('history', STAGES.indexOf('history'), total, year / years),
+  );
   return world;
 }

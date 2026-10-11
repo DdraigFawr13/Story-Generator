@@ -12,7 +12,7 @@ src/
     narrative/ narrator interface and template renderer
     systems/ the ordered list of simulation systems
     worldgen/ terrain, climate, water, biomes, regions, routes
-    history/ settlement (M2.2); later yearly history systems
+    history/ settlement (M2.2) and the yearly history stage (M2.3: harvest, demographics, famine, plague, migration, expansion, abandonment; per-run state in `HistoryRun`)
     (later: site/, lod/)
   content/   typed data ("raws"): races, abilities, weather, event types, rules, templates
   platform/  browser services: IndexedDB saves (worker host for world generation; later: preferences)

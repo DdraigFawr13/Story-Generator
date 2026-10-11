@@ -14,6 +14,7 @@ import {
   type Id,
   type Region,
   type RouteGraph,
+  type SimEvent,
   type Site,
   type WorldCells,
 } from '../engine';
@@ -42,6 +43,9 @@ interface Props {
   routes: RouteGraph;
   sites: ReadonlyMap<Id, Site>;
   civs: ReadonlyMap<Id, Civ>;
+  /** The world's events (oldest first) and how to tell one; the site inspector lists its latest. */
+  events: readonly SimEvent[];
+  renderEvent: (event: SimEvent) => string;
   cultures: readonly CultureDef[];
   seed: string;
   content: Pick<ContentBundle, 'biomes' | 'resources'>;
@@ -55,6 +59,8 @@ interface Props {
 
 /** A drag shorter than this many pixels is a click. */
 const DRAG_THRESHOLD = 4;
+/** Half-size in pixels of the cross drawn on a ruined site. */
+const RUIN_RADIUS = 3;
 /** Minimum ms between wheel zoom steps, so one trackpad flick is one step. */
 const WHEEL_STEP_MS = 120;
 /** Zoom step used when the minimap recentres a fully zoomed-out map. */
@@ -173,6 +179,23 @@ function drawSiteGlyph(
   }
 }
 
+/** A ruined site: a small grey cross, no name. */
+function drawRuin(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  const r = RUIN_RADIUS;
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+  ctx.beginPath();
+  ctx.moveTo(x - r, y - r);
+  ctx.lineTo(x + r, y + r);
+  ctx.moveTo(x + r, y - r);
+  ctx.lineTo(x - r, y + r);
+  ctx.stroke();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#6b6b6b';
+  ctx.stroke();
+}
+
 interface Cache {
   cells: WorldCells | null;
   bitmaps: Map<string, HTMLCanvasElement>;
@@ -187,6 +210,8 @@ export function WorldMap({
   routes,
   sites,
   civs,
+  events,
+  renderEvent,
   cultures,
   seed,
   content,
@@ -331,6 +356,10 @@ export function WorldMap({
       const sx = ox + ((site.cell % c.width) + 0.5) * scale;
       const sy = oy + (Math.floor(site.cell / c.width) + 0.5) * scale;
       if (sx < -20 || sy < -20 || sx > width + 20 || sy > height + 20) continue;
+      if (site.ruinedYear !== undefined) {
+        drawRuin(ctx, sx, sy);
+        continue;
+      }
       const r = Math.min(
         SITE_RADIUS_MAX,
         SITE_RADIUS_BASE + Math.sqrt(sitePopulation(site)) / SITE_RADIUS_DIVISOR,
@@ -597,6 +626,20 @@ export function WorldMap({
   const ownerOf = (id: Id | null | undefined) => (id ? (civs.get(id) ?? null) : null);
   const cultureOf = (id: string | undefined) =>
     cultures.find((culture) => culture.id === id) ?? null;
+  // The Peoples legend lists the civs this world has, with their map colours.
+  const peoples =
+    layerDef.id === 'territory' && civs.size > 0
+      ? [
+          { label: 'Unclaimed', color: civColor(0) },
+          ...[...civs.values()]
+            .sort((a, b) => a.id - b.id)
+            .map((civ) => ({
+              label:
+                civ.fell === undefined ? civ.name : `${civ.name} (fell in year ${civ.fell + 1})`,
+              color: civColor(civ.id),
+            })),
+        ]
+      : undefined;
   const landCiv =
     cells && selected ? ownerOf(cells.territory[selected.y * cells.width + selected.x]) : null;
 
@@ -650,7 +693,13 @@ export function WorldMap({
         onPick={(id) => onView({ layer: id })}
         onOverlays={(next) => setOverlays({ ...overlays, ...next })}
       />
-      <Legend layer={layerDef} shade={overlays.shade} hover={hoverValue} />
+      <Legend
+        layer={layerDef}
+        shade={overlays.shade}
+        hover={hoverValue}
+        entries={peoples}
+        readout={peoples ? (value) => (value > 0 ? civs.get(value)?.name : undefined) : undefined}
+      />
       <div className="float minimap">
         <canvas
           ref={miniRef}
@@ -694,6 +743,8 @@ export function WorldMap({
           landCiv={landCiv}
           landCulture={cultureOf(landCiv?.cultureId)}
           places={placesOf(cells, regions).lookup.get(selected.y * cells.width + selected.x) ?? []}
+          events={events}
+          renderEvent={renderEvent}
           onShow={(id) => onView({ layer: id })}
           onClose={() => onView({ at: null })}
         />

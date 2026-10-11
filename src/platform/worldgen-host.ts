@@ -4,7 +4,12 @@
 import type { WorldParams, WorldState, WorldgenContent, WorldgenStage } from '../engine';
 import type { WorkerReply, WorkerRequest } from './worldgen-worker';
 
-export type WorldgenProgress = (stage: WorldgenStage, done: number, total: number) => void;
+export type WorldgenProgress = (
+  stage: WorldgenStage,
+  done: number,
+  total: number,
+  fraction?: number,
+) => void;
 
 export interface WorldgenJob {
   /** Resolves with the world; rejects with `Error('cancelled')` if superseded or cancelled. */
@@ -34,7 +39,8 @@ export function generateInWorker(
     };
     worker.onmessage = (event: MessageEvent<WorkerReply>) => {
       const reply = event.data;
-      if (reply.type === 'progress') onProgress(reply.stage, reply.done, reply.total);
+      if (reply.type === 'progress')
+        onProgress(reply.stage, reply.done, reply.total, reply.fraction);
       else if (reply.type === 'done') settle(() => resolve(reply.world));
       else settle(() => reject(new Error(reply.message)));
     };
@@ -47,11 +53,22 @@ export function generateInWorker(
   job!.promise = promise;
   active = job!;
   // Only the plain-data tables cross over: a full content bundle holds functions, which cannot be cloned.
-  const { biomes, biomeRules, resources, names, races, cultures, eventTypes, settlement } = content;
+  const { biomes, biomeRules, resources, names, races, cultures, eventTypes, settlement, history } =
+    content;
   const request: WorkerRequest = {
     seed,
     params,
-    content: { biomes, biomeRules, resources, names, races, cultures, eventTypes, settlement },
+    content: {
+      biomes,
+      biomeRules,
+      resources,
+      names,
+      races,
+      cultures,
+      eventTypes,
+      settlement,
+      history,
+    },
   };
   worker.postMessage(request);
   return job!;

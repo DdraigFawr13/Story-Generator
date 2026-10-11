@@ -46,7 +46,8 @@ const tylwyth: RaceDef = {
   affinityWeights: { life: 4, mind: 3, air: 2, water: 1 },
   lifespanYears: 210,
   maturityYears: 32,
-  fertility: 0.3,
+  // Sketch said 0.3; raised in M2.3 (2026-10-11) so humans stay under 70% of people. Revisit with race balance.
+  fertility: 0.6,
   foodNeed: 0.9,
   preferredBiomes: ['temperate-forest', 'taiga', 'jungle'],
   dependencies: [
@@ -72,7 +73,8 @@ const dvergar: RaceDef = {
   affinityWeights: { earth: 5, fire: 2 },
   lifespanYears: 130,
   maturityYears: 24,
-  fertility: 0.5,
+  // Sketch said 0.5; raised in M2.3 (2026-10-11) for the same balance target.
+  fertility: 0.75,
   foodNeed: 1.4,
   preferredBiomes: ['alpine', 'tundra', 'taiga'],
   dependencies: [

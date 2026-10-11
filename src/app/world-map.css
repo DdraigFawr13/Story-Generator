@@ -432,6 +432,15 @@ details.debug summary {
   color: var(--muted);
   margin-left: 6px;
 }
+.wm-inspector .site h4 {
+  margin: 8px 0 4px;
+  font-size: 0.8rem;
+}
+.wm-inspector .site-history {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 0.8rem;
+}
 .wm-inspector .land-of {
   margin: 8px 0;
   font-size: 0.85rem;

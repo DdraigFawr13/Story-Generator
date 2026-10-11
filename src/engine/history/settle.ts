@@ -190,8 +190,8 @@ export function suitability(
 export function siteCapacity(
   cells: WorldCells,
   cell: number,
-  race: Pick<RaceDef, 'foodNeed'>,
-  content: Pick<SettleContent, 'resources' | 'settlement'>,
+  race: Pick<RaceDef, 'id' | 'foodNeed' | 'preferredBiomes'>,
+  content: Pick<SettleContent, 'biomes' | 'resources' | 'settlement'>,
   features: readonly SiteFeature[],
 ): number {
   const rules = content.settlement;
@@ -211,7 +211,11 @@ export function siteCapacity(
       const i = y * width + x;
       const water = cells.water[i];
       // Lakes and sea cannot be farmed; their fish still count.
-      if (water === 0 || water === 1) food += weights.perFertility * cells.fertility[i]!;
+      if (water === 0 || water === 1) {
+        // A race farms its own biomes well and foreign land poorly.
+        const home = race.preferredBiomes.includes(content.biomes[cells.biome[i]!]?.id ?? '');
+        food += weights.perFertility * cells.fertility[i]! * (home ? 1 : weights.foreignBiome);
+      }
       for (const deposit of cells.resources.get(i) ?? []) {
         if (deposit.resource === fish) food += weights.fishPerAmount * deposit.amount;
         else if (deposit.resource === game) food += weights.gamePerAmount * deposit.amount;
@@ -221,6 +225,7 @@ export function siteCapacity(
   if (features.includes('harbour')) food *= weights.port;
   if (features.includes('ford')) food *= weights.ford;
   if (features.includes('road')) food *= weights.road;
+  for (const feature of features) food *= weights.raceFeature[race.id]?.[feature] ?? 1;
   return Math.round(food / race.foodNeed);
 }
 
@@ -253,7 +258,7 @@ export function sitePopulation(site: Pick<Site, 'pop'>): number {
   return site.pop.reduce((n, band) => n + band.count, 0);
 }
 
-function sizeKind(pop: number, rules: SettlementRules): SiteKind {
+export function sizeKind(pop: number, rules: SettlementRules): SiteKind {
   for (const [limit, kind] of rules.kindByPop) if (pop < limit) return kind;
   return 'city';
 }
@@ -320,6 +325,55 @@ function shuffle<T>(items: readonly T[], rng: RngStream): T[] {
   return out;
 }
 
+/** Dry candidate cells and what scoring them needs; built once and shared with the history stage. */
+export interface SettleSearch {
+  /** Ascending dry, passable, off-edge cells. */
+  candidates: number[];
+  /** Features per candidate cell (undefined elsewhere). */
+  featuresAt: (SiteFeature[] | undefined)[];
+  places: SettlePlaces;
+  landmass: Int32Array;
+  /** Suitability of a candidate cell for a culture, without jitter. */
+  scoreCell(culture: CultureDef, cell: number): number;
+}
+
+export function buildSettleSearch(
+  cells: WorldCells,
+  content: SettleContent,
+  places: SettlePlaces,
+): SettleSearch {
+  const rules = content.settlement;
+  const { width, height } = cells;
+  const size = width * height;
+  const biomeIds = content.biomes.map((b) => b.id);
+  const candidates: number[] = [];
+  const featuresAt: (SiteFeature[] | undefined)[] = new Array(size);
+  for (let i = 0; i < size; i += 1) {
+    const x = i % width;
+    const y = (i - x) / width;
+    if (x === 0 || y === 0 || x === width - 1 || y === height - 1) continue;
+    if (cells.water[i] !== 0 || cells.travelCost[i]! >= 255) continue;
+    candidates.push(i);
+    featuresAt[i] = siteFeatures(cells, i, places, content);
+  }
+  return {
+    candidates,
+    featuresAt,
+    places,
+    landmass: landmasses(cells),
+    scoreCell: (culture, cell) =>
+      suitability(
+        cells,
+        cell,
+        culture,
+        featuresAt[cell]!,
+        rules,
+        biomeIds,
+        anyWithin(cells, cell, rules.featureRadius.routeNode, (i) => places.node[i] === 1),
+      ),
+  };
+}
+
 /** The settle stage: fills `world.civs`, `world.sites`, `cells.territory` and emits founding events. */
 export function settleWorld(world: WorldState, content: SettleContent): void {
   const cells = world.cells;
@@ -331,22 +385,10 @@ export function settleWorld(world: WorldState, content: SettleContent): void {
   const nameRng = streamFor(world, 'history.names');
   const emit = createEmitter(world, content.eventTypes);
   const places = buildSettlePlaces(cells, world.regions.values(), world.routes);
-  const biomeIds = content.biomes.map((b) => b.id);
-  const landmass = landmasses(cells);
-
-  // 1. Candidates: dry land (floodplain included), off the map edge and passable.
-  const candidates: number[] = [];
-  const featuresAt: (SiteFeature[] | undefined)[] = new Array(size);
+  const search = buildSettleSearch(cells, content, places);
+  const { candidates, featuresAt, landmass } = search;
   let landCells = 0;
   for (let i = 0; i < size; i += 1) if (cells.water[i] !== 3) landCells += 1;
-  for (let i = 0; i < size; i += 1) {
-    const x = i % width;
-    const y = (i - x) / width;
-    if (x === 0 || y === 0 || x === width - 1 || y === height - 1) continue;
-    if (cells.water[i] !== 0 || cells.travelCost[i]! >= 255) continue;
-    candidates.push(i);
-    featuresAt[i] = siteFeatures(cells, i, places, content);
-  }
   const jitter = new Float64Array(size);
   for (const i of candidates) jitter[i] = rng.int(1000) * (rules.suitability.jitter / 1000);
 
@@ -366,16 +408,7 @@ export function settleWorld(world: WorldState, content: SettleContent): void {
     let bestScore = -Infinity;
     for (const cell of candidates) {
       if (!allowed(cell)) continue;
-      const score =
-        suitability(
-          cells,
-          cell,
-          culture,
-          featuresAt[cell]!,
-          rules,
-          biomeIds,
-          anyWithin(cells, cell, rules.featureRadius.routeNode, (i) => places.node[i] === 1),
-        ) + jitter[cell]!;
+      const score = search.scoreCell(culture, cell) + jitter[cell]!;
       if (score > bestScore) {
         bestScore = score;
         best = cell;
@@ -420,7 +453,9 @@ export function settleWorld(world: WorldState, content: SettleContent): void {
       wealth: 0,
       capacity,
       features: [...features],
+      peakPop: 0,
     };
+    site.peakPop = sitePopulation(site);
     world.nextId.site += 1;
     sites.push(site);
     world.sites.set(site.id, site);
