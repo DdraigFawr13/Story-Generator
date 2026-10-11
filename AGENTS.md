@@ -43,3 +43,7 @@ Vercel deploys production from `main` only; branch previews are off (D-026). To 
 ## Branches
 
 Merged PR branches are deleted automatically. Never delete an unmerged branch without explicit authorization.
+
+## Changing GitHub Actions workflows
+
+Use the `efficient-github-actions` skill in [`.claude/skills/efficient-github-actions/`](.claude/skills/efficient-github-actions/SKILL.md) for any change under `.github/workflows/`. It covers the tier patterns, known traps, validation steps and a script that measures billed minutes.
