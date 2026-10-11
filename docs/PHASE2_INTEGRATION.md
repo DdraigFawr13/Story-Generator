@@ -43,6 +43,10 @@ The [individual seed battery](PHASE2_LONG_RUN.md) adds 100 actual P2 worlds × 1
 
 [PR #35](https://github.com/DdraigFawr13/Story-Generator/pull/35) strengthens browser readiness without changing application/save source: the bookmark helper waits for the mounted menu, its quota case controls early reload startup, and same-seed persistence cases wait for accepted Resume before editing the archive. Actual retry outcomes and final-head/exact-main confirmation are recorded in that PR and [CI_VERIFICATION.md](CI_VERIFICATION.md).
 
+## I.8 — Recorded family across generations
+
+The [lineage reader](PHASE2_FAMILY_LINEAGE.md) follows only actual retained parent-child links, exposes ancestors/descendants with generation distance and intermediate birth evidence, and keeps search/pages bounded to 32 visible people. It preserves unknown parentage, deceased identities, source focus/scroll and all supported saves. This extends passive task 2.8 reading without claiming partnership, guardianship, social memory or Spotlight behavior. Its scoped PR records complete final-head and exact-main verification.
+
 ## Current compact handoff
 
 I.1 is implemented in [PR #27](https://github.com/DdraigFawr13/Story-Generator/pull/27), based on main `1dfa235`. Full local verification passed: 147 core tests in 13 files (562.18 seconds), 162 browser checks (54 each in Chromium, Firefox and WebKit), formatting, strict types, 35-module boundaries, production build, the independent 100-map terrain probe and all three resident identity vectors. The browser run includes P2 payload/checksum parity and the existing P1 local-save, recap, evidence and phone regressions. PR #27 merged at `4205a7f`; its exact final head `d5311e3` passed both GitHub core and browser jobs. Production deployment `dpl_FSPGF14Q68VxsqretsRAmMqq4K8W` is READY at that exact main SHA and owns the stable alias. Native Firefox verified HTTP 200, matching main assets, paused Resume at 49, year-one Node prose parity, actual UI Step/Save to 50, matching Node save digest and paused reload/Resume with zero browser errors. The merged remote/local work branch is deleted.

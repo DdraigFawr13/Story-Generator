@@ -10,6 +10,7 @@ import {
 import { dateLabel } from '../controller/chronicle';
 import { householdDossier } from '../controller/households';
 import { HouseholdFacts } from './HouseholdFacts';
+import { FamilyHistory } from './FamilyHistory';
 import { Bookmarks } from './Bookmarks';
 import {
   bookmarkIdentity,
@@ -455,6 +456,13 @@ export function Residents({
                 ) : (
                   <p>No known children are recorded.</p>
                 )}
+                <FamilyHistory
+                  key={person.id}
+                  world={world}
+                  personId={person.id}
+                  onChoose={(id) => choose(id, true)}
+                  onInspect={inspect}
+                />
                 <details>
                   <summary>Recorded attributes</summary>
                   <dl>

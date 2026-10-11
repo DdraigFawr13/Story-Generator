@@ -1,0 +1,249 @@
+{
+  "provenance": {
+    "originalReport": "docs/evidence/phase2-individual-battery.json",
+    "projectionSha256": "5a2c5d98c93dbbdc1afb98d03bd525a1e5d6d431667e1746a78073d79035df87",
+    "node": "v24.19.0",
+    "command": "node scripts/family-lineage-study.mjs",
+    "ticksPerSeed": 1000
+  },
+  "samples": [
+    {
+      "seed": "RIVERSIDE",
+      "tick": 1000,
+      "digest": "ebcf1d751d86b728c70a874e494dce28edad09303785cffe0d8c27482688203e",
+      "subject": {
+        "id": 22,
+        "name": "Rian Willow",
+        "status": "living"
+      },
+      "ancestors": [],
+      "descendants": [
+        {
+          "id": 51,
+          "name": "Jory Willow",
+          "generation": 1,
+          "status": "living",
+          "parentId": 22,
+          "childId": 51,
+          "birthEventId": 109,
+          "birthTick": 180
+        },
+        {
+          "id": 68,
+          "name": "Alin Willow",
+          "generation": 1,
+          "status": "living",
+          "parentId": 22,
+          "childId": 68,
+          "birthEventId": 256,
+          "birthTick": 384
+        },
+        {
+          "id": 76,
+          "name": "Rona Willow",
+          "generation": 1,
+          "status": "living",
+          "parentId": 22,
+          "childId": 76,
+          "birthEventId": 449,
+          "birthTick": 696
+        },
+        {
+          "id": 77,
+          "name": "Wren Willow",
+          "generation": 1,
+          "status": "living",
+          "parentId": 22,
+          "childId": 77,
+          "birthEventId": 520,
+          "birthTick": 840
+        }
+      ]
+    },
+    {
+      "seed": "TERRAIN_005",
+      "tick": 1000,
+      "digest": "35b53aa7315067813616c3f556607e2a30e23f12781848de6f333a67e9effd82",
+      "subject": {
+        "id": 58,
+        "name": "Wren Stone",
+        "status": "living"
+      },
+      "ancestors": [
+        {
+          "id": 47,
+          "name": "Rona Stone",
+          "generation": 1,
+          "status": "living",
+          "parentId": 47,
+          "childId": 58,
+          "birthEventId": 503,
+          "birthTick": 972
+        },
+        {
+          "id": 23,
+          "name": "Neri Stone",
+          "generation": 2,
+          "status": "living",
+          "parentId": 23,
+          "childId": 47,
+          "birthEventId": 66,
+          "birthTick": 96
+        }
+      ],
+      "descendants": []
+    },
+    {
+      "seed": "TERRAIN_011",
+      "tick": 1000,
+      "digest": "d71551d24a1f744681765cecb820a13d3a3778e0aff648ded258a01416e6d1b0",
+      "subject": {
+        "id": 128,
+        "name": "Tarin Flint",
+        "status": "living"
+      },
+      "ancestors": [
+        {
+          "id": 49,
+          "name": "Kira Flint",
+          "generation": 1,
+          "status": "living",
+          "parentId": 49,
+          "childId": 128,
+          "birthEventId": 793,
+          "birthTick": 912
+        },
+        {
+          "id": 29,
+          "name": "Loren Flint",
+          "generation": 2,
+          "status": "living",
+          "parentId": 29,
+          "childId": 49,
+          "birthEventId": 40,
+          "birthTick": 36
+        }
+      ],
+      "descendants": []
+    },
+    {
+      "seed": "TERRAIN_019",
+      "tick": 1000,
+      "digest": "200ede33737e1a2129f67ba571c52daceb0b6a0ef8a4a4ee6b8e76f67e6cfe29",
+      "subject": {
+        "id": 125,
+        "name": "Meri Stone",
+        "status": "living"
+      },
+      "ancestors": [
+        {
+          "id": 49,
+          "name": "Anwen Stone",
+          "generation": 1,
+          "status": "living",
+          "parentId": 49,
+          "childId": 125,
+          "birthEventId": 832,
+          "birthTick": 948
+        },
+        {
+          "id": 23,
+          "name": "Rian Stone",
+          "generation": 2,
+          "status": "deceased",
+          "parentId": 23,
+          "childId": 49,
+          "birthEventId": 60,
+          "birthTick": 72
+        }
+      ],
+      "descendants": []
+    },
+    {
+      "seed": "TERRAIN_030",
+      "tick": 1000,
+      "digest": "bcdf9d62ba1af88ea349ce31f779553eb7a9a2e3cf7b16ca9d8c32b3eb7d27f4",
+      "subject": {
+        "id": 34,
+        "name": "Tegan Rowan",
+        "status": "living"
+      },
+      "ancestors": [],
+      "descendants": [
+        {
+          "id": 48,
+          "name": "Mara Rowan",
+          "generation": 1,
+          "status": "living",
+          "parentId": 34,
+          "childId": 48,
+          "birthEventId": 67,
+          "birthTick": 96
+        },
+        {
+          "id": 57,
+          "name": "Vara Rowan",
+          "generation": 1,
+          "status": "deceased",
+          "parentId": 34,
+          "childId": 57,
+          "birthEventId": 120,
+          "birthTick": 156
+        },
+        {
+          "id": 65,
+          "name": "Neri Rowan",
+          "generation": 1,
+          "status": "living",
+          "parentId": 34,
+          "childId": 65,
+          "birthEventId": 173,
+          "birthTick": 228
+        }
+      ]
+    },
+    {
+      "seed": "TERRAIN_098",
+      "tick": 1000,
+      "digest": "1b8b28360fe8994a5f388ed15f96cde1284d412535ad57971b4f52a562ba0ef6",
+      "subject": {
+        "id": 17,
+        "name": "Rian Alder",
+        "status": "living"
+      },
+      "ancestors": [],
+      "descendants": [
+        {
+          "id": 56,
+          "name": "Tegan Alder",
+          "generation": 1,
+          "status": "living",
+          "parentId": 17,
+          "childId": 56,
+          "birthEventId": 109,
+          "birthTick": 144
+        },
+        {
+          "id": 72,
+          "name": "Orin Alder",
+          "generation": 1,
+          "status": "living",
+          "parentId": 17,
+          "childId": 72,
+          "birthEventId": 372,
+          "birthTick": 624
+        },
+        {
+          "id": 77,
+          "name": "Loren Alder",
+          "generation": 1,
+          "status": "living",
+          "parentId": 17,
+          "childId": 77,
+          "birthEventId": 526,
+          "birthTick": 924
+        }
+      ]
+    }
+  ]
+}
