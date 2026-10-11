@@ -12,3 +12,5 @@ export * from './people/combat-scale';
 export * from './people/tiers';
 export * from './narrative/render';
 export * from './systems';
+export * from './worldgen';
+export * from './worldgen/noise';

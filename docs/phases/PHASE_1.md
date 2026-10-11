@@ -2,6 +2,10 @@
 
 **Goal:** press Generate and get a distinctive world in under 2 seconds: continents and mountain chains, seasonal climates, rivers that reach the sea, biomes, and unevenly clustered resources. You can pan, zoom, switch layers and click any cell to inspect it. This is the stage that later history and live sites play on.
 
+## Status
+
+M1.1 merged. Next: M1.2 (climate and water), delegated to the `implementer` agent with this section as its spec. Terrain lives in `src/engine/worldgen/` (`noise.ts`, `terrain.ts`, `index.ts`); add a stage per milestone in `generateWorld` with its own RNG stream.
+
 ## Milestones
 
 **M1.1 Terrain** (~600 lines)
@@ -69,7 +73,7 @@ Integer typed arrays keep the maths exact and the save small. `serializeWorld` g
 - **Units:** real-world units (metres, °C, mm), because they make content tables and the inspector readable.
 - **Performance:** budget is 256×256 in under 2 s in the worker. Generation is measured in the drama check, not gated in CI.
 
-## Design fork for you
+## Design fork (decided 2026-10-11: option 1, approved with the spec)
 
 **Default number of landmasses?**
 1. **A few continents (3–5) plus islands.** Recommended: borders, seas and trade routes create natural separation between civilizations.

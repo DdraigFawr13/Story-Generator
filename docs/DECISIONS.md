@@ -42,3 +42,4 @@ Locked decisions from the 2026-10-11 reboot Q&A. Don't reopen them without askin
 | 2026-10-11 | 0 | Year = 12 months × 28 days (336 days). |
 | 2026-10-11 | 0 | RNG = `sfc32`, one stream per `(seed, name)`. |
 | 2026-10-11 | 0 | CI = `core` + Chromium smoke; no tiers or batteries. |
+| 2026-10-11 | 1 | Default 3–5 continents plus islands (user choice); `params.continents`. |
