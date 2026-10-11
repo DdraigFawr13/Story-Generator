@@ -4,7 +4,7 @@
 
 ## Status
 
-M1.1 (PR #46), M1.2 with the worldgen tools (PR #47) and M1.3 (PR #48) merged. Extras approved 2026-10-11 (erosion, volcanoes, fertility, wildness, strategic features, M1.6 routes, climate params). Next: M1.4 (world map UI and worker). Worldgen lives in `src/engine/worldgen/`, one module per stage in `generateWorld`, each with its own RNG stream; biome and resource tables live in `src/content/`.
+M1.1 (PR #46), M1.2 with the worldgen tools (PR #47), M1.3 (PR #48) and the rainfall-band and slope-streak fix (PR #50) merged; M1.4 in review. Extras approved 2026-10-11 (erosion, volcanoes, fertility, wildness, strategic features, M1.6 routes, climate params). Next: M1.5 (naming and strategic features). Worldgen lives in `src/engine/worldgen/`, one module per stage in `generateWorld`, each with its own RNG stream; biome and resource tables live in `src/content/`.
 
 ## Milestones
 
@@ -13,10 +13,15 @@ M1.1 (PR #46), M1.2 with the worldgen tools (PR #47) and M1.3 (PR #48) merged. E
 - **M1.2 Climate, water and erosion:** summer high and winter low per cell, wind-swept rainfall with rain shadows, drought/storm/snow risk, distance to sea and continentality (`climate.ts`); light stream-power erosion with a `floodplain` flag (`erosion.ts`); priority-flood rivers and lakes, every river ending in sea or lake (`water.ts`); `params.temperatureShift` (−15…15 °C) and `params.rainfallScale` (0.25…2), no UI (R-05).
 - **M1.3 Biomes, resources, aura, fertility, wildness:** biomes from a temperature × rainfall table in `content/biomes.ts`, with water, alpine (elevation), swamp (wet floodplain) and frost-free rules applied outside the table (`biomes.ts`); volcanoes as a per-cell flag where oceanic plates dive under continental ones (`volcanoes.ts`); aura with legendary-place candidates (springs, old forests, peaks, hot springs) (`aura.ts`); clustered deposits from `content/resources.ts` (`resources.ts`); fertility from biome, rainfall, rivers and growing season, and wildness from distance to high-fertility "farmland", rough ground, biome and old forest (`habitat.ts`).
 
-**M1.4 World map UI and worker** (~800 lines)
-- `platform/worldgen-worker.ts`: generation runs in a Web Worker with a progress bar, so the UI never freezes. The engine stays a pure function: `generateWorld(seed, params, onProgress)`.
-- `app/WorldMap.tsx`: a Canvas 2D renderer with an offscreen-cached base layer, pan and zoom (reusing the legacy `map-camera` maths), hillshading, and layer toggles for elevation, biome, fertility, wildness, plates, temperature (summer/winter), rainfall, rivers, resources and aura. Includes a legend, a minimap and a cell inspector (biome, elevation, temperatures, rainfall, risks, resources, aura, region names) with "why" lines built from the layers, e.g. "Dry: rain shadow of the range to the west". The seed goes in the URL.
-- `/?next` becomes: New World (seed, size), Generate, then the map. The Phase 0 chronicle and saves stay below it.
+**M1.4 World map UI and worker** (~800 lines; design approved 2026-10-11: [viewer design](https://claude.ai/artifact/Ss3UUfRdddNgbgMU1j7upW))
+- `platform/worldgen-worker.ts`: generation runs in a Web Worker (content is posted in as plain data), so the UI never freezes. A thin progress line under the top bar names each stage. The old world stays on screen, dimmed, until the new one arrives.
+- `app/WorldMap.tsx`: a Canvas 2D map. Each base layer is rendered once per world into an offscreen canvas (one pixel per cell, via `renderLayer`) and drawn with nearest-neighbour scaling. Pan by drag, zoom by wheel and buttons from fit-to-screen to 8 px per cell, faint cell grid from 8 px. Camera maths ported from the legacy `map-camera`.
+- **One base layer plus overlays.** Layer panel top left, grouped Land (elevation, biome), Climate (summer high, winter low, rainfall, drought, storm, snow), Life (fertility, wildness, aura, resources), then "Show on top": water (rivers, lakes and sea painted over climate layers) and hillshade (on by default for every layer, key H). A collapsed Debug group holds plates, river flow, distance to sea and floodplain, plus a "Raw numbers" switch. Number keys pick layers.
+- **Legend** bottom left, drawn from `content/map-layers.ts`: a ramp bar with labelled stops and the unit, or swatches for categories. A tick follows the cell under the pointer and a readout shows its value.
+- **Inspector** on the right opens on click (Esc or × closes it; the cell gets a ring). It shows the biome and coordinates, two to four "why" lines, then facts: elevation, summer/winter temperature, rainfall, risks as pills, water class, resources as chips and aura (plate, flow, flow direction and sea distance with Raw numbers on). Why lines come from a rule table in `content/map-why.ts` (rain shadow, windward, maritime, continental, altitude, floodplain, wild), so adding a rule is data. Each line names a layer and offers "show" to switch to it.
+- **Minimap** bottom right shows the viewport box and recentres on click; zoom buttons top right. On phones the layers become a chip row, the inspector a bottom sheet, and the minimap is hidden.
+- **URL:** `/?next&seed=S1&size=256&layer=rainfall&at=118,40&z=3`. Generate pushes a history entry; layer, cell and zoom changes replace it. Opening a link with a seed generates it and restores the view. Copy link says "Link copied". A bad seed shows a message by the field.
+- `/?next` becomes: New world (seed, size 256 or 128), Generate, then the map. The Phase 0 chronicle and saves stay below it, and saves keep the generated cells.
 - Smoke test: generate → toggle a layer → inspect a cell → save → reload → load.
 
 **M1.5 Naming and strategic features** (~500 lines + content)

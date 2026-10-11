@@ -13,7 +13,7 @@ src/
     systems/ the ordered list of simulation systems
     (later: worldgen/, history/, site/, lod/)
   content/   typed data ("raws"): races, abilities, weather, event types, rules, templates
-  platform/  browser services: IndexedDB saves (later: worker host, preferences)
+  platform/  browser services: IndexedDB saves (worker host for world generation; later: preferences)
   app/       React UI for the new engine (served at /?next until Milestone A)
 ```
 

@@ -20,28 +20,40 @@ function collectErrors(page: Page): string[] {
   return errors;
 }
 
-test('the new engine shell generates a world and advances it', async ({ page }) => {
+test('the world map generates, inspects, saves, reloads and advances', async ({ page }) => {
   const errors = collectErrors(page);
-  await page.goto('/?next');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('new engine');
+  await page.goto('/?next&seed=SMOKE&size=128');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('world map');
+  const map = page.getByTestId('world-map');
+  await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
+  await expect(map).toHaveAttribute('data-seed', 'SMOKE');
   await expect(page.getByRole('alert')).toHaveCount(0);
 
-  await page.getByLabel('Seed').fill('SMOKE');
-  await page.getByRole('button', { name: 'New world' }).click();
-  await page.getByRole('button', { name: '+1 year' }).click();
-  await expect(page.getByText('Year 2', { exact: false }).first()).toBeVisible();
-  await expect(page.getByRole('listitem').first()).not.toBeEmpty();
+  const rainfall = page.getByRole('button', { name: 'Rainfall' });
+  await rainfall.click();
+  await expect(rainfall).toHaveAttribute('aria-pressed', 'true');
+  await expect(page).toHaveURL(/layer=rainfall/);
+
+  await page.locator('canvas.map').click();
+  const inspector = page.getByRole('complementary', { name: 'Cell inspector' });
+  await expect(inspector).toBeVisible();
+  await expect(inspector.getByRole('heading')).not.toBeEmpty();
+  await page.getByRole('button', { name: 'Close inspector' }).click();
+  await expect(inspector).toHaveCount(0);
 
   // Save → reload → load → continue.
+  await page.getByRole('button', { name: '+1 year' }).click();
   const date = page.getByText(/, Year \d+$/).first();
   const savedDate = await date.textContent();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Saved "SMOKE"');
   await page.reload();
+  await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
   await expect(date).not.toHaveText(savedDate!);
   await page.getByRole('button', { name: 'Load SMOKE' }).click();
   await expect(page.getByRole('status')).toContainText('Loaded "SMOKE"');
   await expect(date).toHaveText(savedDate!);
+  await expect(map).toHaveAttribute('data-state', 'ready');
   await page.getByRole('button', { name: '+1 month' }).click();
   await expect(date).not.toHaveText(savedDate!);
   expect(errors).toEqual([]);
