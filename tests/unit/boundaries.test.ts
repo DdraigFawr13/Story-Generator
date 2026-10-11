@@ -43,6 +43,11 @@ describe('architectural boundaries include type and dynamic imports', () => {
       0,
     );
     expect(checkModule(engine, 'const roll = Math.random();').length).toBeGreaterThan(0);
+    expect(checkModule(engine, 'const a = Math.floor(Math.sqrt(x) * 2);')).toEqual([]);
+    for (const unsafe of ['Math.sin(x)', 'Math.pow(x, 2)', "Math['log'](x)", 'x ** 2']) {
+      expect(checkModule(engine, `const a = ${unsafe};`).length).toBeGreaterThan(0);
+      expect(checkModule(content, `const a = ${unsafe};`).length).toBeGreaterThan(0);
+    }
     expect(checkModule(content, "import type { RaceDef } from '../engine';")).toEqual([]);
     expect(
       checkModule(content, "import { NextApp } from '../app/NextApp';").length,

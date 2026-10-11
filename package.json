@@ -10,8 +10,6 @@
     "npm": "11.9.0"
   },
   "scripts": {
-    "benchmark:balance-study": "node scripts/balance-sensitivity-study.mjs",
-    "benchmark:memory": "node scripts/renderer-memory-study.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
@@ -21,10 +19,7 @@
     "test:browser": "playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run format:check && npm run typecheck && npm run boundaries && npm test && npm run build",
-    "benchmark:storage": "node scripts/storage-benchmark.mjs",
-    "benchmark:balance": "node scripts/balance-study.mjs",
-    "benchmark:crash": "node scripts/crash-study.mjs"
+    "check": "npm run format:check && npm run typecheck && npm run boundaries && npm test && npm run build"
   },
   "dependencies": {
     "react": "19.3.0",

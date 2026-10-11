@@ -40,6 +40,33 @@ const forbiddenCoreNames = new Set([
   'localeCompare',
   'random',
 ]);
+// Safe math for determinism (REBOOT_PLAN §7.2): transcendental Math functions can differ
+// between JS engines, so the new engine and content use lookup tables instead.
+const safeMathLayers = new Set(['engine', 'content']);
+const unsafeMathNames = new Set([
+  'sin',
+  'cos',
+  'tan',
+  'asin',
+  'acos',
+  'atan',
+  'atan2',
+  'sinh',
+  'cosh',
+  'tanh',
+  'asinh',
+  'acosh',
+  'atanh',
+  'exp',
+  'expm1',
+  'pow',
+  'log',
+  'log1p',
+  'log2',
+  'log10',
+  'cbrt',
+  'hypot',
+]);
 
 export function checkModule(fileName, sourceText) {
   const layer = path.relative(path.join(root, 'src'), fileName).split(path.sep)[0];
@@ -92,6 +119,24 @@ export function checkModule(fileName, sourceText) {
       forbiddenCoreNames.has(node.property.value)
     ) {
       errors.push(`Simulation core cannot use ${node.property.value}.`);
+    }
+    if (
+      safeMathLayers.has(layer) &&
+      node.type === 'MemberExpression' &&
+      node.object.type === 'Identifier' &&
+      node.object.name === 'Math'
+    ) {
+      const name = node.computed
+        ? node.property.type === 'StringLiteral'
+          ? node.property.value
+          : null
+        : node.property.name;
+      if (name === null) errors.push('Computed Math access is not allowed in the engine.');
+      else if (unsafeMathNames.has(name))
+        errors.push(`Engine math must be deterministic: Math.${name} is not allowed.`);
+    }
+    if (safeMathLayers.has(layer) && node.type === 'BinaryExpression' && node.operator === '**') {
+      errors.push('Engine math must be deterministic: ** is not allowed.');
     }
     for (const child of Object.values(node)) {
       if (Array.isArray(child))

@@ -1,66 +1,30 @@
-name: Core and browser verification
+name: CI
 
-# Tiered verification (docs/CI_VERIFICATION.md):
-#   Tier 1 (every PR, and main pushes while the repo is private): format, types, boundaries,
-#           unit tests, build, probes.
-#   Tier 2 (PRs touching the matching code): representative seed battery and Chromium (unsharded).
-#   Tier 3 (label `full-regression`, high-risk paths, full-regression.yml dispatch, or any main
-#           push while the repository is public):
-#           all 100 seeds in both batteries and every browser case in all three engines (2 partitions
-#           each), each closed by its coverage verifier.
-# `core` and `browser` stay the aggregate check names.
+# Slim CI for the reboot (REBOOT_PLAN §11). Two parallel jobs, under 5 minutes:
+#   core:    format, typecheck, boundaries, unit tests, build
+#   browser: the Chromium smoke (tests/browser)
+# The job names stay `core` and `browser` so earlier check names keep reporting.
 
 on:
   push:
     branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
-  workflow_call:
-    inputs:
-      full:
-        description: Run the complete Tier 3 regression.
-        type: boolean
-        default: true
-      ref:
-        description: Branch, tag or commit SHA to verify (empty = the triggering commit).
-        type: string
-        default: ''
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  # One run per PR / branch; newer commits cancel older runs. An unrelated label gets its
-  # own throwaway group so it neither cancels nor repeats the real run.
-  group: checks-${{ github.workflow }}-${{ (github.event.action == 'labeled' && github.event.label.name != 'full-regression') && github.run_id || github.ref }}
+  # One run per PR or branch; a newer commit cancels the older run.
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  unit:
-    if: github.event.action != 'labeled' || github.event.label.name == 'full-regression'
+  core:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    outputs:
-      docs_only: ${{ steps.scope.outputs.docs_only }}
-      full: ${{ steps.scope.outputs.full }}
-      sim: ${{ steps.scope.outputs.sim }}
-      browser: ${{ steps.scope.outputs.browser }}
-      battery: ${{ steps.scope.outputs.battery }}
-      browsers: ${{ steps.scope.outputs.browsers }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ inputs.ref }}
-          fetch-depth: 2
-      - id: scope
-        env:
-          CI_EVENT: ${{ github.event_name }}
-          # Public repositories get standard-runner minutes free, so every main push then runs
-          # the full regression; a private repository falls back to Tier 1 on main.
-          CI_FULL: ${{ inputs.full == true || contains(github.event.pull_request.labels.*.name, 'full-regression') || (github.event_name == 'push' && github.event.repository.private == false) }}
-        run: |
-          echo "Verifying $(git rev-parse HEAD)"
-          bash scripts/ci-scope.sh
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -68,146 +32,21 @@ jobs:
       - run: npm install --global npm@11.9.0
       - run: npm ci
       - run: npm run format:check
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: npm run typecheck
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: npm run boundaries
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: npm test -- --exclude tests/unit/settlement-seed-battery.test.ts --exclude tests/unit/living-seed-battery.test.ts
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: npm run build
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: python3 docs/probes/terrain_probe.py
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: python3 docs/probes/resident_probe.py --check tests/fixtures/residents.json
-
-  seed-battery:
-    needs: unit
-    if: needs.unit.outputs.sim == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.unit.outputs.battery) }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ inputs.ref }}
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm install --global npm@11.9.0
-      - run: npm ci
-      - run: bash scripts/ci-battery.sh ${{ matrix.parts }}
-      - if: needs.unit.outputs.full == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: seed-battery-${{ matrix.id }}
-          path: test-results/seed-battery-*.json
-          if-no-files-found: error
-          retention-days: 3
-
-  core:
-    needs: [unit, seed-battery]
-    if: always() && (github.event.action != 'labeled' || github.event.label.name == 'full-regression')
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Require Tier 1 and every required battery partition
-        env:
-          UNIT_RESULT: ${{ needs.unit.result }}
-          BATTERY_RESULT: ${{ needs.seed-battery.result }}
-          BATTERY_REQUIRED: ${{ needs.unit.outputs.sim }}
-        run: |
-          echo "unit=$UNIT_RESULT battery=$BATTERY_RESULT required=$BATTERY_REQUIRED"
-          test "$UNIT_RESULT" = success
-          if [ "$BATTERY_REQUIRED" = true ]; then test "$BATTERY_RESULT" = success; else test "$BATTERY_RESULT" = skipped; fi
-      - if: needs.unit.outputs.full == 'true'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ inputs.ref }}
-      - if: needs.unit.outputs.full == 'true'
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-      - if: needs.unit.outputs.full == 'true'
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          pattern: seed-battery-*
-          merge-multiple: true
-          path: test-results/seed-battery
-      - if: needs.unit.outputs.full == 'true'
-        run: node scripts/verify-seed-battery.mjs test-results/seed-battery --living
-
-  browser-tests:
-    needs: unit
-    if: needs.unit.outputs.browser == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.unit.outputs.browsers) }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ inputs.ref }}
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm install --global npm@11.9.0
-      - run: npm ci
-      - run: npx playwright install --with-deps ${{ matrix.project }}
-      - run: npm run test:browser -- --project=${{ matrix.project }} --workers=2 --shard=${{ matrix.shard }}/${{ matrix.shards }} --fully-parallel --forbid-only --reporter=list,json
-        env:
-          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/browser-report-${{ matrix.project }}-${{ matrix.shard }}-of-${{ matrix.shards }}.json
-      - if: needs.unit.outputs.full == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: browser-report-${{ matrix.project }}-${{ matrix.shard }}-of-${{ matrix.shards }}
-          path: test-results/browser-report-${{ matrix.project }}-${{ matrix.shard }}-of-${{ matrix.shards }}.json
-          if-no-files-found: error
-          retention-days: 3
+      - run: npm run typecheck
+      - run: npm run boundaries
+      - run: npm test
+      - run: npm run build
 
   browser:
-    needs: [unit, browser-tests]
-    if: always() && (github.event.action != 'labeled' || github.event.label.name == 'full-regression')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Require every required browser partition
-        env:
-          UNIT_RESULT: ${{ needs.unit.result }}
-          BROWSER_RESULT: ${{ needs.browser-tests.result }}
-          BROWSER_REQUIRED: ${{ needs.unit.outputs.browser }}
-        run: |
-          echo "unit=$UNIT_RESULT browser=$BROWSER_RESULT required=$BROWSER_REQUIRED"
-          test "$UNIT_RESULT" = success
-          if [ "$BROWSER_REQUIRED" = true ]; then test "$BROWSER_RESULT" = success; else test "$BROWSER_RESULT" = skipped; fi
-      # Tier 3: prove every listed case ran exactly once in every engine (scripts/verify-browser-reports.mjs).
-      - if: needs.unit.outputs.full == 'true'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ inputs.ref }}
-      - if: needs.unit.outputs.full == 'true'
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
-      - if: needs.unit.outputs.full == 'true'
-        run: npm install --global npm@11.9.0
-      - if: needs.unit.outputs.full == 'true'
-        run: npm ci
-      - if: needs.unit.outputs.full == 'true'
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          pattern: browser-report-*
-          merge-multiple: true
-          path: test-results/browser-reports
-      - if: needs.unit.outputs.full == 'true'
-        run: npx playwright test --list --fully-parallel --forbid-only --reporter=json > test-results/browser-expected.json
-      - if: needs.unit.outputs.full == 'true'
-        run: node scripts/verify-browser-reports.mjs test-results/browser-expected.json test-results/browser-reports
+      - run: npm install --global npm@11.9.0
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser -- --forbid-only
