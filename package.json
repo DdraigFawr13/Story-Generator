@@ -17,6 +17,8 @@
     "boundaries": "node scripts/check-boundaries.mjs",
     "test": "vitest run",
     "test:browser": "playwright test",
+    "drama": "node scripts/drama.mjs",
+    "worldmap": "node scripts/worldmap.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run format:check && npm run typecheck && npm run boundaries && npm test && npm run build"

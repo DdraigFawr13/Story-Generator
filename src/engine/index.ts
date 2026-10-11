@@ -18,3 +18,5 @@ export * from './worldgen/grid';
 export * from './worldgen/erosion';
 export * from './worldgen/climate';
 export * from './worldgen/water';
+export * from './worldgen/render';
+export * from './worldgen/check';

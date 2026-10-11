@@ -24,11 +24,20 @@ const OCEAN_PICKUP = 2500;
 /** Share of the moisture that falls on each land cell, and the share of that rain evaporated back. */
 const LAND_RAIN_SHARE = 0.1;
 const LAND_RECYCLE = 0.9;
-/** Orographic rain (mm) per metre of rise from the previous cell, plus extra moisture wrung out beyond it. */
-const OROGRAPHIC_RAIN = 2.2;
-const OROGRAPHIC_EXTRA_LOSS = 3;
+/** Rise (m, on smoothed relief) over one cell that wrings out all the air's moisture; capped at OROGRAPHIC_MAX. */
+const OROGRAPHIC_RISE = 3000;
+const OROGRAPHIC_MAX = 0.25;
+/** Box-blur radius (cells) for the relief the wind feels, so single noisy cells don't make rain stripes. */
+const RELIEF_RADIUS = 3;
 /** Rain over open sea as a share of the air's moisture. */
 const OCEAN_RAIN_SHARE = 0.25;
+/**
+ * Rain from weather the row sweep can't model (fronts, storms arriving from other
+ * directions), in mm/yr before the belt factor, blended in at BACKGROUND_SHARE
+ * so lee sides are dry but rarely barren outside the subtropical belt.
+ */
+const BACKGROUND_RAIN = 500;
+const BACKGROUND_SHARE = 0.25;
 /** Box-filter passes down each column to hide row stripes. */
 const SMOOTH_PASSES = 3;
 const MAX_RAINFALL = 6000;
@@ -142,11 +151,13 @@ export function computeRainfall(
   rainfallScale: number,
 ): Uint16Array {
   const size = width * height;
+  const relief = smoothRelief(width, height, elevation);
   let rain = new Float64Array(size);
   for (let y = 0; y < height; y += 1) {
     const wind = windDirection(y, height);
     const belt = beltFactor(Math.abs(latitudeOfRow(y, height)));
-    let moisture = 0;
+    // Air arrives from beyond the map edge already half-laden.
+    let moisture = MOISTURE_CAP / 2;
     let previous = 0;
     for (let step = 0; step < width; step += 1) {
       const x = wind > 0 ? step : width - 1 - step;
@@ -158,16 +169,16 @@ export function computeRainfall(
         fallen = moisture * OCEAN_RAIN_SHARE;
         previous = 0;
       } else {
-        const here = Math.max(0, elevation[i]!);
+        const here = relief[i]!;
         const rise = Math.max(0, here - previous);
         const base = moisture * LAND_RAIN_SHARE;
-        const orographic = Math.min(moisture - base, rise * OROGRAPHIC_RAIN);
+        // Rising air rains out; that water is gone, so the lee side stays dry.
+        const orographic = moisture * Math.min(OROGRAPHIC_MAX, rise / OROGRAPHIC_RISE);
         fallen = base + orographic;
-        const lost = Math.min(moisture, fallen + rise * OROGRAPHIC_EXTRA_LOSS);
-        moisture = moisture - lost + fallen * LAND_RECYCLE;
+        moisture = Math.max(0, moisture - fallen + base * LAND_RECYCLE);
         previous = here;
       }
-      rain[i] = fallen * belt;
+      rain[i] = (fallen * (1 - BACKGROUND_SHARE) + BACKGROUND_RAIN * BACKGROUND_SHARE) * belt;
     }
   }
   // Smooth down each column so row-by-row sweeps don't leave stripes.
@@ -188,6 +199,44 @@ export function computeRainfall(
     result[i] = Math.min(MAX_RAINFALL, Math.max(0, Math.round(rain[i]! * rainfallScale)));
   }
   return result;
+}
+
+/** Land relief (m, sea at 0) box-blurred along both axes. */
+function smoothRelief(width: number, height: number, elevation: ArrayLike<number>): Float64Array {
+  const size = width * height;
+  const rows = new Float64Array(size);
+  const out = new Float64Array(size);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let sum = 0;
+      let count = 0;
+      for (
+        let k = Math.max(0, x - RELIEF_RADIUS);
+        k <= Math.min(width - 1, x + RELIEF_RADIUS);
+        k += 1
+      ) {
+        sum += Math.max(0, elevation[y * width + k]!);
+        count += 1;
+      }
+      rows[y * width + x] = sum / count;
+    }
+  }
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let sum = 0;
+      let count = 0;
+      for (
+        let k = Math.max(0, y - RELIEF_RADIUS);
+        k <= Math.min(height - 1, y + RELIEF_RADIUS);
+        k += 1
+      ) {
+        sum += rows[k * width + x]!;
+        count += 1;
+      }
+      out[y * width + x] = sum / count;
+    }
+  }
+  return out;
 }
 
 export interface Risks {

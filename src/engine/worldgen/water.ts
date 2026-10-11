@@ -12,7 +12,7 @@ export const WATER_LAKE = 2;
 export const WATER_SEA = 3;
 
 /** Filled depressions of at least this many cells become lakes; smaller pits are levelled. */
-export const LAKE_MIN_CELLS = 6;
+export const LAKE_MIN_CELLS = 24;
 /** Accumulated runoff at which a land cell becomes a river (about 5-15 per cell, so roughly 10-30 cells upstream). */
 export const RIVER_FLOW = 150;
 /** Floodplain: ground below this height (m) whose drop to the next cell is at most FLOODPLAIN_DROP (m). */
@@ -41,6 +41,7 @@ export function computeWater(
   elevation: Int16Array,
   rainfall: Uint16Array,
   ocean: Uint8Array,
+  lakeMinCells = LAKE_MIN_CELLS,
 ): WaterResult {
   const size = width * height;
   const filled = new Int32Array(size);
@@ -108,7 +109,7 @@ export function computeWater(
     }
     for (let k = 0; k < tail; k += 1) {
       const c = queue[k]!;
-      if (tail >= LAKE_MIN_CELLS) water[c] = WATER_LAKE;
+      if (tail >= lakeMinCells) water[c] = WATER_LAKE;
       else elevation[c] = filled[c]!;
     }
   }

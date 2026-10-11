@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   D8_DX,
   D8_DY,
+  checkWorldCells,
   computeWater,
   generateWorld,
   oceanMask,
   type WorldCells,
 } from '../../src/engine';
+import { gridFromAscii } from './helpers/grid-from-ascii';
 
 const SMALL = { width: 96, height: 96 };
 
@@ -19,17 +21,22 @@ function downstream(cells: WorldCells, i: number): number {
   return y * cells.width + x;
 }
 
-/** 12x8 ramp rising from a sea column, with a 1-cell pit and a 3x3 basin. */
+/** 12x8 ramp (10 m per digit) rising from a sea column, with a 1-cell pit and a 3x3 basin. */
 function fixture() {
-  const width = 12;
-  const height = 8;
-  const elevation = new Int16Array(width * height);
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) elevation[y * width + x] = x === 0 ? -10 : x * 10;
-  }
+  const { width, height, elevation } = gridFromAscii(
+    [
+      '~12345678999',
+      '~12305678999',
+      '~12345678999',
+      '~12345672229',
+      '~12345672229',
+      '~12345672229',
+      '~12345678999',
+      '~12345678999',
+    ],
+    10,
+  );
   const pit = 1 * width + 4;
-  elevation[pit] = 5;
-  for (let y = 3; y <= 5; y += 1) for (let x = 8; x <= 10; x += 1) elevation[y * width + x] = 20;
   const ocean = oceanMask(width, height, elevation);
   const rainfall = new Uint16Array(width * height).fill(100);
   return { width, height, elevation, ocean, rainfall, pit };
@@ -38,7 +45,8 @@ function fixture() {
 describe('water fixture', () => {
   it('fills a pit, turns a basin into a lake and drains everything to the sea', () => {
     const { width, height, elevation, ocean, rainfall, pit } = fixture();
-    const result = computeWater(width, height, elevation, rainfall, ocean);
+    // A fixture-sized lake threshold, so the 9-cell basin counts as a lake.
+    const result = computeWater(width, height, elevation, rainfall, ocean, 6);
     // The pit is levelled to its spill height and is plain land.
     expect(elevation[pit]).toBeGreaterThan(5);
     expect(result.water[pit]).toBe(0);
@@ -68,25 +76,16 @@ describe('water on generated worlds', () => {
   for (const seed of ['A', 'B', 'C']) {
     it(`never runs uphill and ends rivers in sea or lake (seed ${seed})`, () => {
       const cells = generateWorld(seed, SMALL).cells!;
-      const size = cells.width * cells.height;
+      expect(checkWorldCells(cells)).toEqual([]);
       let rivers = 0;
-      for (let i = 0; i < size; i += 1) {
+      for (let i = 0; i < cells.width * cells.height; i += 1) {
+        if (cells.water[i] === 1) rivers += 1;
         if (cells.water[i] === 3) continue;
-        const n = downstream(cells, i);
-        expect(n).toBeGreaterThanOrEqual(0);
         // Lakes sit below their rim, so only compare dry ground to dry ground.
+        const n = downstream(cells, i);
         if (cells.water[i] !== 2 && cells.water[n] !== 2) {
           expect(cells.elevation[n]).toBeLessThanOrEqual(cells.elevation[i]!);
         }
-        if (cells.water[i] !== 1) continue;
-        rivers += 1;
-        let at = i;
-        let steps = 0;
-        while (cells.water[at] === 1 && steps <= size) {
-          at = downstream(cells, at);
-          steps += 1;
-        }
-        expect([2, 3]).toContain(cells.water[at]);
       }
       expect(rivers).toBeGreaterThan(20);
     });
