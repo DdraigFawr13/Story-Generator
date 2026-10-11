@@ -1,0 +1,557 @@
+{
+  "provenance": {
+    "originalReport": "docs/evidence/phase2-individual-battery.json",
+    "projectionSha256": "4b09cc531765449919fdd5bff9922f94c45e17eed0dee93e1615dafa9dd96099",
+    "node": "v24.19.0",
+    "command": "node scripts/work-history-study.mjs",
+    "ticksPerSeed": 1000
+  },
+  "samples": [
+    {
+      "seed": "RIVERSIDE",
+      "tick": 1000,
+      "digest": "ebcf1d751d86b728c70a874e494dce28edad09303785cffe0d8c27482688203e",
+      "selected": [
+        {
+          "id": 23,
+          "name": "Idris Willow",
+          "status": "living",
+          "totals": {
+            "fieldwork": 379,
+            "foraging": 585,
+            "repairing": 0,
+            "building": 12,
+            "gathering": 8,
+            "caretaking": 0,
+            "resting": 16
+          },
+          "spans": 36,
+          "first": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 1,
+            "through": 36,
+            "weeks": 36,
+            "startEventId": 4,
+            "endEventId": 32
+          },
+          "longest": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 145,
+            "through": 461,
+            "weeks": 317,
+            "startEventId": 93,
+            "endEventId": 327
+          },
+          "last": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 997,
+            "through": 1000,
+            "weeks": 4,
+            "startEventId": 591,
+            "endEventId": null
+          }
+        },
+        {
+          "id": 17,
+          "name": "Rian Hazel",
+          "status": "deceased",
+          "totals": {
+            "fieldwork": 456,
+            "foraging": 144,
+            "repairing": 0,
+            "building": 0,
+            "gathering": 0,
+            "caretaking": 0,
+            "resting": 192
+          },
+          "spans": 26,
+          "first": {
+            "role": "fieldwork",
+            "targetId": 8,
+            "from": 1,
+            "through": 36,
+            "weeks": 36,
+            "startEventId": 4,
+            "endEventId": 32
+          },
+          "longest": {
+            "role": "resting",
+            "targetId": null,
+            "from": 601,
+            "through": 792,
+            "weeks": 192,
+            "startEventId": 403,
+            "endEventId": 497
+          },
+          "last": {
+            "role": "resting",
+            "targetId": null,
+            "from": 601,
+            "through": 792,
+            "weeks": 192,
+            "startEventId": 403,
+            "endEventId": 497
+          }
+        }
+      ]
+    },
+    {
+      "seed": "TERRAIN_005",
+      "tick": 1000,
+      "digest": "35b53aa7315067813616c3f556607e2a30e23f12781848de6f333a67e9effd82",
+      "selected": [
+        {
+          "id": 25,
+          "name": "Sera Vale",
+          "status": "living",
+          "totals": {
+            "fieldwork": 108,
+            "foraging": 660,
+            "repairing": 0,
+            "building": 4,
+            "gathering": 0,
+            "caretaking": 191,
+            "resting": 37
+          },
+          "spans": 21,
+          "first": {
+            "role": "building",
+            "targetId": 41,
+            "from": 1,
+            "through": 2,
+            "weeks": 2,
+            "startEventId": 4,
+            "endEventId": 8
+          },
+          "longest": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 385,
+            "through": 672,
+            "weeks": 288,
+            "startEventId": 212,
+            "endEventId": 354
+          },
+          "last": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 997,
+            "through": 1000,
+            "weeks": 4,
+            "startEventId": 518,
+            "endEventId": null
+          }
+        },
+        {
+          "id": 17,
+          "name": "Galen Hill",
+          "status": "deceased",
+          "totals": {
+            "fieldwork": 96,
+            "foraging": 24,
+            "repairing": 0,
+            "building": 0,
+            "gathering": 0,
+            "caretaking": 0,
+            "resting": 0
+          },
+          "spans": 5,
+          "first": {
+            "role": "fieldwork",
+            "targetId": 4,
+            "from": 1,
+            "through": 36,
+            "weeks": 36,
+            "startEventId": 4,
+            "endEventId": 40
+          },
+          "longest": {
+            "role": "fieldwork",
+            "targetId": 4,
+            "from": 1,
+            "through": 36,
+            "weeks": 36,
+            "startEventId": 4,
+            "endEventId": 40
+          },
+          "last": {
+            "role": "fieldwork",
+            "targetId": 4,
+            "from": 97,
+            "through": 120,
+            "weeks": 24,
+            "startEventId": 69,
+            "endEventId": 79
+          }
+        }
+      ]
+    },
+    {
+      "seed": "TERRAIN_011",
+      "tick": 1000,
+      "digest": "d71551d24a1f744681765cecb820a13d3a3778e0aff648ded258a01416e6d1b0",
+      "selected": [
+        {
+          "id": 30,
+          "name": "Rona Flint",
+          "status": "living",
+          "totals": {
+            "fieldwork": 108,
+            "foraging": 545,
+            "repairing": 3,
+            "building": 26,
+            "gathering": 59,
+            "caretaking": 191,
+            "resting": 68
+          },
+          "spans": 38,
+          "first": {
+            "role": "resting",
+            "targetId": null,
+            "from": 1,
+            "through": 48,
+            "weeks": 48,
+            "startEventId": 4,
+            "endEventId": 48
+          },
+          "longest": {
+            "role": "caretaking",
+            "targetId": 89,
+            "from": 397,
+            "through": 587,
+            "weeks": 191,
+            "startEventId": 328,
+            "endEventId": 497
+          },
+          "last": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 901,
+            "through": 1000,
+            "weeks": 100,
+            "startEventId": 765,
+            "endEventId": null
+          }
+        },
+        {
+          "id": 18,
+          "name": "Rona Cedar",
+          "status": "deceased",
+          "totals": {
+            "fieldwork": 180,
+            "foraging": 60,
+            "repairing": 0,
+            "building": 0,
+            "gathering": 0,
+            "caretaking": 96,
+            "resting": 0
+          },
+          "spans": 11,
+          "first": {
+            "role": "fieldwork",
+            "targetId": 9,
+            "from": 1,
+            "through": 36,
+            "weeks": 36,
+            "startEventId": 4,
+            "endEventId": 43
+          },
+          "longest": {
+            "role": "caretaking",
+            "targetId": 72,
+            "from": 241,
+            "through": 336,
+            "weeks": 96,
+            "startEventId": 194,
+            "endEventId": 271
+          },
+          "last": {
+            "role": "caretaking",
+            "targetId": 72,
+            "from": 241,
+            "through": 336,
+            "weeks": 96,
+            "startEventId": 194,
+            "endEventId": 271
+          }
+        }
+      ]
+    },
+    {
+      "seed": "TERRAIN_019",
+      "tick": 1000,
+      "digest": "200ede33737e1a2129f67ba571c52daceb0b6a0ef8a4a4ee6b8e76f67e6cfe29",
+      "selected": [
+        {
+          "id": 26,
+          "name": "Orin Hazel",
+          "status": "living",
+          "totals": {
+            "fieldwork": 179,
+            "foraging": 570,
+            "repairing": 0,
+            "building": 16,
+            "gathering": 26,
+            "caretaking": 191,
+            "resting": 18
+          },
+          "spans": 27,
+          "first": {
+            "role": "building",
+            "targetId": 41,
+            "from": 1,
+            "through": 2,
+            "weeks": 2,
+            "startEventId": 4,
+            "endEventId": 8
+          },
+          "longest": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 145,
+            "through": 564,
+            "weeks": 420,
+            "startEventId": 128,
+            "endEventId": 499
+          },
+          "last": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 997,
+            "through": 1000,
+            "weeks": 4,
+            "startEventId": 884,
+            "endEventId": null
+          }
+        },
+        {
+          "id": 17,
+          "name": "Elan Rowan",
+          "status": "deceased",
+          "totals": {
+            "fieldwork": 361,
+            "foraging": 120,
+            "repairing": 0,
+            "building": 0,
+            "gathering": 0,
+            "caretaking": 191,
+            "resting": 0
+          },
+          "spans": 22,
+          "first": {
+            "role": "fieldwork",
+            "targetId": 9,
+            "from": 1,
+            "through": 36,
+            "weeks": 36,
+            "startEventId": 4,
+            "endEventId": 42
+          },
+          "longest": {
+            "role": "caretaking",
+            "targetId": 62,
+            "from": 157,
+            "through": 347,
+            "weeks": 191,
+            "startEventId": 135,
+            "endEventId": 282
+          },
+          "last": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 661,
+            "through": 672,
+            "weeks": 12,
+            "startEventId": 566,
+            "endEventId": 593
+          }
+        }
+      ]
+    },
+    {
+      "seed": "TERRAIN_030",
+      "tick": 1000,
+      "digest": "bcdf9d62ba1af88ea349ce31f779553eb7a9a2e3cf7b16ca9d8c32b3eb7d27f4",
+      "selected": [
+        {
+          "id": 25,
+          "name": "Alin Cedar",
+          "status": "living",
+          "totals": {
+            "fieldwork": 86,
+            "foraging": 480,
+            "repairing": 0,
+            "building": 18,
+            "gathering": 14,
+            "caretaking": 382,
+            "resting": 20
+          },
+          "spans": 25,
+          "first": {
+            "role": "building",
+            "targetId": 41,
+            "from": 1,
+            "through": 2,
+            "weeks": 2,
+            "startEventId": 4,
+            "endEventId": 8
+          },
+          "longest": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 193,
+            "through": 504,
+            "weeks": 312,
+            "startEventId": 153,
+            "endEventId": 419
+          },
+          "last": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 997,
+            "through": 1000,
+            "weeks": 4,
+            "startEventId": 915,
+            "endEventId": null
+          }
+        },
+        {
+          "id": 20,
+          "name": "Vara Brook",
+          "status": "deceased",
+          "totals": {
+            "fieldwork": 68,
+            "foraging": 124,
+            "repairing": 0,
+            "building": 0,
+            "gathering": 0,
+            "caretaking": 0,
+            "resting": 0
+          },
+          "spans": 5,
+          "first": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 1,
+            "through": 100,
+            "weeks": 100,
+            "startEventId": 4,
+            "endEventId": 76
+          },
+          "longest": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 1,
+            "through": 100,
+            "weeks": 100,
+            "startEventId": 4,
+            "endEventId": 76
+          },
+          "last": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 181,
+            "through": 192,
+            "weeks": 12,
+            "startEventId": 143,
+            "endEventId": 149
+          }
+        }
+      ]
+    },
+    {
+      "seed": "TERRAIN_098",
+      "tick": 1000,
+      "digest": "1b8b28360fe8994a5f388ed15f96cde1284d412535ad57971b4f52a562ba0ef6",
+      "selected": [
+        {
+          "id": 28,
+          "name": "Orin Hazel",
+          "status": "living",
+          "totals": {
+            "fieldwork": 63,
+            "foraging": 573,
+            "repairing": 0,
+            "building": 4,
+            "gathering": 12,
+            "caretaking": 191,
+            "resting": 157
+          },
+          "spans": 31,
+          "first": {
+            "role": "gathering",
+            "targetId": null,
+            "from": 1,
+            "through": 4,
+            "weeks": 4,
+            "startEventId": 4,
+            "endEventId": 10
+          },
+          "longest": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 625,
+            "through": 872,
+            "weeks": 248,
+            "startEventId": 375,
+            "endEventId": 498
+          },
+          "last": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 997,
+            "through": 1000,
+            "weeks": 4,
+            "startEventId": 568,
+            "endEventId": null
+          }
+        },
+        {
+          "id": 19,
+          "name": "Wren Alder",
+          "status": "deceased",
+          "totals": {
+            "fieldwork": 308,
+            "foraging": 100,
+            "repairing": 0,
+            "building": 0,
+            "gathering": 0,
+            "caretaking": 0,
+            "resting": 0
+          },
+          "spans": 18,
+          "first": {
+            "role": "foraging",
+            "targetId": null,
+            "from": 1,
+            "through": 4,
+            "weeks": 4,
+            "startEventId": 4,
+            "endEventId": 10
+          },
+          "longest": {
+            "role": "fieldwork",
+            "targetId": 42,
+            "from": 49,
+            "through": 84,
+            "weeks": 36,
+            "startEventId": 41,
+            "endEventId": 72
+          },
+          "last": {
+            "role": "fieldwork",
+            "targetId": 42,
+            "from": 385,
+            "through": 408,
+            "weeks": 24,
+            "startEventId": 253,
+            "endEventId": 262
+          }
+        }
+      ]
+    }
+  ]
+}
