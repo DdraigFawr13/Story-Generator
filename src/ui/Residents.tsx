@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   activityLabel,
   ageLabel,
@@ -10,6 +10,16 @@ import {
 import { dateLabel } from '../controller/chronicle';
 import { householdDossier } from '../controller/households';
 import { HouseholdFacts } from './HouseholdFacts';
+import { Bookmarks } from './Bookmarks';
+import {
+  bookmarkIdentity,
+  bookmarkWorldKey,
+  watchBookmarks,
+  loadBookmarks,
+  saveBookmarks,
+  BOOKMARK_LIMIT,
+  type ReadingBookmark,
+} from '../controller/bookmarks';
 
 const PAGE_SIZE = 32;
 type Subject = { kind: 'resident' | 'household'; id: number };
@@ -27,6 +37,9 @@ export function Residents({
   onFocusHome: (tile: number) => void;
 }) {
   const [selected, setSelected] = useState<Subject | null>(null);
+  const [bookmarks, setBookmarks] = useState(() => loadBookmarks(world));
+  const bookmarkKey = bookmarkWorldKey(world);
+  useEffect(() => watchBookmarks(bookmarkKey, setBookmarks), [bookmarkKey]);
   const selectedId = selected?.kind === 'resident' ? selected.id : null;
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('living');
@@ -110,6 +123,19 @@ export function Residents({
     onInspect(id, selected?.kind ?? 'resident');
   }
   const person = dossier?.person;
+  const currentBookmark = selected ? bookmarkIdentity(world, selected) : null;
+  const bookmarked =
+    currentBookmark !== null &&
+    bookmarks.subjects.some(
+      (item) =>
+        item.kind === currentBookmark.kind &&
+        item.id === currentBookmark.id &&
+        item.origin === currentBookmark.origin,
+    );
+  function updateBookmarks(subjects: ReadingBookmark[]) {
+    const available = saveBookmarks(world, subjects);
+    setBookmarks({ subjects, available });
+  }
   return (
     <section
       className="resident-reader"
@@ -142,6 +168,15 @@ export function Residents({
           {living} living · {world.world.residents.length - living} deceased. Choose a name to
           follow a recorded life.
         </p>
+        <Bookmarks
+          world={world}
+          subjects={bookmarks.subjects}
+          available={bookmarks.available}
+          onChoose={(subject) => chooseSubject(subject)}
+          onRemove={(index) =>
+            updateBookmarks(bookmarks.subjects.filter((_, offset) => offset !== index))
+          }
+        />
         <details
           className="resident-roster"
           open={showRoster}
@@ -266,6 +301,22 @@ export function Residents({
               {person ? residentName(person) : `${householdHistory!.household.name} household`} · #
               {selected.id}
             </h3>
+            {currentBookmark && (
+              <button
+                type="button"
+                className="secondary"
+                aria-pressed={bookmarked}
+                disabled={!bookmarked && bookmarks.subjects.length >= BOOKMARK_LIMIT}
+                onClick={() => {
+                  const others = bookmarks.subjects.filter(
+                    (item) => item.kind !== currentBookmark.kind || item.id !== currentBookmark.id,
+                  );
+                  updateBookmarks(bookmarked ? others : [...others, currentBookmark]);
+                }}
+              >
+                {bookmarked ? 'Remove bookmark' : `Bookmark ${selected.kind}`}
+              </button>
+            )}
             {trail.length > 0 && (
               <button
                 type="button"
