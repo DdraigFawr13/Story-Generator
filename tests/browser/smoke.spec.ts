@@ -31,6 +31,19 @@ test('the new engine shell generates a world and advances it', async ({ page }) 
   await page.getByRole('button', { name: '+1 year' }).click();
   await expect(page.getByText('Year 2', { exact: false }).first()).toBeVisible();
   await expect(page.getByRole('listitem').first()).not.toBeEmpty();
+
+  // Save → reload → load → continue.
+  const date = page.getByText(/, Year \d+$/).first();
+  const savedDate = await date.textContent();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Saved "SMOKE"');
+  await page.reload();
+  await expect(date).not.toHaveText(savedDate!);
+  await page.getByRole('button', { name: 'Load SMOKE' }).click();
+  await expect(page.getByRole('status')).toContainText('Loaded "SMOKE"');
+  await expect(date).toHaveText(savedDate!);
+  await page.getByRole('button', { name: '+1 month' }).click();
+  await expect(date).not.toHaveText(savedDate!);
   expect(errors).toEqual([]);
 });
 

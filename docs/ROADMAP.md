@@ -4,7 +4,7 @@ Detail for every phase lives in [REBOOT_PLAN.md §9](REBOOT_PLAN.md#9-phases). E
 
 | Phase | Name | Size | Key output | Status |
 | --- | --- | --- | --- | --- |
-| 0 | Reset and skeleton | 2–3 PRs | New docs, slim CI, engine core, person record, `?next` | **In progress** ([spec](phases/PHASE_0.md)) |
+| 0 | Reset and skeleton | 2–3 PRs | New docs, slim CI, engine core, person record, `?next` | Done, awaiting check-in ([spec](phases/PHASE_0.md)) |
 | 1 | World generation | 3–5 PRs | Topography, seasonal climate, rivers, biomes, resources, aura, world map | Next |
 | 2 | Legends | 6–8 PRs | Races, cultures, inheritance, sites, demographics, families/dynasties, history, legends browser | |
 | 3 | Live site (**Milestone A**) | 10–14 PRs | Full everyday life thinly: needs, mood, health, environment, family, relationships, work, threats, light magic; saves | |

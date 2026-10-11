@@ -3,6 +3,8 @@
 // saves are a structured clone. Add fields as phases need them; do not add
 // per-version compatibility layers (R-02, R-03).
 
+import type { RngState } from './rng';
+
 export type Id = number;
 
 export const ENTITY_KINDS = ['event', 'person', 'site', 'civ', 'creature', 'item'] as const;
@@ -115,7 +117,7 @@ export interface WorldState {
   day: number;
   params: WorldParams;
   /** Named RNG stream states, created lazily from the seed (core/rng.ts). */
-  rng: Record<string, number>;
+  rng: Record<string, RngState>;
   nextId: Record<EntityKind, Id>;
   people: Map<Id, Person>;
   events: SimEvent[];
