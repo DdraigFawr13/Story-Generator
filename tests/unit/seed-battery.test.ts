@@ -1,4 +1,8 @@
 import { expect, it } from 'vitest';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { BATTERY_SEEDS, batteryPartition, verifyBatteryReports } from '../fixtures/seed-battery';
 
 function reports(total = 4) {
@@ -40,6 +44,68 @@ it('rejects invalid shard settings instead of silently running fewer seeds', () 
     '999999999999999999/4',
   ])
     expect(() => batteryPartition(value)).toThrow();
+});
+
+it('requires complete independent P2 coverage under its explicit version contract', () => {
+  const individual = reports().map((report) => ({ ...report, version: 'p2-settlement-v1' }));
+  expect(verifyBatteryReports(individual, 4, 'p2-settlement-v1').seeds).toBe(100);
+  expect(() => verifyBatteryReports(individual, 4)).toThrow();
+  expect(() => verifyBatteryReports(reports(), 4, 'p2-settlement-v1')).toThrow();
+  expect(() => verifyBatteryReports(individual.slice(1), 4, 'p2-settlement-v1')).toThrow();
+});
+
+it('runs the real aggregate CLI and rejects missing P2 continuation proof', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'story-generator-battery-gate-'));
+  const run = () =>
+    spawnSync(process.execPath, ['scripts/verify-seed-battery.mjs', directory, '--living'], {
+      encoding: 'utf8',
+    });
+  try {
+    for (const [offset, report] of reports().entries()) {
+      writeFileSync(
+        path.join(directory, `seed-battery-${offset + 1}.json`),
+        JSON.stringify(report),
+      );
+      writeFileSync(
+        path.join(directory, `living-seed-battery-${offset + 1}.json`),
+        JSON.stringify({
+          ...report,
+          version: 'p2-settlement-v1',
+          continuationWeeks: 12,
+          outcomes: report.outcomes.map((outcome) => ({
+            ...outcome,
+            continuedDigest: outcome.digest,
+          })),
+        }),
+      );
+    }
+    expect(run().status).toBe(0);
+    const file = path.join(directory, 'living-seed-battery-1.json');
+    for (const version of ['p2-settlement-v1', 'unknown-version']) {
+      writeFileSync(
+        file,
+        JSON.stringify({
+          ...reports()[0],
+          version,
+          continuationWeeks: 11,
+          outcomes: reports()[0]!.outcomes.map((outcome) => ({
+            ...outcome,
+            continuedDigest: outcome.digest,
+          })),
+        }),
+      );
+      expect(run().status).not.toBe(0);
+    }
+    writeFileSync(
+      file,
+      JSON.stringify({ ...reports()[0], version: 'p2-settlement-v1', continuationWeeks: 12 }),
+    );
+    expect(run().status).not.toBe(0);
+    rmSync(file);
+    expect(run().status).not.toBe(0);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 it('fails the aggregate gate for missing, duplicate, truncated or mismatched reports', () => {

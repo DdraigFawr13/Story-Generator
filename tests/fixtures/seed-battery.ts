@@ -31,7 +31,11 @@ interface BatteryReport {
   outcomes: { seed: string; digest: string }[];
 }
 
-export function verifyBatteryReports(input: unknown[], total: number) {
+export function verifyBatteryReports(
+  input: unknown[],
+  total: number,
+  version = 'p1-settlement-v2',
+) {
   if (input.length !== total) throw new Error('Missing or extra battery reports.');
   const seenShards = new Set<number>();
   const seenSeeds = new Set<string>();
@@ -40,7 +44,7 @@ export function verifyBatteryReports(input: unknown[], total: number) {
     const report = value as BatteryReport | null;
     if (
       !report ||
-      report.version !== 'p1-settlement-v2' ||
+      report.version !== version ||
       report.ticksPerSeed !== 1000 ||
       !report.shard ||
       report.shard.total !== total ||

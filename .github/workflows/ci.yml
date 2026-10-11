@@ -26,7 +26,7 @@ jobs:
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm run boundaries
-      - run: npm test -- --exclude tests/unit/settlement-seed-battery.test.ts
+      - run: npm test -- --exclude tests/unit/settlement-seed-battery.test.ts --exclude tests/unit/living-seed-battery.test.ts
       - run: npm run build
       - run: python3 docs/probes/terrain_probe.py
       - run: python3 docs/probes/resident_probe.py --check tests/fixtures/residents.json
@@ -36,6 +36,7 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3, 4]
+        suite: [settlement, living]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -45,14 +46,15 @@ jobs:
       - run: npm install --global npm@11.9.0
       - run: npm ci
       - run: mkdir -p test-results
-      - run: npm test -- tests/unit/settlement-seed-battery.test.ts
+      - run: npm test -- tests/unit/${{ matrix.suite }}-seed-battery.test.ts
         env:
           STORY_GENERATOR_BATTERY_SHARD: ${{ matrix.shard }}/4
-          STORY_GENERATOR_REPORT: test-results/seed-battery-${{ matrix.shard }}.json
+          STORY_GENERATOR_REPORT: test-results/seed-battery-settlement-${{ matrix.shard }}.json
+          STORY_GENERATOR_LIVING_REPORT: test-results/seed-battery-living-${{ matrix.shard }}.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: seed-battery-${{ matrix.shard }}
-          path: test-results/seed-battery-${{ matrix.shard }}.json
+          name: seed-battery-${{ matrix.suite }}-${{ matrix.shard }}
+          path: test-results/seed-battery-${{ matrix.suite }}-${{ matrix.shard }}.json
           if-no-files-found: error
           retention-days: 7
   core:
@@ -74,7 +76,7 @@ jobs:
           pattern: seed-battery-*
           merge-multiple: true
           path: test-results/seed-battery
-      - run: node scripts/verify-seed-battery.mjs test-results/seed-battery
+      - run: node scripts/verify-seed-battery.mjs test-results/seed-battery --living
   browser-tests:
     runs-on: ubuntu-latest
     strategy:

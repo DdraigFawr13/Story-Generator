@@ -6,7 +6,8 @@ The 2026-10-11 continuation asks for shorter GitHub checks while keeping the sto
 
 - Every ordinary unit test, formatting, strict type checking, source boundaries, production build and both independent Python probes still run on every PR and main push.
 - The original 100 terrain seeds still advance through the same complete 1,000-week assertions, winter observations, validation and canonical digests. Four separate runners each execute 25 seeds; there is no reduced seed sample or shortened history.
-- The `core` check requires successful ordinary-unit and seed-battery jobs, then downloads all four current-run reports. It rejects missing/duplicate partitions, missing/extra/wrong seeds, wrong rule version or tick count, malformed digests and duplicate canonical results across partitions. Uploading a missing report fails its job.
+- [I.6](PHASE2_LONG_RUN.md) adds the same 100 seeds under the individual P2 rules, complete save restoration and 12-week continuation. Four additional runners each cover 25 named worlds in parallel with the original battery; core requires complete separate P1/P2 report coverage.
+- The `core` check requires successful ordinary-unit and all eight seed-battery jobs, then downloads all eight current-run reports. Each version independently rejects missing/duplicate partitions, missing/extra/wrong seeds, wrong rule version or tick count, malformed digests and duplicate canonical results across partitions. The P2 reports also require complete 12-week continuation evidence. Uploading a missing report fails its job.
 - Every browser case still runs in Chromium, Firefox and WebKit. Each engine has its own runner, installs only its engine, and uses two workers across files. Tests within each file retain their existing sequential order and independent browser contexts. `fullyParallel`, timeouts and retry policy are unchanged.
 - The existing `core` and `browser` check names remain aggregate gates. Both use `always()` and explicitly require successful dependencies, so failed, skipped or cancelled partitions cannot produce a green aggregate check. Matrix fail-fast is disabled so another failure does not hide coverage.
 - Actions are pinned to commit SHAs. Permissions, PR/main triggers, concurrency cancellation, dependency/runtime pins and main-only Vercel deployment rules remain unchanged. No path-based skipping is introduced.
@@ -25,7 +26,7 @@ STORY_GENERATOR_BATTERY_SHARD=1/4 \
 npm run test:browser -- --project=chromium --workers=2
 ```
 
-Repeat the seed command for 2/4, 3/4 and 4/4, then run `node scripts/verify-seed-battery.mjs test-results`. Invalid shard settings fail instead of silently reducing coverage. Three focused partition/gate tests exercise complete uneven partitions, all 100 one-seed partitions, invalid settings, missing/duplicate/truncated reports, changed contracts and cross-partition digest collisions.
+Repeat the seed command for 2/4, 3/4 and 4/4, then run `node scripts/verify-seed-battery.mjs test-results`. For both versions, follow the additional [individual battery commands](PHASE2_LONG_RUN.md) and pass `--living` with all eight reports. Invalid shard settings fail instead of silently reducing coverage. Five focused partition/gate tests exercise complete uneven partitions, all 100 one-seed partitions, invalid settings, missing/duplicate/truncated reports, changed contracts, cross-partition digest collisions, independent P2 coverage and the actual Node CLI's continuation/report rejection.
 
 ## Measurement and limits
 
