@@ -97,6 +97,28 @@ Known rough edges (honest, short).
 Next phase proposal + any design forks.
 ```
 
+### 1F. Scaffolding already in place (start here)
+
+A thin, working through line already exists. It runs content → engine loop → events → narrator → UI. Extend these files; don't replace them.
+
+| File | What it gives you | Next phase that grows it |
+| --- | --- | --- |
+| `src/engine/core/types.ts` | `WorldState`, `Person` (attributes, potential, magic, family, site-only `detail`), `SimEvent` with `causes`, `Command` | Every phase adds fields (Phase 1 `cells`, Phase 2 `civs`/`sites`, Phase 3 `activeSite`) |
+| `src/engine/core/rng.ts` | Named deterministic streams, `streamFor(world, 'name')`, plus `int`/`between`/`chance`/`pick`/`weighted` | Use one new stream name per system |
+| `src/engine/core/clock.ts` | Day-based calendar (28-day months, 336-day year, seasons), `isDue(cadence, day)` | Cultures may rename months |
+| `src/engine/core/scheduler.ts` | `step`/`advance`, fixed-order `System`s, command queue with handler registry (hybrid seam), `rulesSystem` running content event rules | Phase 3 inserts life systems; Phase 8 registers command handlers |
+| `src/engine/core/context.ts` | `SimContext`: `emit` (refuses event types without content templates), `rng`, `nextId`, `lastEvent` | Add helpers as systems need them |
+| `src/engine/core/content-types.ts` | Shapes for races, schools, unified abilities/spells, weather, event types and event rules | Phase 1 biomes/resources; Phase 2 cultures/creatures; Phase 3 needs/jobs/illnesses/traits |
+| `src/engine/core/validate-content.ts` | Duplicate/reference checks, **per-tier effect caps (R-24)**, **no self-taught magic (R-28)**, **race balance (R-29)** | Add checks with each new content type |
+| `src/engine/people/tiers.ts` | Tier table with soldier equivalence and caps, `LEGEND_CAP = 3`, `MAX_SOLDIER_EQUIVALENT = 1000` | Read-only design constants; change only with the user |
+| `src/engine/people/aptitude.ts` | `rollAptitude` (race + inheritance + aura), `meetsRequirements` | Phase 2 history and Phase 3 promotion call it; Phase 3 adds age scaling |
+| `src/engine/people/combat-scale.ts` | `soldierEquivalent(person)`: the R-24 yardstick | Phase 2 world battles, Phase 3 combat consistency, drama check |
+| `src/engine/narrative/render.ts` | `Narrator` interface and a deterministic template narrator | Recaps (Phase 3) and an optional LLM narrator later |
+| `src/engine/systems/` | `DEFAULT_SYSTEMS` order plus a demo seasonal weather system | Phase 1 replaces weather with per-cell climate |
+| `src/content/` | Humans, two **placeholder** races (awaiting Phase 2 sketches), schools, sample skills/spells, weather, event types with historian templates, one example rule with a cause link | All content work |
+| `src/app/NextApp.tsx` (`/?next`) | Seed, New world, step day/month/year, chronicle, a per-race magic aptitude preview | Phase 1 world map replaces the body |
+| `tests/unit/engine-*.test.ts` | Determinism, save→load→continue, content validity, aptitude distribution, bloodlines, ability gating, scale ceiling, race balance | Extend for each system |
+
 ---
 
 ## 2. Vision
@@ -289,7 +311,7 @@ These are **examples of the kind of stories the systems should be able to produc
 
   - Mundane people follow the same curve through attributes and skill. The greatest swordsman of an age is roughly Exceptional-equivalent at most, unless magic or a legendary artifact is involved.
   - Affinities: a person with Power above 0 gets one primary affinity (race-weighted) at a value near Power, and possibly a weaker secondary one.
-  - Inheritance: if a parent is Gifted or better, the child's odds of each tier above None roughly double, capped.
+  - Inheritance: if a parent is Gifted or better, the child's odds of Gifted and every higher tier roughly double. Faint odds are unchanged, so bloodlines pass on *real* talent.
   - Environment: birth in a cell with aura in the top 10% shifts the odds of each tier above None by +25% relative.
   - **Becoming Legendary:** nobody is born Legendary. An Exceptional-potential person reaches it only through decades of training, a great teacher or lost lore, and usually a high-aura place or event.
   - **Legend cap:** the world tier checks the count. While 3 Legendary individuals live, no one else can cross into Legendary until one dies. Their potential stays capped at Exceptional in the meantime.
@@ -582,10 +604,10 @@ Each phase lists its goal, milestones (PR-sized), done-when criteria and known f
   - Keep this plan as `docs/REBOOT_PLAN.md`.
   - Rewrite `README.md` and `CONTRIBUTING.md` briefly.
 - **M0.2 CI and boundaries:** slim the CI (section 11), keep the legacy fast unit tests until deletion, and add the new boundary layers.
-- **M0.3 Engine skeleton:**
-  - IDs, RNG streams, clock, scheduler, event log, command queue, state, save/load, content registry and validation.
-  - The **person record of section 7.3** and a stub of `rollAttributes`.
-  - A demo seasonal-weather system, the determinism test, and the `?next` New World shell.
+- **M0.3 Engine skeleton:** **already scaffolded** (see section 1F). What remains:
+  - review the scaffold;
+  - add a `platform/` IndexedDB save adapter, adapted from `src/adapters/local-save.ts`;
+  - move world stepping into a Web Worker host when Phase 1 needs it.
 - **Done when:** the old app works at `/`, `/?next` loads, CI is under 5 minutes, and the new docs total about 10 pages or less.
 - **Forks:** none. Decide the year length and RNG yourself and record them.
 

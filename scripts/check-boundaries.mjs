@@ -8,8 +8,16 @@ const allowed = {
   sim: new Set(['sim']),
   controller: new Set(['controller', 'sim', 'adapters']),
   adapters: new Set(['adapters', 'sim']),
-  ui: new Set(['ui', 'controller']),
+  // Legacy ui may only reach `app` through the `?next` entry; removed at Milestone A.
+  ui: new Set(['ui', 'controller', 'app']),
+  // New layers (REBOOT_PLAN §7.1). Engine data shapes live in engine; content is data only.
+  engine: new Set(['engine']),
+  content: new Set(['content', 'engine']),
+  platform: new Set(['platform', 'engine']),
+  app: new Set(['app', 'engine', 'content', 'platform']),
 };
+const pureLayers = new Set(['sim', 'engine', 'content']);
+const reactLayers = new Set(['ui', 'app']);
 const forbiddenCoreNames = new Set([
   'Date',
   'performance',
@@ -50,7 +58,7 @@ export function checkModule(fileName, sourceText) {
     }
     const name = specifier.value;
     if (!name.startsWith('.')) {
-      if (!(layer === 'ui' && (name === 'react' || name === 'react-dom/client'))) {
+      if (!(reactLayers.has(layer) && (name === 'react' || name === 'react-dom/client'))) {
         errors.push(`${layer} cannot import external module ${name}.`);
       }
       return;
@@ -73,11 +81,11 @@ export function checkModule(fileName, sourceText) {
       if (node.arguments[0]) checkImport(node.arguments[0]);
       else errors.push('Missing module specifier.');
     }
-    if (layer === 'sim' && node.type === 'Identifier' && forbiddenCoreNames.has(node.name)) {
+    if (pureLayers.has(layer) && node.type === 'Identifier' && forbiddenCoreNames.has(node.name)) {
       errors.push(`Simulation core cannot use ${node.name}.`);
     }
     if (
-      layer === 'sim' &&
+      pureLayers.has(layer) &&
       node.type === 'MemberExpression' &&
       node.computed &&
       node.property.type === 'StringLiteral' &&
