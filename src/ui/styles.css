@@ -696,6 +696,38 @@ aside dd {
 .resident-relations {
   padding-left: 20px;
 }
+.resident-lineage summary {
+  min-height: 44px;
+  padding-block: 10px;
+  cursor: pointer;
+}
+.lineage-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-block: 12px;
+}
+.lineage-controls label {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.lineage-controls input,
+.lineage-controls select {
+  width: 100%;
+}
+.lineage-list {
+  list-style: none;
+  padding: 0;
+}
+.lineage-list li {
+  border-top: 1px solid #c6d0bd;
+  padding-block: 12px;
+}
+.lineage-list button {
+  max-width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
 .bookmark-list {
   list-style: none;
   padding: 0;
