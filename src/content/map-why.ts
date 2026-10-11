@@ -13,7 +13,7 @@ export type WhyCondition =
   | { kind: 'windward'; rainAbove: number; reach: number };
 
 export type WhyField =
-  'rainfall' | 'elevation' | 'seaDistance' | 'floodplain' | 'wildness' | 'tempSummer';
+  'rainfall' | 'elevation' | 'seaDistance' | 'floodplain' | 'wildness' | 'tempSummer' | 'roads';
 
 export interface WhyRule {
   id: string;
@@ -83,5 +83,12 @@ export const WHY_RULES: WhyRule[] = [
     lead: 'Wild:',
     text: 'far from farmland',
     when: { kind: 'atLeast', field: 'wildness', value: 70 },
+  },
+  {
+    id: 'road',
+    layer: 'travelCost',
+    lead: 'Road:',
+    text: 'many routes pass here',
+    when: { kind: 'atLeast', field: 'roads', value: 3 },
   },
 ];

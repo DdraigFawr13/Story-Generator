@@ -10,6 +10,7 @@ const {
   generateWorld,
   checkWorldCells,
   checkRegions,
+  checkRoutes,
   D8_DX,
   D8_DY,
   DEFAULT_CONTENT,
@@ -98,6 +99,28 @@ function stats(seed) {
       }
     }
   }
+  // Route graph: share of land nodes in the largest connected piece of their landmass's land graph.
+  const { nodes, edges } = world.routes;
+  const root = nodes.map((node) => node.id);
+  const top1 = (k) => (root[k] === k ? k : (root[k] = top1(root[k])));
+  for (const e of edges) if (!e.sea) root[top1(e.a)] = top1(e.b);
+  const pieces = new Map();
+  for (const node of nodes) {
+    const key = `${node.landmass}:${top1(node.id)}`;
+    pieces.set(key, (pieces.get(key) ?? 0) + 1);
+  }
+  let connected = 0,
+    counted = 0;
+  for (const mass of new Set(nodes.map((node) => node.landmass))) {
+    const total = nodes.filter((node) => node.landmass === mass).length;
+    if (total < 2) continue;
+    let largest = 0;
+    for (const [key, count] of pieces)
+      if (key.startsWith(`${mass}:`)) largest = Math.max(largest, count);
+    connected += largest;
+    counted += total;
+  }
+  const seaEdges = edges.filter((e) => e.sea).length;
   const pct = (v, of) => (of ? (100 * v) / of : 0);
   const biomePct = (id) => pct(biomeCount[BIOMES.findIndex((b) => b.id === id)], dryLand);
   const top = BIOMES.map((b, i) => [b.id, biomeCount[i]])
@@ -135,20 +158,30 @@ function stats(seed) {
     wild: pct(wild, dryLand),
     resourcePct: resourceCells.map((n) => pct(n, land)),
     kinds,
-    problems: checkWorldCells(c).length + checkRegions(c, [...world.regions.values()]).length,
+    nodes: nodes.length,
+    edges: edges.length - seaEdges,
+    seaEdges,
+    conn: counted ? (100 * connected) / counted : 100,
+    problems:
+      checkWorldCells(c).length +
+      checkRegions(c, [...world.regions.values()]).length +
+      checkRoutes(c, world.routes).length,
   };
 }
 
 const rows = seeds.map(stats);
 // The four classic stages get a column each; the M1.3 stages are summed into "restms".
 const stages = ['terrain', 'erosion', 'climate', 'water'];
-// Regions get their own column, after the summed rest.
+// Regions and routes get their own columns, after the summed rest.
 for (const r of rows) {
   r.ms.rest = Object.entries(r.ms)
-    .filter(([name]) => !stages.includes(name) && name !== 'rest' && name !== 'regions')
+    .filter(
+      ([name]) =>
+        !stages.includes(name) && name !== 'rest' && name !== 'regions' && name !== 'routes',
+    )
     .reduce((a, [, v]) => a + v, 0);
 }
-stages.push('rest', 'regions');
+stages.push('rest', 'regions', 'routes');
 const f = (v, w, d = 0) => v.toFixed(d).padStart(w);
 const head = [
   'seed',
@@ -176,6 +209,10 @@ const head = [
   'spots',
   'fert%',
   'wild%',
+  'nodes',
+  'edges',
+  'seaE',
+  'conn%',
   'bad',
 ];
 process.stdout.write(`${size}x${size}\n${head.join(' ')}\n`);
@@ -207,6 +244,10 @@ for (const r of rows) {
       f(r.spots, 5),
       f(r.fertile, 5, 1),
       f(r.wild, 5, 1),
+      f(r.nodes, 5),
+      f(r.edges, 5),
+      f(r.seaEdges, 4),
+      f(r.conn, 5, 1),
       f(r.problems, 3),
     ].join(' ') + '\n',
   );

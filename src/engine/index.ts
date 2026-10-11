@@ -27,3 +27,4 @@ export * from './worldgen/habitat';
 export * from './worldgen/render';
 export * from './worldgen/check';
 export * from './worldgen/regions';
+export * from './worldgen/travel';

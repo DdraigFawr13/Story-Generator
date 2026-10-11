@@ -144,6 +144,9 @@ function worldgenContentProblems(content: ContentBundle): string[] {
         problems.push(`Biome ${biome.id}: ${key} ${biome[key]} is outside 0-100.`);
       }
     }
+    if (!biome.water && !(biome.travel >= 1 && biome.travel <= 100)) {
+      problems.push(`Biome ${biome.id}: travel ${biome.travel} must be 1-100 for land biomes.`);
+    }
   }
   const ascending = (values: number[]) => values.every((v, i) => i === 0 || v > values[i - 1]!);
   if (!ascending(rules.temperatureBands)) problems.push('Temperature bands must ascend.');

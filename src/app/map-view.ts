@@ -169,3 +169,8 @@ export function rampPosition(layer: MapLayer, value: number, water: number): num
   const [lo, hi] = stopSpan(layer);
   return Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
 }
+
+/** Line width (px) of a land route whose middle cell is used by `count` routes: 1 to 3. */
+export function roadWidth(count: number): number {
+  return Math.max(1, Math.min(3, 1 + Math.floor((count - 1) / 2)));
+}

@@ -213,6 +213,38 @@ export interface WorldCells {
   wildness: Uint8Array;
   /** Sparse deposits by cell; keys ascend, each list is ordered by resource index. */
   resources: Map<number, ResourceDeposit[]>;
+  /** Cost to enter a cell on foot (M1.6): 1–254 passable, 255 impassable; sea cells 2 (sea links only). */
+  travelCost: Uint8Array;
+  /** How many land routes use each cell: 0 none, capped at 255. */
+  roads: Uint8Array;
+}
+
+/** A place routes join (M1.6): a harbour, ford, pass or fertile river mouth. Ids index `nodes`. */
+export interface RouteNode {
+  id: number;
+  cell: number;
+  kind: 'harbour' | 'ford' | 'pass' | 'river-mouth';
+  /** The harbour, ford, pass or river region it stands on. */
+  region: Id | null;
+  /** Landmass number (see worldgen/regions.ts `landmasses`). */
+  landmass: number;
+}
+
+/** A route between two nodes (a < b): `path` runs cell by cell from node a to node b. */
+export interface RouteEdge {
+  a: number;
+  b: number;
+  /** Summed travel cost of the path, rounded. */
+  cost: number;
+  path: number[];
+  /** True for a sea lane between harbours. */
+  sea: boolean;
+}
+
+/** The coarse route graph; edges are sorted by (a, b). */
+export interface RouteGraph {
+  nodes: RouteNode[];
+  edges: RouteEdge[];
 }
 
 export interface WorldState {
@@ -227,6 +259,8 @@ export interface WorldState {
   cells: WorldCells | null;
   /** Named regions and strategic features, filled by worldgen; empty until then. */
   regions: Map<Id, Region>;
+  /** Route graph between site candidates, filled by worldgen; empty until then. */
+  routes: RouteGraph;
   people: Map<Id, Person>;
   events: SimEvent[];
   commands: Command[];

@@ -9,10 +9,19 @@ import {
   type ContentBundle,
   type Id,
   type Region,
+  type RouteGraph,
   type WorldCells,
 } from '../engine';
 import { Inspector, LAYER_BY_ID, LAYER_KEYS, Legend, LayerPanel, type Overlays } from './MapPanels';
-import { boundCamera, cellAt, cellScale, clampZoom, DEFAULT_LAYER, type Camera } from './map-view';
+import {
+  boundCamera,
+  cellAt,
+  cellScale,
+  clampZoom,
+  DEFAULT_LAYER,
+  roadWidth,
+  type Camera,
+} from './map-view';
 import { boxesOverlap, planLabels, regionLookup, type Label } from './map-labels';
 import './world-map.css';
 
@@ -25,6 +34,7 @@ export interface ViewChange {
 interface Props {
   cells: WorldCells | null;
   regions: ReadonlyMap<Id, Region>;
+  routes: RouteGraph;
   seed: string;
   content: Pick<ContentBundle, 'biomes' | 'resources'>;
   layer: string;
@@ -43,6 +53,12 @@ const WHEEL_STEP_MS = 120;
 const MINIMAP_ZOOM = 2;
 /** Radius (px) of the pass, ford and harbour markers. */
 const MARKER_RADIUS = 5;
+/** Route nodes show as dots from this cell scale (pixels per cell). */
+const NODE_DOT_SCALE = 3;
+const ROAD_COLOR = 'rgba(120, 72, 32, 0.9)';
+const SEA_LANE_COLOR = 'rgba(210, 235, 255, 0.95)';
+/** Dash pattern (px) of sea lanes. */
+const SEA_LANE_DASH = [6, 5];
 const ELEVATION = MAP_LAYERS.find((l) => l.id === DEFAULT_LAYER)!;
 
 function drawMarker(
@@ -86,11 +102,23 @@ interface Cache {
   places: { labels: Label[]; lookup: Map<number, Region[]> } | null;
 }
 
-export function WorldMap({ cells, regions, seed, content, layer, at, zoom, busy, onView }: Props) {
+export function WorldMap({
+  cells,
+  regions,
+  routes,
+  seed,
+  content,
+  layer,
+  at,
+  zoom,
+  busy,
+  onView,
+}: Props) {
   const [overlays, setOverlays] = useState<Overlays>({
     water: true,
     shade: true,
     names: true,
+    roads: true,
     raw: false,
   });
   const [hoverCell, setHoverCell] = useState<number | null>(null);
@@ -103,8 +131,8 @@ export function WorldMap({ cells, regions, seed, content, layer, at, zoom, busy,
     values: new Map(),
     places: null,
   });
-  const latest = useRef({ cells, regions, layer, overlays, at, zoom, onView });
-  latest.current = { cells, regions, layer, overlays, at, zoom, onView };
+  const latest = useRef({ cells, regions, routes, layer, overlays, at, zoom, onView });
+  latest.current = { cells, regions, routes, layer, overlays, at, zoom, onView };
 
   const layerDef = LAYER_BY_ID.get(layer) ?? LAYER_BY_ID.get(DEFAULT_LAYER)!;
   const selected = cells && at && at.x < cells.width && at.y < cells.height ? at : null;
@@ -193,6 +221,61 @@ export function WorldMap({ cells, regions, seed, content, layer, at, zoom, busy,
     }
   }
 
+  /** Draws land routes as brown lines and sea lanes as dashed pale blue, then route nodes as dots. */
+  function drawRoutes(
+    ctx: CanvasRenderingContext2D,
+    c: WorldCells,
+    graph: RouteGraph,
+    scale: number,
+    ox: number,
+    oy: number,
+  ) {
+    const trace = (path: number[]) => {
+      ctx.beginPath();
+      path.forEach((cell, k) => {
+        const px = ox + ((cell % c.width) + 0.5) * scale;
+        const py = oy + (Math.floor(cell / c.width) + 0.5) * scale;
+        if (k === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+    };
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.setLineDash(SEA_LANE_DASH);
+    ctx.strokeStyle = SEA_LANE_COLOR;
+    ctx.lineWidth = 1.5;
+    for (const edge of graph.edges) {
+      if (!edge.sea) continue;
+      trace(edge.path);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.strokeStyle = ROAD_COLOR;
+    for (const edge of graph.edges) {
+      if (edge.sea) continue;
+      ctx.lineWidth = roadWidth(c.roads[edge.path[edge.path.length >> 1]!]!);
+      trace(edge.path);
+      ctx.stroke();
+    }
+    if (scale >= NODE_DOT_SCALE) {
+      ctx.fillStyle = '#1b1b1b';
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      for (const node of graph.nodes) {
+        ctx.beginPath();
+        ctx.arc(
+          ox + ((node.cell % c.width) + 0.5) * scale,
+          oy + (Math.floor(node.cell / c.width) + 0.5) * scale,
+          2.5,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+  }
+
   /** Canvas size in CSS pixels, and how much of the view the whole map fills at zoom 0. */
   function viewport() {
     const rect = canvasRef.current!.getBoundingClientRect();
@@ -244,6 +327,7 @@ export function WorldMap({ cells, regions, seed, content, layer, at, zoom, busy,
       }
       ctx.stroke();
     }
+    if (o.roads) drawRoutes(ctx, c, latest.current.routes, scale, ox, oy);
     if (o.names) drawLabels(ctx, c, scale, ox, oy, rect.width, rect.height);
     if (sel && sel.x < c.width && sel.y < c.height) {
       const cx = ox + (sel.x + 0.5) * scale;
@@ -325,6 +409,7 @@ export function WorldMap({ cells, regions, seed, content, layer, at, zoom, busy,
       if (picked) change({ layer: picked });
       else if (event.key === 'h' || event.key === 'H') setOverlays({ ...o, shade: !o.shade });
       else if (event.key === 'n' || event.key === 'N') setOverlays({ ...o, names: !o.names });
+      else if (event.key === 'r' || event.key === 'R') setOverlays({ ...o, roads: !o.roads });
       else if (event.key === 'Escape' && sel) change({ at: null });
     };
     window.addEventListener('keydown', keydown);

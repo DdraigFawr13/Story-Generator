@@ -20,6 +20,7 @@ export type WhyCells = Pick<
   | 'floodplain'
   | 'wildness'
   | 'tempSummer'
+  | 'roads'
 >;
 
 export interface WhyLine {

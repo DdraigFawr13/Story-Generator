@@ -42,6 +42,14 @@ test('the world map generates, inspects, saves, reloads and advances', async ({ 
   await page.keyboard.press('n');
   await expect(names).toBeChecked();
 
+  // Likely roads are an overlay too, on by default, toggled with R.
+  const roads = page.getByLabel(/^Roads/);
+  await expect(roads).toBeChecked();
+  await page.keyboard.press('r');
+  await expect(roads).not.toBeChecked();
+  await page.keyboard.press('r');
+  await expect(roads).toBeChecked();
+
   await page.locator('canvas.map').click();
   const inspector = page.getByRole('complementary', { name: 'Cell inspector' });
   await expect(inspector).toBeVisible();

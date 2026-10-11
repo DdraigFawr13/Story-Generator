@@ -1,4 +1,4 @@
-// Writes PNGs of world layers: npm run worldmap -- --seed NAME [--size 256] [--layer rainfall|features|all]
+// Writes PNGs of world layers: npm run worldmap -- --seed NAME [--size 256] [--layer rainfall|features|roads|all]
 // [--out tmp/worldmap] [--scale 2]
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -12,13 +12,14 @@ const scale = Number(args.scale || 2);
 const out = args.out || 'tmp/worldmap';
 const wanted = args.layer || 'all';
 
-const { generateWorld, renderLayer, paintRegions, MAP_LAYERS, DEFAULT_CONTENT } =
+const { generateWorld, renderLayer, paintRegions, paintRoutes, MAP_LAYERS, DEFAULT_CONTENT } =
   await loadEngine();
-// "features" is a pseudo-layer: elevation with water and hillshade, then strategic features on top.
+// "features" and "roads" are pseudo-layers: elevation with water and hillshade, then strategic
+// features or routes on top.
 const layers = wanted === 'all' ? MAP_LAYERS : MAP_LAYERS.filter((l) => l.id === wanted);
-if (!layers.length && wanted !== 'features') {
+if (!layers.length && wanted !== 'features' && wanted !== 'roads') {
   process.stderr.write(
-    `Unknown layer "${wanted}". Layers: ${MAP_LAYERS.map((l) => l.id).join(', ')}, features\n`,
+    `Unknown layer "${wanted}". Layers: ${MAP_LAYERS.map((l) => l.id).join(', ')}, features, roads\n`,
   );
   process.exit(1);
 }
@@ -38,6 +39,15 @@ if (wanted === 'features' || wanted === 'all') {
   paintRegions(pixels, cells.width, world.regions.values());
   const image = upscale(cells.width, cells.height, pixels, scale);
   const file = path.join(out, `${seed}-features.png`);
+  await writeFile(file, encodePng(image.width, image.height, image.rgba));
+  process.stdout.write(`${file}\n`);
+}
+if (wanted === 'roads' || wanted === 'all') {
+  const elevation = MAP_LAYERS.find((l) => l.id === 'elevation');
+  const pixels = renderLayer(cells, elevation, { hillshade: true, water: true });
+  paintRoutes(pixels, cells.width, cells, world.routes);
+  const image = upscale(cells.width, cells.height, pixels, scale);
+  const file = path.join(out, `${seed}-roads.png`);
   await writeFile(file, encodePng(image.width, image.height, image.rgba));
   process.stdout.write(`${file}\n`);
 }

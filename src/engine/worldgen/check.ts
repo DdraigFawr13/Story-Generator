@@ -1,7 +1,7 @@
 // Invariant checker for generated world layers, used by tests and dev builds.
 // Returns human-readable problems; an empty list means the world is sound.
 
-import type { Region, WorldCells } from '../core/types';
+import type { Region, RouteGraph, WorldCells } from '../core/types';
 import { D8_DX, D8_DY } from './grid';
 import { saddleAxis } from './regions';
 
@@ -209,5 +209,64 @@ export function checkRegions(cells: WorldCells, regions: readonly Region[]): str
       problems.push(`${label} includes cells that are not sea`);
     }
   });
+  return problems;
+}
+
+/** Invariant checker for the route graph, travel costs and roads; empty means sound. */
+export function checkRoutes(cells: WorldCells, routes: RouteGraph): string[] {
+  const { width, height } = cells;
+  const size = width * height;
+  const problems: string[] = [];
+  if (cells.travelCost.length !== size || cells.roads.length !== size) {
+    return [`travelCost/roads have ${cells.travelCost.length}/${cells.roads.length} values`];
+  }
+  const report = (text: string) => {
+    if (problems.length < MAX_PER_RULE * 4) problems.push(text);
+  };
+  const { nodes, edges } = routes;
+  nodes.forEach((node, n) => {
+    if (node.id !== n) report(`route node ${n} has id ${node.id}`);
+    if (!(node.cell >= 0 && node.cell < size)) report(`route node ${n} is off the map`);
+    else if (cells.water[node.cell] !== 0 && cells.water[node.cell] !== 1) {
+      report(`route node ${n} at ${node.cell} is not on dry land or a river`);
+    }
+  });
+  const expected = new Uint8Array(size);
+  edges.forEach((edge, n) => {
+    const label = `${edge.sea ? 'sea' : 'land'} route ${edge.a}-${edge.b}`;
+    const a = nodes[edge.a];
+    const b = nodes[edge.b];
+    if (!a || !b || edge.a >= edge.b) return report(`${label} has bad endpoints`);
+    const before = edges[n - 1];
+    if (before && (before.a > edge.a || (before.a === edge.a && before.b > edge.b))) {
+      report(`${label} is out of order`);
+    }
+    const { path } = edge;
+    if (path.length < 2 || path[0] !== a.cell || path[path.length - 1] !== b.cell) {
+      return report(`${label} does not run from its first node to its second`);
+    }
+    for (let k = 0; k < path.length; k += 1) {
+      const c = path[k]!;
+      if (!(c >= 0 && c < size)) return report(`${label} leaves the map`);
+      if (k > 0) {
+        const p = path[k - 1]!;
+        const dx = Math.abs((c % width) - (p % width));
+        const dy = Math.abs(Math.floor(c / width) - Math.floor(p / width));
+        if (Math.max(dx, dy) !== 1) return report(`${label} jumps between ${p} and ${c}`);
+      }
+      const w = cells.water[c];
+      const ends = k === 0 || k === path.length - 1;
+      if (edge.sea ? !ends && w !== 3 : w === 2 || w === 3) {
+        report(`${label} crosses ${w === 3 ? 'sea' : w === 2 ? 'a lake' : 'land'} at ${c}`);
+      }
+      if (!edge.sea) expected[c] = Math.min(255, expected[c]! + 1);
+    }
+  });
+  for (let i = 0; i < size; i += 1) {
+    if (expected[i] !== cells.roads[i]) {
+      report(`roads[${i}] is ${cells.roads[i]}, the routes make it ${expected[i]}`);
+      break;
+    }
+  }
   return problems;
 }

@@ -217,6 +217,20 @@ export const MAP_LAYERS: MapLayer[] = [
     ]),
   },
   {
+    id: 'travelCost',
+    label: 'Travel cost',
+    unit: 'per cell',
+    kind: 'ramp',
+    // 255 is impassable (lakes): the ramp's last stop sits just below it and 255 shows grey.
+    ...ramp([
+      [1, [70, 170, 70], '1'],
+      [10, [235, 220, 70], '10'],
+      [30, [210, 60, 50], '30'],
+      [254, [60, 20, 20], '254'],
+      [255, [128, 128, 128], 'blocked'],
+    ]),
+  },
+  {
     id: 'aura',
     label: 'Aura',
     unit: '0–100',

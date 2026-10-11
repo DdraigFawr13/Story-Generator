@@ -48,6 +48,7 @@ const STAGE_LABELS: Record<WorldgenStage, string> = {
   resources: 'Resources',
   habitat: 'Fertility and wildness',
   regions: 'Names and places',
+  routes: 'Travel and routes',
 };
 /** How long "Link copied" stays on the button. */
 const COPIED_MS = 2000;
@@ -239,6 +240,7 @@ export function NextApp() {
         <WorldMap
           cells={state.cells}
           regions={state.regions}
+          routes={state.routes}
           seed={state.seed}
           content={DEFAULT_CONTENT}
           layer={view.layer}
