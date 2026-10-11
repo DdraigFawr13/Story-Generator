@@ -696,7 +696,8 @@ aside dd {
 .resident-relations {
   padding-left: 20px;
 }
-.resident-lineage summary {
+.resident-lineage summary,
+.resident-work summary {
   min-height: 44px;
   padding-block: 10px;
   cursor: pointer;

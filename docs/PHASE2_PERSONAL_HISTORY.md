@@ -18,6 +18,8 @@ Known parent and child links navigate real relationships and preserve a return t
 
 [Recorded family across generations](PHASE2_FAMILY_LINEAGE.md) adds ancestor/descendant paths, intermediate birth-record evidence, name/ID search and bounded 32-person pages. Grandparent/grandchild labels require two actual known-parent links. Unknown parentage and unrelated household peers remain separate.
 
+[Recorded weekly assignments](PHASE2_WORK_HISTORY.md) add role-week totals, actual first/longest assignment spans and source-linked boundaries. Inspected spans remain selected when playback changes the longest span. Newborn/death weeks follow the recorded reducer order; assigned work never establishes a profession or completed output.
+
 The resident historian uses local deterministic prose with a restrained annalistic voice. Its initial `resident-historian-v1` cites actual founding/birth, child birth, latest assignment/home and death records. [I.7's `resident-historian-v2`](PHASE2_RECORDED_FAMILY_DEATHS.md) also reports the latest actual parent/child death with explicit chronology around the subject's own death. It does not invent feelings, marriages, disputes, illnesses, accomplishments or prehistory. The personal timeline includes actual assignment/home changes, known children's births and known relatives' recorded deaths, including a relative sharing the subject's own death record. Earlier records remain reachable in pages of 32 even when they are outside the chronicle's latest 200 headlines.
 
 ## Passive inspection and navigation

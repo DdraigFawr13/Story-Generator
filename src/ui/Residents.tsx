@@ -11,6 +11,7 @@ import { dateLabel } from '../controller/chronicle';
 import { householdDossier } from '../controller/households';
 import { HouseholdFacts } from './HouseholdFacts';
 import { FamilyHistory } from './FamilyHistory';
+import { WorkHistory } from './WorkHistory';
 import { Bookmarks } from './Bookmarks';
 import {
   bookmarkIdentity,
@@ -461,6 +462,12 @@ export function Residents({
                   world={world}
                   personId={person.id}
                   onChoose={(id) => choose(id, true)}
+                  onInspect={inspect}
+                />
+                <WorkHistory
+                  key={`work-${person.id}`}
+                  world={world}
+                  personId={person.id}
                   onInspect={inspect}
                 />
                 <details>
