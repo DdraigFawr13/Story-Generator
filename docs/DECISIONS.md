@@ -48,6 +48,8 @@ PR #10 was merged at [cefd9da](https://github.com/DdraigFawr13/Story-Generator/c
 
 **D-031:** On 2026-10-11 the user asked for GitHub Actions runner-minute consumption to fall by roughly 70–90% without removing tests or weakening release verification. CI is now tiered ([CI verification](CI_VERIFICATION.md)): Tier 1 on every PR and main push, path-selected representative integration on PRs, and the complete 100-seed / three-engine regression on the `full-regression` label, high-risk paths or manual dispatch. No test, seed or engine was deleted. Agent push and CI etiquette lives in `CLAUDE.md` / `AGENTS.md`.
 
+**D-032:** On 2026-10-11 the user made the repository public "so it can take advantage of whatever free actions it can do." Standard-runner minutes are free for public repositories, so every main push now runs the complete Tier 3 regression; PRs stay tiered for speed and the shared concurrency limit. The rule follows repository visibility automatically ([CI verification](CI_VERIFICATION.md)).
+
 ## Art selection — 2026-10-09
 
 **D-014:** The user selected **Illustrated Minimal**, option 2 of the final three-image comparison. This retains Direction C and chooses its map-art treatment. Collapsed and expanded phone chronicle studies were subsequently generated. This is art selection, not evidence that source sprite size, actual-device readability, interactions, numeric mechanics or the entire pre-build gate are approved. See [continuation review](CONTINUATION_REVIEW.md) for the exact selected artifact and outstanding checks.
