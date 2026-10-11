@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   computeRainfall,
   computeSeaDistance,
+  eastwardShare,
   generateWorld,
   windDirection,
   type WorldCells,
@@ -58,6 +59,17 @@ describe('climate fixtures', () => {
     expect(windward).toBeGreaterThan(lee * 1.5);
     const scaled = computeRainfall(width, height, elevation, ocean, 2);
     expect(scaled[row * width + 8]).toBeGreaterThan(windward * 1.9);
+  });
+});
+
+describe('rainfall banding', () => {
+  it('hands the westerlies over to the trade winds gradually', () => {
+    for (let lat = -10; lat < 70; lat += 0.5) {
+      expect(Math.abs(eastwardShare(lat + 0.5) - eastwardShare(lat))).toBeLessThan(0.1);
+    }
+    expect(eastwardShare(45)).toBe(1);
+    expect(eastwardShare(20)).toBe(0);
+    expect(eastwardShare(68)).toBe(0);
   });
 });
 
