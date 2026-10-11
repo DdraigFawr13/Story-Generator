@@ -23,7 +23,7 @@ docs_only=true
 if printf '%s\n' "$changed" | grep -Ev '\.md$' >/dev/null; then docs_only=false; fi
 
 # Toolchain, dependency, workflow and rule-version changes are high risk: full regression.
-if matches '^(package(-lock)?\.json|\.nvmrc|\.npmrc|playwright\.config\.ts|vite\.config\.ts|vitest\.config\.ts|tsconfig\.json|\.github/workflows/|scripts/ci-scope\.sh$|src/sim/[a-z-]*config\.ts$)'; then
+if matches '^(package(-lock)?\.json|\.nvmrc|\.npmrc|playwright\.config\.ts|vite\.config\.ts|vitest\.config\.ts|tsconfig\.json|\.github/workflows/|scripts/ci-scope\.sh$|scripts/verify-browser-reports\.mjs$|src/sim/[a-z-]*config\.ts$)'; then
   full=true
 fi
 
@@ -38,11 +38,13 @@ if [ "$full" = true ]; then
   sim=true
   browser=true
   battery='[{"id":"settlement","parts":"settlement:1 settlement:2 settlement:3 settlement:4"},{"id":"living-a","parts":"living:1 living:2"},{"id":"living-b","parts":"living:3 living:4"}]'
-  engines='["chromium","firefox","webkit"]'
+  # Same 3 engines x 2 partitions as scripts/verify-browser-reports.mjs expects.
+  browsers='[{"project":"chromium","shard":1,"shards":2},{"project":"chromium","shard":2,"shards":2},{"project":"firefox","shard":1,"shards":2},{"project":"firefox","shard":2,"shards":2},{"project":"webkit","shard":1,"shards":2},{"project":"webkit","shard":2,"shards":2}]'
 else
-  # Representative integration: all 100 settlement seeds plus one quarter of the living battery.
+  # Representative integration: all 100 settlement seeds plus one quarter of the living
+  # battery, and every browser case in Chromium in one unsharded run.
   battery='[{"id":"sample","parts":"settlement:all living:1"}]'
-  engines='["chromium"]'
+  browsers='[{"project":"chromium","shard":1,"shards":1}]'
 fi
 
 {
@@ -51,6 +53,6 @@ fi
   echo "sim=$sim"
   echo "browser=$browser"
   echo "battery=$battery"
-  echo "engines=$engines"
+  echo "browsers=$browsers"
 } >>"$out"
 printf 'Changed files:\n%s\n' "$changed" | head -50

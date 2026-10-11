@@ -2,9 +2,10 @@ name: Core and browser verification
 
 # Tiered verification (docs/CI_VERIFICATION.md):
 #   Tier 1 (every PR and main push): format, types, boundaries, unit tests, build, probes.
-#   Tier 2 (PRs touching the matching code): representative seed battery and Chromium.
+#   Tier 2 (PRs touching the matching code): representative seed battery and Chromium (unsharded).
 #   Tier 3 (label `full-regression`, high-risk paths, or full-regression.yml dispatch):
-#           all 100 seeds in both batteries with the coverage verifier, and all three engines.
+#           all 100 seeds in both batteries and every browser case in all three engines (2 partitions
+#           each), each closed by its coverage verifier.
 # `core` and `browser` stay the aggregate check names.
 
 on:
@@ -43,7 +44,7 @@ jobs:
       sim: ${{ steps.scope.outputs.sim }}
       browser: ${{ steps.scope.outputs.browser }}
       battery: ${{ steps.scope.outputs.battery }}
-      engines: ${{ steps.scope.outputs.engines }}
+      browsers: ${{ steps.scope.outputs.browsers }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -144,7 +145,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: ${{ fromJSON(needs.unit.outputs.engines) }}
+        include: ${{ fromJSON(needs.unit.outputs.browsers) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -156,15 +157,24 @@ jobs:
       - run: npm install --global npm@11.9.0
       - run: npm ci
       - run: npx playwright install --with-deps ${{ matrix.project }}
-      - run: npm run test:browser -- --project=${{ matrix.project }} --workers=2
+      - run: npm run test:browser -- --project=${{ matrix.project }} --workers=2 --shard=${{ matrix.shard }}/${{ matrix.shards }} --fully-parallel --forbid-only --reporter=list,json
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/browser-report-${{ matrix.project }}-${{ matrix.shard }}-of-${{ matrix.shards }}.json
+      - if: needs.unit.outputs.full == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: browser-report-${{ matrix.project }}-${{ matrix.shard }}-of-${{ matrix.shards }}
+          path: test-results/browser-report-${{ matrix.project }}-${{ matrix.shard }}-of-${{ matrix.shards }}.json
+          if-no-files-found: error
+          retention-days: 3
 
   browser:
     needs: [unit, browser-tests]
     if: always() && (github.event.action != 'labeled' || github.event.label.name == 'full-regression')
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - name: Require every required browser engine
+      - name: Require every required browser partition
         env:
           UNIT_RESULT: ${{ needs.unit.result }}
           BROWSER_RESULT: ${{ needs.browser-tests.result }}
@@ -173,3 +183,27 @@ jobs:
           echo "unit=$UNIT_RESULT browser=$BROWSER_RESULT required=$BROWSER_REQUIRED"
           test "$UNIT_RESULT" = success
           if [ "$BROWSER_REQUIRED" = true ]; then test "$BROWSER_RESULT" = success; else test "$BROWSER_RESULT" = skipped; fi
+      # Tier 3: prove every listed case ran exactly once in every engine (scripts/verify-browser-reports.mjs).
+      - if: needs.unit.outputs.full == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+      - if: needs.unit.outputs.full == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - if: needs.unit.outputs.full == 'true'
+        run: npm install --global npm@11.9.0
+      - if: needs.unit.outputs.full == 'true'
+        run: npm ci
+      - if: needs.unit.outputs.full == 'true'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: browser-report-*
+          merge-multiple: true
+          path: test-results/browser-reports
+      - if: needs.unit.outputs.full == 'true'
+        run: npx playwright test --list --fully-parallel --forbid-only --reporter=json > test-results/browser-expected.json
+      - if: needs.unit.outputs.full == 'true'
+        run: node scripts/verify-browser-reports.mjs test-results/browser-expected.json test-results/browser-reports
