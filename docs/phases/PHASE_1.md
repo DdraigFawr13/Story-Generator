@@ -47,6 +47,13 @@ M1.1 merged. Extras approved 2026-10-11 (erosion, fertility, wildness, strategic
 
 **Close:** drama-check stub (`npm run drama -- --seeds 5`) printing world statistics (land fraction, biome mix, river count and length, resource spread, fertile and wild shares, passes and harbours, generation time), plus the Phase 1 check-in.
 
+## Tools (land with M1.2 unless noted; no new runtime dependencies)
+
+- `npm run drama -- --seeds 5`: world stats per seed and time per stage; grows with each milestone.
+- `npm run worldmap -- --seed X --layer <name>`: writes a PNG of a layer (Node `zlib`), from a pure layer-to-colour renderer the M1.4 map reuses. Palettes and legends live in `content/map-layers.ts`.
+- `checkWorldCells(world)`: invariant checker (sizes, ranges, rivers reach sea or lake) for tests and dev builds; `gridFromAscii()` builds tiny fixture maps.
+- M1.4: debug layers (plates, flow, sea distance, travel cost), raw numbers in the optional inspector panel, `?seed=` URLs. M1.3: a `worldgen-check` project skill so `test-runner` can run drama and render layers each milestone.
+
 ## Data shapes
 
 ```ts
