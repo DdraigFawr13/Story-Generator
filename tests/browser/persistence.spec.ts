@@ -416,6 +416,7 @@ for (const { tick, version } of [
     await save(page, 0);
     await fixture(page, 'writeFixture', 'RIVERSIDE', 12);
     await page.getByRole('button', { name: 'Resume local save' }).click();
+    await expect(page.getByTestId('tick')).toHaveText('12');
     await page.getByLabel('Record number').fill('1');
     await page.getByRole('button', { name: 'Find record' }).click();
     await expect(page.getByRole('region', { name: 'Event evidence' })).toContainText('record #1');
