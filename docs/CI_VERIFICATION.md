@@ -1,4 +1,42 @@
-# Complete verification with shorter GitHub checks
+# CI verification tiers
+
+Since D-031 (2026-10-11), GitHub verification is tiered, so routine changes no longer run the full 14-job matrix. No test, seed, engine, assertion or coverage gate was removed: the complete regression is the same work as before, run on demand and for high-risk changes.
+
+## What runs when
+
+| Tier | Runs on | Work | Typical billed minutes |
+| --- | --- | --- | --- |
+| 1 Fast | Every PR update and every main push | `unit`: format, typecheck, boundaries, every ordinary unit test, build, both Python probes. Markdown-only changes run the format check only. | ~5 (~2 for Markdown only) |
+| 2 Integration | PRs whose diff touches the matching code | `seed-battery` (sample) for `src/sim`, `src/adapters`, `src/controller` and battery files: all 100 settlement seeds plus living partition 1/4. `browser-tests` (every case in Chromium, one unsharded `--fully-parallel --forbid-only` run) for any `src/`, `tests/browser/`, browser fixture or `index.html` change. | +8 sim, +5 browser |
+| 3 Full regression | PR label `full-regression`; high-risk paths; manual dispatch | Both batteries, all 100 seeds, as 8 reported partitions in 3 jobs, then the unchanged `verify-seed-battery.mjs --living` coverage gate; every browser case in Chromium, Firefox and WebKit as 2 partitions per engine (PR #38), closed by `verify-browser-reports.mjs`. | ~50 |
+
+High-risk paths force Tier 3 automatically: `package.json`, `package-lock.json`, `.nvmrc`, `.npmrc`, `tsconfig.json`, the Vite/Vitest/Playwright configs, anything under `.github/workflows/`, `scripts/ci-scope.sh`, the rule-version files `src/sim/*config.ts`, and `scripts/verify-browser-reports.mjs`.
+
+`scripts/ci-scope.sh` makes the decision from the PR's own diff (GitHub's merge commit against its base parent) and prints the changed files in the `unit` log. The main push runs Tier 1 only: the PR already ran Tiers 2/3 for the same change, and Vercel deploys main independently (D-026).
+
+## Check names and gates
+
+`core` and `browser` remain the aggregate checks. Each requires `unit` to succeed, and requires its integration job to **succeed when the scope says it was needed** and to be skipped otherwise, so a mis-skipped job cannot go green. In Tier 3, `core` and `browser` also download every partition report and run the unchanged seed and browser coverage verifiers. Tier 2's single unsharded Chromium run has no partitions to reconcile, so Playwright's own exit status (with `--forbid-only`) closes it. Matrix fail-fast stays off. The default branch has no branch protection today; if required checks are added later, require `core` and `browser` only, since they always report.
+
+## Running full regression
+
+- **On a PR:** add the label `full-regression`. The run restarts in full mode and every later push stays full until the label is removed. Other labels do not restart or cancel CI.
+- **On any branch or commit:** Actions, then *Full regression*, then *Run workflow*. Pick the branch under "Use workflow from", and optionally pin a commit SHA. The `unit` log prints the exact commit verified.
+- **Required before merging:** simulation rule or rule-version changes, save-format changes, dependency or toolchain updates (automatic), and milestone or release merges.
+
+## Cost controls
+
+- One run per PR or branch; a newer commit cancels the older run (`concurrency`).
+- Feature branches are not built on push; the PR run covers them.
+- Battery partitions share one runner per job (3 jobs instead of 8 in Tier 3; 1 job in Tier 2), removing repeated checkout, Node setup and `npm ci`.
+- Every job has a `timeout-minutes` cap. Report artifacts are kept 3 days.
+- Gate jobs stay on `ubuntu-latest`. They finish in seconds and bill one minute either way, and a `ubuntu-slim` label the account cannot provision would leave a gate pending.
+
+## Local commands
+
+`npm run check` remains the complete local suite, including all 100 seeds in both batteries. `npm run test:browser` runs all three engines. To reproduce CI partitions: `bash scripts/ci-battery.sh settlement:1 living:1` (or `settlement:all`), then `node scripts/verify-seed-battery.mjs test-results --living` once all eight numbered partitions exist.
+
+# History: complete verification with shorter GitHub checks
 
 The 2026-10-11 continuation asks for shorter GitHub checks while keeping the story generator safely working. The preceding exact-main run [38103583238](https://github.com/DdraigFawr13/Story-Generator/actions/runs/38103583238) took 18 minutes 14 seconds from creation to completion. Core occupied about 10 minutes; browser verification occupied about 18 minutes, including 78 seconds installing all three engines.
 

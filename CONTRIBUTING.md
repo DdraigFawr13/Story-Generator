@@ -7,7 +7,8 @@
 - One logical change per pull request, ideally small enough to test and review.
 - Squash merges are preferred when PRs have exploratory commits.
 - Never overwrite unrelated changes or delete an active branch without explicit authorization.
-- Merged same-repository PR branches should be deleted by the branch-cleanup GitHub Action, subject to repository Actions/token permissions.
+- Merged same-repository PR branches are deleted by GitHub's "Automatically delete head branches" setting once enabled; until then the branch-cleanup Action does it (it skips itself when the setting is on).
+- CI is tiered and minutes are budgeted: follow [AGENTS.md](AGENTS.md) for local checks, push cadence and when to run full regression ([details](docs/CI_VERIFICATION.md)).
 
 ## Roadmap and requirements
 
