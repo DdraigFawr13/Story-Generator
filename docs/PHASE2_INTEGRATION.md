@@ -29,6 +29,10 @@ Continue factual relationship/history views and the Phase 2 chronicle filters. P
 
 Partnership/guardianship, social memory and autonomous social decisions remain subsequent P2 slices. Spotlight families, budgets and commands still require the separate Q-005 contract. No new hosted service is needed for these increments.
 
+## I.5 — Passive resident and household bookmarks (implemented; verification in progress)
+
+Task 2.8's reading shortcuts belong to version/seed preferences outside canonical state and saved world envelopes. They retain original identity anchors, permit factual deceased/retired reading, disable unrecorded subjects, preserve source focus/scroll and report failed persistence. Bounded browser-local storage and cross-tab refresh never activate Spotlight or change simulation outcomes. [PHASE2_BOOKMARKS.md](PHASE2_BOOKMARKS.md) records the complete contract. Broader social/relationship rules and Q-005 remain separate increments.
+
 ## Current compact handoff
 
 I.1 is implemented in [PR #27](https://github.com/DdraigFawr13/Story-Generator/pull/27), based on main `1dfa235`. Full local verification passed: 147 core tests in 13 files (562.18 seconds), 162 browser checks (54 each in Chromium, Firefox and WebKit), formatting, strict types, 35-module boundaries, production build, the independent 100-map terrain probe and all three resident identity vectors. The browser run includes P2 payload/checksum parity and the existing P1 local-save, recap, evidence and phone regressions. PR #27 merged at `4205a7f`; its exact final head `d5311e3` passed both GitHub core and browser jobs. Production deployment `dpl_FSPGF14Q68VxsqretsRAmMqq4K8W` is READY at that exact main SHA and owns the stable alias. Native Firefox verified HTTP 200, matching main assets, paused Resume at 49, year-one Node prose parity, actual UI Step/Save to 50, matching Node save digest and paused reload/Resume with zero browser errors. The merged remote/local work branch is deleted.
