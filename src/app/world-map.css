@@ -416,6 +416,26 @@ details.debug summary {
 .places li b {
   font-weight: 600;
 }
+.wm-inspector .site {
+  margin: 10px 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--accent);
+  background: rgba(0, 0, 0, 0.04);
+}
+.wm-inspector .site h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+.wm-inspector .site h3 span {
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-left: 6px;
+}
+.wm-inspector .land-of {
+  margin: 8px 0;
+  font-size: 0.85rem;
+}
 dl.facts {
   display: grid;
   grid-template-columns: auto 1fr;

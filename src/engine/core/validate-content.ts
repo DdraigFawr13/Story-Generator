@@ -77,6 +77,7 @@ export function validateContent(content: ContentBundle): string[] {
   }
 
   problems.push(...cultureProblems(content));
+  problems.push(...settlementProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -133,6 +134,30 @@ export function cultureProblems(content: ContentBundle): string[] {
     if (!content.cultures.some((c) => c.raceId === race.id)) {
       problems.push(`Race ${race.id} has no culture.`);
     }
+  }
+  return problems;
+}
+
+/** Settlement rules: present, capitalKind keys are culture ids, a civ name template per government used. */
+export function settlementProblems(content: ContentBundle): string[] {
+  const rules = content.settlement;
+  if (!rules) return ['Content has no settlement rules.'];
+  const problems: string[] = [];
+  const cultureIds = new Set(content.cultures.map((c) => c.id));
+  for (const id of Object.keys(rules.capitalKind)) {
+    if (!cultureIds.has(id)) problems.push(`Settlement capitalKind: unknown culture "${id}".`);
+  }
+  for (const culture of content.cultures) {
+    if (!rules.civNames[culture.government]?.includes('{n}')) {
+      problems.push(`Settlement civNames: no template with {n} for "${culture.government}".`);
+    }
+  }
+  if (rules.civs.min < 1 || rules.civs.min > rules.civs.max) {
+    problems.push('Settlement civs: need 1 <= min <= max.');
+  }
+  const eventIds = new Set(content.eventTypes.map((e) => e.id));
+  for (const id of ['civ_founded', 'site_founded']) {
+    if (!eventIds.has(id)) problems.push(`Settlement needs event type "${id}".`);
   }
   return problems;
 }

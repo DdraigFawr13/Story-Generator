@@ -11,6 +11,8 @@ const {
   checkWorldCells,
   checkRegions,
   checkRoutes,
+  checkSites,
+  sitePopulation,
   D8_DX,
   D8_DY,
   DEFAULT_CONTENT,
@@ -120,6 +122,21 @@ function stats(seed) {
     connected += largest;
     counted += total;
   }
+  // Settlement: civs, sites by kind, population, race shares and mean capacity.
+  const siteKinds = {};
+  const raceTotals = {};
+  let population = 0,
+    capacitySum = 0;
+  for (const site of world.sites.values()) {
+    siteKinds[site.kind] = (siteKinds[site.kind] ?? 0) + 1;
+    capacitySum += site.capacity;
+    for (const band of site.pop) {
+      raceTotals[band.raceId] = (raceTotals[band.raceId] ?? 0) + band.count;
+      population += band.count;
+    }
+  }
+  let claimed = 0;
+  for (let i = 0; i < n; i += 1) if (c.territory[i]) claimed += 1;
   const seaEdges = edges.filter((e) => e.sea).length;
   const pct = (v, of) => (of ? (100 * v) / of : 0);
   const biomePct = (id) => pct(biomeCount[BIOMES.findIndex((b) => b.id === id)], dryLand);
@@ -162,7 +179,17 @@ function stats(seed) {
     edges: edges.length - seaEdges,
     seaEdges,
     conn: counted ? (100 * connected) / counted : 100,
+    civCount: world.civs.size,
+    siteCount: world.sites.size,
+    siteKinds,
+    population,
+    raceShares: Object.entries(raceTotals).map(
+      ([id, v]) => `${id} ${pct(v, population).toFixed(0)}`,
+    ),
+    meanCapacity: world.sites.size ? capacitySum / world.sites.size : 0,
+    claimed: pct(claimed, land),
     problems:
+      checkSites(world).length +
       checkWorldCells(c).length +
       checkRegions(c, [...world.regions.values()]).length +
       checkRoutes(c, world.routes).length,
@@ -177,11 +204,15 @@ for (const r of rows) {
   r.ms.rest = Object.entries(r.ms)
     .filter(
       ([name]) =>
-        !stages.includes(name) && name !== 'rest' && name !== 'regions' && name !== 'routes',
+        !stages.includes(name) &&
+        name !== 'rest' &&
+        name !== 'regions' &&
+        name !== 'routes' &&
+        name !== 'settle',
     )
     .reduce((a, [, v]) => a + v, 0);
 }
-stages.push('rest', 'regions', 'routes');
+stages.push('rest', 'regions', 'routes', 'settle');
 const f = (v, w, d = 0) => v.toFixed(d).padStart(w);
 const head = [
   'seed',
@@ -268,3 +299,16 @@ function mean2(i) {
 process.stdout.write(
   `resources (mean % of land cells / seeds with it): ${perResource.join(', ')}\n`,
 );
+
+process.stdout.write(
+  '\nsettlement: seed civs sites kinds population races meanCap claimed% settlems\n',
+);
+for (const r of rows) {
+  const kinds = Object.entries(r.siteKinds)
+    .map(([kind, count]) => `${kind} ${count}`)
+    .join(', ');
+  process.stdout.write(
+    `${r.seed.padEnd(4)} ${String(r.civCount).padStart(2)} ${String(r.siteCount).padStart(3)}  ${kinds}  pop ${r.population}  ` +
+      `${r.raceShares.join(' ')}  cap ${r.meanCapacity.toFixed(0)}  claimed ${r.claimed.toFixed(0)}%  ${r.ms.settle.toFixed(0)}ms\n`,
+  );
+}

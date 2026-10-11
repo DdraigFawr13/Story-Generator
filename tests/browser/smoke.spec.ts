@@ -50,6 +50,17 @@ test('the world map generates, inspects, saves, reloads and advances', async ({ 
   await page.keyboard.press('r');
   await expect(roads).toBeChecked();
 
+  // Sites are an overlay on by default, toggled with S; the Peoples layer colours territory.
+  const sites = page.getByLabel(/^Sites/);
+  await expect(sites).toBeChecked();
+  await page.keyboard.press('s');
+  await expect(sites).not.toBeChecked();
+  await page.keyboard.press('s');
+  await expect(sites).toBeChecked();
+  const peoples = page.getByRole('button', { name: 'Peoples' });
+  await peoples.click();
+  await expect(peoples).toHaveAttribute('aria-pressed', 'true');
+
   await page.locator('canvas.map').click();
   const inspector = page.getByRole('complementary', { name: 'Cell inspector' });
   await expect(inspector).toBeVisible();

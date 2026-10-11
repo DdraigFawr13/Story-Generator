@@ -27,8 +27,37 @@ export interface SimContext {
   lastEvent(type: string): SimEvent | undefined;
 }
 
+/**
+ * Builds events from content types: ids come from `state.nextId.event`, and a type with no
+ * content definition is refused. World-gen stages use it directly; systems get it as `ctx.emit`.
+ */
+export function createEmitter(
+  state: WorldState,
+  eventTypes: readonly EventTypeDef[],
+): (input: EmitInput) => SimEvent {
+  const types = new Map(eventTypes.map((def) => [def.id, def]));
+  return (input) => {
+    const def = types.get(input.type);
+    if (!def) throw new Error(`Event type "${input.type}" has no content definition.`);
+    const event: SimEvent = {
+      id: state.nextId.event,
+      day: state.day,
+      type: input.type,
+      importance: def.baseImportance + (input.importanceBonus ?? 0),
+      actors: input.actors ?? [],
+      place: input.place ?? null,
+      causes: input.causes ?? [],
+      data: input.data ?? {},
+    };
+    state.nextId.event += 1;
+    state.events.push(event);
+    return event;
+  };
+}
+
 export function createContext(state: WorldState, content: ContentBundle): SimContext {
   const types = new Map(content.eventTypes.map((def) => [def.id, def]));
+  const emit = createEmitter(state, content.eventTypes);
   const ctx: SimContext = {
     state,
     content,
@@ -43,21 +72,7 @@ export function createContext(state: WorldState, content: ContentBundle): SimCon
       if (!def) throw new Error(`Event type "${id}" has no content definition.`);
       return def;
     },
-    emit(input) {
-      const def = ctx.eventType(input.type);
-      const event: SimEvent = {
-        id: ctx.nextId('event'),
-        day: state.day,
-        type: input.type,
-        importance: def.baseImportance + (input.importanceBonus ?? 0),
-        actors: input.actors ?? [],
-        place: input.place ?? null,
-        causes: input.causes ?? [],
-        data: input.data ?? {},
-      };
-      state.events.push(event);
-      return event;
-    },
+    emit,
     lastEvent(type) {
       for (let i = state.events.length - 1; i >= 0; i -= 1) {
         if (state.events[i]!.type === type) return state.events[i];

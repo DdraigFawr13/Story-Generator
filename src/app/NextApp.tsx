@@ -49,6 +49,7 @@ const STAGE_LABELS: Record<WorldgenStage, string> = {
   habitat: 'Fertility and wildness',
   regions: 'Names and places',
   routes: 'Travel and routes',
+  settle: 'Peoples and sites',
 };
 /** How long "Link copied" stays on the button. */
 const COPIED_MS = 2000;
@@ -241,6 +242,9 @@ export function NextApp() {
           cells={state.cells}
           regions={state.regions}
           routes={state.routes}
+          sites={state.sites}
+          civs={state.civs}
+          cultures={DEFAULT_CONTENT.cultures}
           seed={state.seed}
           content={DEFAULT_CONTENT}
           layer={view.layer}

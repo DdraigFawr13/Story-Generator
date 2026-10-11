@@ -3,6 +3,7 @@
 
 import type { ContentBundle } from '../core/content-types';
 import { streamFor } from '../core/rng';
+import { settleWorld } from '../history/settle';
 import type { WorldParams, WorldState } from '../core/types';
 import { createWorld } from '../core/world';
 import { generateAura } from './aura';
@@ -19,7 +20,17 @@ import { placeVolcanoes } from './volcanoes';
 import { computeWater } from './water';
 
 /** The content the generator reads: biome table, resource list and name tables. */
-export type WorldgenContent = Pick<ContentBundle, 'biomes' | 'biomeRules' | 'resources' | 'names'>;
+export type WorldgenContent = Pick<
+  ContentBundle,
+  | 'biomes'
+  | 'biomeRules'
+  | 'resources'
+  | 'names'
+  | 'races'
+  | 'cultures'
+  | 'eventTypes'
+  | 'settlement'
+>;
 
 export type WorldgenStage =
   | 'terrain'
@@ -32,7 +43,8 @@ export type WorldgenStage =
   | 'resources'
   | 'habitat'
   | 'regions'
-  | 'routes';
+  | 'routes'
+  | 'settle';
 /** Called as each stage starts: (stage, stages already done, total stages). */
 export type ProgressCallback = (stage: WorldgenStage, done: number, total: number) => void;
 
@@ -48,6 +60,7 @@ const STAGES: readonly WorldgenStage[] = [
   'habitat',
   'regions',
   'routes',
+  'settle',
 ];
 
 export function generateWorld(
@@ -161,6 +174,8 @@ export function generateWorld(
     // Filled by the routes stage.
     travelCost: new Uint8Array(width * height),
     roads: new Uint8Array(width * height),
+    // Filled by the settle stage.
+    territory: new Uint16Array(width * height),
   };
   world.cells = cells;
 
@@ -174,5 +189,8 @@ export function generateWorld(
   cells.travelCost = travel.travelCost;
   cells.roads = travel.roads;
   world.routes = travel.routes;
+
+  start('settle');
+  settleWorld(world, content);
   return world;
 }

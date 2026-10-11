@@ -63,6 +63,22 @@ const RESOURCE_COLORS: Record<string, Rgb> = {
 };
 const resourceColor = (id: string): Rgb => RESOURCE_COLORS[id] ?? [255, 0, 255];
 
+/** Muted colours for peoples; civ n takes entry (n - 1) mod 8, and 0 is unclaimed land. */
+const UNCLAIMED: Rgb = [225, 225, 218];
+const CIV_COLORS: Rgb[] = [
+  [196, 112, 100],
+  [100, 150, 200],
+  [200, 170, 90],
+  [120, 170, 110],
+  [160, 120, 190],
+  [90, 175, 170],
+  [210, 140, 160],
+  [150, 140, 100],
+];
+export function civColor(civId: number): Rgb {
+  return civId <= 0 ? UNCLAIMED : CIV_COLORS[(civId - 1) % CIV_COLORS.length]!;
+}
+
 export const MAP_LAYERS: MapLayer[] = [
   {
     id: 'elevation',
@@ -241,6 +257,21 @@ export const MAP_LAYERS: MapLayer[] = [
       [50, [170, 100, 220], 'strong'],
       [100, [255, 240, 150], 'legendary'],
     ]),
+  },
+  {
+    id: 'territory',
+    label: 'Peoples',
+    unit: 'civ',
+    kind: 'categories',
+    cycle: true,
+    categories: [
+      { value: 0, label: 'Unclaimed', color: UNCLAIMED },
+      ...CIV_COLORS.map((color, i) => ({ value: i + 1, label: `People ${i + 1}`, color })),
+    ],
+    legend: [
+      { label: 'Unclaimed', color: UNCLAIMED },
+      ...CIV_COLORS.map((color, i) => ({ label: `People ${i + 1}`, color })),
+    ],
   },
   {
     id: 'resources',

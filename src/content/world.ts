@@ -52,6 +52,26 @@ export const eventTypes: EventTypeDef[] = [
       '{date} brought a bitter cold snap that no hearth could fully hold back.',
     ],
   },
+  {
+    id: 'civ_founded',
+    baseImportance: 6,
+    category: 'world',
+    templates: [
+      'In {date} the {culture} raised {site} and the {civ} began.',
+      '{date}: the {civ} was founded when the {culture} settled at {site}.',
+      'At {site}, in {date}, the {culture} made their first hearth, and so the {civ} was born.',
+    ],
+  },
+  {
+    id: 'site_founded',
+    baseImportance: 3,
+    category: 'world',
+    templates: [
+      'In {date} the {civ} founded {site}, a {kind}.',
+      '{date}: settlers of the {civ} built the {kind} of {site}.',
+      'The {civ} spread to a new place, and {site} became their {kind} ({date}).',
+    ],
+  },
 ];
 
 export const rules: EventRuleDef[] = [

@@ -11,7 +11,9 @@ src/
     people/  attributes, aptitude, magic tiers, combat scale
     narrative/ narrator interface and template renderer
     systems/ the ordered list of simulation systems
-    (later: worldgen/, history/, site/, lod/)
+    worldgen/ terrain, climate, water, biomes, regions, routes
+    history/ settlement (M2.2); later yearly history systems
+    (later: site/, lod/)
   content/   typed data ("raws"): races, abilities, weather, event types, rules, templates
   platform/  browser services: IndexedDB saves (worker host for world generation; later: preferences)
   app/       React UI for the new engine (served at /?next until Milestone A)

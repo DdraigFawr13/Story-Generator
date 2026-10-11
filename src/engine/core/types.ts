@@ -217,6 +217,8 @@ export interface WorldCells {
   travelCost: Uint8Array;
   /** How many land routes use each cell: 0 none, capped at 255. */
   roads: Uint8Array;
+  /** Owning civ id per cell (M2.2), 0 = unclaimed; filled by the settle stage. */
+  territory: Uint16Array;
 }
 
 /** A place routes join (M1.6): a harbour, ford, pass or fertile river mouth. Ids index `nodes`. */
@@ -247,6 +249,72 @@ export interface RouteGraph {
   edges: RouteEdge[];
 }
 
+export const SITE_KINDS = [
+  'hamlet',
+  'village',
+  'town',
+  'city',
+  'fortress',
+  'mine',
+  'temple',
+  'port',
+] as const;
+export type SiteKind = (typeof SITE_KINDS)[number];
+
+/** Why a site sits where it does; shown in the inspector. */
+export type SiteFeature =
+  | 'river'
+  | 'floodplain'
+  | 'coast'
+  | 'harbour'
+  | 'ford'
+  | 'pass'
+  | 'road'
+  | 'deposit'
+  | 'aura'
+  | 'forest'
+  | 'heights'
+  | 'plains';
+
+/** People of one race and culture in one age band at a site. */
+export interface PopBand {
+  raceId: string;
+  cultureId: string;
+  band: 'child' | 'adult' | 'elder';
+  count: number;
+}
+
+/** A people with a capital (M2.2). `founded` and `fell` are year numbers (0 = founding year). */
+export interface Civ {
+  id: Id;
+  name: string;
+  raceId: string;
+  cultureId: string;
+  /** Site id of the capital. */
+  capital: Id;
+  founded: number;
+  fell?: number;
+  rulerId?: Id;
+  grievances: Map<Id, number>;
+}
+
+/** A settlement (M2.2). `founded` is a year number. */
+export interface Site {
+  id: Id;
+  name: string;
+  kind: SiteKind;
+  cell: number;
+  civId: Id | null;
+  founded: number;
+  ruinedYear?: number;
+  pop: PopBand[];
+  stores: number;
+  wealth: number;
+  /** People the land within reach feeds (the M2.3 growth target). */
+  capacity: number;
+  features: SiteFeature[];
+}
+
 export interface WorldState {
   seed: string;
   /** Number of completed days. The next step simulates day `day`. */
@@ -261,11 +329,14 @@ export interface WorldState {
   regions: Map<Id, Region>;
   /** Route graph between site candidates, filled by worldgen; empty until then. */
   routes: RouteGraph;
+  /** Founding peoples and their settlements, filled by the settle stage; empty until then. */
+  civs: Map<Id, Civ>;
+  sites: Map<Id, Site>;
   people: Map<Id, Person>;
   events: SimEvent[];
   commands: Command[];
   /** Demo climate state for the scaffold; Phase 1 moves weather to per-cell climate. */
   weather: { current: string; sinceDay: number; causeEvent: Id | null };
-  // Phase 2 adds `civs`, `sites`, `creatures`, `items`;
+  // Phase 2 adds `creatures`, `items`;
   // Phase 3 adds `activeSite`.
 }

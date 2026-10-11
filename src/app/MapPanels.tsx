@@ -2,7 +2,17 @@
 
 import { Fragment, type ReactNode } from 'react';
 import { MAP_LAYERS } from '../content';
-import type { BiomeDef, MapLayer, Region, ResourceDef, WorldCells } from '../engine';
+import {
+  sitePopulation,
+  type BiomeDef,
+  type Civ,
+  type CultureDef,
+  type MapLayer,
+  type Region,
+  type ResourceDef,
+  type Site,
+  type WorldCells,
+} from '../engine';
 import { formatReadout, rampGradient, rampPosition, rampTicks } from './map-view';
 import { explainCell } from './why';
 
@@ -32,6 +42,10 @@ const LAYER_GROUPS: LayerGroup[] = [
     ],
   },
   {
+    title: 'People',
+    layers: [{ id: 'territory', key: '0' }],
+  },
+  {
     title: 'Life',
     layers: [
       { id: 'fertility', key: '6' },
@@ -57,6 +71,7 @@ export interface Overlays {
   shade: boolean;
   names: boolean;
   roads: boolean;
+  sites: boolean;
   raw: boolean;
 }
 
@@ -145,6 +160,14 @@ export function LayerPanel({
             onChange={(e) => onOverlays({ roads: e.target.checked })}
           />
           Roads <kbd>R</kbd>
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={overlays.sites}
+            onChange={(e) => onOverlays({ sites: e.target.checked })}
+          />
+          Sites <kbd>S</kbd>
         </label>
       </div>
       <details className="debug">
@@ -253,6 +276,46 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+const BAND_ORDER = ['child', 'adult', 'elder'] as const;
+
+function SiteBlock({
+  site,
+  civ,
+  culture,
+  num,
+}: {
+  site: Site;
+  civ: Civ | null;
+  culture: CultureDef | null;
+  num: (n: number) => string;
+}) {
+  const bandCount = (band: (typeof BAND_ORDER)[number]) =>
+    site.pop.filter((p) => p.band === band).reduce((n, p) => n + p.count, 0);
+  return (
+    <section className="site" aria-label="Site">
+      <h3>
+        {site.name} <span>{site.kind}</span>
+      </h3>
+      <dl className="facts">
+        {civ && (
+          <Fact label="People">
+            {civ.name} ({culture?.name ?? civ.cultureId})
+          </Fact>
+        )}
+        <Fact label="Population">
+          {num(sitePopulation(site))} ({BAND_ORDER.map((b) => num(bandCount(b))).join(' / ')}{' '}
+          children / adults / elders)
+        </Fact>
+        <Fact label="Capacity">{num(site.capacity)}</Fact>
+        <Fact label="Stores">{num(site.stores)}</Fact>
+        <Fact label="Founded here for">
+          {site.features.length === 0 ? 'open ground' : site.features.join(', ')}
+        </Fact>
+      </dl>
+    </section>
+  );
+}
+
 export function Inspector({
   cells,
   x,
@@ -260,6 +323,11 @@ export function Inspector({
   biomes,
   resources,
   raw,
+  site,
+  siteCiv,
+  siteCulture,
+  landCiv,
+  landCulture,
   places,
   onShow,
   onClose,
@@ -270,6 +338,13 @@ export function Inspector({
   biomes: readonly BiomeDef[];
   resources: readonly ResourceDef[];
   raw: boolean;
+  /** The site on or beside the cell (nearest wins), its civ and culture. */
+  site: Site | null;
+  siteCiv: Civ | null;
+  siteCulture: CultureDef | null;
+  /** The civ whose territory holds the cell, if any. */
+  landCiv: Civ | null;
+  landCulture: CultureDef | null;
   /** Regions containing the cell, in id order. */
   places: readonly Region[];
   onShow: (layerId: string) => void;
@@ -322,6 +397,12 @@ export function Inspector({
             </li>
           ))}
         </ul>
+      )}
+      {site && <SiteBlock site={site} civ={siteCiv} culture={siteCulture} num={num} />}
+      {!site && landCiv && (
+        <p className="land-of">
+          Land of {landCiv.name} ({landCulture?.name ?? landCiv.cultureId})
+        </p>
       )}
       {places.length > 0 && (
         <ul className="places" aria-label="Places">
