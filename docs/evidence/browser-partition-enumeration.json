@@ -1,0 +1,58 @@
+{
+  "provenance": {
+    "sourceBase": "8fba64d66c415fd84d6d7c35b3d74e8822343043",
+    "playwright": "1.64.0",
+    "command": "CI=true npx playwright test --list --fully-parallel --forbid-only --reporter=json",
+    "manifestSha256": "f0c258bb37ae8e7ada4f5f26b13194f191252f4b183684573ef594d7a3b678b3",
+    "verifierSha256": "948a0ab9e9530a417f9a7d09fa83bbc7b3a694c7aee65ede41de82b924c65033"
+  },
+  "expectedCases": 267,
+  "engines": [
+    {
+      "project": "chromium",
+      "expectedCases": 89,
+      "partitionCases": [
+        45,
+        44
+      ],
+      "overlap": 0
+    },
+    {
+      "project": "firefox",
+      "expectedCases": 89,
+      "partitionCases": [
+        45,
+        44
+      ],
+      "overlap": 0
+    },
+    {
+      "project": "webkit",
+      "expectedCases": 89,
+      "partitionCases": [
+        45,
+        44
+      ],
+      "overlap": 0
+    }
+  ],
+  "nativeProbe": {
+    "cases": 9,
+    "partitions": 6,
+    "flaky": 0,
+    "unexpected": 0,
+    "skipped": 0,
+    "fullCoverageGate": "Correctly rejects this partial run against the complete 267-case manifest"
+  },
+  "immediateBaseline": {
+    "run": 38116431980,
+    "head": "8fba64d66c415fd84d6d7c35b3d74e8822343043",
+    "elapsedSeconds": 400,
+    "ordinaryTests": 198,
+    "browserCases": 267,
+    "completeSeedReports": [
+      "100 original worlds \u00d7 1,000 weeks",
+      "100 individual worlds \u00d7 1,000 weeks plus restored continuation"
+    ]
+  }
+}
