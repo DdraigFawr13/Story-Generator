@@ -31,4 +31,22 @@ describe('architectural boundaries include type and dynamic imports', () => {
       [],
     );
   });
+  it('keeps the new engine pure and content data-only', () => {
+    const engine = path.resolve('src/engine/core/example.ts');
+    const content = path.resolve('src/content/example.ts');
+    const app = path.resolve('src/app/example.tsx');
+    expect(checkModule(engine, "import type { RaceDef } from './content-types';")).toEqual([]);
+    expect(
+      checkModule(engine, "import { DEFAULT_CONTENT } from '../../content';").length,
+    ).toBeGreaterThan(0);
+    expect(checkModule(engine, "import { App } from '../../app/NextApp';").length).toBeGreaterThan(
+      0,
+    );
+    expect(checkModule(engine, 'const roll = Math.random();').length).toBeGreaterThan(0);
+    expect(checkModule(content, "import type { RaceDef } from '../engine';")).toEqual([]);
+    expect(
+      checkModule(content, "import { NextApp } from '../app/NextApp';").length,
+    ).toBeGreaterThan(0);
+    expect(checkModule(app, "import { useState } from 'react';")).toEqual([]);
+  });
 });
