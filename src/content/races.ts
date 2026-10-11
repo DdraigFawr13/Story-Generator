@@ -24,7 +24,7 @@ const human: RaceDef = {
   maturityYears: 16,
   fertility: 1,
   foodNeed: 1,
-  preferredBiomes: ['grassland', 'temperate_forest', 'river_valley', 'coast'],
+  preferredBiomes: ['grassland', 'temperate-forest', 'steppe'],
   dependencies: [],
 };
 
@@ -49,7 +49,8 @@ const placeholderMagicRace: RaceDef = {
   maturityYears: 32,
   fertility: 0.3,
   foodNeed: 0.9,
-  preferredBiomes: ['old_forest'],
+  // Old, high-aura forest: forest biomes; the aura need is the dependency below.
+  preferredBiomes: ['temperate-forest', 'taiga'],
   dependencies: [
     { id: 'high_aura_land', description: 'Mood and health decline away from high-aura land.' },
   ],
@@ -76,7 +77,7 @@ const placeholderStrongRace: RaceDef = {
   maturityYears: 20,
   fertility: 0.7,
   foodNeed: 1.5,
-  preferredBiomes: ['mountain', 'tundra'],
+  preferredBiomes: ['alpine', 'tundra', 'taiga'],
   dependencies: [],
 };
 

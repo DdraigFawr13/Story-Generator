@@ -133,6 +133,18 @@ describe('scale ceiling (R-24)', () => {
   });
 });
 
+describe('race biomes', () => {
+  it('rejects a preferred biome id that does not exist', () => {
+    const broken: ContentBundle = {
+      ...DEFAULT_CONTENT,
+      races: DEFAULT_CONTENT.races.map((race) =>
+        race.id === 'human' ? { ...race, preferredBiomes: ['river_valley'] } : race,
+      ),
+    };
+    expect(validateContent(broken).join('\n')).toMatch(/human: unknown biome "river_valley"/);
+  });
+});
+
 describe('race balance (R-29)', () => {
   it('requires a downside from races stronger than humans', () => {
     const elder = DEFAULT_CONTENT.races.find((race) => race.id === 'placeholder_elder')!;

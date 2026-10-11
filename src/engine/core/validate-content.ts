@@ -51,6 +51,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...worldgenContentProblems(content));
 
   const schools = new Set(content.schools.map((s) => s.id));
+  const biomeIds = new Set(content.biomes.map((b) => b.id));
   const human = content.races.find((r) => r.id === 'human');
   if (!human) problems.push('Content needs a "human" race as the balance baseline.');
 
@@ -63,6 +64,9 @@ export function validateContent(content: ContentBundle): string[] {
     }
     for (const school of Object.keys(race.affinityWeights)) {
       if (!schools.has(school)) problems.push(`Race ${race.id}: unknown school "${school}".`);
+    }
+    for (const biome of race.preferredBiomes) {
+      if (!biomeIds.has(biome)) problems.push(`Race ${race.id}: unknown biome "${biome}".`);
     }
     if (human && race !== human) problems.push(...raceBalanceProblems(race, human));
   }
