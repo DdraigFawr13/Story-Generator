@@ -671,15 +671,18 @@ aside dd {
 .resident-list button[aria-pressed='true'] {
   border: 2px solid #315d40;
 }
-.resident-profile h3 {
+.resident-profile h3,
+.household-profile h3 {
   font-family: Georgia, serif;
   font-size: 1.4rem;
   font-weight: 400;
 }
-.resident-profile dl div {
+.resident-profile dl div,
+.household-profile dl div {
   flex-wrap: wrap;
 }
-.resident-profile dd {
+.resident-profile dd,
+.household-profile dd {
   overflow-wrap: anywhere;
 }
 .resident-prose {
@@ -701,6 +704,46 @@ aside dd {
   width: 100%;
   text-align: left;
   margin-bottom: 8px;
+}
+.household-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 12px;
+}
+.household-members,
+.household-homes {
+  list-style: none;
+  padding: 0;
+}
+.household-members li,
+.household-homes li {
+  margin-block: 12px;
+  border-top: 1px solid #c6d0bd;
+  padding-block: 12px;
+}
+.chronicle-filters {
+  padding: 0 16px 12px;
+}
+.chronicle-filters summary {
+  min-height: 44px;
+  padding-block: 10px;
+  cursor: pointer;
+}
+.chronicle-filters .resident-filters {
+  margin-block: 12px;
+}
+.chronicle-records {
+  min-width: 0;
+}
+.chronicle-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+}
+.chronicle-empty {
+  padding: 16px;
 }
 @media (max-width: 760px) {
   .resident-reader:not([hidden]) {

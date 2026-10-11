@@ -8,8 +8,11 @@ import {
   type LivingSettlementSnapshot,
 } from '../controller/residents';
 import { dateLabel } from '../controller/chronicle';
+import { householdDossier } from '../controller/households';
+import { HouseholdFacts } from './HouseholdFacts';
 
 const PAGE_SIZE = 32;
+type Subject = { kind: 'resident' | 'household'; id: number };
 export function Residents({
   world,
   visible,
@@ -20,16 +23,17 @@ export function Residents({
   world: LivingSettlementSnapshot;
   visible: boolean;
   onClose: () => void;
-  onInspect: (id: number) => void;
+  onInspect: (id: number, kind: 'resident' | 'household') => void;
   onFocusHome: (tile: number) => void;
 }) {
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selected, setSelected] = useState<Subject | null>(null);
+  const selectedId = selected?.kind === 'resident' ? selected.id : null;
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('living');
   const [household, setHousehold] = useState('all');
   const [rosterPage, setRosterPage] = useState(0);
   const [showRoster, setShowRoster] = useState(true);
-  const [trail, setTrail] = useState<number[]>([]);
+  const [trail, setTrail] = useState<Subject[]>([]);
   const [beforeId, setBeforeId] = useState<number | null>(null);
   const [historyTrail, setHistoryTrail] = useState<(number | null)[]>([]);
   const content = useRef<HTMLDivElement>(null);
@@ -42,6 +46,16 @@ export function Residents({
     () => (selectedId === null ? null : residentDossier(world, selectedId)),
     [world, selectedId],
   );
+  const householdHistory = useMemo(
+    () => (selected?.kind === 'household' ? householdDossier(world, selected.id) : null),
+    [world, selected],
+  );
+  const history = dossier ?? householdHistory;
+  function subjectName(subject: Subject) {
+    return subject.kind === 'resident'
+      ? residentName(world.world.residents.find((person) => person.id === subject.id)!)
+      : `the ${world.world.households.find((household) => household.id === subject.id)!.name} household`;
+  }
   const people = world.world.residents.filter(
     (person) =>
       (status === 'all' || (person.deathEventId === null ? 'living' : 'deceased') === status) &&
@@ -51,7 +65,7 @@ export function Residents({
   const living = world.world.settlement.population;
   const page = Math.min(rosterPage, Math.max(0, Math.ceil(people.length / PAGE_SIZE) - 1));
   const records =
-    dossier?.records
+    history?.records
       .filter((record) => beforeId === null || record.eventId <= beforeId)
       .slice(-PAGE_SIZE)
       .reverse() ?? [];
@@ -76,11 +90,14 @@ export function Residents({
     focusProfile.current = false;
     profileHeading.current?.focus({ preventScroll: true });
     profileHeading.current?.scrollIntoView({ block: 'nearest' });
-  }, [selectedId, showRoster, visible]);
+  }, [selected, showRoster, visible]);
   function choose(id: number, follow = false) {
-    if (follow && selectedId !== null) setTrail((previous) => [...previous, selectedId]);
+    chooseSubject({ kind: 'resident', id }, follow);
+  }
+  function chooseSubject(subject: Subject, follow = false) {
+    if (follow && selected !== null) setTrail((previous) => [...previous, selected]);
     else if (!follow) setTrail([]);
-    setSelectedId(id);
+    setSelected(subject);
     setShowRoster(false);
     setBeforeId(null);
     setHistoryTrail([]);
@@ -90,7 +107,7 @@ export function Residents({
   function inspect(id: number, element: HTMLButtonElement) {
     returnSource.current = { id, element };
     if (content.current) scroll.current = content.current.scrollTop;
-    onInspect(id);
+    onInspect(id, selected?.kind ?? 'resident');
   }
   const person = dossier?.person;
   return (
@@ -224,194 +241,232 @@ export function Residents({
             </div>
           )}
         </details>
-        {dossier && person ? (
-          <article className="resident-profile" aria-label="Personal history">
+        <details className="household-roster">
+          <summary>Choose a household</summary>
+          <div className="household-list">
+            {world.world.households.map((item) => (
+              <button
+                type="button"
+                className="secondary"
+                key={item.id}
+                data-household-id={item.id}
+                onClick={() => chooseSubject({ kind: 'household', id: item.id })}
+              >
+                {item.name} household · #{item.id}
+              </button>
+            ))}
+          </div>
+        </details>
+        {history && selected ? (
+          <article
+            className={householdHistory ? 'household-profile' : 'resident-profile'}
+            aria-label={householdHistory ? 'Household history' : 'Personal history'}
+          >
             <h3 ref={profileHeading} tabIndex={-1}>
-              {residentName(person)} · #{person.id}
+              {person ? residentName(person) : `${householdHistory!.household.name} household`} · #
+              {selected.id}
             </h3>
             {trail.length > 0 && (
               <button
                 type="button"
                 className="secondary"
                 onClick={() => {
-                  const id = trail.at(-1)!;
+                  const subject = trail.at(-1)!;
                   setTrail((previous) => previous.slice(0, -1));
-                  setSelectedId(id);
+                  setSelected(subject);
                   setBeforeId(null);
                   setHistoryTrail([]);
                   focusProfile.current = true;
                 }}
               >
-                Back to{' '}
-                {residentName(world.world.residents.find((item) => item.id === trail.at(-1))!)}
+                Back to {subjectName(trail.at(-1)!)}
               </button>
             )}
-            <dl>
-              <div>
-                <dt>Status</dt>
-                <dd>
-                  {dossier.death ? 'Deceased' : 'Living'} · {dossier.stage}
-                </dd>
-              </div>
-              <div>
-                <dt>{dossier.death ? 'Age at death' : 'Age'}</dt>
-                <dd>{ageLabel(dossier.ageWeeks)}</dd>
-              </div>
-              <div>
-                <dt>{dossier.death ? 'Health at death' : 'Health'}</dt>
-                <dd>{person.health} / 100</dd>
-              </div>
-              <div>
-                <dt>Household</dt>
-                <dd>
+            {dossier && person ? (
+              <>
+                <dl>
+                  <div>
+                    <dt>Status</dt>
+                    <dd>
+                      {dossier.death ? 'Deceased' : 'Living'} · {dossier.stage}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{dossier.death ? 'Age at death' : 'Age'}</dt>
+                    <dd>{ageLabel(dossier.ageWeeks)}</dd>
+                  </div>
+                  <div>
+                    <dt>{dossier.death ? 'Health at death' : 'Health'}</dt>
+                    <dd>{person.health} / 100</dd>
+                  </div>
+                  <div>
+                    <dt>Household</dt>
+                    <dd>
+                      <button
+                        type="button"
+                        className="recap-link"
+                        onClick={() =>
+                          chooseSubject({ kind: 'household', id: person.householdId }, true)
+                        }
+                      >
+                        {dossier.household.name} · #{dossier.household.id}
+                      </button>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{dossier.death ? 'Last recorded home' : 'Home'}</dt>
+                    <dd>{dossier.home ? `Hut #${dossier.home.id}` : 'No assigned hut'}</dd>
+                  </div>
+                  <div>
+                    <dt>{dossier.death ? 'Last weekly assignment' : 'Weekly assignment'}</dt>
+                    <dd>{activityLabel(person.activity)}</dd>
+                  </div>
+                  <div>
+                    <dt>Profession</dt>
+                    <dd>Unassigned</dd>
+                  </div>
+                </dl>
+                <div className="control-row">
                   <button
                     type="button"
-                    className="recap-link"
-                    onClick={() => {
-                      setHousehold(String(person.householdId));
-                      setStatus('all');
-                      setQuery('');
-                      setRosterPage(0);
-                      setShowRoster(true);
-                    }}
+                    className="secondary"
+                    onClick={() => onFocusHome(person.tile)}
                   >
-                    {dossier.household.name} · #{dossier.household.id}
+                    {dossier.death ? 'Focus last recorded home' : 'Focus home'}
                   </button>
-                </dd>
-              </div>
-              <div>
-                <dt>{dossier.death ? 'Last recorded home' : 'Home'}</dt>
-                <dd>{dossier.home ? `Hut #${dossier.home.id}` : 'No assigned hut'}</dd>
-              </div>
-              <div>
-                <dt>{dossier.death ? 'Last weekly assignment' : 'Weekly assignment'}</dt>
-                <dd>{activityLabel(person.activity)}</dd>
-              </div>
-              <div>
-                <dt>Profession</dt>
-                <dd>Unassigned</dd>
-              </div>
-            </dl>
-            <div className="control-row">
-              <button type="button" className="secondary" onClick={() => onFocusHome(person.tile)}>
-                {dossier.death ? 'Focus last recorded home' : 'Focus home'}
-              </button>
-              {dossier.home && (
-                <button
-                  type="button"
-                  className="secondary"
-                  data-resident-source-id={dossier.home.creationEventId}
-                  onClick={(event) => inspect(dossier.home!.creationEventId, event.currentTarget)}
-                >
-                  Inspect hut #{dossier.home.id} origin
-                </button>
-              )}
-              {dossier.target && (
-                <button
-                  type="button"
-                  className="secondary"
-                  data-resident-source-id={
-                    dossier.target.kind === 'resident' ? undefined : dossier.target.creationEventId
-                  }
-                  onClick={(event) =>
-                    dossier.target!.kind === 'resident'
-                      ? choose(dossier.target!.id, true)
-                      : inspect(dossier.target!.creationEventId, event.currentTarget)
-                  }
-                >
-                  Inspect assignment target #{dossier.target.id}
-                </button>
-              )}
-            </div>
-            <p className="note">
-              Weekly work is an assignment; reserved building labor can finish early and idle. Homes
-              can be shared by different households.{' '}
-              {dossier.home?.retired ? 'This hut has since been lost.' : ''}
-            </p>
-            <h4>Known relations</h4>
-            {dossier.parents.length ? (
-              <p>
-                Known parent:{' '}
-                <button
-                  type="button"
-                  className="recap-link"
-                  onClick={() => choose(dossier.parents[0]!.id, true)}
-                >
-                  {residentName(dossier.parents[0]!)} · #{dossier.parents[0]!.id}
-                </button>
-                . Further parentage is unknown.
-              </p>
-            ) : (
-              <p>Parentage and earlier family life are unrecorded.</p>
-            )}
-            {dossier.children.length ? (
-              <ul className="resident-relations">
-                {dossier.children.map((child) => (
-                  <li key={child.id}>
+                  {dossier.home && (
+                    <button
+                      type="button"
+                      className="secondary"
+                      data-resident-source-id={dossier.home.creationEventId}
+                      onClick={(event) =>
+                        inspect(dossier.home!.creationEventId, event.currentTarget)
+                      }
+                    >
+                      Inspect hut #{dossier.home.id} origin
+                    </button>
+                  )}
+                  {dossier.target && (
+                    <button
+                      type="button"
+                      className="secondary"
+                      data-resident-source-id={
+                        dossier.target.kind === 'resident'
+                          ? undefined
+                          : dossier.target.creationEventId
+                      }
+                      onClick={(event) =>
+                        dossier.target!.kind === 'resident'
+                          ? choose(dossier.target!.id, true)
+                          : inspect(dossier.target!.creationEventId, event.currentTarget)
+                      }
+                    >
+                      Inspect assignment target #{dossier.target.id}
+                    </button>
+                  )}
+                </div>
+                <p className="note">
+                  Weekly work is an assignment; reserved building labor can finish early and idle.
+                  Homes can be shared by different households.{' '}
+                  {dossier.home?.retired ? 'This hut has since been lost.' : ''}
+                </p>
+                <h4>Known relations</h4>
+                {dossier.parents.length ? (
+                  <p>
+                    Known parent:{' '}
                     <button
                       type="button"
                       className="recap-link"
-                      onClick={() => choose(child.id, true)}
+                      onClick={() => choose(dossier.parents[0]!.id, true)}
                     >
-                      {residentName(child)} · #{child.id}
-                    </button>{' '}
-                    · {child.deathEventId === null ? 'living' : 'deceased'}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>No known children are recorded.</p>
-            )}
-            <details>
-              <summary>Recorded attributes</summary>
-              <dl>
-                {Object.entries(person.traits).map(([trait, value]) => (
-                  <div key={trait}>
-                    <dt>{trait[0]!.toUpperCase() + trait.slice(1)}</dt>
-                    <dd>{value} / 100</dd>
-                  </div>
-                ))}
-              </dl>
-              <p className="note">
-                These founding/birth attributes have not yet shaped recorded decisions.
-              </p>
-            </details>
-            {dossier.lastHealth && (
-              <details>
-                <summary>
-                  {dossier.death ? 'Recorded death inputs' : 'Last week’s health inputs'}
-                </summary>
-                <p>
-                  {dateLabel(dossier.healthTick!)}: health {dossier.lastHealth.before} →{' '}
-                  {dossier.lastHealth.after}; ration{' '}
-                  {dossier.lastHealth.ration ? 'received' : 'missed'}; opening shelter{' '}
-                  {dossier.lastHealth.homeId === null
-                    ? 'none'
-                    : `hut #${dossier.lastHealth.homeId}`}
-                  .
-                </p>
-                <p>
-                  Caregiver:{' '}
-                  {dossier.lastHealth.caregiverId === null
-                    ? 'none recorded'
-                    : residentName(
-                        world.world.residents.find(
-                          (item) => item.id === dossier.lastHealth!.caregiverId,
-                        )!,
-                      )}
-                  .
-                </p>
-                {dossier.deathHealth && (
-                  <p>
-                    Modeled risk draw {dossier.deathHealth.draw} was below threshold{' '}
-                    {dossier.deathHealth.threshold} out of 1,000.
+                      {residentName(dossier.parents[0]!)} · #{dossier.parents[0]!.id}
+                    </button>
+                    . Further parentage is unknown.
                   </p>
+                ) : (
+                  <p>Parentage and earlier family life are unrecorded.</p>
                 )}
-              </details>
+                {dossier.children.length ? (
+                  <ul className="resident-relations">
+                    {dossier.children.map((child) => (
+                      <li key={child.id}>
+                        <button
+                          type="button"
+                          className="recap-link"
+                          onClick={() => choose(child.id, true)}
+                        >
+                          {residentName(child)} · #{child.id}
+                        </button>{' '}
+                        · {child.deathEventId === null ? 'living' : 'deceased'}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No known children are recorded.</p>
+                )}
+                <details>
+                  <summary>Recorded attributes</summary>
+                  <dl>
+                    {Object.entries(person.traits).map(([trait, value]) => (
+                      <div key={trait}>
+                        <dt>{trait[0]!.toUpperCase() + trait.slice(1)}</dt>
+                        <dd>{value} / 100</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <p className="note">
+                    These founding/birth attributes have not yet shaped recorded decisions.
+                  </p>
+                </details>
+                {dossier.lastHealth && (
+                  <details>
+                    <summary>
+                      {dossier.death ? 'Recorded death inputs' : 'Last week’s health inputs'}
+                    </summary>
+                    <p>
+                      {dateLabel(dossier.healthTick!)}: health {dossier.lastHealth.before} →{' '}
+                      {dossier.lastHealth.after}; ration{' '}
+                      {dossier.lastHealth.ration ? 'received' : 'missed'}; opening shelter{' '}
+                      {dossier.lastHealth.homeId === null
+                        ? 'none'
+                        : `hut #${dossier.lastHealth.homeId}`}
+                      .
+                    </p>
+                    <p>
+                      Caregiver:{' '}
+                      {dossier.lastHealth.caregiverId === null
+                        ? 'none recorded'
+                        : residentName(
+                            world.world.residents.find(
+                              (item) => item.id === dossier.lastHealth!.caregiverId,
+                            )!,
+                          )}
+                      .
+                    </p>
+                    {dossier.deathHealth && (
+                      <p>
+                        Modeled risk draw {dossier.deathHealth.draw} was below threshold{' '}
+                        {dossier.deathHealth.threshold} out of 1,000.
+                      </p>
+                    )}
+                  </details>
+                )}
+              </>
+            ) : (
+              householdHistory && (
+                <HouseholdFacts
+                  key={householdHistory.household.id}
+                  world={world}
+                  dossier={householdHistory}
+                  onChoose={(id) => choose(id, true)}
+                  onInspect={inspect}
+                  onFocusHome={onFocusHome}
+                />
+              )
             )}
             <h4>From the annals</h4>
             <div className="resident-prose">
-              {dossier.paragraphs.map((entry, index) => (
+              {history.paragraphs.map((entry, index) => (
                 <p key={index}>
                   {entry.tokens.map((token, tokenIndex) =>
                     token.kind === 'text' ? (
@@ -431,9 +486,9 @@ export function Residents({
                 </p>
               ))}
             </div>
-            <h4>Personal records</h4>
+            <h4>{householdHistory ? 'Household records' : 'Personal records'}</h4>
             <p className="note">
-              {dossier.records.length} records retained. Pages show up to {PAGE_SIZE}; earlier
+              {history.records.length} records retained. Pages show up to {PAGE_SIZE}; earlier
               records remain available.
             </p>
             <ol className="personal-records">
@@ -463,21 +518,21 @@ export function Residents({
                   setHistoryTrail((previous) => previous.slice(0, -1));
                 }}
               >
-                Newer personal records
+                {householdHistory ? 'Newer household records' : 'Newer personal records'}
               </button>
               <button
                 type="button"
                 className="secondary"
                 disabled={
                   !records.length ||
-                  !dossier.records.some((record) => record.eventId < records.at(-1)!.eventId)
+                  !history.records.some((record) => record.eventId < records.at(-1)!.eventId)
                 }
                 onClick={() => {
                   setHistoryTrail((previous) => [...previous, beforeId]);
                   setBeforeId(records.at(-1)!.eventId - 1);
                 }}
               >
-                Earlier personal records
+                {householdHistory ? 'Earlier household records' : 'Earlier personal records'}
               </button>
             </div>
           </article>

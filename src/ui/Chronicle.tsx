@@ -1,6 +1,13 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { dateLabel, eventDetails, headline } from '../controller/chronicle';
-import type { WorldSnapshot } from '../controller/world';
+import { isIndividualWorld, type WorldSnapshot } from '../controller/world';
+import { residentName } from '../controller/residents';
+import {
+  ALL_RECORDS,
+  categoryLabel,
+  filterChronicle,
+  type ChronicleFilters,
+} from '../controller/chronicle-filters';
 
 export function Chronicle({
   world,
@@ -11,6 +18,7 @@ export function Chronicle({
   focusRequest = 0,
   backToRecap = false,
   backToResident = false,
+  backToHousehold = false,
 }: {
   world: WorldSnapshot;
   selectedId: number | null;
@@ -20,6 +28,7 @@ export function Chronicle({
   focusRequest?: number;
   backToRecap?: boolean;
   backToResident?: boolean;
+  backToHousehold?: boolean;
 }) {
   const list = useRef<HTMLDivElement>(null);
   const back = useRef<HTMLButtonElement>(null);
@@ -32,6 +41,39 @@ export function Chronicle({
   const [record, setRecord] = useState('');
   const [error, setError] = useState('');
   const [causeTrail, setCauseTrail] = useState<number[]>([]);
+  const [filters, setFilters] = useState<Readonly<ChronicleFilters>>(ALL_RECORDS);
+  const [beforeId, setBeforeId] = useState<number | null>(null);
+  const [pageTrail, setPageTrail] = useState<(number | null)[]>([]);
+  const matches = useMemo(() => filterChronicle(world, filters), [world, filters]);
+  const shown = useMemo(
+    () =>
+      matches
+        .filter((event) => beforeId === null || event.id <= beforeId)
+        .slice(-200)
+        .reverse(),
+    [matches, beforeId],
+  );
+  const categories = useMemo(
+    () => [...new Set(world.events.map((event) => event.type))].sort(),
+    [world.events],
+  );
+  const hasFilters =
+    filters.personId !== null ||
+    filters.householdId !== null ||
+    filters.category !== 'all' ||
+    filters.importance !== 'all';
+  function changeFilters(next: Readonly<ChronicleFilters>) {
+    setFilters(next);
+    setBeforeId(null);
+    setPageTrail([]);
+    anchor.current = null;
+    if (list.current) list.current.scrollTop = 0;
+  }
+  function changePage(before: number | null) {
+    setBeforeId(before);
+    anchor.current = null;
+    if (list.current) list.current.scrollTop = 0;
+  }
   useEffect(() => {
     if (expanded && focusRequest === 0) back.current?.focus({ preventScroll: true });
   }, [expanded]);
@@ -95,7 +137,7 @@ export function Chronicle({
   return (
     <section
       id="chronicle"
-      className={`chronicle ${expanded ? 'expanded' : ''} ${backToRecap || backToResident ? 'recap-evidence' : ''}`}
+      className={`chronicle ${expanded ? 'expanded' : ''} ${backToRecap || backToResident || backToHousehold ? 'recap-evidence' : ''}`}
       aria-label="Chronicle"
       onKeyDown={(event) => {
         if (event.key === 'Escape' && expanded) {
@@ -107,14 +149,122 @@ export function Chronicle({
       <div className="map-heading">
         <h2>The chronicle</h2>
         <button type="button" className="secondary back-map" ref={back} onClick={onClose}>
-          {backToRecap ? 'Back to recap' : backToResident ? 'Back to resident' : 'Back to map'}
+          {backToRecap
+            ? 'Back to recap'
+            : backToResident
+              ? 'Back to resident'
+              : backToHousehold
+                ? 'Back to household'
+                : 'Back to map'}
         </button>
       </div>
       <div className="chronicle-content" ref={content}>
         <p className="chronicle-note">
-          Latest {Math.min(200, world.events.length)} of {world.events.length} records. Causes
-          retain access to earlier records.
+          {beforeId === null ? 'Latest' : 'Showing'} {shown.length} of {matches.length}{' '}
+          {hasFilters ? 'matching ' : ''}records. Causes retain access to earlier records.
         </p>
+        <details className="chronicle-filters">
+          <summary>Filter records</summary>
+          <div className="resident-filters">
+            {isIndividualWorld(world) && (
+              <>
+                <label>
+                  Person
+                  <select
+                    value={filters.personId ?? 'all'}
+                    onChange={(event) =>
+                      changeFilters({
+                        ...filters,
+                        personId:
+                          event.currentTarget.value === 'all'
+                            ? null
+                            : Number(event.currentTarget.value),
+                      })
+                    }
+                  >
+                    <option value="all">All people</option>
+                    {world.world.residents.map((person) => (
+                      <option key={person.id} value={person.id}>
+                        {residentName(person)} · #{person.id}
+                        {person.deathEventId === null ? '' : ' · deceased'}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Household records
+                  <select
+                    value={filters.householdId ?? 'all'}
+                    onChange={(event) =>
+                      changeFilters({
+                        ...filters,
+                        householdId:
+                          event.currentTarget.value === 'all'
+                            ? null
+                            : Number(event.currentTarget.value),
+                      })
+                    }
+                  >
+                    <option value="all">All households</option>
+                    {world.world.households.map((household) => (
+                      <option key={household.id} value={household.id}>
+                        {household.name} · #{household.id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
+            )}
+            <label>
+              Record category
+              <select
+                value={filters.category}
+                onChange={(event) =>
+                  changeFilters({
+                    ...filters,
+                    category: event.currentTarget.value as ChronicleFilters['category'],
+                  })
+                }
+              >
+                <option value="all">All categories</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {categoryLabel(category)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Record importance
+              <select
+                value={filters.importance}
+                onChange={(event) =>
+                  changeFilters({
+                    ...filters,
+                    importance: event.currentTarget.value as ChronicleFilters['importance'],
+                  })
+                }
+              >
+                <option value="all">All importance</option>
+                <option value="major">Major</option>
+                <option value="ordinary">Ordinary</option>
+                <option value="minor">Minor</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => changeFilters(ALL_RECORDS)}
+              disabled={!hasFilters}
+            >
+              Clear record filters
+            </button>
+          </div>
+          <p className="note">
+            Person and household filters match recorded participants. Lookup and causes can open any
+            retained record.
+          </p>
+        </details>
         <form
           className="archive-search"
           onSubmit={(event) => {
@@ -146,17 +296,15 @@ export function Chronicle({
           </p>
         )}
         <div className="chronicle-body">
-          <div
-            ref={list}
-            className="event-list"
-            onScroll={rememberAnchor}
-            tabIndex={0}
-            aria-label="Recent events"
-          >
-            {world.events
-              .slice(-200)
-              .reverse()
-              .map((event) => (
+          <div className="chronicle-records">
+            <div
+              ref={list}
+              className="event-list"
+              onScroll={rememberAnchor}
+              tabIndex={0}
+              aria-label="Recent events"
+            >
+              {shown.map((event) => (
                 <button
                   type="button"
                   key={event.id}
@@ -171,10 +319,43 @@ export function Chronicle({
                   <span>{headline(event)}</span>
                 </button>
               ))}
+              {shown.length === 0 && (
+                <p className="chronicle-empty">No records match these filters.</p>
+              )}
+            </div>
+            {(matches.length > 200 || beforeId !== null) && (
+              <div className="chronicle-pages">
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={pageTrail.length === 0}
+                  onClick={() => {
+                    changePage(pageTrail.at(-1)!);
+                    setPageTrail((previous) => previous.slice(0, -1));
+                  }}
+                >
+                  Newer matching records
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={!shown.length || !matches.some((event) => event.id < shown.at(-1)!.id)}
+                  onClick={() => {
+                    setPageTrail((previous) => [...previous, beforeId]);
+                    changePage(shown.at(-1)!.id - 1);
+                  }}
+                >
+                  Earlier matching records
+                </button>
+              </div>
+            )}
           </div>
           <div className="event-details" role="region" aria-label="Event evidence" ref={evidence}>
             {selected && details ? (
               <>
+                {hasFilters && !matches.some((event) => event.id === selected.id) && (
+                  <p className="note">This source is outside your current filters.</p>
+                )}
                 <h3 ref={evidenceHeading} tabIndex={-1}>
                   {headline(selected)}
                 </h3>

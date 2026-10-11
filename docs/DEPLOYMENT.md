@@ -14,7 +14,7 @@ The game is a static browser application. Simulation and its single atomic save 
 
 After the merge, verify Vercel's reported source SHA equals the main merge commit and the deployment is READY. From an ordinary browser session on the production domain, create a seeded world, inspect the map and chronicle, exercise Play/Pause and Step, save, reload, Resume paused, and continue. Check desktop and phone layouts and collect page/console failures. Production bundles do not serve the development-only `/tests/fixtures/*.ts` helpers, so live checks must use the actual interface and browser storage. Record the live URL and results in the [PR #24 deployment record](https://github.com/DdraigFawr13/Story-Generator/pull/24).
 
-The hosted viewer remains P1. The deterministic P2 resident/household component is a foundation for later versioned world/save integration. Hosting does not close the outstanding selected-art, physical-device, storage-policy or human experience reviews.
+The hosted viewer creates named `p2-settlement-v1` worlds and preserves existing P1 v1/v2 saves under their original rules. [Personal histories](PHASE2_PERSONAL_HISTORY.md) and [household histories and archive filters](PHASE2_HOUSEHOLD_HISTORY.md) remain factual, passive views of retained records. The milestone PR records exact-main live verification after each merge. Hosting does not close the outstanding selected-art, physical-device, storage-policy or human experience reviews.
 
 Configuration reference: [Vercel Git configuration](https://vercel.com/docs/project-configuration/git-configuration).
 
