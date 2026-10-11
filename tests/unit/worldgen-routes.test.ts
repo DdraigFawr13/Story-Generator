@@ -3,6 +3,7 @@ import { DEFAULT_CONTENT } from '../../src/content';
 import {
   PathSearch,
   checkRoutes,
+  checkSites,
   deserializeWorld,
   generateWorld,
   paintRoutes,
@@ -199,6 +200,7 @@ describe('generated routes', () => {
     expect(nodes.length).toBeGreaterThan(5);
     expect(edges.length).toBeGreaterThan(5);
     expect(checkRoutes(cells, world.routes)).toEqual([]);
+    expect(checkSites(world)).toEqual([]);
   });
 
   it('walks contiguous land paths from node to node, avoiding sea and lakes', () => {

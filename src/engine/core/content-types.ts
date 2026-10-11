@@ -4,7 +4,7 @@
 
 import type { Cadence, Season } from './clock';
 import type { SimContext } from './context';
-import type { Attributes } from './types';
+import type { Attributes, SiteKind } from './types';
 import type { BirthTierId } from '../people/tiers';
 
 export interface RaceDef {
@@ -175,6 +175,7 @@ export interface ContentBundle {
   weather: WeatherDef[];
   eventTypes: EventTypeDef[];
   rules: EventRuleDef[];
+  settlement: SettlementRules;
 }
 
 /** Syllable and pattern tables for naming regions (M1.5). */
@@ -285,4 +286,77 @@ export interface MapLayer {
   cycle?: boolean;
   /** Swatches shown in the map legend. */
   legend: { label: string; color: Rgb }[];
+}
+
+/** Tunable numbers for the settle stage (M2.2): where peoples found sites and how many people live there. */
+export interface SettlementRules {
+  /** Founding civs = clamp(min, max, floor(landCells / landCellsPerCiv)). */
+  civs: { min: number; max: number; landCellsPerCiv: number };
+  /** Chance a civ also founds a second site, and how far from its capital (cells, Chebyshev). */
+  secondSiteChance: number;
+  secondSiteRange: [number, number];
+  /** Least Chebyshev distance between two civs' capitals (relaxed by halves, not below `minCapitalSpacing`). */
+  capitalSpacing: number;
+  minCapitalSpacing: number;
+  /** No site is founded within this many cells of another. */
+  siteSpacing: number;
+  /** Radius (cells, Chebyshev) of the land a site's people can farm, fish and hunt. */
+  reach: number;
+  /** Radii (cells, Chebyshev) within which a map feature counts for a site. */
+  featureRadius: {
+    river: number;
+    coast: number;
+    harbour: number;
+    ford: number;
+    pass: number;
+    deposit: number;
+    aura: number;
+    routeNode: number;
+  };
+  /** Aura at the cell itself that counts as an aura site, and elevation (m) that counts as heights. */
+  auraMin: number;
+  heightsMin: number;
+  /** Plains: one of these biomes and travel cost at most `plainsMaxTravel`. */
+  plainsBiomes: string[];
+  plainsMaxTravel: number;
+  /** Resource categories that make a mine site. */
+  mineCategories: ResourceDef['category'][];
+  /** Resource ids that feed a site beyond farming. */
+  fishId: string;
+  gameId: string;
+  capacity: {
+    /** People fed per fertility point per cell. */
+    perFertility: number;
+    fishPerAmount: number;
+    gamePerAmount: number;
+    /** Multipliers for trade access. */
+    port: number;
+    ford: number;
+    road: number;
+  };
+  /** Suitability score weights (higher is better). */
+  suitability: {
+    fertility: number;
+    preferredBiome: number;
+    preference: number;
+    routeNode: number;
+    jitter: number;
+  };
+  /** Founding population ranges (uniform ints); capped at `popCapacityShare` of capacity, never below `minPop`. */
+  capitalPop: [number, number];
+  secondPop: [number, number];
+  popCapacityShare: number;
+  minPop: number;
+  /** Starting stores in years of food. */
+  storesYears: number;
+  /** Child share = clamp(maturity / lifespan * childFactor, childMin, childMax). */
+  ageBands: { childFactor: number; childMin: number; childMax: number; elderShare: number };
+  /** Ordinary site kind: the first entry whose limit exceeds the population; larger is a city. */
+  kindByPop: [number, SiteKind][];
+  /** Culture id to the kind of its capital, instead of the size kind. */
+  capitalKind: Record<string, SiteKind>;
+  /** Civ name templates per government; `{n}` is the capital's name. */
+  civNames: Record<GovernmentKind, string>;
+  /** Cost cap (summed travel cost) of a site's territory. */
+  territoryReach: number;
 }

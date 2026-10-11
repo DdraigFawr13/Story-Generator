@@ -6,6 +6,7 @@ import { cultures } from './cultures';
 import { NAMES } from './names';
 import { races } from './races';
 import { RESOURCES } from './resources';
+import { SETTLEMENT } from './settlement';
 import { eventTypes, rules, weather } from './world';
 
 export const DEFAULT_CONTENT: ContentBundle = {
@@ -20,6 +21,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   weather,
   eventTypes,
   rules,
+  settlement: SETTLEMENT,
 };
 
 export * from './biomes';
@@ -27,3 +29,4 @@ export * from './cultures';
 export * from './map-layers';
 export * from './names';
 export * from './resources';
+export * from './settlement';

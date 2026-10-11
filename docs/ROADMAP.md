@@ -6,7 +6,7 @@ Detail for every phase lives in [REBOOT_PLAN.md §9](REBOOT_PLAN.md#9-phases); o
 | --- | --- | --- | --- | --- |
 | 0 | Reset and skeleton | 2–3 PRs | New docs, slim CI, engine core, person record, `?next` | Done ([spec](phases/PHASE_0.md)) |
 | 1 | World generation | 6–7 PRs | Topography, seasonal climate, rivers, biomes, resources, aura, fertility and wildness, world map, names, passes and harbours, routes | Done ([spec](phases/PHASE_1.md)) |
-| 2 | Legends | 6–8 PRs | Races, cultures, inheritance, sites, demographics, families/dynasties, history, legends browser | **Approved, starting M2.1** ([spec](phases/PHASE_2.md)) |
+| 2 | Legends | 6–8 PRs | Races, cultures, inheritance, sites, demographics, families/dynasties, history, legends browser | **In progress: M2.1–M2.2 done** ([spec](phases/PHASE_2.md)) |
 | 3 | Live site (**Milestone A**) | 10–14 PRs | Full everyday life thinly: needs, mood, health, environment, family, relationships, work, threats, light magic; saves | |
 | 4 | Living world | 5–7 PRs | Monthly world during play, world↔site links, medium politics/trade, deeper life | |
 | 5 | Magic depth | 4–6 PRs | Schools, lineages, books, magic in life and war, race dependencies | |

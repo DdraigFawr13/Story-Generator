@@ -2,14 +2,19 @@
 // once per world at one pixel per cell, then only redrawn on pan and zoom.
 
 import { useEffect, useRef, useState } from 'react';
-import { MAP_LAYERS } from '../content';
+import { MAP_LAYERS, civColor } from '../content';
 import {
   layerValues,
   renderLayer,
+  cellDistance,
+  sitePopulation,
+  type Civ,
   type ContentBundle,
+  type CultureDef,
   type Id,
   type Region,
   type RouteGraph,
+  type Site,
   type WorldCells,
 } from '../engine';
 import { Inspector, LAYER_BY_ID, LAYER_KEYS, Legend, LayerPanel, type Overlays } from './MapPanels';
@@ -35,6 +40,9 @@ interface Props {
   cells: WorldCells | null;
   regions: ReadonlyMap<Id, Region>;
   routes: RouteGraph;
+  sites: ReadonlyMap<Id, Site>;
+  civs: ReadonlyMap<Id, Civ>;
+  cultures: readonly CultureDef[];
   seed: string;
   content: Pick<ContentBundle, 'biomes' | 'resources'>;
   layer: string;
@@ -59,6 +67,13 @@ const ROAD_COLOR = 'rgba(120, 72, 32, 0.9)';
 const SEA_LANE_COLOR = 'rgba(210, 235, 255, 0.95)';
 /** Dash pattern (px) of sea lanes. */
 const SEA_LANE_DASH = [6, 5];
+/** Site names show from this cell scale for capitals and for other sites. */
+const CAPITAL_LABEL_SCALE = 2;
+const SITE_LABEL_SCALE = 4;
+/** Site glyph radius (px) = base + sqrt(pop) / divisor, capped. */
+const SITE_RADIUS_BASE = 3;
+const SITE_RADIUS_DIVISOR = 6;
+const SITE_RADIUS_MAX = 9;
 const ELEVATION = MAP_LAYERS.find((l) => l.id === DEFAULT_LAYER)!;
 
 function drawMarker(
@@ -94,6 +109,70 @@ function drawMarker(
   }
 }
 
+/** Draws one site glyph centred on (x, y); the shape tells the kind, the fill is the civ's colour. */
+function drawSiteGlyph(
+  ctx: CanvasRenderingContext2D,
+  kind: Site['kind'],
+  x: number,
+  y: number,
+  r: number,
+  fill: string,
+) {
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#fff';
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  switch (kind) {
+    case 'town':
+      ctx.rect(x - r, y - r, r * 2, r * 2);
+      break;
+    case 'city':
+      ctx.rect(x - r - 1, y - r - 1, (r + 1) * 2, (r + 1) * 2);
+      break;
+    case 'fortress':
+      ctx.moveTo(x, y - r - 1);
+      ctx.lineTo(x + r + 1, y + r);
+      ctx.lineTo(x - r - 1, y + r);
+      ctx.closePath();
+      break;
+    case 'mine':
+      ctx.moveTo(x, y - r - 1);
+      ctx.lineTo(x + r + 1, y);
+      ctx.lineTo(x, y + r + 1);
+      ctx.lineTo(x - r - 1, y);
+      ctx.closePath();
+      break;
+    case 'temple': {
+      const t = r / 2;
+      ctx.moveTo(x - t, y - r);
+      ctx.lineTo(x + t, y - r);
+      ctx.lineTo(x + t, y - t);
+      ctx.lineTo(x + r, y - t);
+      ctx.lineTo(x + r, y + t);
+      ctx.lineTo(x + t, y + t);
+      ctx.lineTo(x + t, y + r);
+      ctx.lineTo(x - t, y + r);
+      ctx.lineTo(x - t, y + t);
+      ctx.lineTo(x - r, y + t);
+      ctx.lineTo(x - r, y - t);
+      ctx.lineTo(x - t, y - t);
+      ctx.closePath();
+      break;
+    }
+    default:
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+  }
+  ctx.fill();
+  ctx.stroke();
+  const inner = kind === 'city' || kind === 'port';
+  if (inner) {
+    ctx.fillStyle = '#1b1b1b';
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(1, r / 3), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 interface Cache {
   cells: WorldCells | null;
   bitmaps: Map<string, HTMLCanvasElement>;
@@ -106,6 +185,9 @@ export function WorldMap({
   cells,
   regions,
   routes,
+  sites,
+  civs,
+  cultures,
   seed,
   content,
   layer,
@@ -119,6 +201,7 @@ export function WorldMap({
     shade: true,
     names: true,
     roads: true,
+    sites: true,
     raw: false,
   });
   const [hoverCell, setHoverCell] = useState<number | null>(null);
@@ -131,8 +214,8 @@ export function WorldMap({
     values: new Map(),
     places: null,
   });
-  const latest = useRef({ cells, regions, routes, layer, overlays, at, zoom, onView });
-  latest.current = { cells, regions, routes, layer, overlays, at, zoom, onView };
+  const latest = useRef({ cells, regions, routes, sites, civs, layer, overlays, at, zoom, onView });
+  latest.current = { cells, regions, routes, sites, civs, layer, overlays, at, zoom, onView };
 
   const layerDef = LAYER_BY_ID.get(layer) ?? LAYER_BY_ID.get(DEFAULT_LAYER)!;
   const selected = cells && at && at.x < cells.width && at.y < cells.height ? at : null;
@@ -190,8 +273,8 @@ export function WorldMap({
     oy: number,
     width: number,
     height: number,
+    drawn: [number, number, number, number][],
   ) {
-    const drawn: [number, number, number, number][] = [];
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
@@ -219,6 +302,63 @@ export function WorldMap({
       ctx.fillStyle = '#1b1b1b';
       ctx.fillText(name, sx, ty);
     }
+  }
+
+  /** Draws site glyphs and names; returns the boxes taken, so region labels can avoid them. */
+  function drawSites(
+    ctx: CanvasRenderingContext2D,
+    c: WorldCells,
+    scale: number,
+    ox: number,
+    oy: number,
+    width: number,
+    height: number,
+  ): [number, number, number, number][] {
+    const { sites: all, civs: owners } = latest.current;
+    const capitals = new Set([...owners.values()].map((civ) => civ.capital));
+    const taken: [number, number, number, number][] = [];
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    // Capitals first, then larger sites, so the important names win collisions.
+    const order = [...all.values()].sort(
+      (a, b) =>
+        Number(capitals.has(b.id)) - Number(capitals.has(a.id)) ||
+        sitePopulation(b) - sitePopulation(a) ||
+        a.id - b.id,
+    );
+    for (const site of order) {
+      const sx = ox + ((site.cell % c.width) + 0.5) * scale;
+      const sy = oy + (Math.floor(site.cell / c.width) + 0.5) * scale;
+      if (sx < -20 || sy < -20 || sx > width + 20 || sy > height + 20) continue;
+      const r = Math.min(
+        SITE_RADIUS_MAX,
+        SITE_RADIUS_BASE + Math.sqrt(sitePopulation(site)) / SITE_RADIUS_DIVISOR,
+      );
+      const [cr, cg, cb] = civColor(site.civId ?? 0);
+      drawSiteGlyph(ctx, site.kind, sx, sy, r, `rgb(${cr},${cg},${cb})`);
+      taken.push([sx - r - 1, sy - r - 1, r * 2 + 2, r * 2 + 2]);
+      const minScale = capitals.has(site.id) ? CAPITAL_LABEL_SCALE : SITE_LABEL_SCALE;
+      if (scale < minScale) continue;
+      const size = capitals.has(site.id) ? 13 : 11;
+      ctx.font = `${capitals.has(site.id) ? 'bold ' : ''}${size}px system-ui, sans-serif`;
+      const w = ctx.measureText(site.name).width;
+      const ty = sy + r + size / 2 + 2;
+      const box: [number, number, number, number] = [
+        sx - w / 2 - 2,
+        ty - size / 2 - 1,
+        w + 4,
+        size + 2,
+      ];
+      if (taken.some((other, k) => k < taken.length - 1 && boxesOverlap(box, other))) continue;
+      taken.push(box);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.strokeText(site.name, sx, ty);
+      ctx.fillStyle = '#1b1b1b';
+      ctx.fillText(site.name, sx, ty);
+    }
+    return taken;
   }
 
   /** Draws land routes as brown lines and sea lanes as dashed pale blue, then route nodes as dots. */
@@ -328,7 +468,8 @@ export function WorldMap({
       ctx.stroke();
     }
     if (o.roads) drawRoutes(ctx, c, latest.current.routes, scale, ox, oy);
-    if (o.names) drawLabels(ctx, c, scale, ox, oy, rect.width, rect.height);
+    const taken = o.sites ? drawSites(ctx, c, scale, ox, oy, rect.width, rect.height) : [];
+    if (o.names) drawLabels(ctx, c, scale, ox, oy, rect.width, rect.height, taken);
     if (sel && sel.x < c.width && sel.y < c.height) {
       const cx = ox + (sel.x + 0.5) * scale;
       const cy = oy + (sel.y + 0.5) * scale;
@@ -410,6 +551,7 @@ export function WorldMap({
       else if (event.key === 'h' || event.key === 'H') setOverlays({ ...o, shade: !o.shade });
       else if (event.key === 'n' || event.key === 'N') setOverlays({ ...o, names: !o.names });
       else if (event.key === 'r' || event.key === 'R') setOverlays({ ...o, roads: !o.roads });
+      else if (event.key === 's' || event.key === 'S') setOverlays({ ...o, sites: !o.sites });
       else if (event.key === 'Escape' && sel) change({ at: null });
     };
     window.addEventListener('keydown', keydown);
@@ -438,6 +580,25 @@ export function WorldMap({
     cells && hoverCell !== null
       ? { value: valuesOf(cells, layerDef.id)?.[hoverCell] ?? 0, water: cells.water[hoverCell]! }
       : null;
+
+  // The site under the selected cell or the nearest within one cell, and who owns the land.
+  let siteHere: Site | null = null;
+  if (cells && selected) {
+    const here = selected.y * cells.width + selected.x;
+    let nearest = Infinity;
+    for (const site of sites.values()) {
+      const d = cellDistance(cells.width, site.cell, here);
+      if (d <= 1 && d < nearest) {
+        nearest = d;
+        siteHere = site;
+      }
+    }
+  }
+  const ownerOf = (id: Id | null | undefined) => (id ? (civs.get(id) ?? null) : null);
+  const cultureOf = (id: string | undefined) =>
+    cultures.find((culture) => culture.id === id) ?? null;
+  const landCiv =
+    cells && selected ? ownerOf(cells.territory[selected.y * cells.width + selected.x]) : null;
 
   return (
     <div
@@ -527,6 +688,11 @@ export function WorldMap({
           biomes={content.biomes}
           resources={content.resources}
           raw={overlays.raw}
+          site={siteHere}
+          siteCiv={ownerOf(siteHere?.civId)}
+          siteCulture={cultureOf(ownerOf(siteHere?.civId)?.cultureId)}
+          landCiv={landCiv}
+          landCulture={cultureOf(landCiv?.cultureId)}
           places={placesOf(cells, regions).lookup.get(selected.y * cells.width + selected.x) ?? []}
           onShow={(id) => onView({ layer: id })}
           onClose={() => onView({ at: null })}

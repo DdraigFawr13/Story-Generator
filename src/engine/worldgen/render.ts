@@ -2,7 +2,7 @@
 // map. Returns RGBA bytes, one pixel per cell (index = y * width + x); no DOM.
 
 import type { MapLayer, MapLayerStop, Rgb } from '../core/content-types';
-import type { Region, RegionKind, RouteGraph, WorldCells } from '../core/types';
+import type { Region, RegionKind, RouteGraph, Site, WorldCells } from '../core/types';
 
 export interface RenderOptions {
   /** Shade land by the slope toward the north-west neighbour. Default: on for elevation. */
@@ -63,6 +63,8 @@ export function layerValues(cells: WorldCells, id: string): ArrayLike<number> | 
       return cells.travelCost;
     case 'aura':
       return cells.aura;
+    case 'territory':
+      return cells.territory;
     case 'resources':
       return richestResource(cells);
     default:
@@ -220,4 +222,53 @@ export function paintRoutes(
     for (const cell of edge.path) put(cell, SEA_LANE_RGB);
   }
   for (const node of routes.nodes) put(node.cell, NODE_RGB);
+}
+
+/** Territory tint strength (0-1) and site dot colour for `paintSites`. */
+const TERRITORY_ALPHA = 0.5;
+const SITE_DOT_RGB: Rgb = [255, 255, 255];
+const SITE_DOT_EDGE_RGB: Rgb = [20, 20, 20];
+
+/**
+ * Tints each claimed cell with its civ's colour at about 35% and draws sites as dots sized by
+ * population, onto RGBA `pixels` in place. `colorOf` maps a civ id to a colour.
+ */
+export function paintSites(
+  pixels: Uint8ClampedArray,
+  width: number,
+  cells: Pick<WorldCells, 'territory'>,
+  sites: Iterable<Site>,
+  colorOf: (civId: number) => Rgb,
+): void {
+  for (let i = 0; i < cells.territory.length; i += 1) {
+    const civ = cells.territory[i]!;
+    if (civ === 0 || i * 4 + 3 >= pixels.length) continue;
+    const color = colorOf(civ);
+    for (let k = 0; k < 3; k += 1) {
+      pixels[i * 4 + k] = pixels[i * 4 + k]! * (1 - TERRITORY_ALPHA) + color[k]! * TERRITORY_ALPHA;
+    }
+  }
+  const put = (cell: number, color: Rgb) => {
+    if (width <= 0 || cell < 0 || cell * 4 + 3 >= pixels.length) return;
+    pixels[cell * 4] = color[0];
+    pixels[cell * 4 + 1] = color[1];
+    pixels[cell * 4 + 2] = color[2];
+  };
+  for (const site of sites) {
+    const pop = site.pop.reduce((n, band) => n + band.count, 0);
+    // Radius in cells: 0 for a hamlet, up to 2 for the largest sites.
+    const radius = pop >= 1500 ? 2 : pop >= 300 ? 1 : 0;
+    const x = site.cell % width;
+    const y = (site.cell - x) / width;
+    for (let dy = -radius - 1; dy <= radius + 1; dy += 1) {
+      for (let dx = -radius - 1; dx <= radius + 1; dx += 1) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= width) continue;
+        const reach = Math.max(Math.abs(dx), Math.abs(dy));
+        if (reach <= radius) put(ny * width + nx, SITE_DOT_RGB);
+        else put(ny * width + nx, SITE_DOT_EDGE_RGB);
+      }
+    }
+  }
 }

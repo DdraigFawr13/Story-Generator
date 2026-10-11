@@ -29,3 +29,4 @@ export * from './worldgen/render';
 export * from './worldgen/check';
 export * from './worldgen/regions';
 export * from './worldgen/travel';
+export * from './history/settle';

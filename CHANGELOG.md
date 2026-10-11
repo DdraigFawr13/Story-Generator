@@ -2,6 +2,10 @@
 
 Newest first. One short entry per merged milestone.
 
+## Phase 2 — Peoples and Legends
+
+- **M2.2 Settlement and sites.** A new `settle` world-gen stage (`engine/history/settle.ts`, rules in `content/settlement.ts`) founds 3–8 peoples (about one per 3,500 land cells), each with a capital and, half the time, a second site picked by the culture's preferred biomes and site preferences (river, coast, aura, plains, deposit, forest, heights), fertility and nearby route nodes. Sites have a kind (hamlet to city, fortress, mine, temple, port), a carrying capacity from fertility, fish and game within 3 cells with port, ford and road bonuses, a population in child, adult and elder bands by race, stores and the features that drew them. Territory is the nearest site by travel cost. Founding emits `civ_founded` and `site_founded` events with cause links. The viewer gains a Peoples layer (key 0), a Sites overlay (key S, glyph by kind, size by population, names) and a Site block in the inspector; `npm run worldmap -- --layer sites` and the drama check report peoples and sites.
+
 ## Phase 1 — World generation
 
 - **M1.6 Travel and routes.** A travel-cost layer (biome, slope, river crossings, cheaper at fords and passes), a route graph joining harbours, fords, passes and fertile river mouths on each landmass plus sea lanes between harbours, and a likely-roads overlay (key R). The inspector gains a Travel row and a "Road" why line; the drama check prints nodes, edges and connectivity.
