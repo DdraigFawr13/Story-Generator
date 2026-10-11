@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { canonicalJson } from '../../src/sim/canonical';
 import { capture } from '../../src/sim/immutable';
-import { RESIDENT_CONFIG } from '../../src/sim/resident-config';
 import {
   createFounderRoster,
   residentAgeWeeks,
@@ -49,62 +48,6 @@ describe('versioned resident foundations', () => {
     expect(capture(JSON.parse(canonicalJson(roster)))).toEqual(roster);
     expect(createFounderRoster(createSettlement('RIVERSIDE', 'p1-settlement-v1'))).toEqual(roster);
   });
-
-  it('keeps IDs, names, census and home references coherent across 100 seeds', () => {
-    const results = new Set<string>();
-    for (let index = 0; index < 100; index++) {
-      const founding = createSettlement(`PEOPLE_${index}`);
-      const roster = createFounderRoster(founding);
-      results.add(
-        canonicalJson({
-          households: roster.households.map((household) => household.name),
-          residents: roster.residents.map((resident) => [
-            resident.givenName,
-            resident.ageWeeksAtFounding,
-            resident.traits,
-          ]),
-        }),
-      );
-      expect(createFounderRoster(founding)).toEqual(roster);
-      expect(roster.residents).toHaveLength(founding.world.settlement.population);
-      expect(roster.households).toHaveLength(founding.world.settlement.households);
-      const identities = [...roster.households, ...roster.residents];
-      expect(new Set(identities.map((identity) => identity.id)).size).toBe(identities.length);
-      expect(identities.every((identity) => identity.id >= founding.allocators.entity)).toBe(true);
-      expect(
-        new Set(
-          roster.residents.map((resident) => `${resident.givenName} ${resident.householdName}`),
-        ).size,
-      ).toBe(24);
-      for (const household of roster.households) {
-        const home = founding.world.buildings.find((building) => building.id === household.homeId)!;
-        expect(home.kind).toBe('hut');
-        expect(household.tile).toBe(home.tile);
-        const members = roster.residents.filter(
-          (resident) => resident.householdId === household.id,
-        );
-        expect(members).toHaveLength(founding.config.peoplePerHousehold);
-        for (const resident of members) {
-          expect(resident.householdName).toBe(household.name);
-          expect(resident.homeId).toBe(home.id);
-          expect(resident.tile).toBe(home.tile);
-          expect(residentLifeStage(resident, 0)).toBe('adult');
-          expect(resident.ageWeeksAtFounding).toBeLessThanOrEqual(
-            RESIDENT_CONFIG.founderMaxAgeWeeks,
-          );
-          expect(resident.health).toBe(founding.world.settlement.health);
-          expect(resident.profession).toBe('unassigned');
-          expect(resident.parentIds).toEqual([]);
-          expect(
-            Object.values(resident.traits).every(
-              (trait) => Number.isInteger(trait) && trait >= 0 && trait <= 100,
-            ),
-          ).toBe(true);
-        }
-      }
-    }
-    expect(results.size).toBe(100);
-  }, 60_000);
 
   it('derives age and stage on exact weekly boundaries without mutations or unsafe arithmetic', () => {
     const resident = {

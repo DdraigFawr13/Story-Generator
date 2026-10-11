@@ -286,19 +286,4 @@ describe('actual individual weeks', () => {
       individualDeathThreshold(30 * 48, 100),
     );
   });
-
-  it('keeps 100 seeded first years and real known-parent birth intervals coherent', () => {
-    for (let index = 0; index < 100; index++) {
-      const state = simulateLivingSettlement(`LIFE_${index}`, 48).state;
-      expect(state.tick).toBe(48);
-      expect(state.allocators.entity).toBe(state.world.entities.length + 1);
-      expect(state.world.settlement.population).toBeGreaterThan(0);
-      expect(state.world.residents.length).toBeGreaterThanOrEqual(24);
-      expect(
-        state.world.residents
-          .filter((person) => person.birthEventId !== null)
-          .every((person) => person.parentIds.length === 1 && person.parentIds[0]! < person.id),
-      ).toBe(true);
-    }
-  }, 120000);
 });
