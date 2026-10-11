@@ -47,8 +47,12 @@ export function generateInWorker(
   job!.promise = promise;
   active = job!;
   // Only the plain-data tables cross over: a full content bundle holds functions, which cannot be cloned.
-  const { biomes, biomeRules, resources } = content;
-  const request: WorkerRequest = { seed, params, content: { biomes, biomeRules, resources } };
+  const { biomes, biomeRules, resources, names } = content;
+  const request: WorkerRequest = {
+    seed,
+    params,
+    content: { biomes, biomeRules, resources, names },
+  };
   worker.postMessage(request);
   return job!;
 }

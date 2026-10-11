@@ -47,6 +47,7 @@ const STAGE_LABELS: Record<WorldgenStage, string> = {
   aura: 'Aura',
   resources: 'Resources',
   habitat: 'Fertility and wildness',
+  regions: 'Names and places',
 };
 /** How long "Link copied" stays on the button. */
 const COPIED_MS = 2000;
@@ -237,6 +238,7 @@ export function NextApp() {
         </div>
         <WorldMap
           cells={state.cells}
+          regions={state.regions}
           seed={state.seed}
           content={DEFAULT_CONTENT}
           layer={view.layer}

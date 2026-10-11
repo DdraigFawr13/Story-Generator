@@ -34,6 +34,14 @@ test('the world map generates, inspects, saves, reloads and advances', async ({ 
   await expect(rainfall).toHaveAttribute('aria-pressed', 'true');
   await expect(page).toHaveURL(/layer=rainfall/);
 
+  // Region names are an overlay, on by default, toggled with N.
+  const names = page.getByLabel(/^Names/);
+  await expect(names).toBeChecked();
+  await page.keyboard.press('n');
+  await expect(names).not.toBeChecked();
+  await page.keyboard.press('n');
+  await expect(names).toBeChecked();
+
   await page.locator('canvas.map').click();
   const inspector = page.getByRole('complementary', { name: 'Cell inspector' });
   await expect(inspector).toBeVisible();

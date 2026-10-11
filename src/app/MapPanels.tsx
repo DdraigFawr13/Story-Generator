@@ -2,7 +2,7 @@
 
 import { Fragment, type ReactNode } from 'react';
 import { MAP_LAYERS } from '../content';
-import type { BiomeDef, MapLayer, ResourceDef, WorldCells } from '../engine';
+import type { BiomeDef, MapLayer, Region, ResourceDef, WorldCells } from '../engine';
 import { formatReadout, rampGradient, rampPosition, rampTicks } from './map-view';
 import { explainCell } from './why';
 
@@ -55,6 +55,7 @@ export const LAYER_KEYS = new Map(
 export interface Overlays {
   water: boolean;
   shade: boolean;
+  names: boolean;
   raw: boolean;
 }
 
@@ -127,6 +128,14 @@ export function LayerPanel({
             onChange={(e) => onOverlays({ shade: e.target.checked })}
           />
           Hillshade <kbd>H</kbd>
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={overlays.names}
+            onChange={(e) => onOverlays({ names: e.target.checked })}
+          />
+          Names <kbd>N</kbd>
         </label>
       </div>
       <details className="debug">
@@ -242,6 +251,7 @@ export function Inspector({
   biomes,
   resources,
   raw,
+  places,
   onShow,
   onClose,
 }: {
@@ -251,6 +261,8 @@ export function Inspector({
   biomes: readonly BiomeDef[];
   resources: readonly ResourceDef[];
   raw: boolean;
+  /** Regions containing the cell, in id order. */
+  places: readonly Region[];
   onShow: (layerId: string) => void;
   onClose: () => void;
 }) {
@@ -298,6 +310,15 @@ export function Inspector({
                   </button>
                 </>
               )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {places.length > 0 && (
+        <ul className="places" aria-label="Places">
+          {places.map((place) => (
+            <li key={place.id}>
+              <b>{place.name}</b> · {place.kind}
             </li>
           ))}
         </ul>

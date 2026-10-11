@@ -2,7 +2,7 @@
 // map. Returns RGBA bytes, one pixel per cell (index = y * width + x); no DOM.
 
 import type { MapLayer, MapLayerStop, Rgb } from '../core/content-types';
-import type { WorldCells } from '../core/types';
+import type { Region, RegionKind, WorldCells } from '../core/types';
 
 export interface RenderOptions {
   /** Shade land by the slope toward the north-west neighbour. Default: on for elevation. */
@@ -152,4 +152,44 @@ export function renderLayer(
     out[i * 4 + 3] = 255;
   }
   return out;
+}
+
+/** Feature colours for `paintRegions`; ranges darken the land instead. */
+const FEATURE_RGB: Partial<Record<RegionKind, Rgb>> = {
+  bay: [150, 210, 245],
+  strait: [235, 40, 220],
+  harbour: [255, 225, 40],
+  ford: [30, 230, 235],
+  pass: [235, 30, 30],
+};
+/** Ranges are darkened by this factor. */
+const RANGE_DARKEN = 0.8;
+/** Paint order: later kinds sit on top. */
+const PAINT_ORDER: RegionKind[] = ['range', 'bay', 'strait', 'harbour', 'ford', 'pass'];
+
+/** Paints strategic features onto RGBA `pixels` (one per cell, `width` wide) in place, for the worldmap CLI. */
+export function paintRegions(
+  pixels: Uint8ClampedArray,
+  width: number,
+  regions: Iterable<Region>,
+): void {
+  const list = [...regions];
+  for (const kind of PAINT_ORDER) {
+    const color = FEATURE_RGB[kind];
+    for (const region of list) {
+      if (region.kind !== kind) continue;
+      for (const cell of region.cells) {
+        if (width <= 0 || cell * 4 + 3 >= pixels.length) continue;
+        if (color) {
+          pixels[cell * 4] = color[0];
+          pixels[cell * 4 + 1] = color[1];
+          pixels[cell * 4 + 2] = color[2];
+        } else {
+          pixels[cell * 4] = pixels[cell * 4]! * RANGE_DARKEN;
+          pixels[cell * 4 + 1] = pixels[cell * 4 + 1]! * RANGE_DARKEN;
+          pixels[cell * 4 + 2] = pixels[cell * 4 + 2]! * RANGE_DARKEN;
+        }
+      }
+    }
+  }
 }

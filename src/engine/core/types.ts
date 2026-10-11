@@ -144,6 +144,35 @@ export interface ResourceDeposit {
   amount: number;
 }
 
+/** Region kinds in the order regions are numbered (see worldgen/regions.ts). */
+export const REGION_KINDS = [
+  'range',
+  'river',
+  'forest',
+  'desert',
+  'lake',
+  'sea',
+  'island',
+  'pass',
+  'ford',
+  'harbour',
+  'strait',
+  'bay',
+  'volcano',
+] as const;
+export type RegionKind = (typeof REGION_KINDS)[number];
+
+/** A named stretch of the map or strategic feature (M1.5). Ids run 1..n in creation order. */
+export interface Region {
+  id: Id;
+  kind: RegionKind;
+  name: string;
+  /** Ascending cell indices. */
+  cells: number[];
+  /** The representative cell: label position, pass saddle, ford crossing, harbour quay. */
+  anchor: number;
+}
+
 /** Per-cell world layers (index = y * width + x). Integer typed arrays keep maths exact. */
 export interface WorldCells {
   width: number;
@@ -196,6 +225,8 @@ export interface WorldState {
   nextId: Record<EntityKind, Id>;
   /** World-gen layers; null until the world is generated. */
   cells: WorldCells | null;
+  /** Named regions and strategic features, filled by worldgen; empty until then. */
+  regions: Map<Id, Region>;
   people: Map<Id, Person>;
   events: SimEvent[];
   commands: Command[];

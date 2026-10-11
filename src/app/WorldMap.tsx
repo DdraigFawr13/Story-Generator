@@ -3,9 +3,17 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { MAP_LAYERS } from '../content';
-import { layerValues, renderLayer, type ContentBundle, type WorldCells } from '../engine';
+import {
+  layerValues,
+  renderLayer,
+  type ContentBundle,
+  type Id,
+  type Region,
+  type WorldCells,
+} from '../engine';
 import { Inspector, LAYER_BY_ID, LAYER_KEYS, Legend, LayerPanel, type Overlays } from './MapPanels';
 import { boundCamera, cellAt, cellScale, clampZoom, DEFAULT_LAYER, type Camera } from './map-view';
+import { boxesOverlap, planLabels, regionLookup, type Label } from './map-labels';
 import './world-map.css';
 
 export interface ViewChange {
@@ -16,6 +24,7 @@ export interface ViewChange {
 
 interface Props {
   cells: WorldCells | null;
+  regions: ReadonlyMap<Id, Region>;
   seed: string;
   content: Pick<ContentBundle, 'biomes' | 'resources'>;
   layer: string;
@@ -32,30 +41,77 @@ const DRAG_THRESHOLD = 4;
 const WHEEL_STEP_MS = 120;
 /** Zoom step used when the minimap recentres a fully zoomed-out map. */
 const MINIMAP_ZOOM = 2;
+/** Radius (px) of the pass, ford and harbour markers. */
+const MARKER_RADIUS = 5;
 const ELEVATION = MAP_LAYERS.find((l) => l.id === DEFAULT_LAYER)!;
+
+function drawMarker(
+  ctx: CanvasRenderingContext2D,
+  kind: 'pass' | 'ford' | 'harbour',
+  x: number,
+  y: number,
+) {
+  const r = MARKER_RADIUS;
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#fff';
+  ctx.fillStyle = '#1b1b1b';
+  ctx.beginPath();
+  if (kind === 'pass') {
+    ctx.moveTo(x, y - r);
+    ctx.lineTo(x + r, y + r);
+    ctx.lineTo(x - r, y + r);
+    ctx.closePath();
+  } else if (kind === 'ford') {
+    ctx.moveTo(x - r, y);
+    ctx.quadraticCurveTo(x - r / 2, y - r, x, y);
+    ctx.quadraticCurveTo(x + r / 2, y + r, x + r, y);
+  } else {
+    ctx.arc(x, y, r - 1, 0, Math.PI * 2);
+  }
+  ctx.stroke();
+  if (kind === 'ford') {
+    ctx.strokeStyle = '#1b1b1b';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  } else {
+    ctx.fill();
+  }
+}
 
 interface Cache {
   cells: WorldCells | null;
   bitmaps: Map<string, HTMLCanvasElement>;
   values: Map<string, ArrayLike<number> | null>;
+  /** Labels and the cell-to-regions lookup, built once per world. */
+  places: { labels: Label[]; lookup: Map<number, Region[]> } | null;
 }
 
-export function WorldMap({ cells, seed, content, layer, at, zoom, busy, onView }: Props) {
-  const [overlays, setOverlays] = useState<Overlays>({ water: true, shade: true, raw: false });
+export function WorldMap({ cells, regions, seed, content, layer, at, zoom, busy, onView }: Props) {
+  const [overlays, setOverlays] = useState<Overlays>({
+    water: true,
+    shade: true,
+    names: true,
+    raw: false,
+  });
   const [hoverCell, setHoverCell] = useState<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const miniRef = useRef<HTMLCanvasElement>(null);
   const camRef = useRef<Camera>({ x: 0, y: 0 });
-  const cache = useRef<Cache>({ cells: null, bitmaps: new Map(), values: new Map() });
-  const latest = useRef({ cells, layer, overlays, at, zoom, onView });
-  latest.current = { cells, layer, overlays, at, zoom, onView };
+  const cache = useRef<Cache>({
+    cells: null,
+    bitmaps: new Map(),
+    values: new Map(),
+    places: null,
+  });
+  const latest = useRef({ cells, regions, layer, overlays, at, zoom, onView });
+  latest.current = { cells, regions, layer, overlays, at, zoom, onView };
 
   const layerDef = LAYER_BY_ID.get(layer) ?? LAYER_BY_ID.get(DEFAULT_LAYER)!;
   const selected = cells && at && at.x < cells.width && at.y < cells.height ? at : null;
 
   function bitmap(c: WorldCells, id: string, shade: boolean, water: boolean): HTMLCanvasElement {
     if (cache.current.cells !== c)
-      cache.current = { cells: c, bitmaps: new Map(), values: new Map() };
+      cache.current = { cells: c, bitmaps: new Map(), values: new Map(), places: null };
     const key = `${id}|${shade}|${water}`;
     let made = cache.current.bitmaps.get(key);
     if (!made) {
@@ -82,9 +138,59 @@ export function WorldMap({ cells, seed, content, layer, at, zoom, busy, onView }
 
   function valuesOf(c: WorldCells, id: string): ArrayLike<number> | null {
     if (cache.current.cells !== c)
-      cache.current = { cells: c, bitmaps: new Map(), values: new Map() };
+      cache.current = { cells: c, bitmaps: new Map(), values: new Map(), places: null };
     if (!cache.current.values.has(id)) cache.current.values.set(id, layerValues(c, id));
     return cache.current.values.get(id)!;
+  }
+
+  function placesOf(c: WorldCells, all: ReadonlyMap<Id, Region>) {
+    if (cache.current.cells !== c)
+      cache.current = { cells: c, bitmaps: new Map(), values: new Map(), places: null };
+    cache.current.places ??= {
+      labels: planLabels(all.values()),
+      lookup: regionLookup(all.values()),
+    };
+    return cache.current.places;
+  }
+
+  /** Draws region names over the bitmap, skipping any label that would overlap a drawn one. */
+  function drawLabels(
+    ctx: CanvasRenderingContext2D,
+    c: WorldCells,
+    scale: number,
+    ox: number,
+    oy: number,
+    width: number,
+    height: number,
+  ) {
+    const drawn: [number, number, number, number][] = [];
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    for (const label of placesOf(c, latest.current.regions).labels) {
+      if (scale < label.minScale) continue;
+      const { anchor, name } = label.region;
+      const sx = ox + ((anchor % c.width) + 0.5) * scale;
+      const sy = oy + (Math.floor(anchor / c.width) + 0.5) * scale;
+      if (sx < 0 || sy < 0 || sx > width || sy > height) continue;
+      ctx.font = `${label.italic ? 'italic ' : ''}${label.size}px system-ui, sans-serif`;
+      const w = ctx.measureText(name).width;
+      const ty = label.marker ? sy + MARKER_RADIUS + label.size / 2 + 1 : sy;
+      const box: [number, number, number, number] = [
+        sx - w / 2 - 2,
+        (label.marker ? sy - MARKER_RADIUS : ty - label.size / 2) - 1,
+        w + 4,
+        label.marker ? MARKER_RADIUS + label.size + 3 : label.size + 2,
+      ];
+      if (drawn.some((other) => boxesOverlap(box, other))) continue;
+      drawn.push(box);
+      if (label.marker) drawMarker(ctx, label.marker, sx, sy);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.strokeText(name, sx, ty);
+      ctx.fillStyle = '#1b1b1b';
+      ctx.fillText(name, sx, ty);
+    }
   }
 
   /** Canvas size in CSS pixels, and how much of the view the whole map fills at zoom 0. */
@@ -138,6 +244,7 @@ export function WorldMap({ cells, seed, content, layer, at, zoom, busy, onView }
       }
       ctx.stroke();
     }
+    if (o.names) drawLabels(ctx, c, scale, ox, oy, rect.width, rect.height);
     if (sel && sel.x < c.width && sel.y < c.height) {
       const cx = ox + (sel.x + 0.5) * scale;
       const cy = oy + (sel.y + 0.5) * scale;
@@ -217,6 +324,7 @@ export function WorldMap({ cells, seed, content, layer, at, zoom, busy, onView }
       const picked = LAYER_KEYS.get(event.key);
       if (picked) change({ layer: picked });
       else if (event.key === 'h' || event.key === 'H') setOverlays({ ...o, shade: !o.shade });
+      else if (event.key === 'n' || event.key === 'N') setOverlays({ ...o, names: !o.names });
       else if (event.key === 'Escape' && sel) change({ at: null });
     };
     window.addEventListener('keydown', keydown);
@@ -334,6 +442,7 @@ export function WorldMap({ cells, seed, content, layer, at, zoom, busy, onView }
           biomes={content.biomes}
           resources={content.resources}
           raw={overlays.raw}
+          places={placesOf(cells, regions).lookup.get(selected.y * cells.width + selected.x) ?? []}
           onShow={(id) => onView({ layer: id })}
           onClose={() => onView({ at: null })}
         />

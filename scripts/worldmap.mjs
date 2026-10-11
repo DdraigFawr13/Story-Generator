@@ -1,4 +1,4 @@
-// Writes PNGs of world layers: npm run worldmap -- --seed NAME [--size 256] [--layer rainfall|all]
+// Writes PNGs of world layers: npm run worldmap -- --seed NAME [--size 256] [--layer rainfall|features|all]
 // [--out tmp/worldmap] [--scale 2]
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -12,20 +12,32 @@ const scale = Number(args.scale || 2);
 const out = args.out || 'tmp/worldmap';
 const wanted = args.layer || 'all';
 
-const { generateWorld, renderLayer, MAP_LAYERS, DEFAULT_CONTENT } = await loadEngine();
+const { generateWorld, renderLayer, paintRegions, MAP_LAYERS, DEFAULT_CONTENT } =
+  await loadEngine();
+// "features" is a pseudo-layer: elevation with water and hillshade, then strategic features on top.
 const layers = wanted === 'all' ? MAP_LAYERS : MAP_LAYERS.filter((l) => l.id === wanted);
-if (!layers.length) {
+if (!layers.length && wanted !== 'features') {
   process.stderr.write(
-    `Unknown layer "${wanted}". Layers: ${MAP_LAYERS.map((l) => l.id).join(', ')}\n`,
+    `Unknown layer "${wanted}". Layers: ${MAP_LAYERS.map((l) => l.id).join(', ')}, features\n`,
   );
   process.exit(1);
 }
 
-const cells = generateWorld(seed, { width: size, height: size }, DEFAULT_CONTENT).cells;
+const world = generateWorld(seed, { width: size, height: size }, DEFAULT_CONTENT);
+const cells = world.cells;
 await mkdir(out, { recursive: true });
 for (const layer of layers) {
   const image = upscale(cells.width, cells.height, renderLayer(cells, layer), scale);
   const file = path.join(out, `${seed}-${layer.id}.png`);
+  await writeFile(file, encodePng(image.width, image.height, image.rgba));
+  process.stdout.write(`${file}\n`);
+}
+if (wanted === 'features' || wanted === 'all') {
+  const elevation = MAP_LAYERS.find((l) => l.id === 'elevation');
+  const pixels = renderLayer(cells, elevation, { hillshade: true, water: true });
+  paintRegions(pixels, cells.width, world.regions.values());
+  const image = upscale(cells.width, cells.height, pixels, scale);
+  const file = path.join(out, `${seed}-features.png`);
   await writeFile(file, encodePng(image.width, image.height, image.rgba));
   process.stdout.write(`${file}\n`);
 }

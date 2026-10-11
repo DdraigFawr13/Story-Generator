@@ -4,7 +4,7 @@
 
 ## Status
 
-M1.1 (PR #46), M1.2 with the worldgen tools (PR #47), M1.3 (PR #48) and the rainfall-band and slope-streak fix (PR #50) merged; M1.4 in review. Extras approved 2026-10-11 (erosion, volcanoes, fertility, wildness, strategic features, M1.6 routes, climate params). Next: M1.5 (naming and strategic features). Worldgen lives in `src/engine/worldgen/`, one module per stage in `generateWorld`, each with its own RNG stream; biome and resource tables live in `src/content/`.
+M1.1 (PR #46), M1.2 with the worldgen tools (PR #47), M1.3 (PR #48) and the rainfall-band and slope-streak fix (PR #50) merged; M1.4 merged; M1.5 (naming and strategic features) in review. Extras approved 2026-10-11 (erosion, volcanoes, fertility, wildness, strategic features, M1.6 routes, climate params). Next: M1.6 (travel and routes). Worldgen lives in `src/engine/worldgen/`, one module per stage in `generateWorld`, each with its own RNG stream; biome and resource tables live in `src/content/`.
 
 ## Milestones
 
@@ -24,7 +24,7 @@ M1.1 (PR #46), M1.2 with the worldgen tools (PR #47), M1.3 (PR #48) and the rain
 - `/?next` becomes: New world (seed, size 256 or 128), Generate, then the map. The Phase 0 chronicle and saves stay below it, and saves keep the generated cells.
 - Smoke test: generate → toggle a layer → inspect a cell → save → reload → load.
 
-**M1.5 Naming and strategic features** (~500 lines + content)
+**M1.5 Naming and strategic features** (~500 lines + content). Landed: `worldgen/regions.ts` (new last stage `regions`, own `worldgen.names` stream) fills `world.regions` with ranges, river main stems, forests, deserts, lakes, seas and the ocean, islands, volcano clusters, passes (saddle between ridges, retried at lower margins so every seed has one), fords, harbours (sheltered coast with a fallback), straits and bays, all named from `content/names.ts`; `landmasses()` is exported for M1.6. The map has a Names overlay (key N) with zoom-gated labels and pass/ford/harbour markers; the inspector lists a "Places" block; `drama` prints feature counts and `worldmap --layer features` paints them; `checkRegions` guards the invariants.
 - Detect connected mountain ranges, rivers, forests, deserts, lakes, seas and islands, and name each from syllable tables in `content/names.ts`, e.g. "the Greyteeth", "River Aln", "the Ashwood".
 - Strategic features as regions: passes (low saddles between basins), fords, natural harbours, straits and bays. Tests: a pass is lower than the ridge on both sides; a harbour touches sea and land.
 - Names appear in the inspector and as map labels at suitable zoom levels.

@@ -1,8 +1,9 @@
 // Invariant checker for generated world layers, used by tests and dev builds.
 // Returns human-readable problems; an empty list means the world is sound.
 
-import type { WorldCells } from '../core/types';
+import type { Region, WorldCells } from '../core/types';
 import { D8_DX, D8_DY } from './grid';
+import { saddleAxis } from './regions';
 
 /** Report at most this many problems per rule, then a count of the rest. */
 const MAX_PER_RULE = 5;
@@ -156,5 +157,57 @@ export function checkWorldCells(cells: WorldCells): string[] {
       );
     }
   }
+  return problems;
+}
+
+/** Smallest ridge and basin margin (m) any pass may have been found with (see REGION_RULES.pass). */
+const PASS_CHECK_MARGIN = 60;
+
+/** Invariant checker for named regions and strategic features; empty means sound. */
+export function checkRegions(cells: WorldCells, regions: readonly Region[]): string[] {
+  const { width, height } = cells;
+  const size = width * height;
+  const problems: string[] = [];
+  const names = new Set<string>();
+  const seaNeighbour = (cell: number): boolean => {
+    const x = cell % width;
+    const y = (cell - x) / width;
+    for (let d = 0; d < 8; d += 2) {
+      const nx = x + D8_DX[d]!;
+      const ny = y + D8_DY[d]!;
+      if (nx >= 0 && ny >= 0 && nx < width && ny < height && cells.water[ny * width + nx] === 3) {
+        return true;
+      }
+    }
+    return false;
+  };
+  regions.forEach((region, n) => {
+    const label = `${region.kind} "${region.name}"`;
+    if (region.id !== n + 1) problems.push(`${label} has id ${region.id}, expected ${n + 1}`);
+    if (names.has(region.name)) problems.push(`name "${region.name}" is used twice`);
+    names.add(region.name);
+    if (region.cells.length === 0) problems.push(`${label} has no cells`);
+    if (
+      region.cells.some((c, k) => !(c >= 0 && c < size) || (k > 0 && c <= region.cells[k - 1]!))
+    ) {
+      problems.push(`${label} has cells that are off the map or not ascending`);
+      return;
+    }
+    if (!region.cells.includes(region.anchor))
+      problems.push(`${label} anchor is not one of its cells`);
+    const anchor = region.anchor;
+    if (region.kind === 'pass' && saddleAxis(cells, anchor, PASS_CHECK_MARGIN) < 0) {
+      problems.push(`${label} at ${anchor} is not lower than a ridge on both sides`);
+    }
+    if (region.kind === 'harbour' && !(cells.water[anchor] === 0 && seaNeighbour(anchor))) {
+      problems.push(`${label} at ${anchor} is not land touching the sea`);
+    }
+    if (region.kind === 'ford' && cells.water[anchor] !== 1) {
+      problems.push(`${label} at ${anchor} is not a river cell`);
+    }
+    if (region.kind === 'strait' && region.cells.some((c) => cells.water[c] !== 3)) {
+      problems.push(`${label} includes cells that are not sea`);
+    }
+  });
   return problems;
 }

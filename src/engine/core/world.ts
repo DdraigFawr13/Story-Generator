@@ -51,6 +51,7 @@ export function createWorld(seed: string, params: Partial<WorldParams> = {}): Wo
     rng: {},
     nextId,
     cells: null,
+    regions: new Map(),
     people: new Map(),
     events: [],
     commands: [],
