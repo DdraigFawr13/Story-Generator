@@ -12,7 +12,7 @@ Since D-031 (2026-10-11), GitHub verification is tiered, so routine changes no l
 
 High-risk paths force Tier 3 automatically: `package.json`, `package-lock.json`, `.nvmrc`, `.npmrc`, `tsconfig.json`, the Vite/Vitest/Playwright configs, anything under `.github/workflows/`, `scripts/ci-scope.sh`, the rule-version files `src/sim/*config.ts`, and `scripts/verify-browser-reports.mjs`.
 
-`scripts/ci-scope.sh` makes the decision from the PR's own diff (GitHub's merge commit against its base parent) and prints the changed files in the `unit` log. The main push runs Tier 1 only: the PR already ran Tiers 2/3 for the same change, and Vercel deploys main independently (D-026).
+`scripts/ci-scope.sh` makes the decision from the PR's own diff (GitHub's merge commit against its base parent) and prints the changed files in the `unit` log. A main push runs Tier 1 only, since the PR already ran Tier 2 for the same change. The exception is a merged change that touches a high-risk path: it runs Tier 3 again on the exact main commit, because Vercel deploys main independently (D-026) and toolchain or workflow changes are worth re-proving there. Such merges are rare.
 
 ## Check names and gates
 
