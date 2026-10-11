@@ -27,8 +27,70 @@ export interface RaceDef {
   preferredBiomes: string[];
   /** Environmental or resource dependencies; a balancing downside (R-29). */
   dependencies: { id: string; description: string }[];
-  /** Mark races still awaiting the user's Phase 2 sketch approval. */
-  placeholder?: boolean;
+}
+
+/** Value dimensions a culture weighs 0–10; later systems read them (feuds, raids, trade, temples, mages). */
+export const CULTURE_VALUES = [
+  'kin',
+  'honour',
+  'faith',
+  'wealth',
+  'learning',
+  'war',
+  'freedom',
+  'order',
+] as const;
+export type CultureValue = (typeof CULTURE_VALUES)[number];
+export type MarriageCustom = 'one-spouse' | 'leaders-many-spouses';
+export type MarriageGift = 'none' | 'bride-price' | 'dowry';
+/** Who inherits property. */
+export type InheritanceRule =
+  | 'all-children'
+  | 'eldest-son'
+  | 'eldest-child'
+  | 'youngest-keeps-hearth'
+  | 'sons-temple-tithe'
+  | 'best-apprentice';
+/** How a ruler is chosen. */
+export type SuccessionRule =
+  | 'kin-elected'
+  | 'eldest-son-assembly'
+  | 'brother-first-gathering'
+  | 'eldest-son-temple'
+  | 'elder-council'
+  | 'eldest-child';
+export type GovernmentKind =
+  'chieftaincy' | 'jarldom' | 'khanate' | 'priest-kingdom' | 'elder-council' | 'thanedom';
+export type MagicAttitude = 'sacred' | 'honoured' | 'respected' | 'wary' | 'licensed';
+export type SitePreference =
+  'river' | 'coast' | 'aura' | 'plains' | 'deposit' | 'forest' | 'heights';
+
+export interface CultureNames {
+  /** Given names are a start plus an end: "Cad" + "oc". */
+  givenStarts: string[];
+  givenEnds: string[];
+  /** Place names: start, optional middle, end. */
+  placeStarts: string[];
+  placeMiddles: string[];
+  placeEnds: string[];
+}
+
+export interface CultureDef {
+  id: string;
+  name: string;
+  raceId: string;
+  /** One line shown in the legends browser. */
+  summary: string;
+  values: Record<CultureValue, number>;
+  marriage: { custom: MarriageCustom; gift: MarriageGift; arranged: boolean };
+  inheritance: InheritanceRule;
+  government: GovernmentKind;
+  succession: SuccessionRule;
+  magic: MagicAttitude;
+  religion: { id: string; name: string };
+  preferredBiomes: string[];
+  sitePreferences: SitePreference[];
+  names: CultureNames;
 }
 
 export interface SchoolDef {
@@ -107,6 +169,7 @@ export interface ContentBundle {
   resources: ResourceDef[];
   names: NameTables;
   races: RaceDef[];
+  cultures: CultureDef[];
   schools: SchoolDef[];
   abilities: AbilityDef[];
   weather: WeatherDef[];

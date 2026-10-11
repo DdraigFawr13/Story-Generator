@@ -3,6 +3,7 @@
 // balance (R-29) and no self-taught magic (R-28). Returns readable problems.
 
 import type { ContentBundle, RaceDef } from './content-types';
+import { CULTURE_VALUES } from './content-types';
 import { ATTRIBUTE_KEYS, REGION_KINDS } from './types';
 import { BIRTH_TIER_IDS, TIERS, tierOfPower } from '../people/tiers';
 
@@ -18,6 +19,10 @@ export function validateContent(content: ContentBundle): string[] {
   unique(
     'race',
     content.races.map((r) => r.id),
+  );
+  unique(
+    'culture',
+    content.cultures.map((c) => c.id),
   );
   unique(
     'school',
@@ -51,6 +56,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...worldgenContentProblems(content));
 
   const schools = new Set(content.schools.map((s) => s.id));
+  const biomeIds = new Set(content.biomes.map((b) => b.id));
   const human = content.races.find((r) => r.id === 'human');
   if (!human) problems.push('Content needs a "human" race as the balance baseline.');
 
@@ -64,8 +70,13 @@ export function validateContent(content: ContentBundle): string[] {
     for (const school of Object.keys(race.affinityWeights)) {
       if (!schools.has(school)) problems.push(`Race ${race.id}: unknown school "${school}".`);
     }
+    for (const biome of race.preferredBiomes) {
+      if (!biomeIds.has(biome)) problems.push(`Race ${race.id}: unknown biome "${biome}".`);
+    }
     if (human && race !== human) problems.push(...raceBalanceProblems(race, human));
   }
+
+  problems.push(...cultureProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -93,6 +104,35 @@ export function validateContent(content: ContentBundle): string[] {
 
   for (const event of content.eventTypes) {
     if (event.templates.length === 0) problems.push(`Event type ${event.id} has no templates.`);
+  }
+  return problems;
+}
+
+/** Cultures: known race and biomes, complete 0-10 values, filled name lists, a culture per race. */
+export function cultureProblems(content: ContentBundle): string[] {
+  const problems: string[] = [];
+  const raceIds = new Set(content.races.map((r) => r.id));
+  const biomeIds = new Set(content.biomes.map((b) => b.id));
+  for (const culture of content.cultures) {
+    const where = `Culture ${culture.id}`;
+    if (!raceIds.has(culture.raceId)) problems.push(`${where}: unknown race "${culture.raceId}".`);
+    for (const b of culture.preferredBiomes) {
+      if (!biomeIds.has(b)) problems.push(`${where}: unknown biome "${b}".`);
+    }
+    for (const key of CULTURE_VALUES) {
+      const value = culture.values[key];
+      if (!Number.isInteger(value) || value < 0 || value > 10) {
+        problems.push(`${where}: value "${key}" must be an integer 0-10, got ${value}.`);
+      }
+    }
+    for (const [key, list] of Object.entries(culture.names)) {
+      if (list.length === 0) problems.push(`${where}: name list "${key}" is empty.`);
+    }
+  }
+  for (const race of content.races) {
+    if (!content.cultures.some((c) => c.raceId === race.id)) {
+      problems.push(`Race ${race.id} has no culture.`);
+    }
   }
   return problems;
 }

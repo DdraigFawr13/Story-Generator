@@ -2,6 +2,7 @@
 import type { ContentBundle } from '../engine';
 import { abilities, schools } from './abilities';
 import { BIOMES, BIOME_RULES } from './biomes';
+import { cultures } from './cultures';
 import { NAMES } from './names';
 import { races } from './races';
 import { RESOURCES } from './resources';
@@ -13,6 +14,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   resources: RESOURCES,
   names: NAMES,
   races,
+  cultures,
   schools,
   abilities,
   weather,
@@ -21,6 +23,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
 };
 
 export * from './biomes';
+export * from './cultures';
 export * from './map-layers';
 export * from './names';
 export * from './resources';
