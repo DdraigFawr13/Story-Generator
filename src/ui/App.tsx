@@ -57,7 +57,7 @@ function Viewer({ controller }: { controller: WorldController }) {
   const [recapInspecting, setRecapInspecting] = useState(false);
   const [peopleSession, setPeopleSession] = useState<number | null>(null);
   const peopleOpen = peopleSession === view.worldSession;
-  const [peopleEvidence, setPeopleInspecting] = useState(false);
+  const [peopleEvidence, setPeopleInspecting] = useState<false | 'resident' | 'household'>(false);
   const peopleInspecting = peopleOpen && peopleEvidence;
   const residentsOpener = useRef<HTMLButtonElement>(null);
   const [evidenceFocus, setEvidenceFocus] = useState(0);
@@ -641,11 +641,11 @@ function Viewer({ controller }: { controller: WorldController }) {
                 select(tile);
                 scrollToMap();
               }}
-              onInspect={(id) => {
+              onInspect={(id, kind) => {
                 const event = world.events[id - 1]!;
                 setEventId(id);
                 select(event.location.tile);
-                setPeopleInspecting(true);
+                setPeopleInspecting(kind);
                 setEvidenceFocus((revision) => revision + 1);
                 openChronicle();
               }}
@@ -682,7 +682,8 @@ function Viewer({ controller }: { controller: WorldController }) {
               recapInspecting ? returnToRecap : peopleInspecting ? returnToResident : closeChronicle
             }
             backToRecap={recapInspecting}
-            backToResident={peopleInspecting}
+            backToResident={peopleInspecting === 'resident'}
+            backToHousehold={peopleInspecting === 'household'}
             focusRequest={recapInspecting || peopleInspecting ? evidenceFocus : 0}
             onSelect={(id) => {
               const event = world.events[id - 1]!;
