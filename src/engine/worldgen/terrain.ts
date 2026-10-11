@@ -19,6 +19,8 @@ const MAX_DEPTH = 5000;
 /** Extra oceanic plates per continent, plus a fixed few: more plates, more ranges and island arcs. */
 const OCEANIC_PER_CONTINENT = 1;
 const OCEANIC_EXTRA = 4;
+/** Uplift blur radius as a fraction of the boundary reach (reach / 7 is 3 cells on a 256 map). */
+const UPLIFT_BLUR_DIVISOR = 7;
 
 function placePlates(params: WorldParams, rng: RngStream): Plate[] {
   const { width, height, continents } = params;
@@ -216,7 +218,41 @@ function boundaryUplift(
     }
     uplift[i] = effect * falloff;
   }
-  return uplift;
+  // The 4-neighbour distance carries every notch of a boundary straight inland
+  // as a one-cell streak (vertical on east-west ranges), and the "other plate"
+  // switches abruptly between neighbours; blurring smooths both away.
+  const radius = Math.max(1, Math.round(reach / UPLIFT_BLUR_DIVISOR));
+  return boxBlur(width, height, boxBlur(width, height, uplift, radius), radius);
+}
+
+/** Separable box blur of radius `radius` (cells), clamped at the map edge. */
+function boxBlur(
+  width: number,
+  height: number,
+  values: Float64Array,
+  radius: number,
+): Float64Array {
+  const rows = new Float64Array(width * height);
+  const out = new Float64Array(width * height);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let sum = 0;
+      for (let k = -radius; k <= radius; k += 1) {
+        sum += values[y * width + Math.min(width - 1, Math.max(0, x + k))]!;
+      }
+      rows[y * width + x] = sum / (2 * radius + 1);
+    }
+  }
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let sum = 0;
+      for (let k = -radius; k <= radius; k += 1) {
+        sum += rows[Math.min(height - 1, Math.max(0, y + k)) * width + x]!;
+      }
+      out[y * width + x] = sum / (2 * radius + 1);
+    }
+  }
+  return out;
 }
 
 export function generateTerrain(params: WorldParams, rng: RngStream): TerrainResult {

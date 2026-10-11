@@ -38,8 +38,14 @@ const OCEAN_RAIN_SHARE = 0.25;
  */
 const BACKGROUND_RAIN = 500;
 const BACKGROUND_SHARE = 0.25;
-/** Box-filter passes down each column to hide row stripes. */
-const SMOOTH_PASSES = 3;
+/** Passes of a 3x3 blur over the final rainfall. */
+const SMOOTH_PASSES = 1;
+/** Share of each row's air swapped with the rows above and below after every sweep step. */
+const ROW_MIX = 0.5;
+/** Degrees of latitude over which the westerlies hand over to the trade winds. */
+const WIND_BLEND = 6;
+/** Degrees the wind and rain belts wander north and south along their length. */
+const BELT_WIGGLE = 6;
 const MAX_RAINFALL = 6000;
 
 /** Rainfall multiplier by absolute latitude: wet tropics, dry subtropics, moderate temperate, dry pole. */
@@ -139,9 +145,22 @@ export function computeTemperature(
 }
 
 /**
- * Rainfall in mm/yr. Each row is swept along its prevailing wind: air gains
- * moisture over sea, loses a share as rain over land and a large amount on
- * rising ground, so lee sides are dry.
+ * Share of westerly (eastward) wind at a latitude: 1 inside 30–60 degrees, 0
+ * outside, easing over WIND_BLEND degrees so the two sweeps meet without a seam.
+ */
+export function eastwardShare(latitude: number): number {
+  const lat = Math.abs(latitude);
+  const inside = Math.min(lat - 30, 60 - lat);
+  const t = Math.min(1, Math.max(0, (inside + WIND_BLEND) / (2 * WIND_BLEND)));
+  return t * t * (3 - 2 * t);
+}
+
+/**
+ * Rainfall in mm/yr. Air is swept across the map along the prevailing wind:
+ * it gains moisture over sea, loses a share as rain over land and a large
+ * amount on rising ground, so lee sides are dry. All rows advance together and
+ * trade moisture with their neighbours after every step, so no row runs dry or
+ * wet on its own (which used to paint east-west bands).
  */
 export function computeRainfall(
   width: number,
@@ -149,56 +168,106 @@ export function computeRainfall(
   elevation: ArrayLike<number>,
   ocean: Uint8Array,
   rainfallScale: number,
+  noiseSeed = 0,
 ): Uint16Array {
   const size = width * height;
+  const wiggle = { scale: Math.max(8, width / 3), octaves: 2, persistence: 0.5 };
   const relief = smoothRelief(width, height, elevation);
+  const eastward = sweepRain(width, height, elevation, ocean, relief, 1);
+  const westward = sweepRain(width, height, elevation, ocean, relief, -1);
   let rain = new Float64Array(size);
   for (let y = 0; y < height; y += 1) {
-    const wind = windDirection(y, height);
-    const belt = beltFactor(Math.abs(latitudeOfRow(y, height)));
-    // Air arrives from beyond the map edge already half-laden.
-    let moisture = MOISTURE_CAP / 2;
-    let previous = 0;
-    for (let step = 0; step < width; step += 1) {
-      const x = wind > 0 ? step : width - 1 - step;
+    const lat = latitudeOfRow(y, height);
+    for (let x = 0; x < width; x += 1) {
       const i = y * width + x;
-      let fallen: number;
-      // Inland basins below sea level evaporate like the sea.
-      if (ocean[i] || elevation[i]! <= 0) {
-        moisture = Math.min(MOISTURE_CAP, moisture + OCEAN_PICKUP);
-        fallen = moisture * OCEAN_RAIN_SHARE;
-        previous = 0;
-      } else {
-        const here = relief[i]!;
-        const rise = Math.max(0, here - previous);
-        const base = moisture * LAND_RAIN_SHARE;
-        // Rising air rains out; that water is gone, so the lee side stays dry.
-        const orographic = moisture * Math.min(OROGRAPHIC_MAX, rise / OROGRAPHIC_RISE);
-        fallen = base + orographic;
-        moisture = Math.max(0, moisture - fallen + base * LAND_RECYCLE);
-        previous = here;
-      }
+      // Wind and rain belts wander north and south so their edges don't rule
+      // straight lines across the map (and through the biomes).
+      const wandered = lat + fractalNoise(noiseSeed, x, y, wiggle) * BELT_WIGGLE;
+      const share = eastwardShare(wandered);
+      const belt = beltFactor(Math.abs(wandered));
+      const fallen = eastward[i]! * share + westward[i]! * (1 - share);
       rain[i] = (fallen * (1 - BACKGROUND_SHARE) + BACKGROUND_RAIN * BACKGROUND_SHARE) * belt;
     }
   }
-  // Smooth down each column so row-by-row sweeps don't leave stripes.
-  for (let pass = 0; pass < SMOOTH_PASSES; pass += 1) {
-    const next = new Float64Array(size);
-    for (let y = 0; y < height; y += 1) {
-      const up = Math.max(0, y - 1);
-      const down = Math.min(height - 1, y + 1);
-      for (let x = 0; x < width; x += 1) {
-        next[y * width + x] =
-          (rain[up * width + x]! + rain[y * width + x]! + rain[down * width + x]!) / 3;
-      }
-    }
-    rain = next;
-  }
+  // A light 3x3 blur hides single-cell speckle from the step-by-step sweep.
+  for (let pass = 0; pass < SMOOTH_PASSES; pass += 1) rain = blur3(width, height, rain);
   const result = new Uint16Array(size);
   for (let i = 0; i < size; i += 1) {
     result[i] = Math.min(MAX_RAINFALL, Math.max(0, Math.round(rain[i]! * rainfallScale)));
   }
   return result;
+}
+
+/** Rain fallen per cell when every row's air blows toward `wind` (+1 east, -1 west). */
+function sweepRain(
+  width: number,
+  height: number,
+  elevation: ArrayLike<number>,
+  ocean: Uint8Array,
+  relief: Float64Array,
+  wind: 1 | -1,
+): Float64Array {
+  const rain = new Float64Array(width * height);
+  // Air arrives from beyond the map edge already half-laden.
+  let moisture = new Float64Array(height).fill(MOISTURE_CAP / 2);
+  let mixed = new Float64Array(height);
+  const previous = new Float64Array(height);
+  for (let step = 0; step < width; step += 1) {
+    const x = wind > 0 ? step : width - 1 - step;
+    for (let y = 0; y < height; y += 1) {
+      const i = y * width + x;
+      let air = moisture[y]!;
+      let fallen: number;
+      // Inland basins below sea level evaporate like the sea.
+      if (ocean[i] || elevation[i]! <= 0) {
+        air = Math.min(MOISTURE_CAP, air + OCEAN_PICKUP);
+        fallen = air * OCEAN_RAIN_SHARE;
+        previous[y] = 0;
+      } else {
+        const here = relief[i]!;
+        const rise = Math.max(0, here - previous[y]!);
+        const base = air * LAND_RAIN_SHARE;
+        // Rising air rains out; that water is gone, so the lee side stays dry.
+        const orographic = air * Math.min(OROGRAPHIC_MAX, rise / OROGRAPHIC_RISE);
+        fallen = base + orographic;
+        air = Math.max(0, air - fallen + base * LAND_RECYCLE);
+        previous[y] = here;
+      }
+      moisture[y] = air;
+      rain[i] = fallen;
+    }
+    // Neighbouring rows of air mix a little at every step.
+    for (let y = 0; y < height; y += 1) {
+      const up = moisture[Math.max(0, y - 1)]!;
+      const down = moisture[Math.min(height - 1, y + 1)]!;
+      mixed[y] = moisture[y]! * (1 - ROW_MIX) + ((up + down) / 2) * ROW_MIX;
+    }
+    [moisture, mixed] = [mixed, moisture];
+  }
+  return rain;
+}
+
+/** One pass of a 3x3 box blur, clamped at the map edge. */
+function blur3(
+  width: number,
+  height: number,
+  values: ArrayLike<number>,
+): Float64Array<ArrayBuffer> {
+  const out = new Float64Array(width * height);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let sum = 0;
+      for (let dy = -1; dy <= 1; dy += 1) {
+        const yy = Math.min(height - 1, Math.max(0, y + dy));
+        for (let dx = -1; dx <= 1; dx += 1) {
+          const xx = Math.min(width - 1, Math.max(0, x + dx));
+          sum += values[yy * width + xx]!;
+        }
+      }
+      out[y * width + x] = sum / 9;
+    }
+  }
+  return out;
 }
 
 /** Land relief (m, sea at 0) box-blurred along both axes. */
@@ -306,7 +375,7 @@ export function generateClimate(
     noiseSeed,
     temperatureShift,
   );
-  const rainfall = computeRainfall(width, height, elevation, ocean, rainfallScale);
+  const rainfall = computeRainfall(width, height, elevation, ocean, rainfallScale, noiseSeed + 1);
   const risk = computeRisks(
     width,
     height,
