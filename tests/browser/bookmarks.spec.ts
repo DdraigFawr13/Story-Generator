@@ -24,6 +24,7 @@ async function fixture<T>(page: Page, name: string, ...args: unknown[]): Promise
   );
 }
 async function menu(page: Page) {
+  await expect(page.locator('.world-menu summary')).toBeVisible();
   if (!(await page.getByLabel('World seed', { exact: true }).isVisible()))
     await page.locator('.world-menu summary').click();
 }
@@ -167,8 +168,24 @@ test('quota-denied bookmark storage keeps session shortcuts and reports that the
   );
   await expect(page.locator('[data-bookmark-open="resident:17"]')).toBeEnabled();
   expect(await fixture(page, 'storedDigest')).toEqual(before);
-  await page.reload();
-  await resume(page);
+  let releaseStartup!: () => void;
+  const startupGate = new Promise<void>((resolve) => {
+    releaseStartup = resolve;
+  });
+  await page.route('**/src/main.tsx*', async (route) => {
+    await startupGate;
+    await route.continue();
+  });
+  await page.reload({ waitUntil: 'commit' });
+  try {
+    await Promise.all([
+      resume(page),
+      expect(page.locator('.world-menu summary')).toHaveCount(0).finally(releaseStartup),
+    ]);
+  } finally {
+    releaseStartup();
+    await page.unroute('**/src/main.tsx*');
+  }
   await open(page);
   await expect(page.locator('[data-bookmark-open]')).toHaveCount(0);
   expect(await fixture(page, 'storedDigest')).toEqual(before);
