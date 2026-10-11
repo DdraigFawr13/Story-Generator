@@ -2,6 +2,8 @@
 // the renderer in engine/worldgen/render.ts turns cell values into pixels.
 
 import type { MapLayer, MapLayerStop, Rgb } from '../engine';
+import { BIOMES } from './biomes';
+import { RESOURCES } from './resources';
 
 /** Build ramp stops and legend swatches from [value, colour, label] rows. */
 function ramp(rows: [number, Rgb, string][]) {
@@ -40,6 +42,26 @@ const risk = (id: string, label: string, high: Rgb): MapLayer => ({
     [100, high, 'severe'],
   ]),
 });
+
+/** Map colour per resource id; anything unlisted shows magenta. */
+const RESOURCE_COLORS: Record<string, Rgb> = {
+  copper: [205, 127, 50],
+  iron: [140, 140, 150],
+  silver: [215, 215, 230],
+  gold: [255, 215, 0],
+  stone: [120, 120, 110],
+  clay: [190, 110, 80],
+  salt: [250, 250, 250],
+  gems: [60, 220, 200],
+  'fertile-soil': [110, 190, 60],
+  timber: [110, 70, 30],
+  game: [200, 150, 90],
+  fish: [70, 130, 230],
+  reagent: [200, 80, 230],
+  sulphur: [240, 230, 60],
+  obsidian: [30, 20, 40],
+};
+const resourceColor = (id: string): Rgb => RESOURCE_COLORS[id] ?? [255, 0, 255];
 
 export const MAP_LAYERS: MapLayer[] = [
   {
@@ -162,5 +184,59 @@ export const MAP_LAYERS: MapLayer[] = [
       { label: 'Other', color: [60, 60, 60] },
       { label: 'Floodplain', color: [120, 220, 110] },
     ],
+  },
+  {
+    id: 'biome',
+    label: 'Biomes',
+    unit: 'biome',
+    kind: 'categories',
+    categories: BIOMES.map((b, value) => ({ value, label: b.name, color: b.color })),
+    legend: BIOMES.map((b) => ({ label: b.name, color: b.color })),
+  },
+  {
+    id: 'fertility',
+    label: 'Fertility',
+    unit: '0–100',
+    kind: 'ramp',
+    ...ramp([
+      [0, [60, 60, 60], 'none'],
+      [25, [200, 180, 100], 'poor'],
+      [60, [140, 200, 90], 'good'],
+      [100, [30, 140, 40], 'rich'],
+    ]),
+  },
+  {
+    id: 'wildness',
+    label: 'Wildness',
+    unit: '0–100',
+    kind: 'ramp',
+    ...ramp([
+      [0, [235, 235, 220], 'tamed'],
+      [50, [190, 150, 90], 'frontier'],
+      [100, [90, 30, 90], 'untamed'],
+    ]),
+  },
+  {
+    id: 'aura',
+    label: 'Aura',
+    unit: '0–100',
+    kind: 'ramp',
+    ...ramp([
+      [0, [25, 25, 40], 'faint'],
+      [15, [60, 50, 110], 'background'],
+      [50, [170, 100, 220], 'strong'],
+      [100, [255, 240, 150], 'legendary'],
+    ]),
+  },
+  {
+    id: 'resources',
+    label: 'Resources',
+    unit: 'richest deposit',
+    kind: 'categories',
+    categories: [
+      { value: 0, label: 'None', color: [30, 30, 30] },
+      ...RESOURCES.map((r, i) => ({ value: i + 1, label: r.name, color: resourceColor(r.id) })),
+    ],
+    legend: RESOURCES.map((r) => ({ label: r.name, color: resourceColor(r.id) })),
   },
 ];

@@ -1,3 +1,4 @@
+import { DEFAULT_CONTENT } from '../../src/content';
 import { describe, expect, it } from 'vitest';
 import {
   computeRainfall,
@@ -63,7 +64,7 @@ describe('climate fixtures', () => {
 describe('generated climate', () => {
   for (const seed of ['A', 'B', 'C']) {
     it(`is colder in the north, on heights, within risk bounds (seed ${seed})`, () => {
-      const cells = generateWorld(seed, SMALL).cells!;
+      const cells = generateWorld(seed, SMALL, DEFAULT_CONTENT).cells!;
       const { height, tempSummer, risk } = cells;
       const north = landCells(cells, (_i, _x, y) => y < height / 4);
       const south = landCells(cells, (_i, _x, y) => y >= (height * 3) / 4);
@@ -95,7 +96,7 @@ describe('generated climate', () => {
 
   it('swings wider between seasons inland than on the coast', () => {
     // Needs a map big enough to have ground 15 cells from the sea.
-    const cells = generateWorld('INLAND', { width: 192, height: 192 }).cells!;
+    const cells = generateWorld('INLAND', { width: 192, height: 192 }, DEFAULT_CONTENT).cells!;
     const { tempSummer, tempWinter, seaDistance } = cells;
     const spread = (i: number) => tempSummer[i]! - tempWinter[i]!;
     const inland = landCells(cells, (i) => seaDistance[i]! >= 15);
@@ -106,9 +107,9 @@ describe('generated climate', () => {
   });
 
   it('shifts temperatures with temperatureShift and scales rainfall', () => {
-    const base = generateWorld('SHIFT', SMALL).cells!;
-    const warm = generateWorld('SHIFT', { ...SMALL, temperatureShift: 10 }).cells!;
-    const wet = generateWorld('SHIFT', { ...SMALL, rainfallScale: 2 }).cells!;
+    const base = generateWorld('SHIFT', SMALL, DEFAULT_CONTENT).cells!;
+    const warm = generateWorld('SHIFT', { ...SMALL, temperatureShift: 10 }, DEFAULT_CONTENT).cells!;
+    const wet = generateWorld('SHIFT', { ...SMALL, rainfallScale: 2 }, DEFAULT_CONTENT).cells!;
     const land = landCells(base, () => true);
     const diff =
       mean(land.map((i) => warm.tempSummer[i]!)) - mean(land.map((i) => base.tempSummer[i]!));
@@ -120,9 +121,13 @@ describe('generated climate', () => {
   });
 
   it('rejects unusable climate parameters', () => {
-    expect(() => generateWorld('BAD', { temperatureShift: 20 })).toThrow(/temperature/);
-    expect(() => generateWorld('BAD', { temperatureShift: Number.NaN })).toThrow(/temperature/);
-    expect(() => generateWorld('BAD', { rainfallScale: 0.1 })).toThrow(/rainfall/);
-    expect(() => generateWorld('BAD', { rainfallScale: 3 })).toThrow(/rainfall/);
+    expect(() => generateWorld('BAD', { temperatureShift: 20 }, DEFAULT_CONTENT)).toThrow(
+      /temperature/,
+    );
+    expect(() => generateWorld('BAD', { temperatureShift: Number.NaN }, DEFAULT_CONTENT)).toThrow(
+      /temperature/,
+    );
+    expect(() => generateWorld('BAD', { rainfallScale: 0.1 }, DEFAULT_CONTENT)).toThrow(/rainfall/);
+    expect(() => generateWorld('BAD', { rainfallScale: 3 }, DEFAULT_CONTENT)).toThrow(/rainfall/);
   });
 });

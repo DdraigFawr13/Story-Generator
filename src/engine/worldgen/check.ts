@@ -33,6 +33,11 @@ export function checkWorldCells(cells: WorldCells): string[] {
     ['flow', cells.flow],
     ['water', cells.water],
     ['floodplain', cells.floodplain],
+    ['biome', cells.biome],
+    ['volcano', cells.volcano],
+    ['aura', cells.aura],
+    ['fertility', cells.fertility],
+    ['wildness', cells.wildness],
   ];
   let sizesOk = true;
   for (const [name, layer] of layers) {
@@ -50,6 +55,11 @@ export function checkWorldCells(cells: WorldCells): string[] {
     ['water', cells.water, 0, 3],
     ['floodplain', cells.floodplain, 0, 1],
     ['flowDir', cells.flowDir, -1, 7],
+    ['biome', cells.biome, 0, 254],
+    ['volcano', cells.volcano, 0, 1],
+    ['aura', cells.aura, 0, 100],
+    ['fertility', cells.fertility, 0, 100],
+    ['wildness', cells.wildness, 0, 100],
   ];
   for (const [name, layer, lo, hi] of ranges) {
     for (let i = 0; i < size; i += 1) {
@@ -63,6 +73,36 @@ export function checkWorldCells(cells: WorldCells): string[] {
     const m = cells.elevation[i]!;
     if (sea && m > 0) report('sea height', `sea cell ${i} is ${m} m, expected 0 or below`);
     if (!sea && m < 1) report('land height', `land cell ${i} is ${m} m, expected 1 or above`);
+    if (sea && cells.biome[i]! > 1) {
+      report(
+        'sea biome',
+        `sea cell ${i} has biome ${cells.biome[i]}, expected 0 (ocean) or 1 (coast)`,
+      );
+    }
+    if (sea && cells.fertility[i] !== 0) {
+      report('sea fertility', `sea cell ${i} has fertility ${cells.fertility[i]}, expected 0`);
+    }
+    if (sea && cells.wildness[i] !== 0) {
+      report('sea wildness', `sea cell ${i} has wildness ${cells.wildness[i]}, expected 0`);
+    }
+  }
+
+  let previous = -1;
+  for (const [cell, deposits] of cells.resources) {
+    if (!Number.isInteger(cell) || cell < 0 || cell >= size || cell <= previous) {
+      report('resource cell', `resource key ${cell} is not a new valid cell`);
+    }
+    previous = cell;
+    if (deposits.length === 0) report('resource list', `resource cell ${cell} has no deposits`);
+    for (const deposit of deposits) {
+      if (!(deposit.amount >= 1 && deposit.amount <= 100)) {
+        report('resource amount', `resource cell ${cell} amount ${deposit.amount}, outside 1..100`);
+      }
+    }
+  }
+  for (const spot of cells.auraSpots) {
+    if (!(spot.cell >= 0 && spot.cell < size))
+      report('aura spot', `aura spot at ${spot.cell} is off the map`);
   }
 
   // Follow flowDir from every non-sea cell: 0 unknown, 1 on the current path, 2 reaches the sea.

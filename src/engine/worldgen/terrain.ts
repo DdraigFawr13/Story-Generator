@@ -107,27 +107,30 @@ function assignPlates(params: WorldParams, plates: readonly Plate[], seed: numbe
  * Convergence between two plates: positive when they move toward each other.
  * Roughly -2..2 after normalising by the maximum speed (10).
  */
-function convergence(a: Plate, b: Plate): number {
+export function convergence(a: Plate, b: Plate): number {
   const nx = b.cx - a.cx;
   const ny = b.cy - a.cy;
   const length = Math.sqrt(nx * nx + ny * ny) || 1;
   return ((a.vx - b.vx) * nx + (a.vy - b.vy) * ny) / length / 10;
 }
 
+/** Boundary reach in cells: how far a plate edge's influence spreads inward. */
+export function boundaryReach(width: number, height: number): number {
+  return Math.max(3, Math.round(Math.min(width, height) / 12));
+}
+
 /**
- * Uplift from plate boundaries. A multi-source BFS spreads each boundary's
- * effect inward, fading with distance: collisions raise ranges and island
- * arcs, separations open rifts and mid-ocean ridges.
+ * Distance (cells, 4-neighbour BFS inside each plate) from the nearest plate
+ * boundary, up to `reach`, and the plate on the other side of that boundary.
+ * Both are -1 beyond the reach.
  */
-function boundaryUplift(
-  params: WorldParams,
-  plates: readonly Plate[],
+export function plateBoundaries(
+  width: number,
+  height: number,
   owner: Uint8Array,
-  seed: number,
-): Float64Array {
-  const { width, height } = params;
+  reach: number,
+): { distance: Int32Array; other: Int16Array } {
   const size = width * height;
-  const reach = Math.max(3, Math.round(Math.min(width, height) / 12));
   const distance = new Int32Array(size).fill(-1);
   const other = new Int16Array(size).fill(-1);
   const queue = new Int32Array(size);
@@ -170,6 +173,24 @@ function boundaryUplift(
       }
     }
   }
+  return { distance, other };
+}
+
+/**
+ * Uplift from plate boundaries. A multi-source BFS spreads each boundary's
+ * effect inward, fading with distance: collisions raise ranges and island
+ * arcs, separations open rifts and mid-ocean ridges.
+ */
+function boundaryUplift(
+  params: WorldParams,
+  plates: readonly Plate[],
+  owner: Uint8Array,
+  seed: number,
+): Float64Array {
+  const { width, height } = params;
+  const size = width * height;
+  const reach = boundaryReach(width, height);
+  const { distance, other } = plateBoundaries(width, height, owner, reach);
 
   const uplift = new Float64Array(size);
   const ridges = { scale: Math.max(4, width / 24), octaves: 3, persistence: 0.55 };

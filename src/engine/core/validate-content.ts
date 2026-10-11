@@ -40,6 +40,16 @@ export function validateContent(content: ContentBundle): string[] {
     content.rules.map((r) => r.id),
   );
 
+  unique(
+    'biome',
+    content.biomes.map((b) => b.id),
+  );
+  unique(
+    'resource',
+    content.resources.map((r) => r.id),
+  );
+  problems.push(...worldgenContentProblems(content));
+
   const schools = new Set(content.schools.map((s) => s.id));
   const human = content.races.find((r) => r.id === 'human');
   if (!human) problems.push('Content needs a "human" race as the balance baseline.');
@@ -111,4 +121,61 @@ export function raceBalanceProblems(race: RaceDef, human: RaceDef): string[] {
   return downside
     ? []
     : [`Race ${race.id} is stronger than humans but declares no downside (R-29).`];
+}
+
+/** Biome table and resource checks: complete table, known ids, Uint8-sized biome list. */
+function worldgenContentProblems(content: ContentBundle): string[] {
+  const problems: string[] = [];
+  const { biomes, biomeRules: rules, resources } = content;
+  const ids = new Set(biomes.map((b) => b.id));
+  if (biomes.length > 255) problems.push(`Too many biomes (${biomes.length}); the limit is 255.`);
+  if (biomes[0]?.water !== 'sea' || biomes[1]?.water !== 'coast') {
+    problems.push('Biomes 0 and 1 must be the sea biomes (ocean, coast).');
+  }
+  for (const water of ['sea', 'coast', 'lake'] as const) {
+    if (!biomes.some((b) => b.water === water)) problems.push(`No "${water}" water biome.`);
+  }
+  for (const id of ['alpine', 'swamp']) {
+    if (!ids.has(id)) problems.push(`Biome rules need an "${id}" biome.`);
+  }
+  for (const biome of biomes) {
+    for (const key of ['fertility', 'wildness'] as const) {
+      if (biome[key] < 0 || biome[key] > 100) {
+        problems.push(`Biome ${biome.id}: ${key} ${biome[key]} is outside 0-100.`);
+      }
+    }
+  }
+  const ascending = (values: number[]) => values.every((v, i) => i === 0 || v > values[i - 1]!);
+  if (!ascending(rules.temperatureBands)) problems.push('Temperature bands must ascend.');
+  if (!ascending(rules.rainfallBands)) problems.push('Rainfall bands must ascend.');
+  const rows = rules.temperatureBands.length + 1;
+  const columns = rules.rainfallBands.length + 1;
+  if (rules.table.length !== rows) {
+    problems.push(`Biome table has ${rules.table.length} rows, expected ${rows}.`);
+  }
+  rules.table.forEach((row, t) => {
+    if (row.length !== columns) {
+      problems.push(`Biome table row ${t} has ${row.length} entries, expected ${columns}.`);
+    }
+    for (const id of row) {
+      const biome = biomes.find((b) => b.id === id);
+      if (!biome) problems.push(`Biome table row ${t}: unknown biome "${id}".`);
+      else if (biome.water) problems.push(`Biome table row ${t}: "${id}" is a water biome.`);
+    }
+  });
+  for (const id of [...rules.frostFree.biomes, ...Object.values(rules.frostFree.fallback)]) {
+    if (!ids.has(id)) problems.push(`Frost-free rule: unknown biome "${id}".`);
+  }
+  for (const id of rules.frostFree.biomes) {
+    if (!rules.frostFree.fallback[id]) problems.push(`Frost-free biome "${id}" has no fallback.`);
+  }
+  for (const resource of resources) {
+    for (const id of resource.biomes ?? []) {
+      if (!ids.has(id)) problems.push(`Resource ${resource.id}: unknown biome "${id}".`);
+    }
+    if (resource.maxCellShare <= 0 || resource.maxCellShare > 1) {
+      problems.push(`Resource ${resource.id}: maxCellShare must be in (0, 1].`);
+    }
+  }
+  return problems;
 }

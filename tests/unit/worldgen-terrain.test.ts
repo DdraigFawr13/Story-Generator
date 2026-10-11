@@ -1,3 +1,4 @@
+import { DEFAULT_CONTENT } from '../../src/content';
 import { describe, expect, it } from 'vitest';
 import {
   deserializeWorld,
@@ -33,16 +34,16 @@ describe('noise', () => {
 
 describe('terrain', () => {
   it('is reproducible per seed and differs between seeds', () => {
-    const a = generateWorld('TERRAIN', SMALL).cells!;
-    const b = generateWorld('TERRAIN', SMALL).cells!;
-    const c = generateWorld('OTHER', SMALL).cells!;
+    const a = generateWorld('TERRAIN', SMALL, DEFAULT_CONTENT).cells!;
+    const b = generateWorld('TERRAIN', SMALL, DEFAULT_CONTENT).cells!;
+    const c = generateWorld('OTHER', SMALL, DEFAULT_CONTENT).cells!;
     expect(a.elevation).toEqual(b.elevation);
     expect(a.elevation).not.toEqual(c.elevation);
   });
 
   it('hits the land fraction, keeps ocean at the map edge and spans sea to peaks', () => {
     for (const seed of ['A', 'B', 'C']) {
-      const cells = generateWorld(seed, { ...SMALL, landFraction: 0.4 }).cells!;
+      const cells = generateWorld(seed, { ...SMALL, landFraction: 0.4 }, DEFAULT_CONTENT).cells!;
       expect(Math.abs(landShare(cells) - 0.4)).toBeLessThan(0.05);
       const { width, height, elevation } = cells;
       for (let x = 0; x < width; x += 1) {
@@ -55,7 +56,7 @@ describe('terrain', () => {
   });
 
   it('raises the highest ground near plate boundaries', () => {
-    const cells = generateWorld('RANGES', SMALL).cells!;
+    const cells = generateWorld('RANGES', SMALL, DEFAULT_CONTENT).cells!;
     const { width, height, elevation, plate } = cells;
     const nearBoundary = (i: number) => {
       const x = i % width;
@@ -77,7 +78,7 @@ describe('terrain', () => {
   });
 
   it('round-trips through a save with typed arrays intact', () => {
-    const world = generateWorld('SAVE', { width: 48, height: 48 });
+    const world = generateWorld('SAVE', { width: 48, height: 48 }, DEFAULT_CONTENT);
     const loaded = deserializeWorld(serializeWorld(world));
     expect(loaded.cells!.elevation).toBeInstanceOf(Int16Array);
     expect(loaded.cells!.elevation).toEqual(world.cells!.elevation);
@@ -88,8 +89,8 @@ describe('terrain', () => {
   });
 
   it('rejects unusable world parameters', () => {
-    expect(() => generateWorld('BAD', { width: 8 })).toThrow(/size/);
-    expect(() => generateWorld('BAD', { continents: 0 })).toThrow(/continents/);
-    expect(() => generateWorld('BAD', { landFraction: 0.95 })).toThrow(/land/);
+    expect(() => generateWorld('BAD', { width: 8 }, DEFAULT_CONTENT)).toThrow(/size/);
+    expect(() => generateWorld('BAD', { continents: 0 }, DEFAULT_CONTENT)).toThrow(/continents/);
+    expect(() => generateWorld('BAD', { landFraction: 0.95 }, DEFAULT_CONTENT)).toThrow(/land/);
   });
 });

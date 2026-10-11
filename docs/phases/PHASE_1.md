@@ -4,7 +4,7 @@
 
 ## Status
 
-M1.1 merged. Extras approved 2026-10-11 (erosion, fertility, wildness, strategic features, M1.6 routes, climate params). M1.2 and the worldgen tools are in review. Next: M1.3 (biomes, resources, aura, fertility, wildness), delegated to the `implementer` agent with this section as its spec. Terrain lives in `src/engine/worldgen/` (`noise.ts`, `terrain.ts`, `index.ts`); add a stage per milestone in `generateWorld` with its own RNG stream.
+M1.1, M1.2 and the worldgen tools merged. Extras approved 2026-10-11 (erosion, fertility, wildness, strategic features, M1.6 routes, climate params). M1.3 (biomes, resources, aura, fertility, wildness, volcanoes) is in review. Next: M1.4 (world map UI and worker). Worldgen lives in `src/engine/worldgen/`, one module per stage in `generateWorld`, each with its own RNG stream; biome and resource tables live in `src/content/`.
 
 ## Milestones
 
