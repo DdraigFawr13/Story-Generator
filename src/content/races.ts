@@ -1,6 +1,5 @@
-// Races (§5.4). Humans are the balance baseline. The two other races are
-// PLACEHOLDERS showing the intended shapes; the user approves real sketches
-// at the start of Phase 2 (design fork). Every advantage costs something (R-29).
+// Races (§5.4). Humans are the balance baseline. Tylwyth and Dvergar sketches
+// were approved 2026-10-11. Every advantage costs something (R-29).
 
 import type { RaceDef } from '../engine';
 
@@ -24,17 +23,17 @@ const human: RaceDef = {
   maturityYears: 16,
   fertility: 1,
   foodNeed: 1,
-  preferredBiomes: ['grassland', 'temperate-forest', 'steppe'],
+  preferredBiomes: ['grassland', 'temperate-forest', 'steppe', 'savanna'],
   dependencies: [],
 };
 
-const placeholderMagicRace: RaceDef = {
-  id: 'placeholder_elder',
-  name: 'Elder folk (placeholder)',
-  placeholder: true,
+// Long-lived forest people: about 4x human magic odds, but few children and bound to aura.
+const tylwyth: RaceDef = {
+  id: 'tylwyth',
+  name: 'Tylwyth',
   attributeMeans: {
     strength: 8,
-    agility: 11,
+    agility: 12,
     endurance: 8,
     intellect: 12,
     willpower: 12,
@@ -42,43 +41,46 @@ const placeholderMagicRace: RaceDef = {
     charisma: 10,
   },
   attributeRange: [3, 18],
-  // About 4× the human odds of gifted or better.
+  // 18% gifted or better, about 4x the human odds.
   magicTierWeights: { none: 30000, faint: 52000, gifted: 16000, strong: 1800, exceptional: 200 },
-  affinityWeights: { life: 4, mind: 3, air: 2, water: 2 },
+  affinityWeights: { life: 4, mind: 3, air: 2, water: 1 },
   lifespanYears: 210,
   maturityYears: 32,
   fertility: 0.3,
   foodNeed: 0.9,
-  // Old, high-aura forest: forest biomes; the aura need is the dependency below.
-  preferredBiomes: ['temperate-forest', 'taiga'],
+  preferredBiomes: ['temperate-forest', 'taiga', 'jungle'],
   dependencies: [
-    { id: 'high_aura_land', description: 'Mood and health decline away from high-aura land.' },
+    { id: 'high_aura_land', description: 'Mood and health fade away from high-aura land.' },
   ],
 };
 
-const placeholderStrongRace: RaceDef = {
-  id: 'placeholder_stone',
-  name: 'Stone folk (placeholder)',
-  placeholder: true,
+// Enduring mountain people: strong and hungry, weak at magic (1.5% gifted or better).
+const dvergar: RaceDef = {
+  id: 'dvergar',
+  name: 'Dvergar',
   attributeMeans: {
     strength: 13,
     agility: 9,
     endurance: 13,
     intellect: 10,
-    willpower: 11,
+    willpower: 12,
     perception: 9,
-    charisma: 9,
+    charisma: 8,
   },
   attributeRange: [4, 19],
-  // About 0.3× the human odds of gifted or better.
   magicTierWeights: { none: 75000, faint: 23500, gifted: 1350, strong: 135, exceptional: 15 },
   affinityWeights: { earth: 5, fire: 2 },
-  lifespanYears: 110,
-  maturityYears: 20,
-  fertility: 0.7,
-  foodNeed: 1.5,
+  lifespanYears: 130,
+  maturityYears: 24,
+  fertility: 0.5,
+  foodNeed: 1.4,
   preferredBiomes: ['alpine', 'tundra', 'taiga'],
-  dependencies: [],
+  dependencies: [
+    {
+      id: 'ore_deposit',
+      description: 'Needs stone or metal deposits near home; starves without trade on poor land.',
+    },
+  ],
 };
 
-export const races: RaceDef[] = [human, placeholderMagicRace, placeholderStrongRace];
+export const races: RaceDef[] = [human, tylwyth, dvergar];

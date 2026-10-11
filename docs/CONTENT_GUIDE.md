@@ -62,7 +62,33 @@ Skills, abilities and spells share one shape. Requirements are hard gates. Magic
 
 ## Race
 
-A race lists attribute means, magic tier weights per 100,000 births, lifespan, maturity, fertility, food need, preferred biomes and dependencies. If its magic or physical baseline beats humans, it must pay for it: low fertility, slow maturity or a dependency. See `src/content/races.ts`. The two non-human races are placeholders until the Phase 2 sketches are approved.
+A race lists attribute means, magic tier weights per 100,000 births, lifespan, maturity, fertility, food need, preferred biomes and dependencies. If its magic or physical baseline beats humans, it must pay for it: low fertility, slow maturity or a dependency. See `src/content/races.ts`. Tylwyth live long and are magical but have few children and fade away from high-aura land; Dvergar are strong and enduring but hungry, slow to mature, weak at magic and tied to ore deposits.
+
+## Culture
+
+A culture ties a race to customs: values, marriage, inheritance, government, succession, attitude to magic, religion, preferred biomes, site preferences and name tables. Each set of customs is chosen to make a particular kind of story. See `src/content/cultures.ts`; name tables live in `src/content/names.ts`.
+
+```ts
+// src/content/cultures.ts (abbreviated)
+const gwerin: CultureDef = {
+  id: 'gwerin',
+  name: 'Gwerin',
+  raceId: 'human',
+  summary: 'Valley farmers and bards.',
+  values: { kin: 9, honour: 5, faith: 6, wealth: 4, learning: 7, war: 3, freedom: 6, order: 4 },
+  marriage: { custom: 'one-spouse', gift: 'none', arranged: true },
+  inheritance: 'all-children', // split property makes cousin feuds
+  government: 'chieftaincy',
+  succession: 'kin-elected',
+  magic: 'honoured',
+  religion: { id: 'wells', name: 'The Wells' },
+  preferredBiomes: ['temperate-forest', 'grassland'],
+  sitePreferences: ['river', 'aura'],
+  names: GWERIN_NAMES,
+};
+```
+
+`validateContent` checks that culture ids are unique, the race and biome ids exist, every value is an integer from 0 to 10, no name list is empty, and every race has at least one culture.
 
 ## Weather
 

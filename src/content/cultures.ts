@@ -1,0 +1,129 @@
+// Cultures (M2.1). Each culture's customs are chosen to make a different kind of
+// story; the comment above each says which. Names live in names.ts.
+
+import type { CultureDef } from '../engine';
+import {
+  DVERGAR_NAMES,
+  GWERIN_NAMES,
+  SKARN_NAMES,
+  TARQAI_NAMES,
+  TYLWYTH_NAMES,
+  USHANI_NAMES,
+} from './names';
+
+// Split inheritance makes cousin feuds.
+const gwerin: CultureDef = {
+  id: 'gwerin',
+  name: 'Gwerin',
+  raceId: 'human',
+  summary: 'Valley farmers and bards.',
+  values: { kin: 9, honour: 5, faith: 6, wealth: 4, learning: 7, war: 3, freedom: 6, order: 4 },
+  marriage: { custom: 'one-spouse', gift: 'none', arranged: true },
+  inheritance: 'all-children',
+  government: 'chieftaincy',
+  succession: 'kin-elected',
+  magic: 'honoured',
+  religion: { id: 'wells', name: 'The Wells' },
+  preferredBiomes: ['temperate-forest', 'grassland'],
+  sitePreferences: ['river', 'aura'],
+  names: GWERIN_NAMES,
+};
+
+// The eldest son takes the hall, so younger sons raid and found villages.
+const skarn: CultureDef = {
+  id: 'skarn',
+  name: 'Skarn',
+  raceId: 'human',
+  summary: 'Sea raiders and settlers.',
+  values: { kin: 6, honour: 9, faith: 4, wealth: 7, learning: 3, war: 7, freedom: 6, order: 3 },
+  marriage: { custom: 'one-spouse', gift: 'bride-price', arranged: false },
+  inheritance: 'eldest-son',
+  government: 'jarldom',
+  succession: 'eldest-son-assembly',
+  magic: 'wary',
+  religion: { id: 'hall', name: 'The Hall' },
+  preferredBiomes: ['taiga', 'temperate-forest', 'tundra'],
+  sitePreferences: ['coast'],
+  names: SKARN_NAMES,
+};
+
+// Brother-first succession makes disputed thrones.
+const tarqai: CultureDef = {
+  id: 'tarqai',
+  name: 'Tarqai',
+  raceId: 'human',
+  summary: 'Steppe horse clans.',
+  values: { kin: 7, honour: 6, faith: 5, wealth: 4, learning: 2, war: 8, freedom: 9, order: 3 },
+  marriage: { custom: 'leaders-many-spouses', gift: 'bride-price', arranged: true },
+  inheritance: 'youngest-keeps-hearth',
+  government: 'khanate',
+  succession: 'brother-first-gathering',
+  magic: 'respected',
+  religion: { id: 'eternal-sky', name: 'The Eternal Sky' },
+  preferredBiomes: ['steppe', 'grassland', 'savanna'],
+  sitePreferences: ['plains'],
+  names: TARQAI_NAMES,
+};
+
+// Mages need a temple licence, so rogue mages are hunted.
+const ushani: CultureDef = {
+  id: 'ushani',
+  name: 'Ushani',
+  raceId: 'human',
+  summary: 'River-city builders.',
+  values: { kin: 5, honour: 4, faith: 8, wealth: 7, learning: 7, war: 4, freedom: 2, order: 9 },
+  marriage: { custom: 'one-spouse', gift: 'dowry', arranged: true },
+  inheritance: 'sons-temple-tithe',
+  government: 'priest-kingdom',
+  succession: 'eldest-son-temple',
+  magic: 'licensed',
+  religion: { id: 'river-mothers', name: 'The River Mothers' },
+  preferredBiomes: ['desert', 'savanna', 'grassland'],
+  sitePreferences: ['river'],
+  names: USHANI_NAMES,
+};
+
+// The best apprentice inherits, so heirlooms start quarrels.
+const tylwythCulture: CultureDef = {
+  id: 'tylwyth',
+  name: 'Tylwyth',
+  raceId: 'tylwyth',
+  summary: 'Forest people of the old groves.',
+  values: { kin: 8, honour: 5, faith: 7, wealth: 2, learning: 9, war: 2, freedom: 6, order: 5 },
+  marriage: { custom: 'one-spouse', gift: 'none', arranged: false },
+  inheritance: 'best-apprentice',
+  government: 'elder-council',
+  succession: 'elder-council',
+  magic: 'sacred',
+  religion: { id: 'the-grove', name: 'The Grove' },
+  preferredBiomes: ['temperate-forest', 'taiga', 'jungle'],
+  sitePreferences: ['aura', 'forest'],
+  names: TYLWYTH_NAMES,
+};
+
+// The eldest child holds the hold, so clans feud over holds.
+const dvergarCulture: CultureDef = {
+  id: 'dvergar',
+  name: 'Dvergar',
+  raceId: 'dvergar',
+  summary: 'Mountain clans of the deep holds.',
+  values: { kin: 9, honour: 8, faith: 6, wealth: 7, learning: 4, war: 6, freedom: 4, order: 7 },
+  marriage: { custom: 'one-spouse', gift: 'dowry', arranged: true },
+  inheritance: 'eldest-child',
+  government: 'thanedom',
+  succession: 'eldest-child',
+  magic: 'wary',
+  religion: { id: 'ancestor-stones', name: 'The Ancestor Stones' },
+  preferredBiomes: ['alpine', 'tundra', 'taiga'],
+  sitePreferences: ['deposit', 'heights'],
+  names: DVERGAR_NAMES,
+};
+
+export const cultures: CultureDef[] = [
+  gwerin,
+  skarn,
+  tarqai,
+  ushani,
+  tylwythCulture,
+  dvergarCulture,
+];

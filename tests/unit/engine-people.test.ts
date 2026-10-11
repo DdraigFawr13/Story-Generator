@@ -147,9 +147,16 @@ describe('race biomes', () => {
 
 describe('race balance (R-29)', () => {
   it('requires a downside from races stronger than humans', () => {
-    const elder = DEFAULT_CONTENT.races.find((race) => race.id === 'placeholder_elder')!;
-    expect(raceBalanceProblems(elder, human)).toEqual([]);
-    const free = { ...elder, fertility: 1, maturityYears: 10, foodNeed: 1, dependencies: [] };
+    const tylwyth = DEFAULT_CONTENT.races.find((race) => race.id === 'tylwyth')!;
+    expect(raceBalanceProblems(tylwyth, human)).toEqual([]);
+    const free = { ...tylwyth, fertility: 1, maturityYears: 10, foodNeed: 1, dependencies: [] };
+    expect(raceBalanceProblems(free, human)).toHaveLength(1);
+  });
+
+  it('flags a dvergar copy that is strong with no downside', () => {
+    const dvergar = DEFAULT_CONTENT.races.find((race) => race.id === 'dvergar')!;
+    expect(raceBalanceProblems(dvergar, human)).toEqual([]);
+    const free = { ...dvergar, fertility: 1, maturityYears: 10, foodNeed: 1, dependencies: [] };
     expect(raceBalanceProblems(free, human)).toHaveLength(1);
   });
 });
