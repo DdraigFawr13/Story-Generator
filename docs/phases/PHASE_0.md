@@ -48,9 +48,9 @@ None (per the reboot plan).
 
 ## Done when
 
-- [ ] Old app works at `/`; `/?next` loads, steps and saves/loads.
-- [ ] CI under 5 minutes.
-- [ ] New docs total about 10 pages or fewer.
+- [x] Old app works at `/`; `/?next` loads, steps and saves/loads.
+- [x] CI under 5 minutes (PR #44: `core` 53 s, `browser` 40 s, in parallel).
+- [x] New docs total about 10 pages or fewer.
 
 ## Out of scope
 

@@ -16,7 +16,7 @@ import {
 } from '../../src/engine';
 
 const human = DEFAULT_CONTENT.races.find((race) => race.id === 'human')!;
-const rng = (name: string) => new RngStream({ [name]: 12345 }, name);
+const rng = (name: string) => RngStream.detached('PEOPLE', name);
 const avg: Attributes = {
   strength: 10,
   agility: 10,

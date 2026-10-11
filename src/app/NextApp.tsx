@@ -2,7 +2,7 @@
 // (REBOOT_PLAN M3.13). It proves the through line: content → engine loop →
 // events → narrator → UI. Phase 1 replaces the body with the world map.
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_CONTENT } from '../content';
 import {
   BIRTH_TIER_IDS,
@@ -10,7 +10,6 @@ import {
   RngStream,
   advance,
   createWorld,
-  deriveStreamState,
   formatDate,
   rollAptitude,
   templateNarrator,
@@ -20,6 +19,7 @@ import {
   type TierId,
   type WorldState,
 } from '../engine';
+import { openSaveStore, type SaveStore, type SaveSummary } from '../platform/save-store';
 
 const SIM: Simulation = { content: DEFAULT_CONTENT, systems: DEFAULT_SYSTEMS };
 const CONTENT_PROBLEMS = validateContent(DEFAULT_CONTENT);
@@ -74,6 +74,14 @@ export function NextApp() {
         <strong>{formatDate(state.day)}</strong> · weather: {state.weather.current} · events:{' '}
         {state.events.length}
       </p>
+      <SavePanel
+        world={state}
+        onLoad={(loaded) => {
+          world.current = loaded;
+          setSeed(loaded.seed);
+          setRevision((n) => n + 1);
+        }}
+      />
       <AptitudePreview seed={state.seed} />
       <h2 style={{ fontSize: 18 }}>Chronicle</h2>
       <ol style={{ paddingLeft: 20 }}>
@@ -91,10 +99,7 @@ function AptitudePreview({ seed }: { seed: string }) {
     () =>
       DEFAULT_CONTENT.races.map((race) => {
         // A preview stream outside world state: viewing never changes history.
-        const rng = new RngStream(
-          { preview: deriveStreamState(seed, `preview.${race.id}`) },
-          'preview',
-        );
+        const rng = RngStream.detached(seed, `preview.${race.id}`);
         const counts: Record<TierId, number> = {
           none: 0,
           faint: 0,
@@ -134,5 +139,91 @@ function AptitudePreview({ seed }: { seed: string }) {
         </tbody>
       </table>
     </details>
+  );
+}
+
+/** Named browser saves (M0.3). Loading replaces the world only after it validates. */
+function SavePanel({ world, onLoad }: { world: WorldState; onLoad: (world: WorldState) => void }) {
+  const [store, setStore] = useState<SaveStore | null>(null);
+  const [persistent, setPersistent] = useState(true);
+  const [saves, setSaves] = useState<SaveSummary[]>([]);
+  const [name, setName] = useState('');
+  const [status, setStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void openSaveStore().then(async (opened) => {
+      if (!active) return;
+      setStore(opened.store);
+      setPersistent(opened.persistent);
+      setSaves(await opened.store.list());
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const attempt = async (action: () => Promise<string>) => {
+    if (!store) return;
+    try {
+      setStatus(await action());
+      setSaves(await store.list());
+    } catch (problem) {
+      setStatus((problem as Error).message);
+    }
+  };
+
+  return (
+    <section aria-label="Saves" style={{ margin: '12px 0' }}>
+      <h2 style={{ fontSize: 18 }}>Saves</h2>
+      {!persistent && <p>This browser is not keeping saves; they last until the page closes.</p>}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <label>
+          Save name{' '}
+          <input value={name} placeholder={world.seed} onChange={(e) => setName(e.target.value)} />
+        </label>
+        <button
+          disabled={!store}
+          onClick={() =>
+            void attempt(async () => {
+              const saved = await store!.save(name || world.seed, world);
+              return `Saved "${saved.name}" at ${formatDate(saved.day)}.`;
+            })
+          }
+        >
+          Save
+        </button>
+      </div>
+      {status && <p role="status">{status}</p>}
+      <ul style={{ paddingLeft: 20 }}>
+        {saves.map((save) => (
+          <li key={save.name}>
+            {save.name} · {save.seed} · {formatDate(save.day)}{' '}
+            <button
+              aria-label={`Load ${save.name}`}
+              onClick={() =>
+                void attempt(async () => {
+                  onLoad(await store!.load(save.name));
+                  return `Loaded "${save.name}".`;
+                })
+              }
+            >
+              Load
+            </button>{' '}
+            <button
+              aria-label={`Delete ${save.name}`}
+              onClick={() =>
+                void attempt(async () => {
+                  await store!.remove(save.name);
+                  return `Deleted "${save.name}".`;
+                })
+              }
+            >
+              Delete
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
