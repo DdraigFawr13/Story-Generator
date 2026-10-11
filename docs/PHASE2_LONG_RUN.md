@@ -30,3 +30,22 @@ Use `STORY_GENERATOR_BATTERY_SHARD=1/4` through 4/4 to reproduce partitions. Dow
 1,000 weeks are about 20.8 simulated years. The 12-week continuation reaches 1,012; this does not establish all-seed century-scale behavior, multi-parent families, orphan guardianship, social memory, bounded memory systems or Spotlight command replay. Known generations derive solely from actual recorded parent links. A prose sample is deterministic factual reporting, not a human engagement/understandability review.
 
 Application source, simulation rules and saved-world schemas are unchanged. All P1 versions, the founding-only codec and P2 local-slot behavior remain covered. Physical-device, selected-art and human experience acceptance remain open. Final-head results, seed observations and exact-main production confirmation are recorded in the milestone PR before declaring this checkpoint complete.
+
+## Observed local run and story review
+
+The complete unpartitioned run passed in 1,186.88 seconds under Node 24.19.0. [All 100 observations and factual prose samples](evidence/phase2-individual-battery.json) retain the source revision, actual harness hash, command and environment-specific timing. Each final and each continued digest is distinct. All 100 worlds admitted the complete history and saved continuation.
+
+| Observation at week 1,000 | Actual range/count |
+| --- | --- |
+| Living residents | 17–38 |
+| Retained identities | 30–49 |
+| Recorded births / deaths | 6–25 / 8–19 |
+| Deepest known generation below founders | 1–2; 19 worlds have depth 2 |
+| Retired founding households | 0–1; seven worlds have one |
+| Shortage starts / extinctions | Zero in this sample |
+| Retained events | 497–1,047 |
+| Complete canonical bytes | 338,088–912,813 |
+
+Six contrasting samples were read against these observations. RIVERSIDE retains 22 living residents and describes Jory Willow's recorded birth, one known parent and childhood resting/home facts. TERRAIN_091 has the lowest census, 17, while Tegan Moss's latest assignment is foraging. TERRAIN_021 has 38 living residents, with Rian Hearth's actual early birth and later foraging. TERRAIN_097 reaches a recorded grandchild generation, while its sampled Loren Stone dies aged five years and 12 weeks; the prose links the actual death rather than supplying a fictional cause or response. TERRAIN_087 has 19 deaths, and TERRAIN_080 retains a retired household with Vara Fern's latest repairs assignment. The complete sample retains their dates, names and individual IDs.
+
+These brief histories distinguish entry, actual weekly work, home changes and death, but remain sparse factual summaries. Recorded parent/child losses already exist in the linked timeline and are a useful subsequent prose increment; this sample does not establish emotional or engaging storytelling. Zero shortage starts do not exercise scarcity across these natural runs or prove balance acceptance. Controlled shortage/care/death tests remain required. The 19 known grandchild histories are not complete genealogies or evidence of implemented guardianship.
