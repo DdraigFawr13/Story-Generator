@@ -15,6 +15,8 @@ const LAKE_RGB: Rgb = [80, 150, 225];
 /** Hillshade: metres of height difference that change brightness by 100%, and the clamp. */
 const SHADE_METRES = 1000;
 const SHADE_LIMIT = 0.35;
+/** Volcano marker on the elevation and biome layers. */
+const VOLCANO_RGB: Rgb = [230, 30, 30];
 const UNKNOWN_RGB: Rgb = [255, 0, 255];
 
 /** Cell values behind a layer id such as "elevation" or "risk.drought". */
@@ -42,9 +44,30 @@ export function layerValues(cells: WorldCells, id: string): ArrayLike<number> | 
       return cells.water;
     case 'floodplain':
       return cells.floodplain;
+    case 'biome':
+      return cells.biome;
+    case 'fertility':
+      return cells.fertility;
+    case 'wildness':
+      return cells.wildness;
+    case 'aura':
+      return cells.aura;
+    case 'resources':
+      return richestResource(cells);
     default:
       return null;
   }
+}
+
+/** Per cell: 1 + index of the resource with the largest deposit (lowest index on ties), 0 for none. */
+function richestResource(cells: WorldCells): Uint8Array {
+  const out = new Uint8Array(cells.width * cells.height);
+  for (const [cell, deposits] of cells.resources) {
+    let best = deposits[0]!;
+    for (const deposit of deposits) if (deposit.amount > best.amount) best = deposit;
+    out[cell] = best.resource + 1;
+  }
+  return out;
 }
 
 function rampColor(stops: MapLayerStop[], value: number): Rgb {
@@ -100,10 +123,12 @@ export function renderLayer(
       if (water === 1) color = RIVER_RGB;
       else if (water === 2) color = LAKE_RGB;
     }
+    const volcano = cells.volcano[i] === 1 && (isElevation || layer.id === 'biome');
+    if (volcano) color = VOLCANO_RGB;
     let factor = 1;
     const x = i % width;
     const y = (i - x) / width;
-    if (shade && x > 0 && y > 0 && cells.elevation[i]! > 0 && cells.water[i] === 0) {
+    if (shade && !volcano && x > 0 && y > 0 && cells.elevation[i]! > 0 && cells.water[i] === 0) {
       const diff = cells.elevation[i]! - cells.elevation[i - width - 1]!;
       factor = 1 + Math.max(-SHADE_LIMIT, Math.min(SHADE_LIMIT, diff / SHADE_METRES));
     }

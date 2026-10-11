@@ -1,52 +1,157 @@
 // World generation entry point (Phase 1). Each step uses its own named RNG
 // stream, so adding a later step never changes the terrain of a seed.
 
+import type { ContentBundle } from '../core/content-types';
 import { streamFor } from '../core/rng';
 import type { WorldParams, WorldState } from '../core/types';
 import { createWorld } from '../core/world';
+import { generateAura } from './aura';
+import { classifyBiomes } from './biomes';
 import { generateClimate } from './climate';
 import { erodeTerrain } from './erosion';
 import { oceanMask } from './grid';
+import { computeHabitat } from './habitat';
+import { placeResources } from './resources';
 import { generateTerrain } from './terrain';
+import { placeVolcanoes } from './volcanoes';
 import { computeWater } from './water';
 
-export type WorldgenStage = 'terrain' | 'erosion' | 'climate' | 'water';
+/** The content the generator reads: biome table and resource list. */
+export type WorldgenContent = Pick<ContentBundle, 'biomes' | 'biomeRules' | 'resources'>;
+
+export type WorldgenStage =
+  | 'terrain'
+  | 'erosion'
+  | 'climate'
+  | 'water'
+  | 'biomes'
+  | 'volcanoes'
+  | 'aura'
+  | 'resources'
+  | 'habitat';
+/** Called as each stage starts: (stage, stages already done, total stages). */
 export type ProgressCallback = (stage: WorldgenStage, done: number, total: number) => void;
 
-const STAGES: readonly WorldgenStage[] = ['terrain', 'erosion', 'climate', 'water'];
+const STAGES: readonly WorldgenStage[] = [
+  'terrain',
+  'erosion',
+  'climate',
+  'water',
+  'biomes',
+  'volcanoes',
+  'aura',
+  'resources',
+  'habitat',
+];
 
 export function generateWorld(
   seed: string,
-  params: Partial<WorldParams> = {},
+  params: Partial<WorldParams>,
+  content: WorldgenContent,
   onProgress: ProgressCallback = () => {},
 ): WorldState {
   const world = createWorld(seed, params);
   const { width, height } = world.params;
   const total = STAGES.length;
+  const start = (stage: WorldgenStage) => onProgress(stage, STAGES.indexOf(stage), total);
 
-  onProgress('terrain', 0, total);
+  start('terrain');
   const terrain = generateTerrain(world.params, streamFor(world, 'worldgen.terrain'));
-  onProgress('terrain', 1, total);
 
   // Erosion keeps land at 1 m or more, so the sea stays exactly where terrain put it.
   const ocean = oceanMask(width, height, terrain.elevation);
-  onProgress('erosion', 1, total);
+  start('erosion');
   erodeTerrain(width, height, terrain.elevation, ocean, streamFor(world, 'worldgen.erosion'));
-  onProgress('erosion', 2, total);
 
-  onProgress('climate', 2, total);
+  start('climate');
   const climate = generateClimate(
     world.params,
     terrain.elevation,
     ocean,
     streamFor(world, 'worldgen.climate'),
   );
-  onProgress('climate', 3, total);
 
-  onProgress('water', 3, total);
+  start('water');
   const water = computeWater(width, height, terrain.elevation, climate.rainfall, ocean);
-  onProgress('water', 4, total);
 
-  world.cells = { width, height, ...terrain, ...climate, ...water };
+  start('biomes');
+  const biome = classifyBiomes(
+    width,
+    height,
+    terrain.elevation,
+    climate.tempSummer,
+    climate.tempWinter,
+    climate.rainfall,
+    water.water,
+    water.floodplain,
+    content,
+  );
+
+  start('volcanoes');
+  const volcano = placeVolcanoes(
+    width,
+    height,
+    terrain.elevation,
+    water.water,
+    terrain.plate,
+    terrain.plates,
+    streamFor(world, 'worldgen.volcanoes'),
+  );
+
+  start('aura');
+  const forest = biome.map((b) => (content.biomes[b]?.forest ? 1 : 0));
+  const { aura, auraSpots } = generateAura(
+    width,
+    height,
+    terrain.elevation,
+    water.water,
+    water.flowDir,
+    forest,
+    volcano,
+    streamFor(world, 'worldgen.aura'),
+  );
+
+  start('resources');
+  const resources = placeResources(
+    width,
+    height,
+    terrain.elevation,
+    biome,
+    water.water,
+    water.floodplain,
+    aura,
+    volcano,
+    content,
+    (name) => streamFor(world, name),
+  );
+
+  start('habitat');
+  const habitat = computeHabitat(
+    width,
+    height,
+    terrain.elevation,
+    climate.tempSummer,
+    climate.tempWinter,
+    climate.rainfall,
+    water.water,
+    water.floodplain,
+    biome,
+    aura,
+    content,
+  );
+
+  world.cells = {
+    width,
+    height,
+    ...terrain,
+    ...climate,
+    ...water,
+    biome,
+    volcano,
+    aura,
+    auraSpots,
+    resources,
+    ...habitat,
+  };
   return world;
 }

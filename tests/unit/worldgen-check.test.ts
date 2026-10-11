@@ -1,3 +1,4 @@
+import { DEFAULT_CONTENT } from '../../src/content';
 import { describe, expect, it } from 'vitest';
 import { checkWorldCells, generateWorld, type WorldCells } from '../../src/engine';
 
@@ -16,18 +17,18 @@ function copyCells(cells: WorldCells): WorldCells {
 describe('checkWorldCells', () => {
   for (const seed of ['A', 'B', 'C']) {
     it(`accepts a generated world (seed ${seed})`, () => {
-      expect(checkWorldCells(generateWorld(seed, SMALL).cells!)).toEqual([]);
+      expect(checkWorldCells(generateWorld(seed, SMALL, DEFAULT_CONTENT).cells!)).toEqual([]);
     });
   }
 
   it('reports a risk out of range', () => {
-    const cells = copyCells(generateWorld('A', SMALL).cells!);
+    const cells = copyCells(generateWorld('A', SMALL, DEFAULT_CONTENT).cells!);
     cells.risk.drought[10] = 150;
     expect(checkWorldCells(cells).join('\n')).toMatch(/risk\.drought\[10\] = 150/);
   });
 
   it('reports a flow loop', () => {
-    const cells = copyCells(generateWorld('A', SMALL).cells!);
+    const cells = copyCells(generateWorld('A', SMALL, DEFAULT_CONTENT).cells!);
     const land = cells.water.findIndex((w, i) => w === 0 && cells.water[i + 1] === 0);
     cells.flowDir[land] = 2; // east
     cells.flowDir[land + 1] = 6; // back west
@@ -35,7 +36,7 @@ describe('checkWorldCells', () => {
   });
 
   it('reports sea above sea level and a short layer', () => {
-    const cells = copyCells(generateWorld('A', SMALL).cells!);
+    const cells = copyCells(generateWorld('A', SMALL, DEFAULT_CONTENT).cells!);
     const sea = cells.water.indexOf(3);
     cells.elevation[sea] = 50;
     expect(checkWorldCells(cells).join('\n')).toMatch(/sea cell/);

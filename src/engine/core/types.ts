@@ -129,6 +129,21 @@ export interface Plate {
   continental: boolean;
 }
 
+/** A legendary-place candidate for Phase 2: a cell of unusually high aura. */
+export interface AuraSpot {
+  cell: number;
+  kind: 'spring' | 'old-forest' | 'peak' | 'hot-spring';
+  /** 70–100 at the spot itself. */
+  aura: number;
+}
+
+/** One resource sitting in a cell. `resource` indexes the content's resource list. */
+export interface ResourceDeposit {
+  resource: number;
+  /** 1–100: richest at the heart of a cluster. */
+  amount: number;
+}
+
 /** Per-cell world layers (index = y * width + x). Integer typed arrays keep maths exact. */
 export interface WorldCells {
   width: number;
@@ -155,6 +170,20 @@ export interface WorldCells {
   water: Uint8Array;
   /** 1 on flat low ground beside a river that floods and silts. */
   floodplain: Uint8Array;
+  /** Index into the content's biome list; 0 is ocean and 1 is coast (both sea only). */
+  biome: Uint8Array;
+  /** 1 on a volcano cell. */
+  volcano: Uint8Array;
+  /** Magical background strength 0–100: low everywhere, high near spots. */
+  aura: Uint8Array;
+  /** Legendary-place candidates, sorted by cell index. */
+  auraSpots: AuraSpot[];
+  /** Farming potential 0–100 (Phase 2 carrying capacity); 0 on water. */
+  fertility: Uint8Array;
+  /** How untamed the ground is 0–100 (Phase 2 beast lairs); 0 on sea. */
+  wildness: Uint8Array;
+  /** Sparse deposits by cell; keys ascend, each list is ordered by resource index. */
+  resources: Map<number, ResourceDeposit[]>;
 }
 
 export interface WorldState {

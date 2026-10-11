@@ -6,7 +6,8 @@ const size = Number(args.size || 256);
 const count = Number(args.seeds || 5);
 const seeds = args.seed ? [args.seed] : Array.from({ length: count }, (_, i) => `S${i + 1}`);
 
-const { generateWorld, checkWorldCells, D8_DX, D8_DY } = await loadEngine();
+const { generateWorld, checkWorldCells, D8_DX, D8_DY, DEFAULT_CONTENT, BIOMES, RESOURCES } =
+  await loadEngine();
 
 function stats(seed) {
   const ms = {};
@@ -14,7 +15,7 @@ function stats(seed) {
   let stage = null;
   // Each callback reports the stage about to run (or just finished); charge elapsed time to
   // whichever stage was last announced.
-  const world = generateWorld(seed, { width: size, height: size }, (name) => {
+  const world = generateWorld(seed, { width: size, height: size }, DEFAULT_CONTENT, (name) => {
     const now = performance.now();
     if (stage) ms[stage] = (ms[stage] ?? 0) + now - last;
     stage = name;
@@ -30,6 +31,11 @@ function stats(seed) {
     dry = 0,
     wet = 0,
     flood = 0;
+  const biomeCount = new Array(BIOMES.length).fill(0);
+  let dryLand = 0,
+    fertile = 0,
+    wild = 0,
+    volcanoes = 0;
   const highs = [];
   const isLake = new Uint8Array(n);
   for (let i = 0; i < n; i += 1) {
@@ -38,7 +44,14 @@ function stats(seed) {
     if (c.rainfall[i] < 250) dry += 1;
     if (c.rainfall[i] > 2000) wet += 1;
     if (c.floodplain[i]) flood += 1;
+    if (c.water[i] !== 2) {
+      dryLand += 1;
+      biomeCount[c.biome[i]] += 1;
+      if (c.fertility[i] >= 50) fertile += 1;
+      if (c.wildness[i] >= 70) wild += 1;
+    }
     highs.push(c.tempSummer[i]);
+    volcanoes += c.volcano[i];
     if (c.water[i] === 2) {
       lakes += 1;
       isLake[i] = 1;
@@ -75,8 +88,19 @@ function stats(seed) {
       }
     }
   }
-  highs.sort((a, b) => a - b);
   const pct = (v, of) => (of ? (100 * v) / of : 0);
+  const biomePct = (id) => pct(biomeCount[BIOMES.findIndex((b) => b.id === id)], dryLand);
+  const top = BIOMES.map((b, i) => [b.id, biomeCount[i]])
+    .filter(([id]) => !BIOMES.find((b) => b.id === id).water)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([id, count]) => `${id.slice(0, 6)} ${pct(count, dryLand).toFixed(0)}`)
+    .join(' ');
+  const resourceCells = RESOURCES.map(() => 0);
+  for (const deposits of c.resources.values()) {
+    for (const d of deposits) resourceCells[d.resource] += 1;
+  }
+  highs.sort((a, b) => a - b);
   return {
     seed,
     ms,
@@ -92,12 +116,27 @@ function stats(seed) {
     hiMed: highs[highs.length >> 1] ?? 0,
     hiMax: highs[highs.length - 1] ?? 0,
     flood: pct(flood, land),
+    top,
+    harsh: biomePct('desert') + biomePct('tundra'),
+    lush: biomePct('temperate-forest') + biomePct('jungle') + biomePct('taiga'),
+    volcanoes,
+    spots: c.auraSpots.length,
+    fertile: pct(fertile, dryLand),
+    wild: pct(wild, dryLand),
+    resourcePct: resourceCells.map((n) => pct(n, land)),
     problems: checkWorldCells(c).length,
   };
 }
 
 const rows = seeds.map(stats);
-const stages = Object.keys(rows[0].ms);
+// The four classic stages get a column each; the M1.3 stages are summed into "restms".
+const stages = ['terrain', 'erosion', 'climate', 'water'];
+for (const r of rows) {
+  r.ms.rest = Object.entries(r.ms)
+    .filter(([name]) => !stages.includes(name) && name !== 'rest')
+    .reduce((a, [, v]) => a + v, 0);
+}
+stages.push('rest');
 const f = (v, w, d = 0) => v.toFixed(d).padStart(w);
 const head = [
   'seed',
@@ -112,6 +151,13 @@ const head = [
   'wet%',
   'hi min/med/max',
   'flood%',
+  'top biomes',
+  'harsh%',
+  'lush%',
+  'volc',
+  'spots',
+  'fert%',
+  'wild%',
   'bad',
 ];
 process.stdout.write(`${size}x${size}\n${head.join(' ')}\n`);
@@ -130,6 +176,13 @@ for (const r of rows) {
       f(r.wet, 4, 1),
       `${r.hiMin}/${r.hiMed}/${r.hiMax}`.padStart(14),
       f(r.flood, 6, 1),
+      r.top.padEnd(24),
+      f(r.harsh, 6, 1),
+      f(r.lush, 5, 1),
+      f(r.volcanoes, 4),
+      f(r.spots, 5),
+      f(r.fertile, 5, 1),
+      f(r.wild, 5, 1),
       f(r.problems, 3),
     ].join(' ') + '\n',
   );
@@ -139,4 +192,14 @@ process.stdout.write(
   `mean: total ${mean('total').toFixed(0)}ms, land ${mean('land').toFixed(1)}%, rivers ${mean('rivers').toFixed(0)}, ` +
     `mouths ${mean('mouths').toFixed(0)}, lakes ${mean('lakes').toFixed(0)} cells/${mean('lakeCount').toFixed(1)}, ` +
     `dry ${mean('dry').toFixed(1)}%, wet ${mean('wet').toFixed(1)}%, flood ${mean('flood').toFixed(1)}%\n`,
+);
+const perResource = RESOURCES.map((res, i) => {
+  const have = rows.filter((r) => r.resourcePct[i] > 0).length;
+  return `${res.id} ${mean2(i).toFixed(1)}/${have} seeds`;
+});
+function mean2(i) {
+  return rows.reduce((a, r) => a + r.resourcePct[i], 0) / rows.length;
+}
+process.stdout.write(
+  `resources (mean % of land cells / seeds with it): ${perResource.join(', ')}\n`,
 );

@@ -12,7 +12,7 @@ const scale = Number(args.scale || 2);
 const out = args.out || 'tmp/worldmap';
 const wanted = args.layer || 'all';
 
-const { generateWorld, renderLayer, MAP_LAYERS } = await loadEngine();
+const { generateWorld, renderLayer, MAP_LAYERS, DEFAULT_CONTENT } = await loadEngine();
 const layers = wanted === 'all' ? MAP_LAYERS : MAP_LAYERS.filter((l) => l.id === wanted);
 if (!layers.length) {
   process.stderr.write(
@@ -21,7 +21,7 @@ if (!layers.length) {
   process.exit(1);
 }
 
-const cells = generateWorld(seed, { width: size, height: size }).cells;
+const cells = generateWorld(seed, { width: size, height: size }, DEFAULT_CONTENT).cells;
 await mkdir(out, { recursive: true });
 for (const layer of layers) {
   const image = upscale(cells.width, cells.height, renderLayer(cells, layer), scale);

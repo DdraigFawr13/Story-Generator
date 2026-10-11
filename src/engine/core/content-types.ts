@@ -102,6 +102,9 @@ export interface EventRuleDef {
 }
 
 export interface ContentBundle {
+  biomes: BiomeDef[];
+  biomeRules: BiomeRules;
+  resources: ResourceDef[];
   races: RaceDef[];
   schools: SchoolDef[];
   abilities: AbilityDef[];
@@ -112,6 +115,64 @@ export interface ContentBundle {
 
 /** [r, g, b], each 0–255. */
 export type Rgb = [number, number, number];
+
+export interface BiomeDef {
+  id: string;
+  name: string;
+  color: Rgb;
+  /** Base fertility (0–100) before rainfall, season and floodplain adjustments. */
+  fertility: number;
+  /** Base wildness contribution (0–100): old forest and swamp high, grassland low. */
+  wildness: number;
+  /** True for forests (timber, game, old-forest aura, wildness). */
+  forest?: boolean;
+  /** Water biomes are assigned by water class, never by the climate table. */
+  water?: 'sea' | 'coast' | 'lake';
+}
+
+export interface BiomeRules {
+  /** Ascending upper bounds (°C) on mean annual temperature = (summer + winter) / 2; last band is open. */
+  temperatureBands: number[];
+  /** Ascending upper bounds (mm/yr) on rainfall; last band is open. */
+  rainfallBands: number[];
+  /** table[t][r] = biome id, for temperature band t and rainfall band r. Must be complete. */
+  table: string[][];
+  /** Land at or above this elevation (m) is alpine regardless of climate. */
+  alpineElevation: number;
+  /** Floodplain or lakeside land with rainfall >= this (mm) and mean temp >= swampMinTemp becomes swamp. */
+  swampRainfall: number;
+  swampMinTemp: number;
+  /** Frost-free biomes only occur where the winter low is high enough; elsewhere the fallback biome is used. */
+  frostFree: { biomes: string[]; minWinter: number; fallback: Record<string, string> };
+  /** Sea cells within this many cells (8-neighbour) of land are coast, deeper ones ocean. */
+  coastReach: number;
+}
+
+export interface ResourceDef {
+  id: string;
+  name: string;
+  category: 'metal' | 'stone' | 'mineral' | 'food' | 'material' | 'magic';
+  /** Biome ids the resource can sit in (omit = any land). */
+  biomes?: string[];
+  /** Elevation window in metres (omit = no limit). */
+  minElevation?: number;
+  maxElevation?: number;
+  /** Extra placement needs, all optional, all must hold. */
+  needs?: {
+    floodplain?: boolean;
+    river?: boolean;
+    /** Within this many cells of a volcano. */
+    nearVolcano?: number;
+    minAura?: number;
+  };
+  /** Clusters per 10 000 land cells, and target cells per cluster. */
+  clustersPer10k: number;
+  clusterSize: number;
+  /** Hard cap on the share of land (or water, for fish) cells holding it, e.g. 0.002 for gems. */
+  maxCellShare: number;
+  /** Fish only: placed on coast/lake/river cells instead of land. */
+  aquatic?: boolean;
+}
 
 export interface MapLayerStop {
   at: number;

@@ -1,3 +1,4 @@
+import { DEFAULT_CONTENT } from '../../src/content';
 import { describe, expect, it } from 'vitest';
 import {
   D8_DX,
@@ -75,7 +76,7 @@ describe('water fixture', () => {
 describe('water on generated worlds', () => {
   for (const seed of ['A', 'B', 'C']) {
     it(`never runs uphill and ends rivers in sea or lake (seed ${seed})`, () => {
-      const cells = generateWorld(seed, SMALL).cells!;
+      const cells = generateWorld(seed, SMALL, DEFAULT_CONTENT).cells!;
       expect(checkWorldCells(cells)).toEqual([]);
       let rivers = 0;
       for (let i = 0; i < cells.width * cells.height; i += 1) {
@@ -92,7 +93,7 @@ describe('water on generated worlds', () => {
   }
 
   it('keeps every flow value positive on land and floodplains beside rivers', () => {
-    const cells = generateWorld('A', SMALL).cells!;
+    const cells = generateWorld('A', SMALL, DEFAULT_CONTENT).cells!;
     let floodplain = 0;
     for (let i = 0; i < cells.water.length; i += 1) {
       if (cells.water[i] !== 3) expect(cells.flow[i]).toBeGreaterThan(0);
