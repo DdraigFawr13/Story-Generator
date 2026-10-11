@@ -6,7 +6,7 @@
 **What changes:** the project moves from one deeply verified settlement to a Dwarf-Fortress-style world. A whole world is generated with a history first, then the viewer zooms into one living site. Scope expands phase by phase to multiple kingdoms. It stays a **grounded medieval fantasy**:
 - ordinary life is the backbone;
 - magic is rare and gated by innate attributes;
-- no individual is ever more powerful than an army.
+- even the rarest living legend is at most a match for one low-end field army (about 1,000 soldiers), and everyone else is far weaker.
 
 ---
 
@@ -36,7 +36,7 @@ These are the user's own words and what they mean for your work.
 | "Make sure there is drama to see on any level." | Something worth noticing should happen to people, households, sites and kingdoms, at every scale and at a pace a viewer enjoys. Do **not** force it with scripts. Make systems interact so drama arises. |
 | "I don't want to force too much." | No guaranteed plots, no event quotas, no "director" that injects crises. Tuning happens only through content weights. |
 | "Basic relationships, environmental stresses and factors and all the normal life stuff." | **Everyday life is the foundation** (section 6). If people do not visibly eat, sleep, love, quarrel, sicken, grieve, age and die in believable ways, the game has failed, however good the kingdoms are. |
-| "Nobody will ever be so powerful that an army couldn't kill them." | Grounded scale (R-24). Magic and skill make people *valuable*, never *unstoppable*. |
+| "Nobody will ever be so powerful that an army couldn't kill them." | Grounded scale (R-24). The user later set the absolute peak: **the most powerful individuals, 0–3 alive in a world at once (usually none to two), can at most match one low-end field army of about 1,000 soldiers.** Everyone below that peak stays grounded on a steep curve. Magic and skill make people *valuable*. Only legends approach *army-level*, and nobody exceeds it. |
 | "Magical and physical attributes determine if they will be good at certain things or able to learn certain skills or abilities or spells… the majority should either not have any or have very weak ones." | Section 5. Aptitude is innate and uneven. Most people are mundane. Talent matters because it is rare. |
 | "Never like all of one race are crazy powerful… it must come with downsides that keep their race in balance." | Every advantage a race has costs something (R-29). |
 | "Efficient." | Fast to develop (small PRs, little ceremony), fast to run (worker threads, budgets), and fast to get to interesting moments ("run until notable"). |
@@ -45,7 +45,7 @@ These are the user's own words and what they mean for your work.
 - cultivation or LitRPG advancement stages;
 - power levels that multiply strength exponentially;
 - "system" notifications;
-- one-person armies;
+- anyone stronger than one low-end field army, or more than 3 such legends alive at once;
 - a drama director that schedules catastrophes;
 - protected main characters;
 - per-feature evidence documents and proof batteries;
@@ -141,11 +141,17 @@ These are **examples of the kind of stories the systems should be able to produc
    - Its few mages make it dangerous, but each war costs lives it cannot replace.
    - Over centuries it shrinks under steady human pressure, unless its land stays untouched.
 
+7. **The legend's last war (world, Phases 5–6):**
+   - The only living legend, an old battle-mage, serves a small kingdom. One day of his power breaks a 1,000-strong invading army.
+   - The neighbouring kings form a coalition and march with three times that number. He spends his strength on the first day and dies on the second.
+   - His apprentice, only Exceptional, carries his notebooks into exile. Decades pass with no legend alive anywhere in the world.
+
 **Bad outcomes to avoid:**
 - Everyone dies in year one on most seeds.
 - Nothing notable happens for an in-game year.
 - Every seed tells the same story.
-- One mage kills an army.
+- Legends are common, or a legend beats a larger host or a whole kingdom.
+- A Strong-tier mage wins battles alone.
 - A race wipes out the others in every seed.
 - Chronicle lines describe things the inspector cannot confirm.
 - People never visibly sleep, eat or socialise.
@@ -195,7 +201,7 @@ These are **examples of the kind of stories the systems should be able to produc
 | R-21 | **Time:** the live site ticks **daily**. The world ticks **monthly** during play and **yearly** during world-gen history. Speeds run up to "run until notable", with auto-pause on chosen categories. |
 | R-22 | **Agents work in plan mode, merge at milestones, and ask on design forks.** Each phase ends with a playtest check-in. |
 | R-23 | **The old "Story Spotlight" folds into the hybrid modes** as one tool: widening a person's options. It is not a separate system. |
-| R-24 | **Scale ceiling (hard rule).** The strongest individual of any race is at most a match for a small squad, about 5–10 trained soldiers, in favourable conditions. Anyone can be killed by numbers, ambush, exhaustion, disease, starvation or age. Magic and skill are force multipliers and specialisms, never one-person armies. Content validation enforces caps on effects. |
+| R-24 | **Scale ceiling (hard rule).** The power curve is steep:<br>• Gifted ≈ 1–2 soldiers.<br>• Strong ≈ a squad (5–15).<br>• Exceptional ≈ a company (30–80).<br>• **Legendary ≈ one low-end field army (about 1,000 soldiers).** That is the absolute maximum. **0–3 legends exist in the world at once:** typically none, sometimes one or two, rarely three.<br>Legends stay mortal. A larger host, a second legend, exhaustion of their daily power, ambush, poison, assassination, disease, starvation or age can kill them. Content validation enforces per-tier effect caps, and the world tier enforces the legend count. |
 | R-25 | **One unified aptitude system.** Every skill, ability and spell has hard attribute requirements and learning-speed modifiers. Magic is one family inside it, alongside smithing, healing, leadership, fighting and the rest. |
 | R-26 | **Where aptitude comes from:** race baseline + inheritance (bloodlines) + environment and events (birth near or exposure to high-magic places). There is no spontaneous talent beyond normal inheritance variance. |
 | R-27 | **Potential is fixed, skill grows.** Innate attributes set the ceilings and learning speed. Practice raises skill toward those ceilings. Physical attributes decline with age and injury. |
@@ -245,7 +251,7 @@ These are **examples of the kind of stories the systems should be able to produc
   - A healing spell needs Power 6, Life 8 and Willpower 6.
 - **Gating:** a person can learn something only if they meet the requirements *and* have a source: someone teaching them, a book, or an institution (R-28). Mundane basics such as farming, foraging and basic fighting can also be learned by doing.
 - **Skill level and effectiveness:** skill grows with practice at a speed set by the relevant attributes, capped by potential. Effectiveness = attributes × skill × tool/equipment × effect.
-- **Effect caps (R-24):** content validation caps spell and ability damage, area, duration and uses per day. Combat math is tested against the rule "one top individual is no match for 10 trained soldiers".
+- **Effect caps (R-24):** content validation caps spell and ability damage, area, duration and uses per day. Combat math is tested against the tier-equivalence table in section 5.4A.
 
 ### 5.3 Where aptitude comes from
 - `rollAttributes(race, parents | null, birthplace, rng)` is a pure function used both in world history and at the live site. It combines:
@@ -272,27 +278,36 @@ These are **examples of the kind of stories the systems should be able to produc
   - A child's attributes start at about 40% of potential and grow to the full value by maturity.
 - **Human magic tiers (per person, at birth):**
 
-| Tier | Power | Share | What they can do |
-| --- | --- | --- | --- |
-| None | 0 | ~60% | Nothing magical |
-| Faint | 1–2 | ~35% | 1–3 common cantrips: kindle a flame, a small light, mend cloth, calm an animal, ease a headache |
-| Gifted | 3–6 | ~4.5% | A real specialist: a village healer, weather-reader or hedge-witch |
-| Strong | 7–12 | ~0.5% | A regional figure: a court mage or battle-mage |
-| Exceptional | 13–16 | about 1 in 2,000 or rarer | A legend in their lifetime, still killable by a squad |
+| Tier | Power | Share | What they can do | Combat equivalence (R-24) |
+| --- | --- | --- | --- | --- |
+| None | 0 | ~60% | Nothing magical | One person |
+| Faint | 1–2 | ~35% | 1–3 common cantrips: kindle a flame, a small light, mend cloth, calm an animal, ease a headache | One person |
+| Gifted | 3–6 | ~4.5% | A real specialist: a village healer, weather-reader or hedge-witch | About 1–2 soldiers |
+| Strong | 7–12 | ~0.5% | A regional figure: a court mage or battle-mage | About a squad (5–15) |
+| Exceptional | 13–16 | about 1 in 2,000 or rarer; a handful per world | A famous figure of the age | About a company (30–80) |
+| Legendary | 17–20 | **0–3 alive in the world at once**, typically 0–2 | Remembered for centuries; shapes the fate of kingdoms | **At most one low-end field army (about 1,000 soldiers)** |
 
+  - Mundane people follow the same curve through attributes and skill. The greatest swordsman of an age is roughly Exceptional-equivalent at most, unless magic or a legendary artifact is involved.
   - Affinities: a person with Power above 0 gets one primary affinity (race-weighted) at a value near Power, and possibly a weaker secondary one.
   - Inheritance: if a parent is Gifted or better, the child's odds of each tier above None roughly double, capped.
   - Environment: birth in a cell with aura in the top 10% shifts the odds of each tier above None by +25% relative.
-- **Effect caps (R-24, enforced in `validateContent`):**
-  - a single spell's damage is no more than a strong soldier's best weapon hit × 1.5;
-  - area is at most a 3×3-tile radius;
-  - a mage's uses per day are bounded by Power and Willpower (for example `Power/2 + Willpower/5`);
-  - healing at most doubles natural recovery speed or stabilises one critical wound;
-  - weather magic affects only a site's local weather for one day, and only for Strong tier and above.
-- **Combat sanity check (unit test):**
-  - an Exceptional-tier mage with full uses per day, against 10 average trained soldiers in the open, should lose most simulated fights;
-  - against 3 soldiers, she should win most fights;
-  - a top mundane warrior should beat 2–3 average soldiers, not 10.
+  - **Becoming Legendary:** nobody is born Legendary. An Exceptional-potential person reaches it only through decades of training, a great teacher or lost lore, and usually a high-aura place or event.
+  - **Legend cap:** the world tier checks the count. While 3 Legendary individuals live, no one else can cross into Legendary until one dies. Their potential stays capped at Exceptional in the meantime.
+- **Effect caps per tier (R-24, enforced in `validateContent`):**
+  - Each spell declares a minimum tier, and its damage, area, duration and uses per day must fall within that tier's caps.
+  - Faint and Gifted: no area damage. Damage is at most a soldier's weapon hit.
+  - Strong: area up to a 3×3-tile radius, a few uses per day.
+  - Exceptional: area up to about a 10-tile radius, a dozen or so uses per day.
+  - Legendary: battlefield-scale effects (a firestorm over a host, an earthquake across a field) but **few uses per day**, with lasting exhaustion afterwards. One day of a legend's power can break about 1,000 soldiers. It cannot do the same every day, or alone stop a bigger host.
+  - A mage's uses per day are bounded by Power and Willpower (for example `Power/2 + Willpower/5`).
+  - Healing at most doubles natural recovery speed or stabilises one critical wound per use. Legendary healers can save many in one day, but cannot raise the dead.
+  - Weather magic: Strong tier affects a site's local weather for one day; Legendary affects a region for days.
+- **Combat sanity checks (unit tests):** each check uses 100 simulated fights at the world-tier battle resolution.
+  - Gifted vs 2 soldiers: about even.
+  - Strong vs 10 soldiers: about even.
+  - Exceptional vs 50 soldiers: about even. Against 150, she loses most fights.
+  - Legendary vs 1,000 soldiers: about even. Against 3,000, or against 1,000 soldiers plus an Exceptional, he loses most fights.
+  - A top mundane warrior beats 2–3 average soldiers, not 10.
 - **Race example shapes** (the user approves the real sketches in Phase 2):
   - *Humans:* average everything, adaptable to many biomes, fast to reproduce, baseline magic.
   - *Magic-leaning race:* Power and affinity odds ×4 versus humans, lower Strength and Endurance, fertility ×0.3, maturity ×2, lifespan ×3. Depends on high-aura land: their mood and health decline away from it.
@@ -676,7 +691,7 @@ Each phase lists its goal, milestones (PR-sized), done-when criteria and known f
 ### Phase 5 — Magic depth (4–6 PRs)
 - **M5.1 Schools and affinities:** full spell content per school, with stronger spells gated by Power and Affinity, all inside the R-24 caps.
 - **M5.2 Learning lineages:** apprenticeship relationships, teacher lineages, spellbooks as valuable or stealable lore, knowledge lost when teachers die or books burn.
-- **M5.3 Magic in life:** healing, crops/weather-reading, crafting, defence and war. Mages are valuable specialists, not decisive alone.
+- **M5.3 Magic in life:** healing, crops/weather-reading, crafting, defence and war. Ordinary mages are valuable specialists, not decisive alone. Only the rare legend can swing a battle, and only within the field-army ceiling.
 - **M5.4 Environment:** awakening near high-aura places, legendary-place effects, race dependencies with real consequences.
 - **M5.5 World tier:** notable mages and bloodlines influence history within the caps.
 - **Forks:**
@@ -692,6 +707,7 @@ Each phase lists its goal, milestones (PR-sized), done-when criteria and known f
 - Governments (chiefdom, monarchy, council, theocracy), nobles and titles, legitimacy, factions and succession disputes.
 - Diplomacy, alliances, vassalage, marriages between houses, betrayals.
 - Armies, battles and sieges; occupations and rebellions.
+- **Legends in politics:** kingdoms court, fear, bribe or try to assassinate the 0–3 living legends. A legend can be a ruler, an ally or a deterrent, but a coalition or a larger host can still bring one down. Their deaths are world-shaking events.
 - Deep trade, roads and inequality.
 - Switching the watched site, plus 2–3 detailed sites at once if performance allows.
 - A 512×512 world option.
@@ -788,7 +804,8 @@ Each phase lists its goal, milestones (PR-sized), done-when criteria and known f
   - **Pitfalls:**
     - magic everywhere;
     - magic as pure combat damage;
-    - mages beating armies;
+    - mages beating armies, other than a legend matching at most one low-end field army;
+    - more than 3 legends alive at once;
     - races with no real downside in play.
 - **Phase 6:**
   - **Pitfalls:**
@@ -810,7 +827,8 @@ Each phase lists its goal, milestones (PR-sized), done-when criteria and known f
   - the longest cause chains;
   - race population and power share;
   - the aptitude distribution actually produced;
-  - the strongest individual's combat value versus a 10-soldier squad.
+  - the count of Legendary and Exceptional individuals alive over time;
+  - the strongest individual's combat value against the tier-equivalence table.
 - **Target:** something notable roughly every 1–3 in-game months at the site and every few years per civ, varying by seed.
 - **Tune with content weights,** never with scripts that guarantee outcomes.
 
@@ -835,7 +853,7 @@ Each phase lists its goal, milestones (PR-sized), done-when criteria and known f
 | Save growth | Trivial-event rollups, `CompressionStream` |
 | LOD inconsistency | Round-trip test; notables never fold away; invariant checker |
 | A magic-strong race dominates | Race-balance validation; drama-check race shares |
-| An individual exceeds the scale ceiling | Effect caps in validation; squad-comparison check |
+| An individual exceeds the scale ceiling, or legends become common | Per-tier effect caps in validation; tier-equivalence combat tests; world-tier legend cap (at most 3); drama-check legend counts |
 | Too little or monotonous drama | Novelty bonus, weight tuning at each check-in |
 | Old app breaks mid-transition | `?next` until M3.13 |
 | Heavy process creeps back | Anti-goals and doc budget |
