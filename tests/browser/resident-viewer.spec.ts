@@ -258,6 +258,82 @@ test('personal evidence and causes return to the exact timeline source without c
   expect(canonicalJson(await save(page, 48))).toBe(canonicalJson(world));
 });
 
+test('recorded family deaths retain chronology, source focus and complete saved history on desktop and zoomed phones', async ({
+  page,
+}) => {
+  test.setTimeout(90000);
+  const world = longWorld();
+  const subject = world.world.residents.find((person) => {
+    if (person.deathEventId === null) return false;
+    return world.world.residents.some(
+      (child) =>
+        child.parentIds.includes(person.id) &&
+        child.deathEventId !== null &&
+        world.events[child.deathEventId - 1]!.tick > world.events[person.deathEventId! - 1]!.tick,
+    );
+  })!;
+  expect(subject).toBeDefined();
+  const dossier = residentDossier(world, subject.id)!;
+  const child = dossier.children
+    .filter((person) => person.deathEventId !== null)
+    .sort((a, b) => b.deathEventId! - a.deathEventId!)[0]!;
+  await namedAt(page, 1000);
+  const stored = await fixture(page, 'readSlot');
+  await openResidents(page);
+  await choose(page, subject.id);
+  await expect(page.locator('.resident-prose')).toContainText(
+    `After ${residentName(subject)}'s death`,
+  );
+  await expect(page.locator('.resident-prose')).toContainText(
+    `known child ${residentName(child)} (#${child.id})`,
+  );
+  expect((await page.locator('.resident-prose').innerText()).replace(/\s+/g, ' ')).toBe(
+    prose(world, subject.id),
+  );
+  const source = page.locator(`.resident-prose [data-resident-source-id="${child.deathEventId}"]`);
+  for (const viewport of [null, { width: 320, height: 568 }, { width: 390, height: 650 }]) {
+    if (viewport) {
+      await page.keyboard.press('Escape');
+      await page.setViewportSize(viewport);
+      if (viewport.width === 320) await page.addStyleTag({ content: ':root {font-size:200%;}' });
+      await page.getByRole('button', { name: 'Read residents', exact: true }).click();
+      await expect(source).toBeFocused();
+      await expect(
+        page.getByRole('button', { name: 'Close residents', exact: true }),
+      ).toBeInViewport();
+      const canvas = await page.locator('canvas').boundingBox();
+      const reader = await page
+        .getByRole('region', { name: 'Resident histories', exact: true })
+        .boundingBox();
+      expect(canvas!.y).toBeLessThan(reader!.y);
+    }
+    await source.focus();
+    const scroll = await page.locator('.resident-content').evaluate((el) => el.scrollTop);
+    await source.press('Enter');
+    await expect(page.locator('.event-details h3')).toBeFocused();
+    await expect(page.locator('.event-details')).toContainText(`record #${child.deathEventId}`);
+    await page.getByRole('button', { name: 'Back to resident', exact: true }).click();
+    await expect(source).toBeFocused();
+    await expect(source).toBeInViewport();
+    expect(await page.locator('.resident-content').evaluate((el) => el.scrollTop)).toBeCloseTo(
+      scroll,
+      0,
+    );
+    if (viewport) {
+      await expect(
+        page.getByRole('button', { name: 'Close residents', exact: true }),
+      ).toBeInViewport();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      expect(
+        await source.evaluate((el) => el.getBoundingClientRect().height),
+      ).toBeGreaterThanOrEqual(44);
+    }
+    expect(await fixture(page, 'readSlot')).toEqual(stored);
+  }
+});
+
 test('rejected Resume preserves the profile and accepted same-world replacement clears its view state', async ({
   page,
 }) => {

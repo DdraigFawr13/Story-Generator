@@ -81,9 +81,11 @@ export function residentDossier(world: WorldSnapshot, id: number) {
   }
   const records: PersonalRecord[] = [];
   let latestWork: Event | null = null,
-    latestHome: Event | null = null;
+    latestHome: Event | null = null,
+    latestRelationDeath: Event | null = null;
   for (const event of world.events) {
     if (!event.entityIds.includes(id) && !relatedDeaths.has(event.id)) continue;
+    if (relatedDeaths.has(event.id)) latestRelationDeath = event;
     let text = '';
     if (event.id === person.creationEventId) {
       text =
@@ -94,16 +96,16 @@ export function residentDossier(world: WorldSnapshot, id: number) {
       const born = children.filter((child) => child.birthEventId === event.id);
       if (born.length)
         text = `Birth recorded for ${born.map((child) => `${residentName(child)} (#${child.id})`).join(', ')}.`;
-    } else if (event.type === 'deaths' && event.id === person.deathEventId) {
-      text = `Died aged ${ageLabel(ageWeeks)}, with recorded health ${person.health}/100.`;
-    } else if (event.type === 'deaths' && relatedDeaths.has(event.id)) {
-      text = relatedDeaths
-        .get(event.id)!
-        .map(
+    } else if (event.type === 'deaths') {
+      text = [
+        ...(event.id === person.deathEventId
+          ? [`Died aged ${ageLabel(ageWeeks)}, with recorded health ${person.health}/100.`]
+          : []),
+        ...(relatedDeaths.get(event.id) ?? []).map(
           (related) =>
             `Death recorded for known ${related.relation} ${residentName(related.person)} (#${related.person.id}).`,
-        )
-        .join(' ');
+        ),
+      ].join(' ');
     } else if (event.type === 'work_changed') {
       const row = (event.facts.assignments as { id: number; after: ResidentActivity }[]).find(
         (row) => row.id === id,
@@ -175,6 +177,35 @@ export function residentDossier(world: WorldSnapshot, id: number) {
       );
     paragraphs.push(paragraph(tokens));
   }
+  const relationAfterLife =
+    !!death && !!latestRelationDeath && latestRelationDeath.tick > death.tick;
+  const sameDeathRecord = !!latestRelationDeath && latestRelationDeath.id === death?.id;
+  const relationParagraph = latestRelationDeath
+    ? paragraph([
+        words(
+          relationAfterLife
+            ? `After ${residentName(person)}'s death, `
+            : sameDeathRecord
+              ? 'The same '
+              : 'The latest death among recorded parents and children appears in ',
+        ),
+        record(
+          latestRelationDeath.id,
+          `${sameDeathRecord ? '' : 'the '}death record at ${dateLabel(latestRelationDeath.tick)}`,
+        ),
+        words(
+          `${sameDeathRecord ? ' also records ' : relationAfterLife ? ' records ' : ': '}${relatedDeaths
+            .get(latestRelationDeath.id)!
+            .map(
+              (related) =>
+                `known ${related.relation} ${residentName(related.person)} (#${related.person.id})`,
+            )
+            .join(', ')}.`,
+        ),
+      ])
+    : null;
+  if (relationParagraph && (!death || latestRelationDeath!.tick < death.tick))
+    paragraphs.push(relationParagraph);
   if (death)
     paragraphs.push(
       paragraph([
@@ -185,6 +216,8 @@ export function residentDossier(world: WorldSnapshot, id: number) {
         ),
       ]),
     );
+  if (relationParagraph && death && latestRelationDeath!.tick >= death.tick)
+    paragraphs.push(relationParagraph);
   const deathHealth = death
     ? (
         death.facts.residents as {
@@ -202,7 +235,7 @@ export function residentDossier(world: WorldSnapshot, id: number) {
   const lastHealth =
     deathHealth ?? world.lastTick?.people.health.find((row) => row.id === id) ?? null;
   return {
-    formatterVersion: 'resident-historian-v1' as const,
+    formatterVersion: 'resident-historian-v2' as const,
     person,
     ageWeeks,
     stage,
