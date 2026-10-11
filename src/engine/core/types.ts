@@ -313,6 +313,8 @@ export interface Site {
   /** People the land within reach feeds (the M2.3 growth target). */
   capacity: number;
   features: SiteFeature[];
+  /** Highest total population the site has held (M2.3). */
+  peakPop: number;
 }
 
 export interface WorldState {

@@ -209,7 +209,8 @@ describe('generated settlement', () => {
   it('emits a founding event per civ, and the second site names it as its cause', () => {
     const founded = world.events.filter((e) => e.type === 'civ_founded');
     expect(founded).toHaveLength(world.civs.size);
-    for (const event of world.events.filter((e) => e.type === 'site_founded')) {
+    // Settle-stage sites only (day 0); history's new sites name their own causes.
+    for (const event of world.events.filter((e) => e.type === 'site_founded' && e.day === 0)) {
       expect(founded.map((e) => e.id)).toContain(event.causes[0]);
     }
   });

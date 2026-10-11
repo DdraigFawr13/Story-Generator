@@ -138,6 +138,19 @@ export function cultureProblems(content: ContentBundle): string[] {
   return problems;
 }
 
+/** Event types the settle and history stages emit; content must define them. */
+const HISTORY_EVENT_IDS = [
+  'civ_founded',
+  'site_founded',
+  'bad_harvest',
+  'famine',
+  'plague',
+  'migration',
+  'site_grew',
+  'site_abandoned',
+  'civ_fell',
+];
+
 /** Settlement rules: present, capitalKind keys are culture ids, a civ name template per government used. */
 export function settlementProblems(content: ContentBundle): string[] {
   const rules = content.settlement;
@@ -156,7 +169,7 @@ export function settlementProblems(content: ContentBundle): string[] {
     problems.push('Settlement civs: need 1 <= min <= max.');
   }
   const eventIds = new Set(content.eventTypes.map((e) => e.id));
-  for (const id of ['civ_founded', 'site_founded']) {
+  for (const id of HISTORY_EVENT_IDS) {
     if (!eventIds.has(id)) problems.push(`Settlement needs event type "${id}".`);
   }
   return problems;

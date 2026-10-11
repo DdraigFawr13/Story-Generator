@@ -17,7 +17,13 @@ export interface WorkerRequest {
 }
 
 export type WorkerReply =
-  | { type: 'progress'; stage: WorldgenStage; done: number; total: number }
+  | {
+      type: 'progress';
+      stage: WorldgenStage;
+      done: number;
+      total: number;
+      fraction?: number | undefined;
+    }
   | { type: 'done'; world: WorldState }
   | { type: 'error'; message: string };
 
@@ -26,8 +32,8 @@ const scope = self as unknown as { postMessage(reply: WorkerReply): void };
 self.addEventListener('message', (event: MessageEvent<WorkerRequest>) => {
   const { seed, params, content } = event.data;
   try {
-    const world = generateWorld(seed, params, content, (stage, done, total) =>
-      scope.postMessage({ type: 'progress', stage, done, total }),
+    const world = generateWorld(seed, params, content, (stage, done, total, fraction) =>
+      scope.postMessage({ type: 'progress', stage, done, total, fraction }),
     );
     scope.postMessage({ type: 'done', world });
   } catch (problem) {

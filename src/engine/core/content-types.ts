@@ -4,7 +4,7 @@
 
 import type { Cadence, Season } from './clock';
 import type { SimContext } from './context';
-import type { Attributes, SiteKind } from './types';
+import type { Attributes, SiteFeature, SiteKind } from './types';
 import type { BirthTierId } from '../people/tiers';
 
 export interface RaceDef {
@@ -176,6 +176,7 @@ export interface ContentBundle {
   eventTypes: EventTypeDef[];
   rules: EventRuleDef[];
   settlement: SettlementRules;
+  history: HistoryRules;
 }
 
 /** Syllable and pattern tables for naming regions (M1.5). */
@@ -333,6 +334,10 @@ export interface SettlementRules {
     port: number;
     ford: number;
     road: number;
+    /** Farming multiplier on cells outside the race's preferred biomes. */
+    foreignBiome: number;
+    /** Extra multipliers by race and site feature, e.g. ore traded for food. */
+    raceFeature: Record<string, Partial<Record<SiteFeature, number>>>;
   };
   /** Suitability score weights (higher is better). */
   suitability: {
@@ -359,4 +364,70 @@ export interface SettlementRules {
   civNames: Record<GovernmentKind, string>;
   /** Cost cap (summed travel cost) of a site's territory. */
   territoryReach: number;
+}
+
+/** Tunable numbers for the yearly history stage (M2.3); see engine/history/. Rates are per year. */
+export interface HistoryRules {
+  /** Harvest yield is 1 plus or minus this much, uniform. */
+  harvestVariance: number;
+  /** Drought chance per site per year = risk.drought / 100 * droughtScale; yield multiplier when it hits. */
+  droughtScale: number;
+  droughtYield: number;
+  /** Harsh winter chance = risk.snow / 100 * winterScale; yield multiplier when it hits. */
+  winterScale: number;
+  winterYield: number;
+  /** Food (in people fed) each person can produce, up to the site's capacity. */
+  workerOutput: number;
+  /** Stores never exceed this many years of need. */
+  storesCapYears: number;
+  /** Births per adult per year, before race fertility and crowding. */
+  birthRate: number;
+  /** Births fall by this share at full crowding. */
+  crowdingBirthCut: number;
+  /** Crowding (pop / capacity) at which births start to fall; the cut grows linearly to full crowding. */
+  crowdingFrom: number;
+  /** Yearly death rates for a human child and adult at zero crowding. */
+  childDeath: number;
+  adultDeath: number;
+  /** Child and adult deaths rise by (1 + crowding * crowdingDeathRise). */
+  crowdingDeathRise: number;
+  /** Lifespan (years) the child and adult death rates are set for; longer-lived races die proportionally less. */
+  referenceLifespan: number;
+  /** Elders are the last share of a lifespan; their death rate is 1 / (lifespan * elderLifeShare). */
+  elderLifeShare: number;
+  /** Floors on the years spent as an adult and as an elder (caps the ageing and death rates). */
+  minAdultYears: number;
+  minElderYears: number;
+  /** Share of a starving site's people who die, times the shortfall (0-1). */
+  famineDeathShare: number;
+  /** Plague: smallest site that can start an outbreak, yearly chance, share killed (min, max). */
+  plagueMinPop: number;
+  plagueChance: number;
+  plagueDeath: [number, number];
+  /** Chance an infected site infects each linked site the next year. */
+  plagueSpread: number;
+  /** Years a site cannot be infected again. */
+  plagueImmunityYears: number;
+  /** Share of children and adults who leave a starving or overfull site. */
+  migrantShare: number;
+  /** A site above this share of capacity may found a new site. */
+  expandAt: number;
+  /** Years between expansions from one site. */
+  expandCooldown: number;
+  expandChance: number;
+  /** Chebyshev distance range (cells) of a new site from its source. */
+  expandRange: [number, number];
+  /** Share of children and adults who found the new site. */
+  expandShare: number;
+  /** A new site starts with this many years of food. */
+  newSiteStoresYears: number;
+  /** No new site within this many cells (Chebyshev) of another, live or ruined. */
+  newSiteSpacing: number;
+  /** A town or city only drops a kind when under its lower limit by this share. */
+  kindHysteresis: number;
+  /** Sites under this population are abandoned. */
+  abandonBelow: number;
+  /** Travel cost within which two sites are linked, and the range (cells) of sea lanes between harbours. */
+  linkReach: number;
+  seaLinkRange: number;
 }

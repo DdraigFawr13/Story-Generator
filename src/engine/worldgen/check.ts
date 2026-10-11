@@ -271,7 +271,7 @@ export function checkRoutes(cells: WorldCells, routes: RouteGraph): string[] {
   return problems;
 }
 
-/** Invariant checker for civs, sites and territory (M2.2); empty means sound. */
+/** Invariant checker for civs, sites and territory (M2.2, M2.3); empty means sound. */
 export function checkSites(world: Pick<WorldState, 'cells' | 'civs' | 'sites'>): string[] {
   const { cells, civs, sites } = world;
   if (!cells) return ['the world has no cells'];
@@ -292,23 +292,32 @@ export function checkSites(world: Pick<WorldState, 'cells' | 'civs' | 'sites'>):
     }
     if (cells.water[site.cell] !== 0) report(`${label} at ${site.cell} is not on dry land`);
     if (site.civId !== null) {
-      if (civs.has(site.civId)) perCiv.set(site.civId, (perCiv.get(site.civId) ?? 0) + 1);
-      else report(`${label} belongs to unknown civ ${site.civId}`);
+      if (civs.has(site.civId)) {
+        if (site.ruinedYear === undefined)
+          perCiv.set(site.civId, (perCiv.get(site.civId) ?? 0) + 1);
+      } else report(`${label} belongs to unknown civ ${site.civId}`);
     }
+    let pop = 0;
     for (const band of site.pop) {
       if (!Number.isInteger(band.count) || band.count < 0) {
         report(`${label} has ${band.band} count ${band.count}`);
       }
+      pop += band.count;
     }
+    if (site.ruinedYear !== undefined && pop !== 0) report(`${label} is ruined but holds ${pop}`);
+    if (!(site.stores >= 0)) report(`${label} has stores ${site.stores}`);
+    if (!(site.peakPop >= pop)) report(`${label} has peak population ${site.peakPop} below ${pop}`);
     if (!(site.capacity >= 0)) report(`${label} has capacity ${site.capacity}`);
   }
   for (const civ of civs.values()) {
     const label = `civ ${civ.id} "${civ.name}"`;
     const capital = sites.get(civ.capital);
     if (!capital) report(`${label} has no capital site`);
-    else if (capital.civId !== civ.id) report(`${label} capital belongs to another civ`);
-    const count = perCiv.get(civ.id) ?? 0;
-    if (count < 1 || count > 2) report(`${label} has ${count} sites, expected 1-2`);
+    else if (civ.fell === undefined) {
+      if (capital.civId !== civ.id) report(`${label} capital belongs to another civ`);
+      if (capital.ruinedYear !== undefined) report(`${label} capital is in ruins`);
+      if ((perCiv.get(civ.id) ?? 0) < 1) report(`${label} has no live site`);
+    }
   }
   for (let i = 0; i < size; i += 1) {
     const owner = cells.territory[i]!;

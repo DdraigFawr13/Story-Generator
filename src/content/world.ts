@@ -72,6 +72,76 @@ export const eventTypes: EventTypeDef[] = [
       'The {civ} spread to a new place, and {site} became their {kind} ({date}).',
     ],
   },
+  {
+    id: 'bad_harvest',
+    baseImportance: 2,
+    category: 'nature',
+    templates: [
+      'In {date} {cause} cut the harvest at {site}, and the {civ} counted its grain.',
+      '{date}: a poor harvest at {site}, laid to {cause}; the {civ} tightened its belts.',
+      'The fields of {site} gave little in {date}, for {cause} had come upon the {civ}.',
+    ],
+  },
+  {
+    id: 'famine',
+    baseImportance: 5,
+    category: 'threat',
+    templates: [
+      'In {date} famine took {dead} at {site}, when the stores of the {civ} ran dry.',
+      '{date}: hunger gripped {site}, and {dead} of the {civ} died before the next harvest.',
+      'The granaries of {site} stood empty in {date}; {dead} perished among the {civ}.',
+    ],
+  },
+  {
+    id: 'plague',
+    baseImportance: 6,
+    category: 'threat',
+    templates: [
+      'In {date} plague struck {site}, and {dead} of the {civ} were buried.',
+      '{date}: a sickness came to {site}; {dead} died, and the {civ} shut their doors.',
+      'Fever swept {site} in {date}, taking {dead} of the {civ}.',
+    ],
+  },
+  {
+    id: 'migration',
+    baseImportance: 3,
+    category: 'social',
+    templates: [
+      'In {date} {count} of the {civ} left {from} for {to}.',
+      '{date}: {count} people of the {civ} took the road from {from} and settled at {to}.',
+      'Driven by want or crowding, {count} left {from} for {to} in {date}.',
+    ],
+  },
+  {
+    id: 'site_grew',
+    baseImportance: 2,
+    category: 'world',
+    templates: [
+      'By {date} {site} had grown into a {kind}, and the {civ} took pride in it.',
+      '{date}: {site} of the {civ} became a {kind}.',
+      'The people of {site} prospered, and in {date} it was counted a {kind}.',
+    ],
+  },
+  {
+    id: 'site_abandoned',
+    baseImportance: 5,
+    category: 'world',
+    templates: [
+      'In {date} {site} was abandoned by the {civ} and left to fall to ruin.',
+      '{date}: the last of the {civ} left {site}, and its hearths went cold.',
+      '{site} stood empty by {date}; the {civ} had gone, and the ruin began.',
+    ],
+  },
+  {
+    id: 'civ_fell',
+    baseImportance: 8,
+    category: 'politics',
+    templates: [
+      'In {date} the {civ} came to its end, with no hearth left to its name.',
+      '{date}: the {civ} fell, and its people were scattered or gone.',
+      'So ended the {civ} in {date}; none remained to keep its name.',
+    ],
+  },
 ];
 
 export const rules: EventRuleDef[] = [

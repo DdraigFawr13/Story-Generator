@@ -1,0 +1,42 @@
+// Yearly history rules (M2.3): harvests, births and deaths, famine, plague, migration and expansion.
+// Tune the numbers here; the history stage in engine/history/ reads only this table.
+
+import type { HistoryRules } from '../engine';
+
+export const HISTORY: HistoryRules = {
+  harvestVariance: 0.1,
+  droughtScale: 0.25,
+  droughtYield: 0.5,
+  winterScale: 0.2,
+  winterYield: 0.7,
+  workerOutput: 1.3,
+  storesCapYears: 1.5,
+  birthRate: 0.12,
+  crowdingBirthCut: 1,
+  crowdingFrom: 0.6,
+  childDeath: 0.02,
+  adultDeath: 0.006,
+  crowdingDeathRise: 0.5,
+  referenceLifespan: 70,
+  elderLifeShare: 0.25,
+  minAdultYears: 5,
+  minElderYears: 10,
+  famineDeathShare: 0.4,
+  plagueMinPop: 200,
+  plagueChance: 0.0005,
+  plagueDeath: [0.1, 0.3],
+  plagueSpread: 0.35,
+  plagueImmunityYears: 20,
+  migrantShare: 0.2,
+  expandAt: 0.8,
+  expandCooldown: 15,
+  expandChance: 0.2,
+  expandRange: [4, 12],
+  expandShare: 0.25,
+  newSiteStoresYears: 0.5,
+  newSiteSpacing: 3,
+  kindHysteresis: 0.1,
+  abandonBelow: 8,
+  linkReach: 60,
+  seaLinkRange: 40,
+};

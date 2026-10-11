@@ -10,6 +10,8 @@ import {
   type MapLayer,
   type Region,
   type ResourceDef,
+  type Rgb,
+  type SimEvent,
   type Site,
   type WorldCells,
 } from '../engine';
@@ -200,10 +202,16 @@ export function Legend({
   layer,
   shade,
   hover,
+  entries,
+  readout,
 }: {
   layer: MapLayer;
   shade: boolean;
   hover: Hover | null;
+  /** Replaces the layer's static legend entries (the Peoples layer lists the world's civs). */
+  entries?: readonly { label: string; color: Rgb }[] | undefined;
+  /** Names a hovered value when the layer's own labels are generic (civ ids on the Peoples layer). */
+  readout?: ((value: number) => string | undefined) | undefined;
 }) {
   const position = hover ? rampPosition(layer, hover.value, hover.water) : null;
   return (
@@ -232,7 +240,7 @@ export function Legend({
         </>
       ) : (
         <div className="swatches">
-          {layer.legend.map((entry) => (
+          {(entries ?? layer.legend).map((entry) => (
             <span key={entry.label}>
               <i style={{ background: `rgb(${entry.color.join(',')})` }} />
               {entry.label}
@@ -242,7 +250,7 @@ export function Legend({
       )}
       <div className="readout">
         {hover
-          ? formatReadout(layer, hover.value, hover.water)
+          ? (readout?.(hover.value) ?? formatReadout(layer, hover.value, hover.water))
           : 'Point at the map to read a value'}
       </div>
     </div>
@@ -283,11 +291,14 @@ function SiteBlock({
   civ,
   culture,
   num,
+  history,
 }: {
   site: Site;
   civ: Civ | null;
   culture: CultureDef | null;
   num: (n: number) => string;
+  /** Rendered chronicle lines for this site, newest first. */
+  history: readonly string[];
 }) {
   const bandCount = (band: (typeof BAND_ORDER)[number]) =>
     site.pop.filter((p) => p.band === band).reduce((n, p) => n + p.count, 0);
@@ -306,15 +317,32 @@ function SiteBlock({
           {num(sitePopulation(site))} ({BAND_ORDER.map((b) => num(bandCount(b))).join(' / ')}{' '}
           children / adults / elders)
         </Fact>
+        <Fact label="Peak population">{num(site.peakPop)}</Fact>
         <Fact label="Capacity">{num(site.capacity)}</Fact>
-        <Fact label="Stores">{num(site.stores)}</Fact>
+        <Fact label="Stores">{num(Math.round(site.stores))}</Fact>
+        {/* Calendar years count from 1 (core/clock.ts); history year N is calendar year N + 1. */}
+        <Fact label="Founded">Year {site.founded + 1}</Fact>
+        {site.ruinedYear !== undefined && <Fact label="Ruined">Year {site.ruinedYear + 1}</Fact>}
         <Fact label="Founded here for">
           {site.features.length === 0 ? 'open ground' : site.features.join(', ')}
         </Fact>
       </dl>
+      {history.length > 0 && (
+        <>
+          <h4>History</h4>
+          <ul className="site-history" aria-label="Site history">
+            {history.map((line, k) => (
+              <li key={k}>{line}</li>
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   );
 }
+
+/** How many of a site's latest events the inspector lists. */
+const SITE_HISTORY_LINES = 5;
 
 export function Inspector({
   cells,
@@ -329,6 +357,8 @@ export function Inspector({
   landCiv,
   landCulture,
   places,
+  events,
+  renderEvent,
   onShow,
   onClose,
 }: {
@@ -347,6 +377,9 @@ export function Inspector({
   landCulture: CultureDef | null;
   /** Regions containing the cell, in id order. */
   places: readonly Region[];
+  /** The world's events, oldest first, and how to tell one in words. */
+  events: readonly SimEvent[];
+  renderEvent: (event: SimEvent) => string;
   onShow: (layerId: string) => void;
   onClose: () => void;
 }) {
@@ -367,6 +400,12 @@ export function Inspector({
     return { kind, level };
   });
   const num = (n: number) => n.toLocaleString('en-US');
+  const history: string[] = [];
+  if (site) {
+    for (let k = events.length - 1; k >= 0 && history.length < SITE_HISTORY_LINES; k -= 1) {
+      if (events[k]!.place === site.cell) history.push(renderEvent(events[k]!));
+    }
+  }
   return (
     <aside className="float wm-inspector" aria-label="Cell inspector">
       <header>
@@ -398,7 +437,9 @@ export function Inspector({
           ))}
         </ul>
       )}
-      {site && <SiteBlock site={site} civ={siteCiv} culture={siteCulture} num={num} />}
+      {site && (
+        <SiteBlock site={site} civ={siteCiv} culture={siteCulture} num={num} history={history} />
+      )}
       {!site && landCiv && (
         <p className="land-of">
           Land of {landCiv.name} ({landCulture?.name ?? landCiv.cultureId})

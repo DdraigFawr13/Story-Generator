@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_CONTENT } from '../content';
 import {
   BIRTH_TIER_IDS,
+  DEFAULT_PARAMS,
   DEFAULT_SYSTEMS,
   RngStream,
   advance,
@@ -50,6 +51,7 @@ const STAGE_LABELS: Record<WorldgenStage, string> = {
   regions: 'Names and places',
   routes: 'Travel and routes',
   settle: 'Peoples and sites',
+  history: 'History',
 };
 /** How long "Link copied" stays on the button. */
 const COPIED_MS = 2000;
@@ -108,8 +110,14 @@ export function NextApp() {
       seed,
       { width: worldSize, height: worldSize },
       DEFAULT_CONTENT,
-      (stage, done, total) =>
-        setProgress({ label: `${STAGE_LABELS[stage]}…`, fraction: done / total }),
+      (stage, done, total, within) =>
+        setProgress({
+          label:
+            stage === 'history' && within !== undefined
+              ? `History, year ${Math.round(within * DEFAULT_PARAMS.historyYears)}…`
+              : `${STAGE_LABELS[stage]}…`,
+          fraction: (done + (within ?? 0)) / total,
+        }),
     );
     job.current = started;
     started.promise.then(
@@ -244,6 +252,8 @@ export function NextApp() {
           routes={state.routes}
           sites={state.sites}
           civs={state.civs}
+          events={state.events}
+          renderEvent={(event) => narrator.renderEvent(event)}
           cultures={DEFAULT_CONTENT.cultures}
           seed={state.seed}
           content={DEFAULT_CONTENT}

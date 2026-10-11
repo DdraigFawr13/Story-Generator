@@ -1,0 +1,69 @@
+// Yearly history (M2.3): after settlement, each year runs harvest, demographics, famine, plague,
+// migration, expansion and site upkeep in a fixed order. Per-run state (links, immunity,
+// cooldowns) lives in `HistoryRun`; only sites, civs, events and territory change in the world.
+
+import { DAYS_PER_YEAR } from '../core/clock';
+import type { WorldState } from '../core/types';
+import { runAbandonment } from './abandon';
+import { runDemography, runKinds } from './demography';
+import { runFamine, runHarvest } from './harvest';
+import { buildLinks, createLinkSearch } from './links';
+import { runExpansion, runMigration } from './migration';
+import { runPlague } from './plague';
+import { buildSettlePlaces, buildSettleSearch, computeTerritory } from './settle';
+import { createRun, isLive, liveSites, type HistoryContent, type HistoryRun } from './state';
+import { totalPop } from './pop';
+
+export type { HistoryContent } from './state';
+export * from './links';
+
+/** Years between territory recomputes and progress reports. */
+const DECADE = 10;
+
+function recomputeTerritory(run: HistoryRun): void {
+  const { cells, world, content } = run;
+  const live = liveSites(run).filter((site) => {
+    const civ = site.civId === null ? undefined : world.civs.get(site.civId);
+    return civ !== undefined && civ.fell === undefined;
+  });
+  cells.territory = computeTerritory(cells, live, content.settlement.territoryReach);
+  run.territory = cells.territory;
+}
+
+/** Runs `world.params.historyYears` yearly steps; `onYear(year, years)` is called each decade and at the end. */
+export function runHistory(
+  world: WorldState,
+  content: HistoryContent,
+  onYear?: (year: number, years: number) => void,
+): void {
+  const cells = world.cells;
+  if (!cells) throw new Error('runHistory needs generated cells.');
+  const years = world.params.historyYears;
+  if (years <= 0) return;
+  const places = buildSettlePlaces(cells, world.regions.values(), world.routes);
+  const search = buildSettleSearch(cells, content, places);
+  const linkSearch = createLinkSearch(cells);
+  const links = buildLinks(cells, [...world.sites.values()], content.history, linkSearch);
+  const run = createRun(world, content, search, linkSearch, links);
+
+  for (let year = 1; year <= years; year += 1) {
+    run.year = year;
+    world.day = year * DAYS_PER_YEAR;
+    runHarvest(run);
+    runDemography(run);
+    runFamine(run);
+    runPlague(run);
+    runMigration(run);
+    runExpansion(run);
+    runKinds(run);
+    runAbandonment(run);
+    for (const site of world.sites.values()) {
+      if (isLive(site)) site.peakPop = Math.max(site.peakPop, totalPop(site));
+    }
+    if (year % DECADE === 0 || year === years) {
+      recomputeTerritory(run);
+      onYear?.(year, years);
+    }
+  }
+  world.day = years * DAYS_PER_YEAR;
+}
