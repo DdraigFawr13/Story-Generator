@@ -109,3 +109,41 @@ export interface ContentBundle {
   eventTypes: EventTypeDef[];
   rules: EventRuleDef[];
 }
+
+/** [r, g, b], each 0–255. */
+export type Rgb = [number, number, number];
+
+export interface MapLayerStop {
+  at: number;
+  color: Rgb;
+}
+
+export interface MapLayerCategory {
+  value: number;
+  label: string;
+  color: Rgb;
+}
+
+/**
+ * A colour scheme for one world-map layer (Phase 1). The renderer in
+ * worldgen/render.ts reads the cell values named by `id` (for example
+ * "risk.drought") and paints them with these colours.
+ */
+export interface MapLayer {
+  id: string;
+  label: string;
+  unit: string;
+  kind: 'ramp' | 'categories';
+  /** Ramp: colours linearly interpolated between stops, sorted by `at`. */
+  stops?: MapLayerStop[];
+  /** Elevation only: ramp for cells at or below sea level (metres, negative). */
+  seaStops?: MapLayerStop[];
+  /** Ramp only: bucket the value first, so `stops` are keyed by bucket number (log-like scales). */
+  thresholds?: number[];
+  /** Categories: one colour per value. */
+  categories?: MapLayerCategory[];
+  /** Categories: values past the list reuse colours in order (plate ids). */
+  cycle?: boolean;
+  /** Swatches shown in the map legend. */
+  legend: { label: string; color: Rgb }[];
+}

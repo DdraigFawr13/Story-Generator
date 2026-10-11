@@ -82,6 +82,9 @@ describe('terrain', () => {
     expect(loaded.cells!.elevation).toBeInstanceOf(Int16Array);
     expect(loaded.cells!.elevation).toEqual(world.cells!.elevation);
     expect(loaded.cells!.plate).toEqual(world.cells!.plate);
+    expect(loaded.cells!.rainfall).toBeInstanceOf(Uint16Array);
+    expect(loaded.cells!.rainfall).toEqual(world.cells!.rainfall);
+    expect(loaded.cells!.risk.snow).toEqual(world.cells!.risk.snow);
   });
 
   it('rejects unusable world parameters', () => {

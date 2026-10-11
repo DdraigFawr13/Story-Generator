@@ -113,6 +113,10 @@ export interface WorldParams {
   continents: number;
   /** Share of cells above sea level (0–1). */
   landFraction: number;
+  /** Degrees C added to every temperature (−15…15); no UI yet. */
+  temperatureShift: number;
+  /** Multiplies every rainfall total (0.25…2); no UI yet. */
+  rainfallScale: number;
 }
 
 /** A tectonic plate from world-gen. Motion is in tenths of a cell per step. */
@@ -134,6 +138,23 @@ export interface WorldCells {
   /** Owning plate id. */
   plate: Uint8Array;
   plates: Plate[];
+  /** Cells to the nearest ocean cell; 0 on the ocean itself. */
+  seaDistance: Uint16Array;
+  /** Typical summer high and winter low in °C. */
+  tempSummer: Int8Array;
+  tempWinter: Int8Array;
+  /** Millimetres per year. */
+  rainfall: Uint16Array;
+  /** Weather risks, 0–100. */
+  risk: { drought: Uint8Array; storm: Uint8Array; snow: Uint8Array };
+  /** Downstream neighbour as a D8 index (0–7, see worldgen/grid.ts); −1 at the sea or none. */
+  flowDir: Int8Array;
+  /** Cells of runoff draining through each cell, weighted by rainfall. */
+  flow: Uint32Array;
+  /** 0 land, 1 river, 2 lake, 3 sea. */
+  water: Uint8Array;
+  /** 1 on flat low ground beside a river that floods and silts. */
+  floodplain: Uint8Array;
 }
 
 export interface WorldState {

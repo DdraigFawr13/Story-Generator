@@ -12,3 +12,5 @@ export const DEFAULT_CONTENT: ContentBundle = {
   eventTypes,
   rules,
 };
+
+export * from './map-layers';

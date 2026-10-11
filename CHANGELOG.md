@@ -4,6 +4,7 @@ Newest first. One short entry per merged milestone.
 
 ## Phase 1 — World generation
 
+- **M1.2 Climate, water and erosion, plus worldgen tools.** `generateWorld` now runs terrain, erosion, climate and water stages (about 0.25 s at 256×256). Light stream-power erosion carves valleys; every cell gets distance to sea, a summer high and winter low (latitude 70°N to 10°S, lapse rate, wider swings inland), wind-swept rainfall with rain shadows, and drought, storm and snow risks. Priority flood gives every cell a downhill path to the sea, rivers above a flow threshold, lakes in larger depressions and floodplains. Cells at or below sea level are sea, including inland seas. New params `temperatureShift` and `rainfallScale`. Tools: `npm run drama` (world stats and stage timings), `npm run worldmap` (PNG per layer, Node `zlib`), layer palettes in `content/map-layers.ts`, a pure `renderLayer`, `checkWorldCells` and the `gridFromAscii` test helper.
 - **M1.1 Terrain.** `generateWorld(seed, params)` builds a 256×256 heightmap in about 0.1 s: paired continental plates (inland ranges where they collide), oceanic plates (coastal ranges, island arcs, rifts), noise-warped plate borders, fractal coasts, ridged interior hills and an ocean margin. Sea level is set to hit `params.landFraction` (default 0.35); `params.continents` defaults to 4. Typed-array layers round-trip through saves. Added the `implementer` (Sonnet) and `test-runner` (Haiku) agents and the model-routing rules in `AGENTS.md`.
 
 ## Phase 0 — Reset and skeleton
