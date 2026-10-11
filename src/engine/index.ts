@@ -14,3 +14,7 @@ export * from './narrative/render';
 export * from './systems';
 export * from './worldgen';
 export * from './worldgen/noise';
+export * from './worldgen/grid';
+export * from './worldgen/erosion';
+export * from './worldgen/climate';
+export * from './worldgen/water';

@@ -10,6 +10,8 @@ export const DEFAULT_PARAMS: WorldParams = {
   historyYears: 250,
   continents: 4,
   landFraction: 0.35,
+  temperatureShift: 0,
+  rainfallScale: 1,
 };
 
 export function validateSeed(seed: string): string {
@@ -20,7 +22,7 @@ export function validateSeed(seed: string): string {
 }
 
 export function validateParams(params: WorldParams): WorldParams {
-  const { width, height, continents, landFraction } = params;
+  const { width, height, continents, landFraction, temperatureShift, rainfallScale } = params;
   if (![width, height].every((size) => Number.isInteger(size) && size >= 32 && size <= 512)) {
     throw new Error('World size must be 32–512 cells per side.');
   }
@@ -29,6 +31,12 @@ export function validateParams(params: WorldParams): WorldParams {
   }
   if (!(landFraction >= 0.1 && landFraction <= 0.8)) {
     throw new Error('The land fraction must be between 0.1 and 0.8.');
+  }
+  if (!(temperatureShift >= -15 && temperatureShift <= 15)) {
+    throw new Error('The temperature shift must be between -15 and 15 degrees.');
+  }
+  if (!(rainfallScale >= 0.25 && rainfallScale <= 2)) {
+    throw new Error('The rainfall scale must be between 0.25 and 2.');
   }
   return params;
 }
