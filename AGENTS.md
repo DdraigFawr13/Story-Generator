@@ -4,7 +4,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/IMPLEMENTATION_PLAN.md](docs/I
 
 ## GitHub Actions budget rules
 
-GitHub Actions minutes are a limited, account-wide budget shared by every repository. CI exists to confirm reviewable work, not to be the debugger.
+GitHub Actions minutes are a limited, account-wide budget shared by every repository. This repository is public, so its minutes are currently free, but the account's concurrent-job limit is shared with private repositories, and fast feedback still matters. CI exists to confirm reviewable work, not to be the debugger.
 
 1. **Verify locally first.** Run the local checks below before every push. Debug failing tests locally; do not push just to see what CI says.
 2. **Push at reviewable checkpoints.** Commit as often as useful, but batch related commits into one push. Each push to a PR branch starts a CI run (newer pushes cancel older runs, but cancelled runs still bill the minutes they used).
@@ -23,7 +23,7 @@ GitHub Actions minutes are a limited, account-wide budget shared by every reposi
 
 ## What GitHub runs automatically
 
-See [docs/CI_VERIFICATION.md](docs/CI_VERIFICATION.md). In short: every PR update runs Tier 1 (`unit`); simulation-area diffs add a representative seed battery; any `src/` or browser-test diff adds Chromium. Main pushes run Tier 1 only, except merges touching high-risk paths, which re-run the full regression on main. Dependency, toolchain, workflow and rule-version changes run the full regression automatically.
+See [docs/CI_VERIFICATION.md](docs/CI_VERIFICATION.md). In short: every PR update runs Tier 1 (`unit`); simulation-area diffs add a representative seed battery; any `src/` or browser-test diff adds Chromium. While the repository is public (minutes are free), every main push runs the full regression; if it becomes private, main pushes run Tier 1 (plus full regression for high-risk paths). Dependency, toolchain, workflow and rule-version changes run the full regression automatically.
 
 ## When full regression is required
 

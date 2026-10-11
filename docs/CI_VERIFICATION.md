@@ -6,13 +6,13 @@ Since D-031 (2026-10-11), GitHub verification is tiered, so routine changes no l
 
 | Tier | Runs on | Work | Typical billed minutes |
 | --- | --- | --- | --- |
-| 1 Fast | Every PR update and every main push | `unit`: format, typecheck, boundaries, every ordinary unit test, build, both Python probes. Markdown-only changes run the format check only. | ~5 (~2 for Markdown only) |
+| 1 Fast | Every PR update (and main pushes if the repo is private) | `unit`: format, typecheck, boundaries, every ordinary unit test, build, both Python probes. Markdown-only changes run the format check only. | ~5 (~2 for Markdown only) |
 | 2 Integration | PRs whose diff touches the matching code | `seed-battery` (sample) for `src/sim`, `src/adapters`, `src/controller` and battery files: all 100 settlement seeds plus living partition 1/4. `browser-tests` (every case in Chromium, one unsharded `--fully-parallel --forbid-only` run) for any `src/`, `tests/browser/`, browser fixture or `index.html` change. | +8 sim, +5 browser |
-| 3 Full regression | PR label `full-regression`; high-risk paths; manual dispatch | Both batteries, all 100 seeds, as 8 reported partitions in 3 jobs, then the unchanged `verify-seed-battery.mjs --living` coverage gate; every browser case in Chromium, Firefox and WebKit as 2 partitions per engine (PR #38), closed by `verify-browser-reports.mjs`. | ~50 |
+| 3 Full regression | Every main push while public; PR label `full-regression`; high-risk paths; manual dispatch | Both batteries, all 100 seeds, as 8 reported partitions in 3 jobs, then the unchanged `verify-seed-battery.mjs --living` coverage gate; every browser case in Chromium, Firefox and WebKit as 2 partitions per engine (PR #38), closed by `verify-browser-reports.mjs`. | ~50 |
 
 High-risk paths force Tier 3 automatically: `package.json`, `package-lock.json`, `.nvmrc`, `.npmrc`, `tsconfig.json`, the Vite/Vitest/Playwright configs, anything under `.github/workflows/`, `scripts/ci-scope.sh`, the rule-version files `src/sim/*config.ts`, and `scripts/verify-browser-reports.mjs`.
 
-`scripts/ci-scope.sh` makes the decision from the PR's own diff (GitHub's merge commit against its base parent) and prints the changed files in the `unit` log. A main push runs Tier 1 only, since the PR already ran Tier 2 for the same change. The exception is a merged change that touches a high-risk path: it runs Tier 3 again on the exact main commit, because Vercel deploys main independently (D-026) and toolchain or workflow changes are worth re-proving there. Such merges are rare.
+`scripts/ci-scope.sh` makes the decision from the PR's own diff (GitHub's merge commit against its base parent) and prints the changed files in the `unit` log. **Main pushes (D-032).** The repository is public, so standard GitHub-hosted runner minutes cost nothing, and every main push runs the complete Tier 3 regression on the exact commit Vercel deploys. That closes the gap tiering leaves (a stale PR merged without full browser coverage). PRs stay tiered: it keeps feedback fast and avoids occupying the account's shared concurrent-job limit, which private repositories also use. The rule keys on `github.event.repository.private`, so if the repository becomes private again, main pushes fall back to Tier 1 (Tier 3 only for high-risk paths) with no workflow change.
 
 ## Check names and gates
 

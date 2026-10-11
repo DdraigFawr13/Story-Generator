@@ -1,9 +1,11 @@
 name: Core and browser verification
 
 # Tiered verification (docs/CI_VERIFICATION.md):
-#   Tier 1 (every PR and main push): format, types, boundaries, unit tests, build, probes.
+#   Tier 1 (every PR, and main pushes while the repo is private): format, types, boundaries,
+#           unit tests, build, probes.
 #   Tier 2 (PRs touching the matching code): representative seed battery and Chromium (unsharded).
-#   Tier 3 (label `full-regression`, high-risk paths, or full-regression.yml dispatch):
+#   Tier 3 (label `full-regression`, high-risk paths, full-regression.yml dispatch, or any main
+#           push while the repository is public):
 #           all 100 seeds in both batteries and every browser case in all three engines (2 partitions
 #           each), each closed by its coverage verifier.
 # `core` and `browser` stay the aggregate check names.
@@ -53,7 +55,9 @@ jobs:
       - id: scope
         env:
           CI_EVENT: ${{ github.event_name }}
-          CI_FULL: ${{ inputs.full == true || contains(github.event.pull_request.labels.*.name, 'full-regression') }}
+          # Public repositories get standard-runner minutes free, so every main push then runs
+          # the full regression; a private repository falls back to Tier 1 on main.
+          CI_FULL: ${{ inputs.full == true || contains(github.event.pull_request.labels.*.name, 'full-regression') || (github.event_name == 'push' && github.event.repository.private == false) }}
         run: |
           echo "Verifying $(git rev-parse HEAD)"
           bash scripts/ci-scope.sh
