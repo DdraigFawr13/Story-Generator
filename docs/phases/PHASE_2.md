@@ -4,7 +4,7 @@
 
 ## Status
 
-Draft for approval (2026-10-11). No feature code until approved. Builds on Phase 1: fertility, wildness, resources, aura spots, regions (passes, fords, harbours) and the route graph.
+Approved 2026-10-11 with all four recommended fork answers. Next: M2.1. Builds on Phase 1: fertility, wildness, resources, aura spots, regions (passes, fords, harbours) and the route graph.
 
 ## Milestones
 
@@ -81,12 +81,12 @@ interface WorldState { civs: Map<Id, Civ>; sites: Map<Id, Site>; creatures: Map<
 - **Territory:** route-graph distance from a civ's sites, not drawn borders.
 - **No director:** every outcome comes from weighted rules in content; tuning is by weights only.
 
-## Design forks for Morgan
+## Design forks (decided 2026-10-11)
 
-1. **Races:** keep the two placeholder shapes (a long-lived, magic-leaning forest people and a strong, slow-breeding mountain people) as the base for the sketches? **Recommended: yes.** Full sketches (names, numbers, downsides) come for approval as a doc at the start of M2.1.
-2. **Cultures:** 3 or 4 human cultures? **Recommended: 4**, roughly one per continent.
-3. **Start:** civs grow from 1–2 founding sites, or start already spread across the land? **Recommended: founding**, so expansion and first wars become stories.
-4. **Legends mock-up:** approve a mock-up of the legends browser before M2.7 is built, as with the M1.4 viewer? **Recommended: yes.**
+1. **Races:** keep the two placeholder shapes (a long-lived, magic-leaning forest people and a strong, slow-breeding mountain people) as the base for the sketches? **Decided: yes.** Full sketches (names, numbers, downsides) come for approval as a doc at the start of M2.1.
+2. **Cultures:** 3 or 4 human cultures? **Decided: 4**, roughly one per continent.
+3. **Start:** civs grow from 1–2 founding sites, or start already spread across the land? **Decided: founding**, so expansion and first wars become stories.
+4. **Legends mock-up:** approve a mock-up of the legends browser before M2.7 is built, as with the M1.4 viewer? **Decided: yes.**
 
 ## Tools and connectors
 
