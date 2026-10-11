@@ -37,6 +37,7 @@ Start a seeded world, observe a society from founding to transformation or colla
 - [Story Spotlight opportunity expansion](docs/SPOTLIGHT_OPPORTUNITIES.md)
 - [Technical architecture review](docs/ARCHITECTURE_REVIEW.md)
 - [Accepted architecture decision records](docs/adr/README.md)
+- [Complete CI verification and parallel coverage gates](docs/CI_VERIFICATION.md)
 - [Working agreements and branch hygiene](CONTRIBUTING.md)
 - [Vercel hosting and main-only deployment rule](docs/DEPLOYMENT.md)
 - [Narrative recaps and linked inspection](docs/NARRATIVE_RECAPS.md)
