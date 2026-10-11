@@ -7,9 +7,16 @@ import type { WorldCells } from '../core/types';
 export interface RenderOptions {
   /** Shade land by the slope toward the north-west neighbour. Default: on for elevation. */
   hillshade?: boolean;
+  /**
+   * Paint sea cells by depth and rivers and lakes over the layer. Default: on for elevation only,
+   * so the worldmap CLI output is unchanged.
+   */
+  water?: boolean;
+  /** Sea colours by depth for `water` on other layers; default: the layer's own `seaStops`. */
+  seaStops?: MapLayerStop[];
 }
 
-/** Rivers and lakes painted over the elevation layer. */
+/** Rivers and lakes painted over the elevation layer (or any layer with `water`). */
 const RIVER_RGB: Rgb = [50, 110, 215];
 const LAKE_RGB: Rgb = [80, 150, 225];
 /** Hillshade: metres of height difference that change brightness by 100%, and the clamp. */
@@ -18,6 +25,8 @@ const SHADE_LIMIT = 0.35;
 /** Volcano marker on the elevation and biome layers. */
 const VOLCANO_RGB: Rgb = [230, 30, 30];
 const UNKNOWN_RGB: Rgb = [255, 0, 255];
+/** Sea colour when `water` is on but no depth stops are available. */
+const FALLBACK_SEA_RGB: Rgb = [40, 80, 150];
 
 /** Cell values behind a layer id such as "elevation" or "risk.drought". */
 export function layerValues(cells: WorldCells, id: string): ArrayLike<number> | null {
@@ -116,12 +125,17 @@ export function renderLayer(
   const out = new Uint8ClampedArray(width * height * 4);
   const isElevation = layer.id === 'elevation';
   const shade = options.hillshade ?? isElevation;
+  const water = options.water ?? isElevation;
+  const seaStops = options.seaStops ?? layer.seaStops;
   for (let i = 0; i < width * height; i += 1) {
     let color: Rgb = values ? colorFor(layer, values[i]!) : UNKNOWN_RGB;
-    if (isElevation) {
-      const water = cells.water[i];
-      if (water === 1) color = RIVER_RGB;
-      else if (water === 2) color = LAKE_RGB;
+    if (water) {
+      const kind = cells.water[i];
+      if (kind === 1) color = RIVER_RGB;
+      else if (kind === 2) color = LAKE_RGB;
+      else if (kind === 3 && !isElevation) {
+        color = seaStops ? rampColor(seaStops, cells.elevation[i]!) : FALLBACK_SEA_RGB;
+      }
     }
     const volcano = cells.volcano[i] === 1 && (isElevation || layer.id === 'biome');
     if (volcano) color = VOLCANO_RGB;

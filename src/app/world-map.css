@@ -1,0 +1,504 @@
+/* World-map viewer (M1.4). Copied from the approved design; everything sits
+   under .wm-root so the legacy styles.css is unaffected. System fonts only. */
+:root:has(.wm-root) {
+  --paper: #eff1e8;
+  --panel: #fafbf6;
+  --ink: #283b2e;
+  --muted: #5d6e60;
+  --line: #c6d0bd;
+  --accent: #315d40;
+  --accent-soft: #dce8d8;
+  --sea: #1d3f6e;
+  --warn: #9a5b1e;
+  --shadow: 0 1px 2px #283b2e22, 0 6px 18px #283b2e18;
+  --display: Georgia, 'Times New Roman', serif;
+  --body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  background: var(--paper);
+}
+@media (prefers-color-scheme: dark) {
+  :root:has(.wm-root) {
+    --paper: #161c18;
+    --panel: #1f2721;
+    --ink: #e2e8dc;
+    --muted: #9fae9f;
+    --line: #36443a;
+    --accent: #8fc29d;
+    --accent-soft: #28382c;
+    --sea: #0d1e33;
+    --warn: #e0a560;
+    --shadow: 0 1px 2px #0008, 0 6px 18px #0006;
+    color-scheme: dark;
+  }
+}
+.wm-root {
+  max-width: 1180px;
+  padding: 16px;
+  margin: 0 auto;
+  color: var(--ink);
+  font: 15px/1.5 var(--body);
+}
+.wm-root h1 {
+  margin: 0 0 10px;
+  font: 600 1.3rem/1.2 var(--display);
+}
+.wm-root h2 {
+  font: 600 1.15rem var(--display);
+}
+.wm-root .wm-below {
+  max-width: 900px;
+  margin-top: 24px;
+}
+.wm-root button {
+  font: 500 0.85rem var(--body);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  box-shadow: none;
+  min-height: 0;
+}
+.wm-root button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.wm-root button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--panel);
+}
+.wm-root :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.wm-root input,
+.wm-root select {
+  font: 0.85rem var(--mono);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 8px;
+  min-height: 0;
+}
+
+.wm-app {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.bar .brand {
+  font: 600 1rem var(--display);
+  margin-right: auto;
+}
+.bar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.bar input {
+  width: 9.5em;
+}
+.bar .field-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--warn);
+  font-size: 0.82rem;
+}
+.progress {
+  height: 3px;
+  background: var(--accent-soft);
+  position: relative;
+}
+.progress i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: var(--accent);
+  transition: width 0.25s;
+}
+.progress-label {
+  position: absolute;
+  right: 12px;
+  top: 6px;
+  font: 0.72rem var(--mono);
+  color: var(--muted);
+}
+
+.stage {
+  position: relative;
+  height: 620px;
+  background: var(--sea);
+  overflow: hidden;
+}
+.stage canvas.map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+  transition: opacity 0.2s;
+}
+.stage.dimmed canvas.map {
+  opacity: 0.5;
+}
+.float {
+  position: absolute;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.layers {
+  left: 12px;
+  top: 12px;
+  width: 212px;
+  max-height: calc(100% - 24px);
+  overflow: auto;
+  padding: 8px;
+}
+.group {
+  font: 500 0.66rem var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 8px 6px 4px;
+}
+.wm-root .layer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 4px 6px;
+  border-radius: 5px;
+  font-size: 0.84rem;
+}
+.layer .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--muted);
+  flex: none;
+}
+.wm-root .layer[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: none;
+}
+.layer[aria-pressed='true'] .dot {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.layer kbd {
+  margin-left: auto;
+  font: 0.68rem var(--mono);
+  color: var(--muted);
+}
+.overlays {
+  display: grid;
+  gap: 2px;
+  padding: 2px 6px;
+  font-size: 0.84rem;
+}
+.overlays label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.overlays input {
+  accent-color: var(--accent);
+  padding: 0;
+}
+.overlays kbd {
+  font: 0.68rem var(--mono);
+  color: var(--muted);
+}
+details.debug summary {
+  cursor: pointer;
+}
+
+.wm-legend {
+  left: 236px;
+  bottom: 12px;
+  width: 280px;
+  padding: 10px 12px;
+}
+.wm-legend h3 {
+  margin: 0 0 6px;
+  font: 600 0.82rem var(--body);
+  display: flex;
+  justify-content: space-between;
+}
+.wm-legend h3 span {
+  font: 0.72rem var(--mono);
+  color: var(--muted);
+  font-weight: 400;
+}
+.ramp {
+  position: relative;
+  height: 12px;
+  border-radius: 3px;
+}
+.ticks {
+  position: relative;
+  height: 16px;
+  font: 0.66rem var(--mono);
+  color: var(--muted);
+}
+.ticks span {
+  position: absolute;
+  transform: translateX(-50%);
+  top: 2px;
+  white-space: nowrap;
+}
+.ticks span:first-child {
+  transform: none;
+}
+.ticks span:last-child {
+  transform: translateX(-100%);
+}
+.cursor {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--ink);
+  box-shadow: 0 0 0 1.5px var(--panel);
+}
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  font-size: 0.7rem;
+  max-height: 96px;
+  overflow: auto;
+}
+.swatches span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.swatches i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+}
+.wm-legend .readout {
+  margin-top: 4px;
+  font: 0.74rem var(--mono);
+  color: var(--ink);
+  min-height: 1.2em;
+}
+
+.minimap {
+  right: 12px;
+  bottom: 12px;
+  width: 132px;
+  height: 132px;
+  padding: 4px;
+}
+.minimap canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 4px;
+  cursor: pointer;
+  image-rendering: auto;
+}
+.zoom {
+  right: 12px;
+  top: 12px;
+  display: grid;
+}
+.wm-root .zoom button {
+  border: 0;
+  border-radius: 0;
+  width: 34px;
+  height: 32px;
+  padding: 0;
+  font-size: 1rem;
+  background: var(--panel);
+}
+.wm-root .zoom button + button {
+  border-top: 1px solid var(--line);
+}
+
+.wm-inspector {
+  right: 58px;
+  top: 12px;
+  width: 300px;
+  max-height: calc(100% - 160px);
+  overflow: auto;
+  padding: 12px 14px;
+}
+.wm-root aside.wm-inspector {
+  padding: 12px 14px;
+  overflow: auto;
+  display: block;
+}
+.wm-inspector header {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.wm-inspector h2 {
+  margin: 0;
+}
+.wm-inspector .coord {
+  font: 0.72rem var(--mono);
+  color: var(--muted);
+  margin-left: auto;
+}
+.wm-root .wm-inspector .close {
+  padding: 0 6px;
+  border: 0;
+  background: none;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.why {
+  margin: 10px 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.why li {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  padding-left: 10px;
+  border-left: 2px solid var(--accent);
+}
+.why li b {
+  font-weight: 600;
+}
+.wm-root .why button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font-size: 0.78rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+dl.facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  margin: 0;
+  font-size: 0.82rem;
+}
+dl.facts dt {
+  color: var(--muted);
+}
+dl.facts dd {
+  margin: 0;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.bars {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pill {
+  font: 0.72rem var(--mono);
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: var(--accent-soft);
+}
+.pill.warn {
+  color: var(--warn);
+}
+.hint {
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* phone: panels become a chip row and a bottom sheet */
+@media (max-width: 760px) {
+  .stage {
+    height: 560px;
+  }
+  .layers {
+    left: 8px;
+    right: 8px;
+    top: 8px;
+    width: auto;
+    max-height: none;
+    padding: 6px;
+    display: flex;
+    overflow-x: auto;
+    gap: 4px;
+  }
+  .layers .group,
+  .layers .overlays,
+  .layers details {
+    display: none;
+  }
+  .wm-root .layer {
+    width: auto;
+    white-space: nowrap;
+    flex: none;
+  }
+  .layer kbd {
+    display: none;
+  }
+  .wm-legend {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+  }
+  .minimap,
+  .hint {
+    display: none;
+  }
+  .zoom {
+    top: 60px;
+    right: 8px;
+  }
+  .wm-inspector {
+    left: 8px;
+    right: 8px;
+    top: auto;
+    bottom: 8px;
+    width: auto;
+    max-height: 62%;
+    z-index: 2;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .progress i,
+  .stage canvas.map {
+    transition: none;
+  }
+}
