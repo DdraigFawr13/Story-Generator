@@ -29,9 +29,13 @@ Continue factual relationship/history views and the Phase 2 chronicle filters. P
 
 Partnership/guardianship, social memory and autonomous social decisions remain subsequent P2 slices. Spotlight families, budgets and commands still require the separate Q-005 contract. No new hosted service is needed for these increments.
 
-## I.5 — Passive resident and household bookmarks (implemented; verification in progress)
+## I.5 — Passive resident and household bookmarks (implemented and live)
 
-Task 2.8's reading shortcuts belong to version/seed preferences outside canonical state and saved world envelopes. They retain original identity anchors, permit factual deceased/retired reading, disable unrecorded subjects, preserve source focus/scroll and report failed persistence. Bounded browser-local storage and cross-tab refresh never activate Spotlight or change simulation outcomes. [PHASE2_BOOKMARKS.md](PHASE2_BOOKMARKS.md) records the complete contract. Broader social/relationship rules and Q-005 remain separate increments.
+Task 2.8's reading shortcuts belong to version/seed preferences outside canonical state and saved world envelopes. They retain original identity anchors, permit factual deceased/retired reading, disable unrecorded subjects, preserve source focus/scroll and report failed persistence. Bounded browser-local storage and cross-tab refresh never activate Spotlight or change simulation outcomes. [PHASE2_BOOKMARKS.md](PHASE2_BOOKMARKS.md) records the complete contract. PR #32 merged at `252fb2e`; its final-head run `38107557115` passed 182 ordinary core cases, all four original seed partitions and all 249 browser cases (83 per engine), without failures/flaky cases, in 7 minutes 10 seconds. Exact-main deployment `dpl_7EJPqe9nqLxeae7RsZy8xczrL96X` is READY. Native Firefox verified actual resident/household bookmark persistence, source focus/scroll, full P2 Node parity at saved week 2 and UI Step/Save/reload to week 3, phone reading at 200% text and no browser errors. Broader social/relationship rules and Q-005 remain separate increments.
+
+## I.6 — Named-world long-run and save-continuation battery (verification in progress)
+
+The [individual seed battery](PHASE2_LONG_RUN.md) adds 100 actual P2 worlds × 1,000 weeks, complete saved restoration and 12-week continuation, retained identity/parent/household checks and factual prose samples. Four partitions per version run independently; the aggregate gate requires eight complete reports and both 100-seed coverage contracts. The application rules and supported saves remain unchanged. This is partial task 2.10 evidence, not all-seed centuries, social memory, guardianship or Spotlight replay acceptance.
 
 ## Current compact handoff
 
