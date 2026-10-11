@@ -6,8 +6,16 @@ const size = Number(args.size || 256);
 const count = Number(args.seeds || 5);
 const seeds = args.seed ? [args.seed] : Array.from({ length: count }, (_, i) => `S${i + 1}`);
 
-const { generateWorld, checkWorldCells, D8_DX, D8_DY, DEFAULT_CONTENT, BIOMES, RESOURCES } =
-  await loadEngine();
+const {
+  generateWorld,
+  checkWorldCells,
+  checkRegions,
+  D8_DX,
+  D8_DY,
+  DEFAULT_CONTENT,
+  BIOMES,
+  RESOURCES,
+} = await loadEngine();
 
 function stats(seed) {
   const ms = {};
@@ -23,6 +31,8 @@ function stats(seed) {
   });
   if (stage) ms[stage] = (ms[stage] ?? 0) + performance.now() - last;
   const c = world.cells;
+  const kinds = {};
+  for (const region of world.regions.values()) kinds[region.kind] = (kinds[region.kind] ?? 0) + 1;
   const n = c.width * c.height;
   let land = 0,
     rivers = 0,
@@ -124,19 +134,21 @@ function stats(seed) {
     fertile: pct(fertile, dryLand),
     wild: pct(wild, dryLand),
     resourcePct: resourceCells.map((n) => pct(n, land)),
-    problems: checkWorldCells(c).length,
+    kinds,
+    problems: checkWorldCells(c).length + checkRegions(c, [...world.regions.values()]).length,
   };
 }
 
 const rows = seeds.map(stats);
 // The four classic stages get a column each; the M1.3 stages are summed into "restms".
 const stages = ['terrain', 'erosion', 'climate', 'water'];
+// Regions get their own column, after the summed rest.
 for (const r of rows) {
   r.ms.rest = Object.entries(r.ms)
-    .filter(([name]) => !stages.includes(name) && name !== 'rest')
+    .filter(([name]) => !stages.includes(name) && name !== 'rest' && name !== 'regions')
     .reduce((a, [, v]) => a + v, 0);
 }
-stages.push('rest');
+stages.push('rest', 'regions');
 const f = (v, w, d = 0) => v.toFixed(d).padStart(w);
 const head = [
   'seed',
@@ -155,6 +167,12 @@ const head = [
   'harsh%',
   'lush%',
   'volc',
+  'pass',
+  'ford',
+  'harb',
+  'strt',
+  'bay',
+  'rng',
   'spots',
   'fert%',
   'wild%',
@@ -180,6 +198,12 @@ for (const r of rows) {
       f(r.harsh, 6, 1),
       f(r.lush, 5, 1),
       f(r.volcanoes, 4),
+      f(r.kinds.pass ?? 0, 4),
+      f(r.kinds.ford ?? 0, 4),
+      f(r.kinds.harbour ?? 0, 4),
+      f(r.kinds.strait ?? 0, 4),
+      f(r.kinds.bay ?? 0, 3),
+      f(r.kinds.range ?? 0, 3),
       f(r.spots, 5),
       f(r.fertile, 5, 1),
       f(r.wild, 5, 1),

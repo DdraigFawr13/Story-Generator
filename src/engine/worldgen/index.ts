@@ -11,13 +11,14 @@ import { generateClimate } from './climate';
 import { erodeTerrain } from './erosion';
 import { oceanMask } from './grid';
 import { computeHabitat } from './habitat';
+import { buildRegions } from './regions';
 import { placeResources } from './resources';
 import { generateTerrain } from './terrain';
 import { placeVolcanoes } from './volcanoes';
 import { computeWater } from './water';
 
-/** The content the generator reads: biome table and resource list. */
-export type WorldgenContent = Pick<ContentBundle, 'biomes' | 'biomeRules' | 'resources'>;
+/** The content the generator reads: biome table, resource list and name tables. */
+export type WorldgenContent = Pick<ContentBundle, 'biomes' | 'biomeRules' | 'resources' | 'names'>;
 
 export type WorldgenStage =
   | 'terrain'
@@ -28,7 +29,8 @@ export type WorldgenStage =
   | 'volcanoes'
   | 'aura'
   | 'resources'
-  | 'habitat';
+  | 'habitat'
+  | 'regions';
 /** Called as each stage starts: (stage, stages already done, total stages). */
 export type ProgressCallback = (stage: WorldgenStage, done: number, total: number) => void;
 
@@ -42,6 +44,7 @@ const STAGES: readonly WorldgenStage[] = [
   'aura',
   'resources',
   'habitat',
+  'regions',
 ];
 
 export function generateWorld(
@@ -140,7 +143,7 @@ export function generateWorld(
     content,
   );
 
-  world.cells = {
+  const cells = {
     width,
     height,
     ...terrain,
@@ -153,5 +156,11 @@ export function generateWorld(
     resources,
     ...habitat,
   };
+  world.cells = cells;
+
+  start('regions');
+  for (const region of buildRegions(cells, content, streamFor(world, 'worldgen.names'))) {
+    world.regions.set(region.id, region);
+  }
   return world;
 }

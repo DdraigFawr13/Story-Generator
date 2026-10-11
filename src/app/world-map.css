@@ -404,6 +404,18 @@ details.debug summary {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+.places {
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  display: grid;
+  gap: 2px;
+}
+.places li b {
+  font-weight: 600;
+}
 dl.facts {
   display: grid;
   grid-template-columns: auto 1fr;

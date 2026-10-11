@@ -105,12 +105,25 @@ export interface ContentBundle {
   biomes: BiomeDef[];
   biomeRules: BiomeRules;
   resources: ResourceDef[];
+  names: NameTables;
   races: RaceDef[];
   schools: SchoolDef[];
   abilities: AbilityDef[];
   weather: WeatherDef[];
   eventTypes: EventTypeDef[];
   rules: EventRuleDef[];
+}
+
+/** Syllable and pattern tables for naming regions (M1.5). */
+export interface NameTables {
+  /** A place name stem is a start, optionally a middle, and an end: "Brann" + "ock". */
+  starts: string[];
+  middles: string[];
+  ends: string[];
+  /** Short capitalised words for compounds such as "the {a}teeth" -> "the Greyteeth". */
+  adjectives: string[];
+  /** Templates per region kind; `{n}` is the stem and `{a}` an adjective. 'ocean' is a sea touching the map edge. */
+  patterns: Record<string, string[]>;
 }
 
 /** [r, g, b], each 0–255. */

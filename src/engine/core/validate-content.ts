@@ -3,7 +3,7 @@
 // balance (R-29) and no self-taught magic (R-28). Returns readable problems.
 
 import type { ContentBundle, RaceDef } from './content-types';
-import { ATTRIBUTE_KEYS } from './types';
+import { ATTRIBUTE_KEYS, REGION_KINDS } from './types';
 import { BIRTH_TIER_IDS, TIERS, tierOfPower } from '../people/tiers';
 
 export function validateContent(content: ContentBundle): string[] {
@@ -176,6 +176,20 @@ function worldgenContentProblems(content: ContentBundle): string[] {
     if (resource.maxCellShare <= 0 || resource.maxCellShare > 1) {
       problems.push(`Resource ${resource.id}: maxCellShare must be in (0, 1].`);
     }
+  }
+  problems.push(...nameProblems(content));
+  return problems;
+}
+
+/** Name tables: every syllable list filled, and a pattern for each region kind (plus "ocean"). */
+function nameProblems(content: ContentBundle): string[] {
+  const problems: string[] = [];
+  const { names } = content;
+  for (const key of ['starts', 'middles', 'ends', 'adjectives'] as const) {
+    if (names[key].length === 0) problems.push(`Name table "${key}" is empty.`);
+  }
+  for (const kind of [...REGION_KINDS, 'ocean']) {
+    if (!names.patterns[kind]?.length) problems.push(`No name patterns for "${kind}".`);
   }
   return problems;
 }
