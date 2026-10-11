@@ -4,7 +4,7 @@
 
 ## Status
 
-M1.1 (PR #46), M1.2 with the worldgen tools (PR #47), M1.3 (PR #48) and the rainfall-band and slope-streak fix (PR #50) merged; M1.4 merged; M1.5 (naming and strategic features) in review; M1.6 (travel and routes) implemented, awaiting review. Extras approved 2026-10-11 (erosion, volcanoes, fertility, wildness, strategic features, M1.6 routes, climate params). Next: Phase 1 close (drama check and playtest check-in). Worldgen lives in `src/engine/worldgen/`, one module per stage in `generateWorld`, each with its own RNG stream; biome and resource tables live in `src/content/`.
+Complete (2026-10-11). M1.1 (PR #46), M1.2 with the worldgen tools (PR #47), M1.3 (PR #48), the rainfall-band and slope-streak fix (PR #50), M1.4 (PR #51), M1.5 (PR #52) and M1.6 (PR #53) merged. Extras approved 2026-10-11 (erosion, volcanoes, fertility, wildness, strategic features, M1.6 routes, climate params). Every done-when check passes on seeds S1–S5 (drama check plus unit tests). Worldgen lives in `src/engine/worldgen/`, one module per stage in `generateWorld`, each with its own RNG stream; biome and resource tables live in `src/content/`.
 
 ## Milestones
 
@@ -84,14 +84,14 @@ Integer typed arrays keep the maths exact and the save small. `serializeWorld` g
 
 ## Done when
 
-- [ ] 5 seeds give visibly different worlds.
-- [ ] Every river reaches the sea or a lake.
-- [ ] Climates vary meaningfully across each map, with at least one desert or tundra and one lush region on 256×256 maps.
-- [ ] Resources are uneven and rare resources are rare.
-- [ ] 256×256 generates in under 2 s on desktop, without blocking the UI.
-- [ ] Floodplains are more fertile than nearby uplands, and wildness is highest far from fertile land.
-- [ ] Every seed has at least one pass and one harbour; each pass is lower than the ridge on both sides.
-- [ ] The route graph connects most site candidates on each landmass, and the likely-roads layer shows it.
+- [x] 5 seeds give visibly different worlds.
+- [x] Every river reaches the sea or a lake.
+- [x] Climates vary meaningfully across each map, with at least one desert or tundra and one lush region on 256×256 maps.
+- [x] Resources are uneven and rare resources are rare.
+- [x] 256×256 generates in under 2 s on desktop, without blocking the UI.
+- [x] Floodplains are more fertile than nearby uplands, and wildness is highest far from fertile land.
+- [x] Every seed has at least one pass and one harbour; each pass is lower than the ridge on both sides.
+- [x] The route graph connects most site candidates on each landmass, and the likely-roads layer shows it.
 
 ## Out of scope
 
