@@ -1,11 +1,11 @@
 # Roadmap
 
-Detail for every phase lives in [REBOOT_PLAN.md §9](REBOOT_PLAN.md#9-phases). Each phase gets a spec of at most two pages in `docs/phases/` before implementation and ends with a playtest check-in.
+Detail for every phase lives in [REBOOT_PLAN.md §9](REBOOT_PLAN.md#9-phases); once a phase has a spec in `docs/phases/`, the spec wins where they differ. Each phase gets a spec of at most two pages in `docs/phases/` before implementation and ends with a playtest check-in.
 
 | Phase | Name | Size | Key output | Status |
 | --- | --- | --- | --- | --- |
 | 0 | Reset and skeleton | 2–3 PRs | New docs, slim CI, engine core, person record, `?next` | Done ([spec](phases/PHASE_0.md)) |
-| 1 | World generation | 3–5 PRs | Topography, seasonal climate, rivers, biomes, resources, aura, world map | **In progress** ([spec](phases/PHASE_1.md)) |
+| 1 | World generation | 6–7 PRs | Topography, seasonal climate, rivers, biomes, resources, aura, fertility and wildness, world map, names, passes and harbours, routes | **In progress** ([spec](phases/PHASE_1.md)) |
 | 2 | Legends | 6–8 PRs | Races, cultures, inheritance, sites, demographics, families/dynasties, history, legends browser | |
 | 3 | Live site (**Milestone A**) | 10–14 PRs | Full everyday life thinly: needs, mood, health, environment, family, relationships, work, threats, light magic; saves | |
 | 4 | Living world | 5–7 PRs | Monthly world during play, world↔site links, medium politics/trade, deeper life | |

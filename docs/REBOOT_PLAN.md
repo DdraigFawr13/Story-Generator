@@ -611,7 +611,10 @@ Each phase lists its goal, milestones (PR-sized), done-when criteria and known f
 - **Done when:** the old app works at `/`, `/?next` loads, CI is under 5 minutes, and the new docs total about 10 pages or less.
 - **Forks:** none. Decide the year length and RNG yourself and record them.
 
-### Phase 1 — World generation and world map (3–5 PRs)
+### Phase 1 — World generation and world map (6–7 PRs)
+
+Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategic features and a new M1.6 for travel and routes) live in [`docs/phases/PHASE_1.md`](phases/PHASE_1.md), which wins where the two differ.
+
 - **M1.1 Terrain:** safe-math fractal noise, a few continents from seeded plate centres plus noise, sea level, and mountain ridges along plate edges.
 - **M1.2 Climate and water:**
   - temperature from latitude, elevation and noise, **with seasonal ranges per cell**;
@@ -764,7 +767,7 @@ Each phase lists its goal, milestones (PR-sized), done-when criteria and known f
 | Phase | Name | Size | Key output |
 | --- | --- | --- | --- |
 | 0 | Reset and skeleton | 2–3 PRs | New docs, slim CI, engine core, person record, `?next` |
-| 1 | World generation | 3–5 PRs | Topography, seasonal climate, rivers, biomes, resources, aura, world map |
+| 1 | World generation | 6–7 PRs | Topography, seasonal climate, rivers, biomes, resources, aura, fertility and wildness, world map, names, passes and harbours, routes |
 | 2 | Legends | 6–8 PRs | Races, cultures, inheritance, sites, demographics, families/dynasties, history, legends browser |
 | 3 | Live site (**Milestone A**) | 10–14 PRs | Full everyday life thinly: needs, mood, health, environment, family, relationships, work, threats, light magic; saves |
 | 4 | Living world | 5–7 PRs | Monthly world during play, world↔site links, medium politics/trade, deeper life |
