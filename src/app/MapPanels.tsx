@@ -41,7 +41,7 @@ const LAYER_GROUPS: LayerGroup[] = [
     ],
   },
 ];
-const DEBUG_LAYERS = ['plate', 'flow', 'seaDistance', 'floodplain'];
+const DEBUG_LAYERS = ['plate', 'flow', 'seaDistance', 'floodplain', 'travelCost'];
 
 /** Every layer the viewer can show, for URL validation and number keys. */
 export const VIEWER_LAYER_IDS = [
@@ -56,6 +56,7 @@ export interface Overlays {
   water: boolean;
   shade: boolean;
   names: boolean;
+  roads: boolean;
   raw: boolean;
 }
 
@@ -136,6 +137,14 @@ export function LayerPanel({
             onChange={(e) => onOverlays({ names: e.target.checked })}
           />
           Names <kbd>N</kbd>
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={overlays.roads}
+            onChange={(e) => onOverlays({ roads: e.target.checked })}
+          />
+          Roads <kbd>R</kbd>
         </label>
       </div>
       <details className="debug">
@@ -353,6 +362,13 @@ export function Inspector({
             </span>
           )}
         </Fact>
+        {water !== 3 && (
+          <Fact label="Travel">
+            {cells.travelCost[i] === 255 ? 'impassable' : `cost ${cells.travelCost[i]}`}
+            {cells.roads[i]! > 0 &&
+              ` · on a road (${cells.roads[i]} route${cells.roads[i] === 1 ? '' : 's'})`}
+          </Fact>
+        )}
         <Fact label="Aura">{cells.aura[i]}</Fact>
         {raw && (
           <>

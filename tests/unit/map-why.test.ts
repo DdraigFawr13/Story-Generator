@@ -16,6 +16,7 @@ function fixture(width: number, elevation: number[], rain: number): WhyCells {
     floodplain: new Uint8Array(size),
     wildness: new Uint8Array(size),
     tempSummer: new Int8Array(size),
+    roads: new Uint8Array(size),
   };
 }
 

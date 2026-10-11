@@ -13,6 +13,7 @@ import { oceanMask } from './grid';
 import { computeHabitat } from './habitat';
 import { buildRegions } from './regions';
 import { placeResources } from './resources';
+import { planRoutes } from './travel';
 import { generateTerrain } from './terrain';
 import { placeVolcanoes } from './volcanoes';
 import { computeWater } from './water';
@@ -30,7 +31,8 @@ export type WorldgenStage =
   | 'aura'
   | 'resources'
   | 'habitat'
-  | 'regions';
+  | 'regions'
+  | 'routes';
 /** Called as each stage starts: (stage, stages already done, total stages). */
 export type ProgressCallback = (stage: WorldgenStage, done: number, total: number) => void;
 
@@ -45,6 +47,7 @@ const STAGES: readonly WorldgenStage[] = [
   'resources',
   'habitat',
   'regions',
+  'routes',
 ];
 
 export function generateWorld(
@@ -155,6 +158,9 @@ export function generateWorld(
     auraSpots,
     resources,
     ...habitat,
+    // Filled by the routes stage.
+    travelCost: new Uint8Array(width * height),
+    roads: new Uint8Array(width * height),
   };
   world.cells = cells;
 
@@ -162,5 +168,11 @@ export function generateWorld(
   for (const region of buildRegions(cells, content, streamFor(world, 'worldgen.names'))) {
     world.regions.set(region.id, region);
   }
+
+  start('routes');
+  const travel = planRoutes(cells, content, [...world.regions.values()]);
+  cells.travelCost = travel.travelCost;
+  cells.roads = travel.roads;
+  world.routes = travel.routes;
   return world;
 }

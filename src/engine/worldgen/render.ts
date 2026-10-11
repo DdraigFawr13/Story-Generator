@@ -2,7 +2,7 @@
 // map. Returns RGBA bytes, one pixel per cell (index = y * width + x); no DOM.
 
 import type { MapLayer, MapLayerStop, Rgb } from '../core/content-types';
-import type { Region, RegionKind, WorldCells } from '../core/types';
+import type { Region, RegionKind, RouteGraph, WorldCells } from '../core/types';
 
 export interface RenderOptions {
   /** Shade land by the slope toward the north-west neighbour. Default: on for elevation. */
@@ -59,6 +59,8 @@ export function layerValues(cells: WorldCells, id: string): ArrayLike<number> | 
       return cells.fertility;
     case 'wildness':
       return cells.wildness;
+    case 'travelCost':
+      return cells.travelCost;
     case 'aura':
       return cells.aura;
     case 'resources':
@@ -192,4 +194,30 @@ export function paintRegions(
       }
     }
   }
+}
+
+/** Route colours for `paintRoutes`. */
+const ROAD_RGB: Rgb = [130, 80, 40];
+const SEA_LANE_RGB: Rgb = [205, 230, 250];
+const NODE_RGB: Rgb = [0, 0, 0];
+
+/** Paints roads (brown), sea lanes (pale blue) and route nodes (black) onto RGBA `pixels` in place. */
+export function paintRoutes(
+  pixels: Uint8ClampedArray,
+  width: number,
+  cells: Pick<WorldCells, 'roads'>,
+  routes: RouteGraph,
+): void {
+  const put = (cell: number, color: Rgb) => {
+    if (width <= 0 || cell < 0 || cell * 4 + 3 >= pixels.length) return;
+    pixels[cell * 4] = color[0];
+    pixels[cell * 4 + 1] = color[1];
+    pixels[cell * 4 + 2] = color[2];
+  };
+  for (let i = 0; i < cells.roads.length; i += 1) if (cells.roads[i]) put(i, ROAD_RGB);
+  for (const edge of routes.edges) {
+    if (!edge.sea) continue;
+    for (const cell of edge.path) put(cell, SEA_LANE_RGB);
+  }
+  for (const node of routes.nodes) put(node.cell, NODE_RGB);
 }

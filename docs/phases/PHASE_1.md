@@ -4,7 +4,7 @@
 
 ## Status
 
-M1.1 (PR #46), M1.2 with the worldgen tools (PR #47), M1.3 (PR #48) and the rainfall-band and slope-streak fix (PR #50) merged; M1.4 merged; M1.5 (naming and strategic features) in review. Extras approved 2026-10-11 (erosion, volcanoes, fertility, wildness, strategic features, M1.6 routes, climate params). Next: M1.6 (travel and routes). Worldgen lives in `src/engine/worldgen/`, one module per stage in `generateWorld`, each with its own RNG stream; biome and resource tables live in `src/content/`.
+M1.1 (PR #46), M1.2 with the worldgen tools (PR #47), M1.3 (PR #48) and the rainfall-band and slope-streak fix (PR #50) merged; M1.4 merged; M1.5 (naming and strategic features) in review; M1.6 (travel and routes) implemented, awaiting review. Extras approved 2026-10-11 (erosion, volcanoes, fertility, wildness, strategic features, M1.6 routes, climate params). Next: Phase 1 close (drama check and playtest check-in). Worldgen lives in `src/engine/worldgen/`, one module per stage in `generateWorld`, each with its own RNG stream; biome and resource tables live in `src/content/`.
 
 ## Milestones
 
@@ -30,7 +30,7 @@ M1.1 (PR #46), M1.2 with the worldgen tools (PR #47), M1.3 (PR #48) and the rain
 - Names appear in the inspector and as map labels at suitable zoom levels.
 
 **M1.6 Travel and routes** (~450 lines)
-- Per-cell travel cost from slope, biome, rivers (fords cheap) and sea; a coarse route graph between the best site candidates (harbours, fords, passes, fertile river mouths) by budgeted A*; a "likely roads" map layer. Phase 2 reads it for migration, trade and war reach.
+- Landed: `BiomeDef.travel`; `worldgen/travel.ts` (new last stage `routes`, no RNG) fills `cells.travelCost` (biome + slope, river crossing +12 except at fords, passes halve the slope term, lakes blocked, sea 2), `world.routes` (nodes at harbours, fords, passes and fertile river mouths, thinned to 3 cells apart; land edges by budgeted A* to each node's 4 nearest on its landmass; sea lanes between nearby harbours; a safety net that joins stray pieces of a landmass) and `cells.roads` (routes per cell). The map has a Roads overlay (key R), a Travel cost debug layer, a "Travel" inspector row and a "Road" why rule; `drama` prints nodes, edges, sea edges and connectivity; `worldmap --layer roads` paints them; `checkRoutes` guards the invariants. Phase 2 reads it for migration, trade and war reach.
 
 **Close:** drama-check stub (`npm run drama -- --seeds 5`) printing world statistics (land fraction, biome mix, river count and length, resource spread, fertile and wild shares, passes and harbours, generation time), plus the Phase 1 check-in.
 

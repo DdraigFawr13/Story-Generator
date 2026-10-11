@@ -260,7 +260,8 @@ function findPasses(cells: WorldCells, rangeOf: Int32Array): Raw[] {
   const size = width * height;
   for (const margin of rule.margins) {
     const mask = new Uint8Array(size);
-    for (let i = 0; i < size; i += 1) if (saddleAxis(cells, i, margin) >= 0) mask[i] = 1;
+    for (let i = 0; i < size; i += 1)
+      if (cells.water[i] === 0 && saddleAxis(cells, i, margin) >= 0) mask[i] = 1;
     const kept: { raw: Raw; range: number }[] = [];
     for (const cluster of components(cells, mask, true)) {
       let anchor = cluster[0]!;

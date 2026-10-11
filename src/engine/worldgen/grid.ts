@@ -42,6 +42,11 @@ export class CellHeap {
     return this.count;
   }
 
+  /** Empties the heap so one allocation serves many searches. */
+  clear(): void {
+    this.count = 0;
+  }
+
   private less(a: number, b: number): boolean {
     const va = this.values[a]!;
     const vb = this.values[b]!;

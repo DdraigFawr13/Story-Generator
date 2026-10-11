@@ -137,6 +137,8 @@ export interface BiomeDef {
   fertility: number;
   /** Base wildness contribution (0–100): old forest and swamp high, grassland low. */
   wildness: number;
+  /** Cost to cross one cell on foot (land biomes at least 1; unused for water biomes). */
+  travel: number;
   /** True for forests (timber, game, old-forest aura, wildness). */
   forest?: boolean;
   /** Water biomes are assigned by water class, never by the climate table. */
