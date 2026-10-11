@@ -1,22 +1,61 @@
 name: Core and browser verification
 
+# Tiered verification (docs/CI_VERIFICATION.md):
+#   Tier 1 (every PR and main push): format, types, boundaries, unit tests, build, probes.
+#   Tier 2 (PRs touching the matching code): representative seed battery and Chromium.
+#   Tier 3 (label `full-regression`, high-risk paths, or full-regression.yml dispatch):
+#           all 100 seeds in both batteries with the coverage verifier, and all three engines.
+# `core` and `browser` stay the aggregate check names.
+
 on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  workflow_call:
+    inputs:
+      full:
+        description: Run the complete Tier 3 regression.
+        type: boolean
+        default: true
+      ref:
+        description: Branch, tag or commit SHA to verify (empty = the triggering commit).
+        type: string
+        default: ''
 
 permissions:
   contents: read
 
 concurrency:
-  group: checks-${{ github.workflow }}-${{ github.ref }}
+  # One run per PR / branch; newer commits cancel older runs. An unrelated label gets its
+  # own throwaway group so it neither cancels nor repeats the real run.
+  group: checks-${{ github.workflow }}-${{ (github.event.action == 'labeled' && github.event.label.name != 'full-regression') && github.run_id || github.ref }}
   cancel-in-progress: true
 
 jobs:
   unit:
+    if: github.event.action != 'labeled' || github.event.label.name == 'full-regression'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      docs_only: ${{ steps.scope.outputs.docs_only }}
+      full: ${{ steps.scope.outputs.full }}
+      sim: ${{ steps.scope.outputs.sim }}
+      browser: ${{ steps.scope.outputs.browser }}
+      battery: ${{ steps.scope.outputs.battery }}
+      engines: ${{ steps.scope.outputs.engines }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 2
+      - id: scope
+        env:
+          CI_EVENT: ${{ github.event_name }}
+          CI_FULL: ${{ inputs.full == true || contains(github.event.pull_request.labels.*.name, 'full-regression') }}
+        run: |
+          echo "Verifying $(git rev-parse HEAD)"
+          bash scripts/ci-scope.sh
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -24,67 +63,92 @@ jobs:
       - run: npm install --global npm@11.9.0
       - run: npm ci
       - run: npm run format:check
-      - run: npm run typecheck
-      - run: npm run boundaries
-      - run: npm test -- --exclude tests/unit/settlement-seed-battery.test.ts --exclude tests/unit/living-seed-battery.test.ts
-      - run: npm run build
-      - run: python3 docs/probes/terrain_probe.py
-      - run: python3 docs/probes/resident_probe.py --check tests/fixtures/residents.json
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: npm run typecheck
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: npm run boundaries
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: npm test -- --exclude tests/unit/settlement-seed-battery.test.ts --exclude tests/unit/living-seed-battery.test.ts
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: npm run build
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: python3 docs/probes/terrain_probe.py
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: python3 docs/probes/resident_probe.py --check tests/fixtures/residents.json
+
   seed-battery:
+    needs: unit
+    if: needs.unit.outputs.sim == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
-        suite: [settlement, living]
+        include: ${{ fromJSON(needs.unit.outputs.battery) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm install --global npm@11.9.0
       - run: npm ci
-      - run: mkdir -p test-results
-      - run: npm test -- tests/unit/${{ matrix.suite }}-seed-battery.test.ts
-        env:
-          STORY_GENERATOR_BATTERY_SHARD: ${{ matrix.shard }}/4
-          STORY_GENERATOR_REPORT: test-results/seed-battery-settlement-${{ matrix.shard }}.json
-          STORY_GENERATOR_LIVING_REPORT: test-results/seed-battery-living-${{ matrix.shard }}.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - run: bash scripts/ci-battery.sh ${{ matrix.parts }}
+      - if: needs.unit.outputs.full == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: seed-battery-${{ matrix.suite }}-${{ matrix.shard }}
-          path: test-results/seed-battery-${{ matrix.suite }}-${{ matrix.shard }}.json
+          name: seed-battery-${{ matrix.id }}
+          path: test-results/seed-battery-*.json
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 3
+
   core:
     needs: [unit, seed-battery]
-    if: always()
+    if: always() && (github.event.action != 'labeled' || github.event.label.name == 'full-regression')
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Require every core partition
+      - name: Require Tier 1 and every required battery partition
         env:
           UNIT_RESULT: ${{ needs.unit.result }}
           BATTERY_RESULT: ${{ needs.seed-battery.result }}
-        run: test "$UNIT_RESULT" = success && test "$BATTERY_RESULT" = success
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+          BATTERY_REQUIRED: ${{ needs.unit.outputs.sim }}
+        run: |
+          echo "unit=$UNIT_RESULT battery=$BATTERY_RESULT required=$BATTERY_REQUIRED"
+          test "$UNIT_RESULT" = success
+          if [ "$BATTERY_REQUIRED" = true ]; then test "$BATTERY_RESULT" = success; else test "$BATTERY_RESULT" = skipped; fi
+      - if: needs.unit.outputs.full == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+      - if: needs.unit.outputs.full == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - if: needs.unit.outputs.full == 'true'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: seed-battery-*
           merge-multiple: true
           path: test-results/seed-battery
-      - run: node scripts/verify-seed-battery.mjs test-results/seed-battery --living
+      - if: needs.unit.outputs.full == 'true'
+        run: node scripts/verify-seed-battery.mjs test-results/seed-battery --living
+
   browser-tests:
+    needs: unit
+    if: needs.unit.outputs.browser == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        project: [chromium, firefox, webkit]
+        project: ${{ fromJSON(needs.unit.outputs.engines) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -93,12 +157,19 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps ${{ matrix.project }}
       - run: npm run test:browser -- --project=${{ matrix.project }} --workers=2
+
   browser:
-    needs: browser-tests
-    if: always()
+    needs: [unit, browser-tests]
+    if: always() && (github.event.action != 'labeled' || github.event.label.name == 'full-regression')
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Require every browser engine
+      - name: Require every required browser engine
         env:
+          UNIT_RESULT: ${{ needs.unit.result }}
           BROWSER_RESULT: ${{ needs.browser-tests.result }}
-        run: test "$BROWSER_RESULT" = success
+          BROWSER_REQUIRED: ${{ needs.unit.outputs.browser }}
+        run: |
+          echo "unit=$UNIT_RESULT browser=$BROWSER_RESULT required=$BROWSER_REQUIRED"
+          test "$UNIT_RESULT" = success
+          if [ "$BROWSER_REQUIRED" = true ]; then test "$BROWSER_RESULT" = success; else test "$BROWSER_RESULT" = skipped; fi
