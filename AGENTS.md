@@ -23,7 +23,7 @@ GitHub Actions minutes are a limited, account-wide budget shared by every reposi
 
 ## What GitHub runs automatically
 
-See [docs/CI_VERIFICATION.md](docs/CI_VERIFICATION.md). In short: every PR update runs Tier 1 (`unit`); simulation-area diffs add a representative seed battery; any `src/` or browser-test diff adds Chromium. Main pushes run Tier 1 only. Dependency, toolchain, workflow and rule-version changes run the full regression automatically.
+See [docs/CI_VERIFICATION.md](docs/CI_VERIFICATION.md). In short: every PR update runs Tier 1 (`unit`); simulation-area diffs add a representative seed battery; any `src/` or browser-test diff adds Chromium. Main pushes run Tier 1 only, except merges touching high-risk paths, which re-run the full regression on main. Dependency, toolchain, workflow and rule-version changes run the full regression automatically.
 
 ## When full regression is required
 
