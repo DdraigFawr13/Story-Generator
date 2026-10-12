@@ -25,6 +25,39 @@ export function countEvents(world, { rollupBelow, DAYS_PER_YEAR }) {
 
 const round1 = (v) => Math.round(v * 10) / 10;
 
+/** Notables, families and items (M2.5): counts from the people, items and events. */
+export function notableMetrics(world, n, DAYS_PER_YEAR) {
+  let alive = 0;
+  for (const person of world.people.values()) if (person.died === undefined) alive += 1;
+  // Legends alive at once: each legend_risen event starts a span that ends when the person dies.
+  const spans = [];
+  for (const e of world.events) {
+    if (e.type !== 'legend_risen') continue;
+    const person = world.people.get(e.actors[0]);
+    spans.push([Math.floor(e.day / DAYS_PER_YEAR), person?.died ?? Infinity]);
+  }
+  let legendsMax = 0;
+  for (const [start] of spans) {
+    legendsMax = Math.max(legendsMax, spans.filter(([s, end]) => s <= start && start < end).length);
+  }
+  const items = [...world.items.values()];
+  return {
+    notablesAlive: alive,
+    notablesEver: world.people.size,
+    dynasties: world.dynasties.size,
+    successions: n.ruler_succeeded ?? 0,
+    disputed: n.succession_disputed ?? 0,
+    oaths: n.oath_sworn ?? 0,
+    mages: n.mage_born ?? 0,
+    legends: n.legend_risen ?? 0,
+    legendsMax,
+    artifacts: items.filter((i) => i.kind === 'artifact').length,
+    books: items.filter((i) => i.kind === 'book').length,
+    itemsLost: n.item_lost ?? 0,
+    itemsStolen: n.item_stolen ?? 0,
+  };
+}
+
 export function historyMetrics(
   world,
   { startPop, peakPop, historyMs, rollupBelow, DAYS_PER_YEAR, raceIds },
@@ -74,6 +107,7 @@ export function historyMetrics(
     ruinsAny: ruinedSites > 0 ? 1 : 0,
     chain,
     events: world.events.length,
+    ...notableMetrics(world, n, DAYS_PER_YEAR),
   };
   ids.forEach((id, i) => {
     out[`share_${id}`] = round1(shares[i]);

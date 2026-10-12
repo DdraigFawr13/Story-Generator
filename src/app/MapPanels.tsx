@@ -10,7 +10,10 @@ import {
   type Creature,
   type CreatureDef,
   type CultureDef,
+  type Dynasty,
+  type Id,
   type MapLayer,
+  type Person,
   type Region,
   type ResourceDef,
   type Rgb,
@@ -288,6 +291,14 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 }
 
 const BAND_ORDER = ['child', 'adult', 'elder'] as const;
+/** Notables listed in the site block. */
+const SITE_NOTABLES = 6;
+
+/** "Name of House X, aged N" for a living notable. */
+function personLine(person: Person, dynasties: ReadonlyMap<Id, Dynasty>, year: number): string {
+  const house = person.dynastyId === undefined ? undefined : dynasties.get(person.dynastyId);
+  return `${person.name}${house ? ` of ${house.name}` : ''}, aged ${year - person.born}`;
+}
 
 function SiteBlock({
   site,
@@ -295,11 +306,17 @@ function SiteBlock({
   culture,
   num,
   history,
+  ruler,
+  notables,
 }: {
   site: Site;
   civ: Civ | null;
   culture: CultureDef | null;
   num: (n: number) => string;
+  /** The civ's living ruler, as a line of text. */
+  ruler: string | null;
+  /** The site's best known living notables: name, role and age. */
+  notables: readonly string[];
   /** Rendered chronicle lines for this site, newest first. */
   history: readonly string[];
 }) {
@@ -314,6 +331,16 @@ function SiteBlock({
         {civ && (
           <Fact label="People">
             {civ.name} ({culture?.name ?? civ.cultureId})
+          </Fact>
+        )}
+        {ruler && <Fact label="Ruler">{ruler}</Fact>}
+        {notables.length > 0 && (
+          <Fact label="Notables">
+            <ul className="site-notables" aria-label="Site notables">
+              {notables.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
           </Fact>
         )}
         <Fact label="Population">
@@ -395,6 +422,9 @@ export function Inspector({
   places,
   events,
   renderEvent,
+  people,
+  dynasties,
+  year,
   onShow,
   onClose,
 }: {
@@ -419,6 +449,10 @@ export function Inspector({
   /** The world's events, oldest first, and how to tell one in words. */
   events: readonly SimEvent[];
   renderEvent: (event: SimEvent) => string;
+  /** Notables and their dynasties, and the history year the ages count to. */
+  people: ReadonlyMap<Id, Person>;
+  dynasties: ReadonlyMap<Id, Dynasty>;
+  year: number;
   onShow: (layerId: string) => void;
   onClose: () => void;
 }) {
@@ -440,7 +474,19 @@ export function Inspector({
   });
   const num = (n: number) => n.toLocaleString('en-US');
   const history: string[] = [];
+  let ruler: string | null = null;
+  const notables: string[] = [];
   if (site) {
+    const lord = siteCiv?.rulerId === undefined ? undefined : people.get(siteCiv.rulerId);
+    if (lord && lord.died === undefined) ruler = personLine(lord, dynasties, year);
+    const here: Person[] = [];
+    for (const person of people.values()) {
+      if (person.died === undefined && person.siteId === site.id) here.push(person);
+    }
+    here.sort((a, b) => b.fame - a.fame || a.id - b.id);
+    for (const person of here.slice(0, SITE_NOTABLES)) {
+      notables.push(`${person.name}, ${person.title ?? 'kin'}, aged ${year - person.born}`);
+    }
     for (let k = events.length - 1; k >= 0 && history.length < SITE_HISTORY_LINES; k -= 1) {
       if (events[k]!.place === site.cell) history.push(renderEvent(events[k]!));
     }
@@ -477,7 +523,15 @@ export function Inspector({
         </ul>
       )}
       {site && (
-        <SiteBlock site={site} civ={siteCiv} culture={siteCulture} num={num} history={history} />
+        <SiteBlock
+          site={site}
+          civ={siteCiv}
+          culture={siteCulture}
+          num={num}
+          history={history}
+          ruler={ruler}
+          notables={notables}
+        />
       )}
       {lair && <LairBlock beast={lair} def={lairDef} num={num} />}
       {!site && landCiv && (

@@ -65,6 +65,7 @@ export function generateInWorker(
     history,
     creatures,
     diseases,
+    notables,
   } = content;
   const request: WorkerRequest = {
     seed,
@@ -81,6 +82,7 @@ export function generateInWorker(
       history,
       creatures,
       diseases,
+      notables,
     },
   };
   worker.postMessage(request);

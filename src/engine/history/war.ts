@@ -2,9 +2,10 @@
 // attacker campaigns against one linked site, a battle settles it on strength and luck, and
 // a win conquers or razes the site. Strength is in soldier equivalents (R-24).
 
-import type { Civ, Id, Site } from '../core/types';
+import type { Civ, Id, Person, Site } from '../core/types';
 import { timberShort } from './goods';
 import { cultureOf } from './state';
+import { battleOutcome, mageStrength, siteLost, startCaptains, warCaptain } from './notables';
 import { civLosesSite, evacuate } from './abandon';
 import { bandCount, removePeople, removeProportional, stochasticRound, totalPop } from './pop';
 import { cellDistance } from './settle';
@@ -56,7 +57,7 @@ export function civStrength(run: HistoryRun, civ: Civ): number {
     }
   }
   const armed = adults > 0 ? Math.min(1, ore / adults) : 0;
-  return strength * (1 + run.rules.oreStrength * armed);
+  return strength * (1 + run.rules.oreStrength * armed) + mageStrength(run, civ);
 }
 
 /** Linked site pairs between two civs: sites of `b` that touch a site of `a`. */
@@ -117,9 +118,11 @@ function declareWars(run: HistoryRun): void {
     if (!target) continue;
     const causes = grievanceEventsOf(run, a.id, target.id).slice(-3);
     const capital = run.world.sites.get(a.capital);
+    const [attackerCaptain, defenderCaptain] = startCaptains(run, a, target);
     const event = run.emit({
       type: 'war_declared',
       place: capital?.cell ?? null,
+      actors: [attackerCaptain, defenderCaptain].flatMap((p) => (p ? [p.id] : [])),
       causes,
       data: { civ: a.name, enemy: target.name, war: run.wars.length + 1 },
     });
@@ -135,6 +138,8 @@ function declareWars(run: HistoryRun): void {
       defenderDead: 0,
       attackerAdults: adultsOf(civSites(run, a)),
       defenderAdults: adultsOf(civSites(run, target)),
+      attackerCaptain: attackerCaptain?.id,
+      defenderCaptain: defenderCaptain?.id,
     });
   }
 }
@@ -183,7 +188,15 @@ function adultsLost(run: HistoryRun, soldiers: number, strength: number, adults:
   return strength > 0 ? Math.round((soldiers / strength) * adults * run.rules.levyShare) : 0;
 }
 
-function conquer(run: HistoryRun, war: War, site: Site, attacker: Civ, defender: Civ, battle: Id) {
+function conquer(
+  run: HistoryRun,
+  war: War,
+  site: Site,
+  attacker: Civ,
+  defender: Civ,
+  battle: Id,
+  lead: Person | undefined,
+) {
   site.civId = attacker.id;
   run.territoryDirty = true;
   const event = run.emit({
@@ -193,10 +206,20 @@ function conquer(run: HistoryRun, war: War, site: Site, attacker: Civ, defender:
     data: { site: site.name, civ: attacker.name, loser: defender.name },
   });
   war.lastEvent = event.id;
-  return civLosesSite(run, defender, site, event.id);
+  const fell = civLosesSite(run, defender, site, event.id);
+  siteLost(run, { site, attacker, defender, event: event.id, razed: false, lead });
+  return fell;
 }
 
-function raze(run: HistoryRun, war: War, site: Site, attacker: Civ, defender: Civ, battle: Id) {
+function raze(
+  run: HistoryRun,
+  war: War,
+  site: Site,
+  attacker: Civ,
+  defender: Civ,
+  battle: Id,
+  lead: Person | undefined,
+) {
   const killed = removeProportional(
     site,
     stochasticRound(run.rng.war, totalPop(site) * run.rules.razeDeathShare),
@@ -211,7 +234,9 @@ function raze(run: HistoryRun, war: War, site: Site, attacker: Civ, defender: Ci
     data: { site: site.name, civ: attacker.name, loser: defender.name, dead: killed },
   });
   war.lastEvent = event.id;
-  return civLosesSite(run, defender, site, event.id);
+  const fell = civLosesSite(run, defender, site, event.id);
+  siteLost(run, { site, attacker, defender, event: event.id, razed: true, lead });
+  return fell;
 }
 
 /** The defender's live site linked to an attacker site and nearest to the attacker's capital. */
@@ -263,9 +288,12 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ): void
   war.attackerDead += attackerKilled;
   war.defenderDead += defenderKilled;
   war.dead += attackerKilled + defenderKilled;
+  const attackerLead = warCaptain(run, war, 'attacker', attacker);
+  const defenderLead = warCaptain(run, war, 'defender', defender);
   const battle = run.emit({
     type: 'battle',
     place: target.cell,
+    actors: [attackerLead, defenderLead].flatMap((p) => (p ? [p.id] : [])),
     causes: causesOf(war.lastEvent),
     data: {
       war: war.id,
@@ -279,11 +307,12 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ): void
     },
   });
   war.lastEvent = battle.id;
+  const lead = battleOutcome(run, attackerLead, defenderLead, attackerWins, battle.id);
   if (!attackerWins) return;
   const differ = run.races.get(attacker.raceId) !== run.races.get(defender.raceId);
   const razeChance = Math.min(1, rules.razeChance * (differ ? 2 : 1));
-  if (rng.war.chance(razeChance)) raze(run, war, target, attacker, defender, battle.id);
-  else conquer(run, war, target, attacker, defender, battle.id);
+  if (rng.war.chance(razeChance)) raze(run, war, target, attacker, defender, battle.id, lead);
+  else conquer(run, war, target, attacker, defender, battle.id, lead);
 }
 
 function endWar(run: HistoryRun, war: War, attacker: Civ | undefined, defender: Civ | undefined) {

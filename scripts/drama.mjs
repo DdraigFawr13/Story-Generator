@@ -427,6 +427,19 @@ for (const r of rows) {
   );
 }
 
+process.stdout.write(
+  '\nnotables: seed | alive/ever | dynasties | successions disputed | oaths | mages | legends (max alive) | artifacts books | lost stolen\n',
+);
+for (const r of rows) {
+  const h = r.history;
+  process.stdout.write(
+    `${r.seed.padEnd(4)} | ${String(h.notablesAlive).padStart(4)}/${String(h.notablesEver).padEnd(5)} | ${String(h.dynasties).padStart(4)} | ` +
+      `${String(h.successions).padStart(3)} ${String(h.disputed).padStart(3)} | ${String(h.oaths).padStart(4)} | ${String(h.mages).padStart(4)} | ` +
+      `${String(h.legends).padStart(2)} (${h.legendsMax}) | ${String(h.artifacts).padStart(3)} ${String(h.books).padStart(3)} | ` +
+      `${String(h.itemsLost).padStart(3)} ${String(h.itemsStolen).padStart(3)}\n`,
+  );
+}
+
 const baselineSeeds = () =>
   Object.fromEntries(rows.map((r) => [r.seed, baselineMetrics(r.history.metrics)]));
 if (args['write-baseline']) {

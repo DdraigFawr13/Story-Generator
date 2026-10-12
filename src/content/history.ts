@@ -90,7 +90,7 @@ export const HISTORY: HistoryRules = {
   civRaidChance: 0.6,
   raidLootShare: 0.4,
   civRaidDeaths: [0.01, 0.05],
-  grievance: { raid: 1, border: 0.8, insult: 0.6, envy: 0.4 },
+  grievance: { raid: 1, border: 0.8, insult: 0.6, envy: 0.4, vengeance: 1.5 },
   borderCells: 12,
   borderClashChance: 0.6,
   insultChance: 0.2,

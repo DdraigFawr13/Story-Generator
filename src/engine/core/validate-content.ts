@@ -80,6 +80,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...settlementProblems(content));
   problems.push(...creatureProblems(content));
   problems.push(...diseaseProblems(content));
+  problems.push(...notableProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -196,6 +197,63 @@ export function diseaseProblems(content: ContentBundle): string[] {
   return problems;
 }
 
+/** Notable rules: a dynasty pattern per culture, forms to draw from, and chances between 0 and 1. */
+export function notableProblems(content: ContentBundle): string[] {
+  const rules = content.notables;
+  if (!rules) return ['Content has no notable rules.'];
+  const problems: string[] = [];
+  for (const culture of content.cultures) {
+    if (!rules.dynastyNames[culture.id]?.includes('{name}')) {
+      problems.push(`Notables dynastyNames: no pattern with {name} for culture "${culture.id}".`);
+    }
+  }
+  const lists: [string, string[] | undefined][] = [
+    ['artifactForms', rules.artifactForms],
+    ['artifactEpithets', rules.artifactEpithets],
+    ['artifactNames', rules.artifactNames],
+    ['bookNames', rules.bookNames],
+    ['bookForms.mundane', rules.bookForms.mundane],
+  ];
+  for (const [name, list] of lists) {
+    if (!list || list.length === 0) problems.push(`Notables ${name} is empty.`);
+  }
+  for (const [school, forms] of Object.entries(rules.bookForms)) {
+    if (forms.length === 0) problems.push(`Notables bookForms.${school} is empty.`);
+  }
+  const chances = [
+    'adultDeath',
+    'childDeath',
+    'famineDeath',
+    'diseaseDeath',
+    'beastKill',
+    'raidKill',
+    'raidStealChance',
+    'raiderChance',
+    'razeDeathShare',
+    'captainDeath',
+    'captainDeathWin',
+    'marryChance',
+    'allianceChance',
+    'allianceGrievanceCut',
+    'extraSpouseChance',
+    'childChance',
+    'mageNotice',
+    'legendChance',
+    'disputeChance',
+    'artifactChance',
+    'bookChance',
+    'scholarChance',
+    'itemToRulerChance',
+    'itemFindChance',
+  ] as const;
+  for (const key of chances) {
+    if (!(rules[key] >= 0 && rules[key] <= 1)) {
+      problems.push(`Notables ${key} ${rules[key]} is outside 0-1.`);
+    }
+  }
+  return problems;
+}
+
 /** Event types the settle and history stages emit; content must define them. */
 const HISTORY_EVENT_IDS = [
   'civ_founded',
@@ -225,6 +283,21 @@ const HISTORY_EVENT_IDS = [
   'cold_years_began',
   'cold_years_ended',
   'year_summary',
+  'notable_born',
+  'mage_born',
+  'marriage',
+  'notable_died',
+  'ruler_succeeded',
+  'succession_disputed',
+  'dynasty_founded',
+  'oath_sworn',
+  'legend_risen',
+  'artifact_made',
+  'book_written',
+  'item_inherited',
+  'item_lost',
+  'item_stolen',
+  'item_found',
 ];
 
 /** Settlement rules: present, capitalKind keys are culture ids, a civ name template per government used. */

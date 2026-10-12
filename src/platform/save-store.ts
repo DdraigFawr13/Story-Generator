@@ -1,7 +1,7 @@
-// Named world saves (REBOOT_PLAN M0.3). A save is the serialized world plus a
-// SHA-256 checksum. Summary and data are written in one transaction, so a save
-// either commits completely or leaves the previous one untouched. There is no
-// cross-version migration (R-02): a save from an older build may fail to load.
+// Named world saves (REBOOT_PLAN M0.3). A save is the serialized world, gzipped with
+// CompressionStream (M2.5), plus a SHA-256 checksum of the stored bytes. Summary and data are
+// written in one transaction, so a save either commits completely or leaves the previous one
+// untouched. There is no cross-version migration (R-02): a save from an older build may fail to load.
 
 import { deserializeWorld, serializeWorld, type WorldState } from '../engine';
 
@@ -15,7 +15,8 @@ export interface SaveSummary {
 export interface SaveRecord {
   name: string;
   checksum: string;
-  data: string;
+  /** Gzipped JSON of the world; a string in saves made before M2.5. */
+  data: Uint8Array | string;
 }
 
 /** Storage behind the store: IndexedDB in the browser, a Map in unit tests. */
@@ -42,9 +43,25 @@ export function validateSaveName(name: string): string {
   return trimmed;
 }
 
-async function checksumOf(data: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
+async function checksumOf(data: Uint8Array | string): Promise<string> {
+  const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+  const digest = await crypto.subtle.digest('SHA-256', bytes as Uint8Array<ArrayBuffer>);
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function pipe(bytes: Uint8Array, stream: GenericTransformStream): Promise<Uint8Array> {
+  const piped = new Blob([bytes as Uint8Array<ArrayBuffer>]).stream().pipeThrough(stream);
+  return new Uint8Array(await new Response(piped).arrayBuffer());
+}
+
+/** Gzips the text; a world of 250 years shrinks several times over. */
+export function compress(text: string): Promise<Uint8Array> {
+  return pipe(new TextEncoder().encode(text), new CompressionStream('gzip'));
+}
+
+export async function decompress(data: Uint8Array | string): Promise<string> {
+  if (typeof data === 'string') return data;
+  return new TextDecoder().decode(await pipe(data, new DecompressionStream('gzip')));
 }
 
 export function createSaveStore(
@@ -58,7 +75,7 @@ export function createSaveStore(
     },
     async save(name, world) {
       const validName = validateSaveName(name);
-      const data = serializeWorld(world);
+      const data = await compress(serializeWorld(world));
       const summary: SaveSummary = {
         name: validName,
         seed: world.seed,
@@ -75,7 +92,7 @@ export function createSaveStore(
         throw new Error(`The save "${name}" is damaged and cannot be loaded.`);
       }
       try {
-        return deserializeWorld(record.data);
+        return deserializeWorld(await decompress(record.data));
       } catch {
         throw new Error(`The save "${name}" could not be read by this version.`);
       }

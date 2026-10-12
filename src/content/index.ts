@@ -7,6 +7,7 @@ import { cultures } from './cultures';
 import { diseases } from './diseases';
 import { HISTORY } from './history';
 import { NAMES } from './names';
+import { NOTABLES } from './notables';
 import { races } from './races';
 import { RESOURCES } from './resources';
 import { SETTLEMENT } from './settlement';
@@ -28,6 +29,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   history: HISTORY,
   creatures,
   diseases,
+  notables: NOTABLES,
 };
 
 export * from './biomes';
@@ -37,5 +39,6 @@ export * from './diseases';
 export * from './history';
 export * from './map-layers';
 export * from './names';
+export * from './notables';
 export * from './resources';
 export * from './settlement';

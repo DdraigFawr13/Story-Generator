@@ -1,7 +1,8 @@
-// Yearly history (M2.3, M2.4, M2.4b): after settlement, each year runs climate, harvest, goods, trade (each decade),
-// demographics, famine, civ raids, beasts, disease, migration, expansion, war and site upkeep in a
+// Yearly history (M2.3, M2.4, M2.4b, M2.5): after settlement, each year runs climate, harvest, goods, trade (each decade),
+// demographics, famine, civ raids, beasts, disease, migration, expansion, war, notables (and items each decade) and site upkeep in a
 // fixed order. Per-run state (links, immunity, cooldowns, wars) lives in `HistoryRun`; only sites,
-// civs, creatures, events and territory change in the world. Trivial events roll up into a yearly
+// civs, creatures, notables, items, events and territory change in the world, plus a
+// snapshot of borders and sites every decade. Trivial events roll up into a yearly
 // summary and uncited ones are pruned after the last year (importance.ts).
 
 import { DAYS_PER_YEAR } from '../core/clock';
@@ -16,8 +17,11 @@ import { runGoods } from './goods';
 import { runFamine, runHarvest } from './harvest';
 import { buildLinks, createLinkSearch } from './links';
 import { runExpansion, runMigration } from './migration';
+import { initNotables, runNotables } from './notables';
+import { runItems } from './items';
 import { runCivRaids, runDiplomacy } from './raids';
 import { buildSettlePlaces, buildSettleSearch, computeTerritory } from './settle';
+import { takeSnapshot } from './snapshots';
 import { createRun, isLive, liveSites, type HistoryContent, type HistoryRun } from './state';
 import { totalPop } from './pop';
 import { runTrade } from './trade';
@@ -26,6 +30,7 @@ import { runWar } from './war';
 export type { HistoryContent } from './state';
 export * from './links';
 export { emptyGoods } from './goods';
+export { decodeTerritory, encodeTerritory } from './snapshots';
 
 /** Years between territory recomputes and progress reports. */
 const DECADE = 10;
@@ -55,6 +60,8 @@ export function runHistory(
   const linkSearch = createLinkSearch(cells);
   const links = buildLinks(cells, [...world.sites.values()], content.history, linkSearch);
   const run = createRun(world, content, search, linkSearch, links);
+  initNotables(run);
+  world.snapshots = [takeSnapshot(world, cells, 0)];
 
   for (let year = 1; year <= years; year += 1) {
     run.year = year;
@@ -71,6 +78,8 @@ export function runHistory(
     runMigration(run);
     runExpansion(run);
     runWar(run);
+    runNotables(run);
+    if (year % DECADE === 0) runItems(run);
     runKinds(run);
     runAbandonment(run);
     for (const site of world.sites.values()) {
@@ -81,6 +90,7 @@ export function runHistory(
       recomputeTerritory(run);
       run.territoryDirty = false;
     }
+    if (decade || year === years) world.snapshots.push(takeSnapshot(world, cells, year));
     if (decade) runDiplomacy(run);
     runYearSummary(run);
     if (decade || year === years) {

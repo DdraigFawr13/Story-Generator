@@ -4,6 +4,8 @@
 import { cultureGivenName } from '../people/names';
 import type { CreatureDef } from '../core/content-types';
 import type { Creature, Id, Site } from '../core/types';
+import { beastRaidDeaths, createHero } from './notables';
+import { addDeed } from './people';
 import { bandCount, removePeople, stochasticRound, totalPop } from './pop';
 import { cellDistance } from './settle';
 import { causesOf, civName, cultureOf, liveSites, logOf, type HistoryRun } from './state';
@@ -113,12 +115,18 @@ function trySlay(
   const hero = cultureGivenName(culture.names, rng.names);
   creature.died = run.year;
   creature.slainBy = hero;
-  run.emit({
+  const notable = createHero(run, site, hero, def.danger);
+  const event = run.emit({
     type: 'beast_slain',
     place: creature.lair,
+    actors: notable ? [notable.id] : [],
     causes: [raid],
     data: { hero, beast: creature.name, kind: def.name, site: site.name, civ: civ.name },
   });
+  if (notable) {
+    creature.slayerId = notable.id;
+    addDeed(notable, event.id);
+  }
   return true;
 }
 
@@ -139,6 +147,7 @@ function raid(run: HistoryRun, creature: Creature, def: CreatureDef): void {
   });
   creature.deeds.push(event.id);
   logOf(run, site.id).raided = { year: run.year, event: event.id };
+  beastRaidDeaths(run, site, event.id);
   trySlay(run, creature, def, site, event.id);
 }
 

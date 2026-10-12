@@ -6,6 +6,7 @@ import { DEFAULT_CONTENT } from '../content';
 import {
   BIRTH_TIER_IDS,
   DEFAULT_PARAMS,
+  DAYS_PER_YEAR,
   DEFAULT_SYSTEMS,
   RngStream,
   advance,
@@ -253,6 +254,9 @@ export function NextApp() {
           sites={state.sites}
           civs={state.civs}
           creatures={state.creatures}
+          people={state.people}
+          dynasties={state.dynasties}
+          year={Math.floor(state.day / DAYS_PER_YEAR)}
           events={state.events}
           renderEvent={(event) => narrator.renderEvent(event)}
           cultures={DEFAULT_CONTENT.cultures}

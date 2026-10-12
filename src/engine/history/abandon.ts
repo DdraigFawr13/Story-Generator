@@ -2,6 +2,7 @@
 
 import type { Civ, Id, SimEvent, Site } from '../core/types';
 import { emptyGoods } from './goods';
+import { relocateNotables } from './notables';
 import { addParty, totalPop, type Party } from './pop';
 import { cellDistance } from './settle';
 import { causesOf, civName, isLive, logOf, type HistoryRun } from './state';
@@ -17,7 +18,7 @@ function largestLive(run: HistoryRun, civ: Civ): Site | undefined {
 }
 
 /** The nearest linked live site of the same civ, or undefined. */
-function findRefuge(run: HistoryRun, site: Site): Site | undefined {
+export function findRefuge(run: HistoryRun, site: Site): Site | undefined {
   let refuge: Site | undefined;
   let nearest = Infinity;
   for (const id of run.links.get(site.id) ?? []) {
@@ -74,6 +75,7 @@ export function runAbandonment(run: HistoryRun): void {
   const { world, rules } = run;
   for (const site of [...world.sites.values()]) {
     if (!isLive(site) || totalPop(site) >= rules.abandonBelow) continue;
+    const refuge = findRefuge(run, site);
     evacuate(run, site);
     site.ruinedYear = run.year;
     const log = logOf(run, site.id);
@@ -86,5 +88,8 @@ export function runAbandonment(run: HistoryRun): void {
     });
     const civ = site.civId === null ? undefined : world.civs.get(site.civId);
     if (civ) civLosesSite(run, civ, site, event.id);
+    // Notables walk to the refuge, else to the capital if the civ still has one.
+    const home = civ && civ.fell === undefined ? world.sites.get(civ.capital) : undefined;
+    relocateNotables(run, site, refuge ?? home);
   }
 }

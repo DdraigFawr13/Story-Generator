@@ -342,6 +342,156 @@ export const eventTypes: EventTypeDef[] = [
       'Peace came in {date} between the {civ} and the {enemy} after {years} years of war.',
     ],
   },
+  {
+    id: 'notable_born',
+    baseImportance: 1,
+    category: 'life',
+    templates: [
+      'In {date} {child} was born at {site} to {parents}, of {dynasty}.',
+      '{date}: {parents} had a child at {site}, and named {child}.',
+      'A child of {dynasty} came into the world at {site} in {date}: {child}, born to {parents}.',
+    ],
+  },
+  {
+    id: 'mage_born',
+    baseImportance: 3,
+    category: 'magic',
+    templates: [
+      'In {date} {child} was born at {site}, to {parents}, with a {tier} gift for {school} among the {civ}.',
+      '{date}: at {site} a child of {parents} showed {tier} power in {school}; they named {child}.',
+      'At {site} the {civ} marked the birth of {child} in {date}, born to {parents} and touched by {school} to a {tier} degree.',
+    ],
+  },
+  {
+    id: 'marriage',
+    baseImportance: 1,
+    category: 'life',
+    templates: [
+      'In {date} {a} wed {b} at {site}, {bond}.',
+      '{date}: {a} and {b} were married at {site}, {bond}.',
+      'At {site} in {date} {a} took {b} to spouse, {bond}.',
+    ],
+  },
+  {
+    id: 'notable_died',
+    baseImportance: 2,
+    category: 'life',
+    templates: [
+      'In {date} {name}, {role} of the {civ}, died at {site} aged {age}, {cause}.',
+      '{date}: {name} the {role} of {site} died {cause}, at the age of {age}.',
+      'The {civ} mourned {name}, {role}, who died {cause} at {site} in {date}, aged {age}.',
+    ],
+  },
+  {
+    id: 'ruler_succeeded',
+    baseImportance: 5,
+    category: 'politics',
+    templates: [
+      'In {date} {ruler} took the seat of the {civ} after {prior}, {rule}.',
+      '{date}: {prior} was dead, and {ruler} ruled the {civ} {rule}.',
+      'The {civ} had a new ruler in {date}: {ruler}, who succeeded {prior} {rule}.',
+    ],
+  },
+  {
+    id: 'succession_disputed',
+    baseImportance: 6,
+    category: 'politics',
+    templates: [
+      'In {date} {a} and {b} both claimed the seat of the {civ} after {prior}.',
+      '{date}: the death of {prior} left the {civ} with two claimants, {a} and {b}.',
+      'After {prior} died in {date}, {a} and {b} quarrelled over who should rule the {civ}.',
+    ],
+  },
+  {
+    id: 'dynasty_founded',
+    baseImportance: 2,
+    category: 'politics',
+    templates: [
+      'In {date} {founder} of the {civ} founded {dynasty} at {site}.',
+      '{date}: {dynasty} began with {founder} at {site}.',
+      'Looking back, the {civ} dated {dynasty} to {founder} at {site} in {date}.',
+    ],
+  },
+  {
+    id: 'oath_sworn',
+    baseImportance: 2,
+    category: 'social',
+    templates: [
+      'In {date} {name} of the {civ} swore vengeance on {enemy} for the death of {dead}.',
+      '{date}: for {dead}, {name} took an oath against {enemy}.',
+      '{name} swore in {date} that {enemy} would answer for {dead}.',
+    ],
+  },
+  {
+    id: 'legend_risen',
+    baseImportance: 7,
+    category: 'magic',
+    templates: [
+      'In {date} {name} of {site} grew into a legend of {school}, and the {civ} spoke of nothing else.',
+      '{date}: {name} of the {civ} reached a power of {school} that the old tales would not have doubted.',
+      'The {civ} could not say when it began, but by {date} {name} of {site} stood among the legends of {school}.',
+    ],
+  },
+  {
+    id: 'artifact_made',
+    baseImportance: 4,
+    category: 'social',
+    templates: [
+      'In {date} {maker} of {site} made {item}, a {form}, and it went to {holder}.',
+      '{date}: {item}, a {form}, came from the forge of {maker} at {site}, and {holder} kept it.',
+      'The {civ} of {site} prized {item}, a {form} made by {maker} in {date} and held by {holder}.',
+    ],
+  },
+  {
+    id: 'book_written',
+    baseImportance: 2,
+    category: 'magic',
+    templates: [
+      'In {date} {writer} of {site} wrote {item}, a {form}.',
+      '{date}: {item}, a {form}, was finished by {writer} at {site}.',
+      '{writer} set down {item} at {site} in {date}, and it was counted a {form}.',
+    ],
+  },
+  {
+    id: 'item_inherited',
+    baseImportance: 2,
+    category: 'life',
+    templates: [
+      'In {date} {item} passed from {from} to {heir} at {site}.',
+      '{date}: when {from} died, {heir} took up {item}.',
+      '{heir} came into {item} at {site} in {date}, after {from}.',
+    ],
+  },
+  {
+    id: 'item_lost',
+    baseImportance: 3,
+    category: 'life',
+    templates: [
+      'In {date} {item} was lost when {from} died near {site}, with no one to take it up.',
+      '{date}: no heir took {item} after {from}, and it lay forgotten near {site}.',
+      'After the death of {from} near {site} in {date}, {item} dropped out of sight.',
+    ],
+  },
+  {
+    id: 'item_stolen',
+    baseImportance: 5,
+    category: 'politics',
+    templates: [
+      'In {date} {thief} of the {civ} took {item} from {from} at {site}.',
+      '{date}: {item} was carried off from {site} by {thief}, who took it from {from}.',
+      '{from} lost {item} to {thief} of the {civ} at {site} in {date}.',
+    ],
+  },
+  {
+    id: 'item_found',
+    baseImportance: 4,
+    category: 'social',
+    templates: [
+      'In {date} {finder} of {site} found {item}, lost for years in the land of the {civ}.',
+      '{date}: {item} came to light in the {civ} land, and {finder} took it up.',
+      '{finder} recovered {item} in {date}, and the {civ} told the tale at {site}.',
+    ],
+  },
 ];
 
 export const rules: EventRuleDef[] = [
