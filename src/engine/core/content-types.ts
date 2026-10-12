@@ -213,6 +213,57 @@ export interface ContentBundle {
   diseases: DiseaseDef[];
   notables: NotableRules;
   biographies: BiographyRules;
+  site: SiteRules;
+}
+
+/** A named glyph entry; the array index is the value stored in a `LocalMap` layer. */
+export interface SiteGlyphDef {
+  id: string;
+  name: string;
+  glyph: string;
+}
+
+/** Live-site rules (M3.1): local map, layout, promotion and outposts. Tunables live in content/site.ts. */
+export interface SiteRules {
+  /** Tiles per side of the local map. */
+  mapSize: number;
+  /** Tiles per world cell; the map spans the site cell plus half of each neighbour. */
+  tilesPerCell: number;
+  /** Sites bigger than this follow about this many people; the rest stay counts. */
+  followCap: number;
+  /** Homes in the layout = ceil(pop / this). */
+  peoplePerHome: number;
+  /** Fields in the layout = ceil(pop / this). */
+  peoplePerField: number;
+  /** How far (0-1) a river in a neighbouring cell is pulled toward the site. */
+  riverPull: number;
+  /** Chance a married man in a leaders-many-spouses culture takes a second wife at promotion. */
+  extraSpouseChance: number;
+  /** Index = `LocalMap.terrain` value. */
+  terrains: SiteGlyphDef[];
+  /** Index = `LocalMap.water` value. */
+  waters: SiteGlyphDef[];
+  /** Index = `LocalMap.tree` value. */
+  trees: SiteGlyphDef[];
+  /** Index = `LocalMap.mineral` value. */
+  minerals: SiteGlyphDef[];
+  buildings: (SiteGlyphDef & { w: number; h: number })[];
+  /** Glyph drawn where a path crosses a river. */
+  bridgeGlyph: string;
+  outpost: {
+    /** Lowest cell fertility (0-100) that can be farmed. */
+    minFertility: number;
+    /** Fewest and most settlers a new outpost gets. */
+    settlers: [number, number];
+    /** Food (person-years) the origin gives each settler. */
+    foodPerSettler: number;
+    /** Share of the origin's children and adults that go, before the settlers range clamps it. */
+    settlerShare: number;
+  };
+  /** Summed world travel cost walked per day on foot. */
+  travelCostPerDay: number;
+  /** Event type ids that pause play, per category. */
+  autoPause: Record<'deaths' | 'breakdowns' | 'fires' | 'raids' | 'arrivals', string[]>;
 }
 
 /** Biographies (M2.6): how many chronicle lines an entity keeps and the words of its summary. */

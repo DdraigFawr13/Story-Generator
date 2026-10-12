@@ -428,6 +428,66 @@ export interface Creature {
   deeds: Id[];
 }
 
+/** A 96x96 tile map of one site (M3.1). Layer values index the content's `site` glyph lists. */
+export interface LocalMap {
+  width: number;
+  height: number;
+  elevation: Int16Array;
+  terrain: Uint8Array;
+  water: Uint8Array;
+  tree: Uint8Array;
+  mineral: Uint8Array;
+  /** Building id per tile, 0 = none. */
+  building: Uint16Array;
+  /** World cell coordinates of the site cell. */
+  cellX: number;
+  cellY: number;
+  /** Tile indexes where a path crosses a river. */
+  bridges: number[];
+}
+
+export interface Household {
+  id: Id;
+  members: Id[];
+  head: Id;
+  home: Id | null;
+}
+
+export interface Building {
+  id: Id;
+  defId: string;
+  cells: number[];
+  owner: Id | null;
+  condition: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** False for homes of counted (unfollowed) households. */
+  followed: boolean;
+}
+
+/** The live site (M3.1): its map, the people followed and what they own. */
+export interface ActiveSite {
+  siteId: Id;
+  enteredDay: number;
+  map: LocalMap;
+  residents: Id[];
+  /** Residents created at promotion (removed again on demotion). */
+  promoted: Id[];
+  households: Map<Id, Household>;
+  buildings: Map<Id, Building>;
+  /** Good id → count. */
+  stock: Map<string, number>;
+  /** Share of the site's people followed (1 when all). */
+  share: number;
+  /** Site goods when watching began, for exact demotion. */
+  goodsAtEntry: Goods;
+  stockAtEntry: Record<string, number>;
+  /** Tile the layout grew from (the village green). */
+  origin: [number, number];
+}
+
 export interface WorldState {
   seed: string;
   /** Number of completed days. The next step simulates day `day`. */
@@ -458,5 +518,6 @@ export interface WorldState {
   commands: Command[];
   /** Demo climate state for the scaffold; Phase 1 moves weather to per-cell climate. */
   weather: { current: string; sinceDay: number; causeEvent: Id | null };
-  // Phase 3 adds `activeSite`.
+  /** The site being watched day by day (Phase 3); null at world tier. */
+  activeSite: ActiveSite | null;
 }

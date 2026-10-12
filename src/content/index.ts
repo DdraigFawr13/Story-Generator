@@ -13,6 +13,7 @@ import { NOTABLES } from './notables';
 import { races } from './races';
 import { RESOURCES } from './resources';
 import { SETTLEMENT } from './settlement';
+import { SITE } from './site';
 import { eventTypes, rules, weather } from './world';
 
 export const DEFAULT_CONTENT: ContentBundle = {
@@ -34,6 +35,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   diseases,
   notables: NOTABLES,
   biographies: BIOGRAPHIES,
+  site: SITE,
 };
 
 export * from './biographies';
@@ -48,3 +50,4 @@ export * from './names';
 export * from './notables';
 export * from './resources';
 export * from './settlement';
+export * from './site';

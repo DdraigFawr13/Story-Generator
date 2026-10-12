@@ -90,6 +90,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...creatureProblems(content));
   problems.push(...diseaseProblems(content));
   problems.push(...notableProblems(content));
+  problems.push(...siteProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -468,6 +469,59 @@ function nameProblems(content: ContentBundle): string[] {
   }
   for (const kind of [...REGION_KINDS, 'ocean']) {
     if (!names.patterns[kind]?.length) problems.push(`No name patterns for "${kind}".`);
+  }
+  return problems;
+}
+
+/** Live-site rules: present, layer lists start with "none", building sizes and event ids are sane. */
+export function siteProblems(content: ContentBundle): string[] {
+  const rules = content.site;
+  if (!rules) return ['Content has no site rules.'];
+  const problems: string[] = [];
+  if (!(rules.mapSize > 0) || !(rules.tilesPerCell > 0) || !(rules.followCap > 0)) {
+    problems.push('Site rules need positive mapSize, tilesPerCell and followCap.');
+  }
+  const [lo, hi] = rules.outpost.settlers;
+  if (lo < 1 || lo > hi) problems.push('Site outpost settlers: need 1 <= min <= max.');
+  const need = (kind: string, list: { id: string }[], ids: string[]) => {
+    for (const id of ids) {
+      if (!list.some((entry) => entry.id === id)) problems.push(`Site ${kind} needs "${id}".`);
+    }
+  };
+  need('terrains', rules.terrains, [
+    'grass',
+    'scrub',
+    'marsh',
+    'shore',
+    'rock',
+    'field',
+    'path',
+    'floor',
+    'wall',
+  ]);
+  need('waters', rules.waters, ['none', 'river', 'sea', 'lake']);
+  need('trees', rules.trees, ['none', 'broadleaf', 'conifer']);
+  need('minerals', rules.minerals, ['none', 'stone', 'ore', 'clay']);
+  need('buildings', rules.buildings, [
+    'hall',
+    'home',
+    'well',
+    'stockpile',
+    'shrine',
+    'field',
+    'dock',
+  ]);
+  for (const b of rules.buildings) {
+    if (b.w < 1 || b.h < 1) problems.push(`Site building ${b.id}: bad size.`);
+  }
+  const eventIds = new Set(content.eventTypes.map((e) => e.id));
+  if (!eventIds.has('outpost_founded'))
+    problems.push('Site rules need event type "outpost_founded".');
+  for (const [category, ids] of Object.entries(rules.autoPause)) {
+    for (const id of ids) {
+      if (!eventIds.has(id))
+        problems.push(`Site autoPause.${category}: unknown event type "${id}".`);
+    }
   }
   return problems;
 }
