@@ -34,6 +34,7 @@ Locked decisions from the 2026-10-11 reboot Q&A. Don't reopen them without askin
 | R-28 | Magic is learned only from teachers, books and institutions, so knowledge can be lost. |
 | R-29 | Every racial advantage carries a downside. Casting cost is a Phase 5 fork; default mild fatigue. |
 | D-026 | Vercel production deploys only from `main`; branch previews off. See [DEPLOYMENT.md](DEPLOYMENT.md). |
+| D-033 | Shared AI rules, agents, the session hook and the branch-cleanup workflow sync from AI-Master-Instructions (`.ai-master.json`); project rules stay in `AGENTS.md` and AGENT_BRIEF (2026-10-12). |
 
 ## Engineering defaults (recorded by agents)
 

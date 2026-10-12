@@ -5,4 +5,17 @@ playwright-report/
 docs/
 *.md
 package-lock.json
-.github/workflows/cleanup-merged-branches.yml
+
+# ai-master:start (managed by .claude/master/sync.mjs)
+.ai-master.lock
+.claude/agents/ci-fixer.md
+.claude/agents/implementer.md
+.claude/agents/reviewer.md
+.claude/agents/test-runner.md
+.claude/hooks/session-start.sh
+.claude/master/
+.claude/master/RULES.md
+.claude/master/sync.mjs
+.claude/skills/efficient-github-actions/
+.github/workflows/prune-merged-branches.yml
+# ai-master:end
