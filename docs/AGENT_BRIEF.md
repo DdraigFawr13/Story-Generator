@@ -28,6 +28,8 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256Ã
 - `npm run check`: format, typecheck, boundaries, unit tests, build. Run before every push.
 - `npm run test:browser`: the Chromium smoke; run for UI or browser-test changes.
 - `npm run drama -- --seeds 5`: world and history statistics per seed (a tool, not a gate).
+- `npm run drama -- --seeds 10 --years 250 --baseline tests/baseline/drama-10-seeds.json`: diff history numbers against the saved baseline (`--write-baseline FILE` regenerates it).
+- `npm run sweep -- --rule expandChance --values 0.1,0.3 --seeds 5`: one history summary line per rule value.
 - `npm run worldmap -- --seed S1 --layer all --out tmp/worldmap`: PNGs per layer.
 - Node 24.19.0 and npm 11.9.0 are pinned. Cloud sessions get them from `.claude/hooks/session-start.sh`; if `node -v` differs, prepend `~/.cache/story-generator/node-v24.19.0-linux-x64/bin` to `PATH`.
 

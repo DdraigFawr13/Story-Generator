@@ -4,6 +4,7 @@ import { abilities, schools } from './abilities';
 import { BIOMES, BIOME_RULES } from './biomes';
 import { creatures } from './creatures';
 import { cultures } from './cultures';
+import { diseases } from './diseases';
 import { HISTORY } from './history';
 import { NAMES } from './names';
 import { races } from './races';
@@ -26,11 +27,13 @@ export const DEFAULT_CONTENT: ContentBundle = {
   settlement: SETTLEMENT,
   history: HISTORY,
   creatures,
+  diseases,
 };
 
 export * from './biomes';
 export * from './creatures';
 export * from './cultures';
+export * from './diseases';
 export * from './history';
 export * from './map-layers';
 export * from './names';

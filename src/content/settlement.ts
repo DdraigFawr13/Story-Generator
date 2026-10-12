@@ -4,8 +4,8 @@
 import type { SettlementRules } from '../engine';
 
 export const SETTLEMENT: SettlementRules = {
-  // About one civ per 3,500 land cells: 6 on a default 256x256 map, 3 on 128x128.
-  civs: { min: 3, max: 8, landCellsPerCiv: 3500 },
+  // About one civ per 3,500 land cells: 6 on a default 256x256 map, 3 on 128x128; jitter adds or drops up to 2.
+  civs: { min: 3, max: 8, landCellsPerCiv: 3500, jitter: 2 },
   secondSiteChance: 0.5,
   secondSiteRange: [4, 10],
   capitalSpacing: 32,
@@ -38,6 +38,10 @@ export const SETTLEMENT: SettlementRules = {
     road: 1.1,
     foreignBiome: 0.5,
     raceFeature: { dvergar: { deposit: 2 } },
+    // Tylwyth food scales with mean aura in reach (ref = typical capital, x1).
+    raceAura: { tylwyth: { ref: 28, min: 0.3, max: 1.6 } },
+    // Dvergar with no ore or stone in reach go hungry.
+    raceWithout: { dvergar: { deposit: 0.4 } },
   },
   suitability: { fertility: 1, preferredBiome: 25, preference: 30, routeNode: 20, jitter: 10 },
   capitalPop: [150, 300],

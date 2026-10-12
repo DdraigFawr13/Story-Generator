@@ -79,6 +79,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...cultureProblems(content));
   problems.push(...settlementProblems(content));
   problems.push(...creatureProblems(content));
+  problems.push(...diseaseProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -169,6 +170,32 @@ export function creatureProblems(content: ContentBundle): string[] {
   return problems;
 }
 
+/** Diseases: unique ids, an existing event type, and sane ranges. */
+export function diseaseProblems(content: ContentBundle): string[] {
+  const problems: string[] = [];
+  const eventIds = new Set(content.eventTypes.map((e) => e.id));
+  const seen = new Set<string>();
+  for (const def of content.diseases) {
+    const where = `Disease ${def.id}`;
+    if (seen.has(def.id)) problems.push(`Duplicate disease id "${def.id}".`);
+    seen.add(def.id);
+    if (!eventIds.has(def.event)) problems.push(`${where}: unknown event type "${def.event}".`);
+    const share = (v: number) => v >= 0 && v <= 1;
+    if (!share(def.infectivity)) problems.push(`${where}: infectivity must be 0-1.`);
+    if (!share(def.outbreak)) problems.push(`${where}: outbreak must be 0-1.`);
+    if (!(share(def.severity[0]) && share(def.severity[1]) && def.severity[0] <= def.severity[1])) {
+      problems.push(`${where}: severity needs 0 <= min <= max <= 1.`);
+    }
+    if (def.ageRisk.child < 0 || def.ageRisk.adult < 0 || def.ageRisk.elder < 0) {
+      problems.push(`${where}: ageRisk multipliers cannot be negative.`);
+    }
+    if (def.minPop < 1) problems.push(`${where}: minPop must be at least 1.`);
+    if (def.immunityYears < 0) problems.push(`${where}: immunityYears cannot be negative.`);
+    if (def.incubation < 0 || def.duration < 0) problems.push(`${where}: negative days.`);
+  }
+  return problems;
+}
+
 /** Event types the settle and history stages emit; content must define them. */
 const HISTORY_EVENT_IDS = [
   'civ_founded',
@@ -193,6 +220,11 @@ const HISTORY_EVENT_IDS = [
   'site_conquered',
   'site_razed',
   'peace_made',
+  'dry_years_began',
+  'dry_years_ended',
+  'cold_years_began',
+  'cold_years_ended',
+  'year_summary',
 ];
 
 /** Settlement rules: present, capitalKind keys are culture ids, a civ name template per government used. */
@@ -211,6 +243,12 @@ export function settlementProblems(content: ContentBundle): string[] {
   }
   if (rules.civs.min < 1 || rules.civs.min > rules.civs.max) {
     problems.push('Settlement civs: need 1 <= min <= max.');
+  }
+  const raceIds = new Set(content.races.map((r) => r.id));
+  for (const key of ['raceAura', 'raceWithout', 'raceFeature'] as const) {
+    for (const id of Object.keys(rules.capacity[key])) {
+      if (!raceIds.has(id)) problems.push(`Settlement capacity.${key}: unknown race "${id}".`);
+    }
   }
   const eventIds = new Set(content.eventTypes.map((e) => e.id));
   for (const id of HISTORY_EVENT_IDS) {

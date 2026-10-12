@@ -139,6 +139,56 @@ export function siteFeatures(
   return out;
 }
 
+/** Indexes of the content's mineral resources (the categories that make a mine). */
+export function mineralIndexes(
+  content: Pick<SettleContent, 'resources' | 'settlement'>,
+): Set<number> {
+  const mineral = new Set<number>();
+  content.resources.forEach((r, n) => {
+    if (content.settlement.mineCategories.includes(r.category)) mineral.add(n);
+  });
+  return mineral;
+}
+
+/** Mineral resources within `radius` (Chebyshev) of a cell. */
+export function mineralsNear(
+  cells: Pick<WorldCells, 'width' | 'height' | 'resources'>,
+  cell: number,
+  radius: number,
+  mineral: ReadonlySet<number>,
+): Set<number> {
+  const found = new Set<number>();
+  const { width, height } = cells;
+  const cx = cell % width;
+  const cy = (cell - cx) / width;
+  for (let y = Math.max(0, cy - radius); y <= Math.min(height - 1, cy + radius); y += 1) {
+    for (let x = Math.max(0, cx - radius); x <= Math.min(width - 1, cx + radius); x += 1) {
+      for (const d of cells.resources.get(y * width + x) ?? []) {
+        if (mineral.has(d.resource)) found.add(d.resource);
+      }
+    }
+  }
+  return found;
+}
+
+/** The nearest aura spot cell within `radius` (Chebyshev) of a cell, or -1 (ties go to the lowest cell). */
+export function nearestAuraSpot(
+  cells: Pick<WorldCells, 'width' | 'auraSpots'>,
+  cell: number,
+  radius: number,
+): number {
+  let best = -1;
+  let bestDistance = Infinity;
+  for (const spot of cells.auraSpots) {
+    const distance = cellDistance(cells.width, cell, spot.cell);
+    if (distance <= radius && distance < bestDistance) {
+      bestDistance = distance;
+      best = spot.cell;
+    }
+  }
+  return best;
+}
+
 /** The feature a culture's `SitePreference` asks for. */
 const PREFERENCE_FEATURES: Record<string, SiteFeature[]> = {
   river: ['river', 'floodplain'],
@@ -203,6 +253,8 @@ export function siteCapacity(
   const cx = cell % width;
   const cy = (cell - cx) / width;
   let food = 0;
+  let auraSum = 0;
+  let windowCells = 0;
   for (let y = Math.max(0, cy - rules.reach); y <= Math.min(height - 1, cy + rules.reach); y += 1) {
     for (
       let x = Math.max(0, cx - rules.reach);
@@ -211,6 +263,8 @@ export function siteCapacity(
     ) {
       const i = y * width + x;
       const water = cells.water[i];
+      auraSum += cells.aura[i]!;
+      windowCells += 1;
       // Lakes and sea cannot be farmed; their fish still count.
       if (water === 0 || water === 1) {
         // A race farms its own biomes well and foreign land poorly.
@@ -227,6 +281,16 @@ export function siteCapacity(
   if (features.includes('ford')) food *= weights.ford;
   if (features.includes('road')) food *= weights.road;
   for (const feature of features) food *= weights.raceFeature[race.id]?.[feature] ?? 1;
+  const aura = weights.raceAura[race.id];
+  if (aura && windowCells > 0) {
+    food *= Math.max(aura.min, Math.min(aura.max, auraSum / windowCells / aura.ref));
+  }
+  const without = weights.raceWithout[race.id];
+  if (without) {
+    for (const feature of Object.keys(without) as SiteFeature[]) {
+      if (!features.includes(feature)) food *= without[feature]!;
+    }
+  }
   return Math.round(food / race.foodNeed);
 }
 
@@ -396,9 +460,20 @@ export function settleWorld(world: WorldState, content: SettleContent): void {
   // 2. Civ count and cultures.
   const civCount = Math.max(
     rules.civs.min,
-    Math.min(rules.civs.max, Math.floor(landCells / rules.civs.landCellsPerCiv)),
+    Math.min(
+      rules.civs.max,
+      Math.floor(landCells / rules.civs.landCellsPerCiv) +
+        rng.int(2 * rules.civs.jitter + 1) -
+        rules.civs.jitter,
+    ),
   );
-  const order = shuffle(content.cultures, rng);
+  // Every race founds a people before any race founds a second: the first culture of each race in
+  // the shuffled order goes first, the rest keep their shuffled order.
+  const shuffled = shuffle(content.cultures, rng);
+  const leads = shuffled.filter(
+    (culture, i) => shuffled.findIndex((c) => c.raceId === culture.raceId) === i,
+  );
+  const order = [...leads, ...shuffled.filter((culture) => !leads.includes(culture))];
   const raceOf = new Map(content.races.map((r) => [r.id, r]));
   const sites: Site[] = [];
   const capitals: number[] = [];

@@ -1,18 +1,21 @@
-// Yearly history (M2.3, M2.4): after settlement, each year runs harvest, goods, trade (each decade),
-// demographics, famine, civ raids, beasts, plague, migration, expansion, war and site upkeep in a
+// Yearly history (M2.3, M2.4): after settlement, each year runs climate, harvest, goods, trade (each decade),
+// demographics, famine, civ raids, beasts, disease, migration, expansion, war and site upkeep in a
 // fixed order. Per-run state (links, immunity, cooldowns, wars) lives in `HistoryRun`; only sites,
-// civs, creatures, events and territory change in the world.
+// civs, creatures, events and territory change in the world. Trivial events roll up into a yearly
+// summary and uncited ones are pruned after the last year (importance.ts).
 
 import { DAYS_PER_YEAR } from '../core/clock';
 import type { WorldState } from '../core/types';
 import { runAbandonment } from './abandon';
 import { runBeasts } from './beasts';
+import { runClimate } from './climate';
+import { runDiseases } from './disease';
+import { pruneEvents, runYearSummary } from './importance';
 import { runDemography, runKinds } from './demography';
 import { runGoods } from './goods';
 import { runFamine, runHarvest } from './harvest';
 import { buildLinks, createLinkSearch } from './links';
 import { runExpansion, runMigration } from './migration';
-import { runPlague } from './plague';
 import { runCivRaids, runDiplomacy } from './raids';
 import { buildSettlePlaces, buildSettleSearch, computeTerritory } from './settle';
 import { createRun, isLive, liveSites, type HistoryContent, type HistoryRun } from './state';
@@ -56,6 +59,7 @@ export function runHistory(
   for (let year = 1; year <= years; year += 1) {
     run.year = year;
     world.day = year * DAYS_PER_YEAR;
+    runClimate(run);
     runHarvest(run);
     runGoods(run);
     if (year % DECADE === 0) runTrade(run);
@@ -63,7 +67,7 @@ export function runHistory(
     runFamine(run);
     runCivRaids(run);
     runBeasts(run);
-    runPlague(run);
+    runDiseases(run);
     runMigration(run);
     runExpansion(run);
     runWar(run);
@@ -78,9 +82,11 @@ export function runHistory(
       run.territoryDirty = false;
     }
     if (decade) runDiplomacy(run);
+    runYearSummary(run);
     if (decade || year === years) {
       onYear?.(year, years);
     }
   }
   world.day = years * DAYS_PER_YEAR;
+  pruneEvents(run);
 }

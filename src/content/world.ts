@@ -103,6 +103,76 @@ export const eventTypes: EventTypeDef[] = [
     ],
   },
   {
+    id: 'fever',
+    baseImportance: 4,
+    category: 'nature',
+    templates: [
+      'In {date} a summer fever ran through {site}, and {dead} of the {civ} did not rise from it.',
+      '{date}: fever took hold at {site}; {dead} died, the young and the old first.',
+      'The fever of {date} emptied {dead} beds among the {civ} at {site}.',
+    ],
+  },
+  {
+    id: 'pox',
+    baseImportance: 4,
+    category: 'nature',
+    templates: [
+      'In {date} the pox came to {site}, and {dead} of the {civ} died of it.',
+      '{date}: pox marked the people of {site}; {dead} did not survive it.',
+      'The pox spread through {site} in {date}, and the {civ} buried {dead}.',
+    ],
+  },
+  {
+    id: 'dry_years_began',
+    baseImportance: 4,
+    category: 'nature',
+    templates: [
+      'In {date} the rains failed near {site}, and a dry spell of {years} years began.',
+      '{date}: the skies near {site} turned hard and dry; the dry years would last {years} years.',
+      'Near {site} the rain stayed away from {date}, for {years} dry years.',
+    ],
+  },
+  {
+    id: 'dry_years_ended',
+    baseImportance: 3,
+    category: 'nature',
+    templates: [
+      'In {date} the rains returned near {site}, ending {years} dry years.',
+      '{date}: the long drought near {site} broke at last.',
+      'The dry years near {site} ended in {date}, and the fields drank again.',
+    ],
+  },
+  {
+    id: 'cold_years_began',
+    baseImportance: 4,
+    category: 'nature',
+    templates: [
+      'In {date} a bitter cold settled near {site}, and the cold years would last {years} years.',
+      '{date}: winters turned harsh near {site}; the cold held for {years} years.',
+      'Near {site} the frosts came early and stayed late from {date}, for {years} years.',
+    ],
+  },
+  {
+    id: 'cold_years_ended',
+    baseImportance: 3,
+    category: 'nature',
+    templates: [
+      'In {date} the winters near {site} softened, ending {years} cold years.',
+      '{date}: the long cold near {site} lifted at last.',
+      'The cold years near {site} ended in {date}, and spring came on time.',
+    ],
+  },
+  {
+    id: 'year_summary',
+    baseImportance: 3,
+    category: 'world',
+    templates: [
+      'Year {year}: {summary}.',
+      'In year {year} the chroniclers noted {summary}.',
+      'Of year {year} little more is told than this: {summary}.',
+    ],
+  },
+  {
     id: 'migration',
     baseImportance: 3,
     category: 'social',
