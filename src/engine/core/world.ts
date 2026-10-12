@@ -2,7 +2,14 @@
 // there is no cross-version compatibility (R-02/R-03).
 
 import { hashString } from './rng';
-import { ENTITY_KINDS, type EntityKind, type Id, type WorldParams, type WorldState } from './types';
+import {
+  ENTITY_KINDS,
+  type EntityKind,
+  type Id,
+  type WorldCells,
+  type WorldParams,
+  type WorldState,
+} from './types';
 
 export const DEFAULT_PARAMS: WorldParams = {
   width: 256,
@@ -116,4 +123,42 @@ export function deserializeWorld(text: string): WorldState {
 /** Cheap state fingerprint for the determinism test and debugging. */
 export function worldDigest(state: WorldState): string {
   return hashString(serializeWorld(state)).toString(16).padStart(8, '0');
+}
+
+/** FNV-1a 32-bit offset basis and prime. */
+const FNV_OFFSET = 0x811c9dc5;
+const FNV_PRIME = 0x01000193;
+
+/**
+ * An 8-hex-digit hash over the bytes of every typed array in the cells (nested ones too, such as
+ * `risk`), in sorted key order, plus width and height. Compares worlds across Node and browsers.
+ */
+export function cellsDigest(cells: WorldCells): string {
+  let hash = FNV_OFFSET;
+  const mix = (byte: number) => {
+    hash = Math.imul(hash ^ (byte & 0xff), FNV_PRIME) >>> 0;
+  };
+  const mixNumber = (value: number) => {
+    for (let shift = 0; shift < 32; shift += 8) mix(value >>> shift);
+  };
+  const walk = (value: object) => {
+    for (const key of Object.keys(value).sort()) {
+      const item = (value as Record<string, unknown>)[key];
+      if (ArrayBuffer.isView(item)) {
+        const bytes = new Uint8Array(item.buffer, item.byteOffset, item.byteLength);
+        mixNumber(bytes.length);
+        for (let i = 0; i < bytes.length; i += 1) mix(bytes[i]!);
+      } else if (
+        item !== null &&
+        typeof item === 'object' &&
+        Object.getPrototypeOf(item) === Object.prototype
+      ) {
+        walk(item);
+      }
+    }
+  };
+  mixNumber(cells.width);
+  mixNumber(cells.height);
+  walk(cells);
+  return hash.toString(16).padStart(8, '0');
 }

@@ -13,12 +13,20 @@ import {
   biography,
   buildLegendIndex,
   createWorld,
-  formatDate,
+  dateOf,
+  eventTitle,
+  eventYear,
+  historyAt,
+  liveSites,
+  locate,
+  MONTH_NAMES,
   rollAptitude,
   templateNarrator,
   tierOfPower,
   validateContent,
   validateSeed,
+  type Id,
+  type SimEvent,
   type Simulation,
   type TierId,
   type WorldState,
@@ -26,8 +34,18 @@ import {
 } from '../engine';
 import { openSaveStore, type SaveStore, type SaveSummary } from '../platform/save-store';
 import { generateInWorker, type WorldgenJob } from '../platform/worldgen-host';
+import { Legends } from './Legends';
+import {
+  openOf,
+  pageFromOpen,
+  sameRef,
+  type CategoryId,
+  type LegendNav,
+  type PageRef,
+} from './legends-ctx';
 import { VIEWER_LAYER_IDS } from './MapPanels';
 import { WorldMap, type ViewChange } from './WorldMap';
+import { YearSlider, finalHistoryYear } from './YearSlider';
 import {
   DEFAULT_LAYER,
   DEFAULT_SEED,
@@ -61,6 +79,66 @@ const COPIED_MS = 2000;
 
 type View = Pick<ViewState, 'layer' | 'at' | 'zoom'>;
 const INITIAL_VIEW: View = { layer: DEFAULT_LAYER, at: null, zoom: 0 };
+const EMPTY_NAV: LegendNav = {
+  open: null,
+  trail: [],
+  cat: null,
+  q: '',
+  all: false,
+  rev: 0,
+  scroll: 0,
+};
+/** Pages kept in the breadcrumb trail. */
+const MAX_TRAIL = 12;
+
+/** What `go` may change: the open page (and its trail), list category, search, "every event". */
+interface GoPatch {
+  open?: PageRef | null;
+  trail?: PageRef[];
+  cat?: CategoryId | null;
+  q?: string;
+  all?: boolean;
+}
+/** The part of a history entry that is not in its URL. */
+interface EntryState {
+  trail?: string[];
+  all?: boolean;
+  scroll?: number;
+}
+/** The slider year and Legends place a world is shown with. */
+interface Restore {
+  year: number | null;
+  nav: LegendNav;
+}
+
+/** The history-year date line: engine dates count years from 1, the slider and chronicle from 0. */
+function historyDate(day: number): string {
+  const date = dateOf(day);
+  return `${date.dayOfMonth} ${MONTH_NAMES[date.month]}, Year ${date.year - 1}`;
+}
+
+/** The Legends place a link names, with its breadcrumb trail from the entry state when it has one. */
+function navFromUrl(url: ViewState, entry: EntryState | null, rev: number): LegendNav {
+  const open = pageFromOpen(url.open);
+  let trail = open ? (entry?.trail ?? []).flatMap((t) => pageFromOpen(t) ?? []) : [];
+  if (open && (trail.length === 0 || !sameRef(trail[trail.length - 1]!, open))) trail = [open];
+  return {
+    open,
+    trail,
+    cat: url.cat,
+    q: url.q,
+    all: entry?.all ?? false,
+    rev,
+    scroll: entry?.scroll ?? 0,
+  };
+}
+
+/** The map cell a Legends page is about, if any. */
+function cellOfPage(state: WorldState, ref: PageRef): number | null {
+  if (ref.kind === 'race') return null;
+  if (ref.kind === 'event') return state.events.find((e) => e.id === ref.id)?.place ?? null;
+  return locate(state, ref);
+}
 
 export function NextApp() {
   const [initial] = useState(() => parseViewUrl(window.location.search, VIEWER_LAYER_IDS));
@@ -74,6 +152,16 @@ export function NextApp() {
     zoom: initial.zoom,
   });
   const [copy, setCopy] = useState<'idle' | 'ok' | 'failed'>('idle');
+  /** The year slider; null means the present day (the final history year). */
+  const [sliderYear, setSliderYear] = useState<number | null>(null);
+  /** With the year locked, chronicle lines after the slider year fade. */
+  const [locked, setLocked] = useState(false);
+  const [nav, setNav] = useState<LegendNav>(EMPTY_NAV);
+  const [focus, setFocus] = useState<{ x: number; y: number; key: number } | null>(null);
+  /** On narrow screens the map and the Legends pane are tabs. */
+  const [tab, setTab] = useState<'map' | 'legends'>(initial.open ? 'legends' : 'map');
+  /** The map was opened from a Legends page, so it offers a way back (narrow layout). */
+  const [fromLegends, setFromLegends] = useState(false);
   const world = useRef<WorldState>(createWorld(initial.seed ?? DEFAULT_SEED));
   /** Seed and size of the map on screen (the inputs may be mid-edit). */
   const shown = useRef<{ seed: string; size: WorldSize } | null>(null);
@@ -91,12 +179,40 @@ export function NextApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [revision],
   );
+  /** Decoded territory by snapshot year, so scrubbing back and forth decodes each once. */
+  const territoryCache = useMemo(
+    () => new Map<number, Uint16Array>(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [revision],
+  );
 
-  const writeUrl = (mode: 'push' | 'replace', next: View) => {
+  // Handlers outlive renders (popstate, debounce), so they read the latest state through refs.
+  const latest = useRef({ view, sliderYear, nav, locked, legend, finalYear: 0 });
+  const finalYear = finalHistoryYear(world.current);
+  latest.current = { view, sliderYear, nav, locked, legend, finalYear };
+  /** The next URL write adds a history entry (a page or list change) instead of editing one. */
+  const pushNext = useRef(false);
+
+  const urlFor = (
+    state: { seed: string; size: WorldSize },
+    v: View,
+    n: LegendNav,
+    y: number | null,
+  ) =>
+    buildViewUrl({
+      ...state,
+      ...v,
+      year: y !== null && y < latest.current.finalYear ? y : null,
+      open: n.open ? openOf(n.open) : null,
+      cat: n.cat,
+      q: n.q.trim(),
+    });
+  const writeUrl = (mode: 'push' | 'replace', v: View, n: LegendNav, y: number | null) => {
     if (!shown.current) return;
-    const url = buildViewUrl({ ...shown.current, ...next });
-    if (mode === 'push') window.history.pushState(null, '', url);
-    else window.history.replaceState(null, '', url);
+    const entry: EntryState = { trail: n.trail.map(openOf), all: n.all };
+    const url = urlFor(shown.current, v, n, y);
+    if (mode === 'push') window.history.pushState(entry, '', url);
+    else window.history.replaceState({ ...window.history.state, ...entry }, '', url);
   };
 
   /** Generate in the worker; the old map stays (dimmed) until the new world arrives. */
@@ -105,6 +221,7 @@ export function NextApp() {
     worldSize: WorldSize,
     next: View,
     mode: 'push' | 'replace',
+    restore?: Restore,
   ) => {
     let seed: string;
     try {
@@ -134,10 +251,22 @@ export function NextApp() {
       (generated) => {
         world.current = generated;
         shown.current = { seed, size: worldSize };
+        const place = restore ?? {
+          year: null,
+          nav: { ...EMPTY_NAV, rev: latest.current.nav.rev + 1 },
+        };
+        latest.current.finalYear = finalHistoryYear(generated);
         setView(next);
+        setSliderYear(place.year);
+        setNav(place.nav);
+        const cell = place.nav.open ? cellOfPage(generated, place.nav.open) : null;
+        const width = generated.cells?.width;
+        setFocus(
+          cell !== null && width ? { x: cell % width, y: Math.floor(cell / width), key: 1 } : null,
+        );
         setProgress(null);
         setRevision((n) => n + 1);
-        writeUrl(mode, next);
+        writeUrl(mode, next, place.nav, place.year);
       },
       (problem: Error) => {
         if (problem.message === 'cancelled') return;
@@ -146,7 +275,6 @@ export function NextApp() {
       },
     );
   };
-  // Handlers outlive renders (popstate), so they call the latest closure through a ref.
   const generateRef = useRef(generate);
   generateRef.current = generate;
 
@@ -160,16 +288,25 @@ export function NextApp() {
         zoom: initial.zoom,
       },
       'replace',
+      { year: initial.year, nav: navFromUrl(initial, window.history.state, 0) },
     );
     const popstate = () => {
       const url = parseViewUrl(window.location.search, VIEWER_LAYER_IDS);
       if (!new URLSearchParams(window.location.search).has('next')) return;
       const next = { layer: url.layer, at: url.at, zoom: url.zoom };
       const seed = url.seed ?? DEFAULT_SEED;
+      const place = {
+        year: url.year,
+        nav: navFromUrl(url, window.history.state, latest.current.nav.rev + 1),
+      };
       setSeedInput(seed);
       setSize(url.size);
-      if (shown.current?.seed === seed && shown.current.size === url.size) setView(next);
-      else generateRef.current(seed, url.size, next, 'replace');
+      if (place.nav.open) setTab('legends');
+      if (shown.current?.seed === seed && shown.current.size === url.size) {
+        setView(next);
+        setSliderYear(place.year);
+        setNav(place.nav);
+      } else generateRef.current(seed, url.size, next, 'replace', place);
     };
     window.addEventListener('popstate', popstate);
     return () => {
@@ -178,17 +315,22 @@ export function NextApp() {
     };
   }, [initial]);
 
-  // Layer, selection and zoom changes edit the current history entry.
+  // Layer, selection, zoom, slider and Legends changes edit the current history entry, or add one
+  // when `go` asked for it.
   useEffect(() => {
-    if (!progress) writeUrl('replace', view);
-  }, [view]);
+    if (progress) return;
+    const mode = pushNext.current ? 'push' : 'replace';
+    pushNext.current = false;
+    writeUrl(mode, view, nav, sliderYear);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, sliderYear, nav]);
 
   const changeView = (change: ViewChange) => setView((v) => ({ ...v, ...change }));
   const copyLink = async () => {
     if (!shown.current) return;
     try {
       await navigator.clipboard.writeText(
-        window.location.origin + buildViewUrl({ ...shown.current, ...view }),
+        window.location.origin + urlFor(shown.current, view, nav, sliderYear),
       );
       setCopy('ok');
     } catch {
@@ -197,13 +339,113 @@ export function NextApp() {
     window.setTimeout(() => setCopy('idle'), COPIED_MS);
   };
 
+  const focusCell = (cell: number) => {
+    const width = world.current.cells?.width;
+    if (!width) return;
+    setFocus((f) => ({ x: cell % width, y: Math.floor(cell / width), key: (f?.key ?? 0) + 1 }));
+  };
+
+  /** Move the Legends pane. A page or list change adds a history entry; the rest edit this one. */
+  const go = (patch: GoPatch, mode: 'push' | 'replace' = 'push') => {
+    const cur = latest.current.nav;
+    const open = patch.open === undefined ? cur.open : patch.open;
+    const cat = patch.cat === undefined ? cur.cat : patch.cat;
+    const q = patch.q === undefined ? cur.q : patch.q;
+    const moved =
+      (open === null ? cur.open !== null : cur.open === null || !sameRef(open, cur.open)) ||
+      cat !== cur.cat ||
+      q.trim() !== cur.q.trim();
+    if (!moved && (patch.all === undefined || patch.all === cur.all)) return;
+    let trail = cur.trail;
+    if (patch.trail) trail = patch.trail;
+    else if (open === null) trail = [];
+    else if (moved && !(cur.open && sameRef(open, cur.open)))
+      trail = [...cur.trail, open].slice(-MAX_TRAIL);
+    if (moved && mode === 'push') {
+      // Remember where this entry was scrolled to, for browser back.
+      const top = document.querySelector('.lg-body')?.scrollTop ?? 0;
+      window.history.replaceState({ ...window.history.state, scroll: top }, '');
+      pushNext.current = true;
+    }
+    setNav({
+      open,
+      trail,
+      cat,
+      q,
+      all: moved ? (patch.all ?? false) : (patch.all ?? cur.all),
+      rev: moved ? cur.rev + 1 : cur.rev,
+      scroll: 0,
+    });
+    if (!moved || open === null || (cur.open && sameRef(open, cur.open))) return;
+    // Opening a page: show it, and move the map and the slider to it.
+    setTab('legends');
+    const { legend: index, locked: lock } = latest.current;
+    if (open.kind === 'event') {
+      const event = index.event(open.id);
+      if (event) {
+        setSliderYear(eventYear(event));
+        if (event.place !== null) focusCell(event.place);
+      }
+    } else {
+      if (!lock) setSliderYear(null);
+      const cell = cellOfPage(world.current, open);
+      if (cell !== null) focusCell(cell);
+    }
+  };
+
+  const hrefOf = (ref: PageRef | null): string => {
+    if (!shown.current) return '#';
+    const event = ref?.kind === 'event' ? latest.current.legend.event(ref.id) : undefined;
+    return urlFor(
+      shown.current,
+      { layer: view.layer, at: null, zoom: 0 },
+      ref ? { ...EMPTY_NAV, open: ref } : { ...EMPTY_NAV, cat: nav.cat, q: nav.q },
+      event ? eventYear(event) : null,
+    );
+  };
+
   const run = (days: number) => {
     advance(world.current, SIM, days);
     setRevision((n) => n + 1);
   };
 
   const state = world.current;
-  const recent = state.events.slice(-60).reverse();
+  const yearShown = Math.min(sliderYear ?? finalYear, finalYear);
+  // The world as of the slider year; the map only gets it when that is before the present.
+  const past = useMemo(
+    () => historyAt(world.current, yearShown, territoryCache),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [revision, yearShown],
+  );
+  const sitesAt = useMemo(
+    () => (yearShown < finalYear ? past.sites : liveSites(world.current)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [past, revision, yearShown < finalYear],
+  );
+  const titleOf = (event: SimEvent) =>
+    eventTitle(
+      event,
+      DEFAULT_CONTENT.eventTypes.find((d) => d.id === event.type),
+    );
+  // While an entity page is open its sites are ringed on the map and the rest dim.
+  const highlight = useMemo(() => {
+    const page = nav.open;
+    if (!page || page.kind === 'event' || page.kind === 'race') return null;
+    const ids = new Set<Id>();
+    if (page.kind === 'civ') {
+      for (const [id, s] of sitesAt) if (s.civId === page.id && !s.ruined) ids.add(id);
+    } else if (page.kind === 'site') ids.add(page.id);
+    else if (page.kind === 'person') {
+      const home = state.people.get(page.id)?.siteId;
+      if (home != null) ids.add(home);
+    } else if (page.kind === 'dynasty') {
+      for (const p of state.people.values()) {
+        if (p.dynastyId === page.id && p.siteId != null) ids.add(p.siteId);
+      }
+    }
+    return ids.size > 0 ? ids : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nav.open, sitesAt, revision]);
   return (
     <main className="wm-root" data-revision={revision}>
       <h1>Story Generator — world map</h1>
@@ -246,6 +488,25 @@ export function NextApp() {
           <button type="button" onClick={() => void copyLink()}>
             {copy === 'ok' ? 'Link copied' : copy === 'failed' ? 'Copy failed' : 'Copy link'}
           </button>
+          <div className="tabs" role="group" aria-label="View">
+            <button
+              type="button"
+              aria-pressed={tab === 'map'}
+              onClick={() => {
+                setFromLegends(false);
+                setTab('map');
+              }}
+            >
+              Map
+            </button>
+            <button
+              type="button"
+              aria-pressed={tab === 'legends'}
+              onClick={() => setTab('legends')}
+            >
+              Legends
+            </button>
+          </div>
           {seedError && (
             <p role="alert" className="field-error">
               {seedError}
@@ -256,28 +517,74 @@ export function NextApp() {
           <i style={{ width: progress ? `${progress.fraction * 100}%` : 0 }} />
           <span className="progress-label">{progress?.label ?? ''}</span>
         </div>
-        <WorldMap
-          cells={state.cells}
-          regions={state.regions}
-          routes={state.routes}
-          sites={state.sites}
-          civs={state.civs}
-          creatures={state.creatures}
-          people={state.people}
-          dynasties={state.dynasties}
-          year={Math.floor(state.day / DAYS_PER_YEAR)}
-          siteBiography={(siteId) =>
-            biography(state, DEFAULT_CONTENT, narrator, legend, { kind: 'site', id: siteId })
-          }
-          cultures={DEFAULT_CONTENT.cultures}
-          seed={state.seed}
-          content={DEFAULT_CONTENT}
-          layer={view.layer}
-          at={view.at}
-          zoom={view.zoom}
-          busy={progress !== null}
-          onView={changeView}
-        />
+        <div className="wm-main" data-tab={tab}>
+          <div className="wm-mapcol">
+            <WorldMap
+              cells={state.cells}
+              regions={state.regions}
+              routes={state.routes}
+              sites={state.sites}
+              civs={state.civs}
+              creatures={state.creatures}
+              people={state.people}
+              dynasties={state.dynasties}
+              year={Math.floor(state.day / DAYS_PER_YEAR)}
+              siteBiography={(siteId) =>
+                biography(state, DEFAULT_CONTENT, narrator, legend, { kind: 'site', id: siteId })
+              }
+              cultures={DEFAULT_CONTENT.cultures}
+              seed={state.seed}
+              content={DEFAULT_CONTENT}
+              layer={view.layer}
+              at={view.at}
+              zoom={view.zoom}
+              busy={progress !== null}
+              onView={changeView}
+              history={yearShown < finalYear ? past : null}
+              focus={focus}
+              highlight={highlight}
+              onBackToLegends={fromLegends && tab === 'map' ? () => setTab('legends') : undefined}
+            />
+            <YearSlider
+              world={state}
+              titleOf={titleOf}
+              revision={revision}
+              year={yearShown}
+              snapshotYear={past.snapshotYear}
+              locked={locked}
+              onLock={setLocked}
+              onYear={setSliderYear}
+            />
+          </div>
+          <Legends
+            world={state}
+            index={legend}
+            narrator={narrator}
+            content={DEFAULT_CONTENT}
+            year={yearShown}
+            finalYear={finalYear}
+            locked={locked}
+            sitesAt={sitesAt}
+            nav={nav}
+            go={go}
+            hrefOf={hrefOf}
+            onShow={(cell) => {
+              focusCell(cell);
+              setFromLegends(true);
+              setTab('map');
+            }}
+            onOpenOnMap={(cell, year) => {
+              setSliderYear(year);
+              if (cell !== null) focusCell(cell);
+              setFromLegends(true);
+              setTab('map');
+            }}
+            onGoMap={() => {
+              setFromLegends(false);
+              setTab('map');
+            }}
+          />
+        </div>
       </div>
       {error && <p role="alert">{error}</p>}
       <div className="wm-below">
@@ -287,7 +594,7 @@ export function NextApp() {
           <button onClick={() => run(336)}>+1 year</button>
         </section>
         <p>
-          <strong>{formatDate(state.day)}</strong> · weather: {state.weather.current} · events:{' '}
+          <strong>{historyDate(state.day)}</strong> · weather: {state.weather.current} · events:{' '}
           {state.events.length}
         </p>
         <SavePanel
@@ -301,16 +608,13 @@ export function NextApp() {
             setSize(loadedSize);
             setProgress(null);
             setView((v) => ({ ...v, at: null, zoom: 0 }));
+            setSliderYear(null);
+            setNav((n) => ({ ...EMPTY_NAV, rev: n.rev + 1 }));
+            setFocus(null);
             setRevision((n) => n + 1);
           }}
         />
         <AptitudePreview seed={state.seed} />
-        <h2 style={{ fontSize: 18 }}>Chronicle</h2>
-        <ol style={{ paddingLeft: 20 }}>
-          {recent.map((event) => (
-            <li key={event.id}>{narrator.renderEvent(event)}</li>
-          ))}
-        </ol>
       </div>
     </main>
   );
@@ -410,7 +714,7 @@ function SavePanel({ world, onLoad }: { world: WorldState; onLoad: (world: World
           onClick={() =>
             void attempt(async () => {
               const saved = await store!.save(name || world.seed, world);
-              return `Saved "${saved.name}" at ${formatDate(saved.day)}.`;
+              return `Saved "${saved.name}" at ${historyDate(saved.day)}.`;
             })
           }
         >
@@ -421,7 +725,7 @@ function SavePanel({ world, onLoad }: { world: WorldState; onLoad: (world: World
       <ul style={{ paddingLeft: 20 }}>
         {saves.map((save) => (
           <li key={save.name}>
-            {save.name} · {save.seed} · {formatDate(save.day)}{' '}
+            {save.name} · {save.seed} · {historyDate(save.day)}{' '}
             <button
               aria-label={`Load ${save.name}`}
               onClick={() =>

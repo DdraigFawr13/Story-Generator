@@ -65,7 +65,29 @@ export function cellAt(
   return x < 0 || x >= columns || y < 0 || y >= rows ? null : { x, y };
 }
 
-// ---- URL: /?next&seed=S1&size=256&layer=rainfall&at=118,40&z=3 ----
+// ---- URL: /?next&seed=S1&size=256&layer=rainfall&at=118,40&z=3&year=112&open=event:412&cat=site&q=ash ----
+
+/** Legends list categories, in tab order. */
+export const LEGEND_CATEGORIES = [
+  'civ',
+  'site',
+  'race',
+  'person',
+  'dynasty',
+  'beast',
+  'item',
+  'event',
+] as const;
+export type LegendCategory = (typeof LEGEND_CATEGORIES)[number];
+/** Longest search text kept in a link. */
+const MAX_QUERY = 80;
+
+/** A Legends page named in a link: "event:412", "civ:3", "race:human". */
+export function parseOpen(text: string | null): { kind: LegendCategory; id: string } | null {
+  const found = /^(\w+):([\w-]{1,40})$/.exec(text ?? '');
+  const kind = LEGEND_CATEGORIES.find((c) => c === found?.[1]);
+  return found && kind ? { kind, id: found[2]! } : null;
+}
 
 export const WORLD_SIZES = [256, 128] as const;
 export type WorldSize = (typeof WORLD_SIZES)[number];
@@ -79,6 +101,14 @@ export interface ViewState {
   layer: string;
   at: { x: number; y: number } | null;
   zoom: number;
+  /** Slider year; null is the final year. */
+  year: number | null;
+  /** The open Legends page as "kind:id", or null for the lists. */
+  open: string | null;
+  /** The Legends list category, or null for the default. */
+  cat: LegendCategory | null;
+  /** The Legends search text. */
+  q: string;
 }
 
 export function parseViewUrl(search: string, layerIds: readonly string[]): ViewState {
@@ -87,17 +117,26 @@ export function parseViewUrl(search: string, layerIds: readonly string[]): ViewS
   const layer = params.get('layer') ?? '';
   const at = /^(\d{1,3}),(\d{1,3})$/.exec(params.get('at') ?? '');
   const zoom = Number(params.get('z'));
+  const year = params.get('year');
+  const open = parseOpen(params.get('open'));
   return {
     seed: params.get('seed') || null,
     size,
     layer: layerIds.includes(layer) ? layer : DEFAULT_LAYER,
     at: at ? { x: Number(at[1]), y: Number(at[2]) } : null,
     zoom: Number.isInteger(zoom) && zoom >= 0 && zoom < ZOOM_STEPS.length ? zoom : 0,
+    year: year !== null && /^\d{1,4}$/.test(year) ? Number(year) : null,
+    open: open ? `${open.kind}:${open.id}` : null,
+    cat: LEGEND_CATEGORIES.find((c) => c === params.get('cat')) ?? null,
+    q: (params.get('q') ?? '').slice(0, MAX_QUERY),
   };
 }
 
-/** Path and query for a view; zoom 0 and no selection are left out. */
-export function buildViewUrl(view: Omit<ViewState, 'seed'> & { seed: string }): string {
+/** Path and query for a view; zoom 0, no selection and empty Legends state are left out. */
+export function buildViewUrl(
+  view: Omit<ViewState, 'seed' | 'year' | 'open' | 'cat' | 'q'> &
+    Partial<Pick<ViewState, 'year' | 'open' | 'cat' | 'q'>> & { seed: string },
+): string {
   const parts = [
     'next',
     `seed=${encodeURIComponent(view.seed)}`,
@@ -106,6 +145,10 @@ export function buildViewUrl(view: Omit<ViewState, 'seed'> & { seed: string }): 
   ];
   if (view.at) parts.push(`at=${view.at.x},${view.at.y}`);
   if (view.zoom > 0) parts.push(`z=${view.zoom}`);
+  if (view.year != null) parts.push(`year=${view.year}`);
+  if (view.open) parts.push(`open=${encodeURIComponent(view.open).replace(/%3A/g, ':')}`);
+  if (view.cat) parts.push(`cat=${view.cat}`);
+  if (view.q) parts.push(`q=${encodeURIComponent(view.q.slice(0, MAX_QUERY))}`);
   return `/?${parts.join('&')}`;
 }
 

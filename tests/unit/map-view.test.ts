@@ -53,12 +53,52 @@ describe('view URL', () => {
       layer: 'rainfall',
       at: { x: 118, y: 40 },
       zoom: 3,
+      year: null,
+      open: null,
+      cat: null,
+      q: '',
     });
+  });
+
+  it('round-trips the year, open page and list state', () => {
+    const view = {
+      seed: 'S1',
+      size: 256 as const,
+      layer: 'elevation',
+      at: null,
+      zoom: 0,
+      year: 112,
+      open: 'event:412',
+      cat: 'site' as const,
+      q: 'ash & co',
+    };
+    const url = buildViewUrl(view);
+    expect(url).toBe(
+      '/?next&seed=S1&size=256&layer=elevation&year=112&open=event:412&cat=site&q=ash%20%26%20co',
+    );
+    expect(parseViewUrl(url.slice(2), IDS)).toEqual(view);
+    expect(parseViewUrl('?next&open=race:human', IDS).open).toBe('race:human');
+  });
+
+  it('ignores bad year, open and category values', () => {
+    const view = parseViewUrl('?next&year=-4&open=nope:1&cat=zzz', IDS);
+    expect([view.year, view.open, view.cat]).toEqual([null, null, null]);
+    expect(parseViewUrl('?next&open=civ:../x', IDS).open).toBeNull();
   });
 
   it('falls back on unknown or bad values', () => {
     const view = parseViewUrl('?next&size=999&layer=nope&at=oops&z=99', IDS);
-    expect(view).toEqual({ seed: null, size: 256, layer: 'elevation', at: null, zoom: 0 });
+    expect(view).toEqual({
+      seed: null,
+      size: 256,
+      layer: 'elevation',
+      at: null,
+      zoom: 0,
+      year: null,
+      open: null,
+      cat: null,
+      q: '',
+    });
   });
 });
 

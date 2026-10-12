@@ -132,6 +132,21 @@ export function validateContent(content: ContentBundle): string[] {
           problems.push(`Event type ${event.id} template ${index + 1} uses unknown key {${key}}.`);
       }
     });
+    // A title may use the keys the first template prints, the declared data keys and the always-on
+    // keys, so it can be filled from any event of the type (a missing value just drops its clause).
+    for (const key of templateKeys(event.title)) {
+      if (!allowed.has(key))
+        problems.push(`Event type ${event.id} title uses unknown key {${key}}.`);
+    }
+    if (event.causeWord !== undefined && event.causeWord.trim() === '')
+      problems.push(`Event type ${event.id} has an empty causeWord.`);
+  }
+  const typeIds = new Set(content.eventTypes.map((e) => e.id));
+  for (const group of content.typeGroups ?? []) {
+    for (const type of group.types) {
+      if (!typeIds.has(type))
+        problems.push(`Event type group ${group.id} names unknown event type "${type}".`);
+    }
   }
   return problems;
 }

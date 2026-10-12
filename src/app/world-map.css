@@ -10,6 +10,7 @@
   --accent-soft: #dce8d8;
   --sea: #1d3f6e;
   --warn: #9a5b1e;
+  --link: #2c5a8a;
   --shadow: 0 1px 2px #283b2e22, 0 6px 18px #283b2e18;
   --display: Georgia, 'Times New Roman', serif;
   --body: system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -27,12 +28,13 @@
     --accent-soft: #28382c;
     --sea: #0d1e33;
     --warn: #e0a560;
+    --link: #8db8e6;
     --shadow: 0 1px 2px #0008, 0 6px 18px #0006;
     color-scheme: dark;
   }
 }
 .wm-root {
-  max-width: 1180px;
+  max-width: 1320px;
   padding: 16px;
   margin: 0 auto;
   color: var(--ink);
@@ -542,6 +544,726 @@ dl.facts dd {
     z-index: 2;
   }
 }
+/* ---- M2.7: year slider, Legends pane, map / Legends layout ---- */
+.wm-root .tabs {
+  display: none;
+  gap: 4px;
+}
+.wm-root .tabs button[aria-pressed='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.wm-root .wm-main {
+  display: grid;
+  grid-template-columns: minmax(0, 720px) minmax(380px, 1fr);
+  align-items: stretch;
+}
+.wm-root .wm-mapcol {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+}
+/* The slider stays in view: the map is capped so map and slider fit one screen, and the years
+   row sticks to the bottom of the column when the page is shorter than that. */
+.wm-root .wm-mapcol .stage {
+  height: clamp(340px, calc(100vh - 300px), 620px);
+}
+.wm-root .whole {
+  right: 12px;
+  top: 84px;
+  padding: 4px 9px;
+  font-size: 0.75rem;
+}
+.wm-root .back-legends {
+  left: 12px;
+  bottom: 12px;
+  z-index: 3;
+  padding: 6px 12px;
+  display: none;
+}
+.wm-root .wm-tip {
+  display: grid;
+  gap: 1px;
+  padding: 5px 9px;
+  font-size: 0.78rem;
+  pointer-events: none;
+  z-index: 4;
+  white-space: nowrap;
+}
+.wm-root .wm-tip span {
+  color: var(--muted);
+}
+.wm-root .lg-years {
+  --thumb: 16px;
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  display: grid;
+  gap: 4px;
+  padding: 8px 12px 8px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+.wm-root .lg-years .row {
+  display: flex;
+  align-items: center;
+  gap: 8px 10px;
+  flex-wrap: wrap;
+}
+.wm-root .lg-years .yr {
+  font: 700 1.1rem var(--display);
+  min-width: 92px;
+  flex: none;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.wm-root .lg-years .yr small {
+  font: 0.75rem var(--body);
+  color: var(--muted);
+  font-weight: 400;
+}
+.wm-root .lg-years .speed {
+  min-width: 2.6em;
+  padding: 6px 8px;
+  font-variant-numeric: tabular-nums;
+}
+.wm-root .lg-years .speed[aria-pressed='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.wm-root .lg-years .lock {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.wm-root .lg-years .lock input {
+  width: auto;
+  padding: 0;
+  accent-color: var(--accent);
+}
+/* One block holds the range, its ticks and its labels, so tick X sits under the thumb at X. */
+.wm-root .lg-years .track {
+  position: relative;
+}
+.wm-root .lg-years input[type='range'] {
+  display: block;
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  appearance: none;
+  accent-color: var(--accent);
+}
+.wm-root .lg-years input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.wm-root .lg-years input[type='range']::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.wm-root .lg-years input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  box-sizing: border-box;
+  width: var(--thumb);
+  height: var(--thumb);
+  margin-top: -6px;
+  border: 2px solid var(--panel);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.wm-root .lg-years input[type='range']::-moz-range-thumb {
+  box-sizing: border-box;
+  width: var(--thumb);
+  height: var(--thumb);
+  border: 2px solid var(--panel);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.wm-root .lg-years .ticks,
+.wm-root .lg-years .labels {
+  position: relative;
+  margin: 0 calc(var(--thumb) / 2);
+}
+.wm-root .lg-years .ticks {
+  height: 14px;
+}
+.wm-root .lg-years .labels {
+  height: 14px;
+}
+.wm-root .lg-years .minor {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 4px;
+  transform: translateX(-50%);
+  background: var(--line);
+}
+.wm-root .lg-years .tick {
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 14px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  transform: translateX(-50%);
+  cursor: pointer;
+}
+.wm-root .lg-years .tick::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0;
+  width: 2px;
+  height: 10px;
+  border-radius: 1px;
+}
+.wm-root .tick.war_declared::before,
+.wm-root .sw.war_declared {
+  background: var(--warn);
+}
+.wm-root .tick.site_razed::before,
+.wm-root .sw.site_razed {
+  background: #a33;
+}
+.wm-root .tick.civ_founded::before,
+.wm-root .sw.civ_founded {
+  background: var(--accent);
+}
+.wm-root .tick.legend_risen::before,
+.wm-root .sw.legend_risen {
+  background: #b58a1a;
+}
+.wm-root .lg-years .tick .tip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--ink);
+  color: var(--panel);
+  font: 0.72rem var(--body);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.wm-root .lg-years .tick.tip-l .tip {
+  left: 0;
+  transform: none;
+}
+.wm-root .lg-years .tick.tip-r .tip {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+.wm-root .lg-years .tick:hover .tip,
+.wm-root .lg-years .tick:focus-visible .tip {
+  display: block;
+}
+.wm-root .lg-years .labels span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font: 10px var(--mono);
+  color: var(--muted);
+}
+.wm-root .lg-years .key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.wm-root .sw {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 5px;
+  vertical-align: -1px;
+}
+
+/* The pane reuses the inspector's type scale: 14px body, 0.72rem mono eyebrows. */
+.wm-root .lg-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100%;
+  /* Zero height lets the map column set the row height; the body scrolls inside. */
+  height: 0;
+  border-left: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 14px;
+}
+.wm-root .lg-pane header {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.wm-root .lg-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.wm-root .lg-pane h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.wm-root .lg-yearbtn {
+  display: none;
+  font-variant-numeric: tabular-nums;
+}
+.wm-root .lg-search {
+  width: 100%;
+  font: 0.9rem var(--body);
+  padding: 6px 9px;
+}
+.wm-root .lg-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.wm-root .lg-cats button {
+  font-size: 0.78rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+.wm-root .lg-cats button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--panel);
+  border-color: var(--accent);
+}
+.wm-root .lg-cats .n {
+  font: 0.72rem var(--mono);
+  opacity: 0.85;
+  margin-left: 4px;
+}
+.wm-root .lg-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  min-height: 31px;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+.wm-root .lg-crumbs button {
+  font-size: 0.78rem;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+.wm-root .lg-trail {
+  flex: 1 1 0;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.wm-root .lg-trail a {
+  flex: 0 1 auto;
+  min-width: 2em;
+  max-width: 16em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--link);
+}
+.wm-root .lg-trail .here {
+  flex: 0 1 auto;
+  min-width: 3em;
+  max-width: 20em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-weight: 600;
+}
+.wm-root .lg-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.wm-root .lg-page .lg-filters {
+  padding: 0;
+  border: 0;
+}
+.wm-root .lg-filters select {
+  font: 0.78rem var(--body);
+  padding: 2px 4px;
+}
+.wm-root .lg-filters .chk {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.wm-root .lg-filters input {
+  width: auto;
+  accent-color: var(--accent);
+}
+.wm-root .lg-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+}
+.wm-root .lg-body {
+  flex: 1 1 0;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 4px 0 14px;
+}
+.wm-root .lg-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wm-root .lg-list li {
+  border-bottom: 1px solid var(--line);
+}
+.wm-root .lg-list li a.lg-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 10px;
+  padding: 7px 14px;
+  color: inherit;
+  text-decoration: none;
+}
+.wm-root .lg-list li a.lg-row:hover,
+.wm-root .lg-list li a.lg-row:focus-visible {
+  background: var(--accent-soft);
+}
+.wm-root .lg-list .nm {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.wm-root .lg-list .dis {
+  font-weight: 400;
+  color: var(--muted);
+}
+.wm-root .lg-list .meta {
+  grid-column: 1 / -1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.wm-root .lg-list .yrs {
+  align-self: center;
+  font: 0.72rem var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.wm-root .stars {
+  color: #b58a1a;
+  letter-spacing: 1px;
+}
+.wm-root mark {
+  background: color-mix(in srgb, var(--warn) 32%, transparent);
+  color: inherit;
+  border-radius: 2px;
+}
+.wm-root .lg-more {
+  display: block;
+  margin: 10px 14px 0;
+}
+.wm-root .lg-small {
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.wm-root .lg-group {
+  padding: 8px 14px 3px;
+}
+.wm-root .lg-empty {
+  margin: 0;
+  padding: 16px 14px;
+  color: var(--muted);
+}
+.wm-root .lg-empty.flush {
+  padding: 0;
+}
+.wm-root .lg-dim {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.wm-root .lg-page {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 14px;
+}
+.wm-root .lg-page h3 {
+  margin: 0;
+  font: 700 1.35rem var(--display);
+  text-wrap: balance;
+}
+.wm-root .lg-kind {
+  font: 0.72rem var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.wm-root .lg-summary {
+  margin: 0;
+  max-width: 62ch;
+  line-height: 1.55;
+}
+.wm-root .lg-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 14px;
+  margin: 0;
+  font-size: 0.82rem;
+}
+.wm-root .lg-facts dt {
+  color: var(--muted);
+}
+.wm-root .lg-facts dd {
+  margin: 0;
+  font-weight: 400;
+}
+.wm-root .lg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.wm-root .lg-sect {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--line);
+  font: 0.72rem var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.wm-root .lg-sect label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font: 0.78rem var(--body);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.wm-root .lg-sect input {
+  width: auto;
+}
+.wm-root .lg-chron,
+.wm-root .lg-tree,
+.wm-root .lg-also {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wm-root .lg-tree {
+  gap: 6px;
+  margin: 6px 0 2px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+  font-size: 0.85rem;
+}
+.wm-root .lg-also {
+  gap: 4px;
+}
+.wm-root .lg-also li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.wm-root .lg-decade h4 {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0 0 6px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  font: 0.72rem var(--mono);
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.wm-root .lg-decade + .lg-decade {
+  margin-top: 8px;
+}
+.wm-root .lg-ev {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 0 8px;
+  line-height: 1.45;
+}
+.wm-root .lg-tree .lg-ev {
+  grid-template-columns: 52px minmax(0, 1fr);
+}
+.wm-root .lg-ev.future {
+  opacity: 0.6;
+}
+.wm-root .lg-ev .y {
+  padding-top: 2px;
+  text-align: right;
+  font: 0.72rem var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.wm-root .lg-ev .txt {
+  min-width: 0;
+}
+.wm-root .lg-ev .rel {
+  margin-right: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.wm-root .gd {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.wm-root .g-wars {
+  background: #b3362f;
+}
+.wm-root .g-rulers {
+  background: #b58a1a;
+}
+.wm-root .g-lives {
+  background: #3b7fb8;
+}
+.wm-root .g-calamities {
+  background: #8a5a9e;
+}
+.wm-root .g-places {
+  background: #3f8f5a;
+}
+.wm-root .g-things {
+  background: #1a8f8f;
+}
+.wm-root .lg-key .gd {
+  margin-right: 4px;
+}
+.wm-root .lg-why,
+.wm-root .lg-ln,
+.wm-root .lg-evlink {
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  font: inherit;
+}
+.wm-root .lg-evlink {
+  color: var(--muted);
+  font: 0.72rem var(--mono);
+  text-decoration: underline dotted;
+}
+.wm-root .lg-ln {
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--link) 35%, transparent);
+  text-underline-offset: 2px;
+}
+.wm-root .lg-ln:hover {
+  text-decoration-color: var(--link);
+}
+.wm-root .lg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+/* Doubled class: chips keep their pill look even where a link rule is more specific. */
+.wm-root .lg-ln.lg-chip.lg-chip {
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--paper);
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+.wm-root .lg-why {
+  margin-left: 6px;
+  color: var(--warn);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.wm-root a.lg-why {
+  text-decoration: none;
+}
+
+@media (max-width: 860px) {
+  .wm-root .tabs {
+    display: flex;
+  }
+  .wm-root .wm-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wm-root .wm-main[data-tab='map'] .lg-pane,
+  .wm-root .wm-main[data-tab='legends'] .wm-mapcol {
+    display: none;
+  }
+  .wm-root .back-legends {
+    display: block;
+    top: 56px;
+    bottom: auto;
+    left: 8px;
+  }
+  /* The pane is capped at the viewport; its header stays put and the body scrolls inside. */
+  .wm-root .lg-pane {
+    height: auto;
+    min-height: 0;
+    max-height: calc(100dvh - 150px);
+    border-left: 0;
+  }
+  .wm-root .lg-body {
+    flex: 1 1 auto;
+  }
+  .wm-root .lg-yearbtn {
+    display: inline-flex;
+  }
+  .wm-root .lg-years {
+    position: static;
+  }
+  .wm-root .whole {
+    right: 8px;
+    bottom: auto;
+    top: 134px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .progress i,
   .stage canvas.map {
