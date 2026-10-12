@@ -13,6 +13,7 @@ The goal is fewer billed runner minutes **with the same coverage**: run the chea
 - **Public repositories:** standard GitHub-hosted runners are free. **Private repositories:** minutes come out of the account's monthly allowance; larger runners are never free. Check visibility first (`gh api repos/OWNER/REPO --jq .visibility`).
 - All of an account's repositories share one concurrent-job limit. A 12-job matrix in one repo can delay another repo's CI even when the minutes are free.
 - A skipped job bills nothing. A job whose `if:` is false never starts a runner.
+- Windows and macOS runners cost more per minute than Linux in private repositories (historically 2x and 10x). A three-OS matrix is the most expensive shape there is: path-filter it and run it in Tier 3 unless the change is platform-specific.
 
 ## Procedure
 
@@ -38,7 +39,7 @@ The goal is fewer billed runner minutes **with the same coverage**: run the chea
    - Run the repo's local checks.
    - For sharded suites, run the shard runner and coverage verifier locally once.
    - Then push **once** and let the PR's single run be the live test.
-6. **Document and set agent rules.** Write a short `docs/CI.md`: before/after with measured run IDs, what runs when, how to run full regression and deploy. Add the budget rules from `references/agent-policy.md` to `AGENTS.md`, and import it from `CLAUDE.md` with a line `@AGENTS.md`.
+6. **Document and set agent rules.** Write a short `docs/CI.md`: before/after with measured run IDs, what runs when, how to run full regression and deploy. The budget rules themselves (CI-01 to CI-06) come from AI-Master-Instructions in `.claude/master/RULES.md`; don't paste them into `AGENTS.md`. Add only the repo-specific sections from `references/agent-policy.md`.
 7. **PR body:** problems found (with numbers), changes, expected savings marked as estimates, testing done, risks, and manual steps for the owner. After merge, check that the first default-branch run behaved as designed and record the measured minutes.
 
 ## Traps (each one has bitten a real run)
@@ -51,6 +52,7 @@ The goal is fewer billed runner minutes **with the same coverage**: run the chea
 - **Docs-only filters can skip real checks.** If `format:check` covers Markdown, or scripts live under `docs/`, a `**/*.md` or `docs/**` filter skips them. Read what the checks cover first.
 - **Test-file exclusions.** Excluding `*.spec.ts` from "needs E2E" can skip E2E for a PR that only changes E2E specs. Exclude only the unit-test pattern.
 - **Reusable workflows rename checks** to `caller-job / called-job`. Keep the PR-facing workflow non-reusable, or accept new check names.
+- **Reusable workflows in a private repo** can't be called from a public repo. Pin any shared workflow or action to a tag or SHA, never `@main`, so a run can be reproduced.
 - **Diff base.** `pull_request` checks out GitHub's merge commit. With `fetch-depth: 2`, `git diff --name-only HEAD^1 HEAD` is exactly the PR's change.
 - **Production deploys and migrations:** `cancel-in-progress: false` in a fixed group, so they queue and never die mid-way. Deploy only default-branch commits, and verify the exact commit in the deploy job, or reuse an artifact built from that commit by the same repo.
 - **Branch cleanup workflows** become redundant once Settings → General → "Automatically delete head branches" is on. Guard the job with `github.event.repository.delete_branch_on_merge != true` so it retires itself, and treat an already-deleted branch as success.

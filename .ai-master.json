@@ -1,0 +1,27 @@
+{
+  "version": "v0.2.0",
+  "layers": ["core", "stacks/node-web", "project-types/game"],
+  "exclude": [],
+  "overrides": [
+    {
+      "id": "CTX-01",
+      "reason": "Sessions start from docs/AGENT_BRIEF.md and the current docs/phases/PHASE_N.md; there is no HANDOFF.md (REBOOT_PLAN R-18, short doc set)."
+    },
+    {
+      "id": "CTX-02",
+      "reason": "Status lives in docs/ROADMAP.md and the phase spec's status section, updated at each milestone, instead of a HANDOFF.md."
+    },
+    {
+      "id": "CTX-03",
+      "reason": "Checkpoint updates go to the phase spec status, docs/ROADMAP.md and CHANGELOG.md at each milestone (AGENT_BRIEF step 4)."
+    },
+    {
+      "id": "SRC-04",
+      "reason": "docs/DECISIONS.md is a one-line table of the locked reboot decisions; the reasoning lives in docs/REBOOT_PLAN.md section 3."
+    },
+    {
+      "id": "GAME-05",
+      "reason": "R-02: no old saves or rule versions are kept during the reboot; saves are not upgraded across versions."
+    }
+  ]
+}
