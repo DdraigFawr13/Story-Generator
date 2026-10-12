@@ -2,10 +2,9 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { NextApp } from './NextApp';
 
-export function mountNextApp(element: HTMLElement): void {
-  createRoot(element).render(
-    <StrictMode>
-      <NextApp />
-    </StrictMode>,
-  );
-}
+// `/` serves the world map and legends. Old `/?next` links still work: the flag is ignored.
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <NextApp />
+  </StrictMode>,
+);

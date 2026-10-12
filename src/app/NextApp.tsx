@@ -1,5 +1,5 @@
-// The `?next` page: world-map viewer on top (Phase 1, M1.4), with the Phase 0
-// day controls, saves and chronicle below it until Phase 2 replaces them.
+// The app at `/`: world-map viewer on top (Phase 1, M1.4) beside the Legends pane (M2.7), with the
+// Phase 0 day controls, saves and chronicle below.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_CONTENT } from '../content';
@@ -292,7 +292,6 @@ export function NextApp() {
     );
     const popstate = () => {
       const url = parseViewUrl(window.location.search, VIEWER_LAYER_IDS);
-      if (!new URLSearchParams(window.location.search).has('next')) return;
       const next = { layer: url.layer, at: url.at, zoom: url.zoom };
       const seed = url.seed ?? DEFAULT_SEED;
       const place = {

@@ -13,5 +13,5 @@ Merge a PR whose CI is green. Never deploy unmerged work manually or enable prev
 ## After each milestone merge
 
 1. Check that Vercel's production deployment is READY and its source SHA equals the merge commit on `main`.
-2. Open the production URL: generate a world at `/?next`, step it, save, reload and load it; check `/` still loads the legacy app.
+2. Open the production URL: generate a world at `/`, open a Legends page, step it, save, reload and load it; check an old `/?next` link still opens the same app.
 3. Note any page or console errors in the PR.

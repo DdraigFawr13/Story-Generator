@@ -46,7 +46,7 @@ describe('view URL', () => {
       at: { x: 118, y: 40 },
       zoom: 3,
     });
-    expect(url).toBe('/?next&seed=S1&size=128&layer=rainfall&at=118,40&z=3');
+    expect(url).toBe('/?seed=S1&size=128&layer=rainfall&at=118,40&z=3');
     expect(parseViewUrl(url.slice(2), IDS)).toEqual({
       seed: 'S1',
       size: 128,
@@ -74,7 +74,7 @@ describe('view URL', () => {
     };
     const url = buildViewUrl(view);
     expect(url).toBe(
-      '/?next&seed=S1&size=256&layer=elevation&year=112&open=event:412&cat=site&q=ash%20%26%20co',
+      '/?seed=S1&size=256&layer=elevation&year=112&open=event:412&cat=site&q=ash%20%26%20co',
     );
     expect(parseViewUrl(url.slice(2), IDS)).toEqual(view);
     expect(parseViewUrl('?next&open=race:human', IDS).open).toBe('race:human');
@@ -120,5 +120,10 @@ describe('readout', () => {
     expect(rampPosition(layer('rainfall'), 9000, 0)).toBe(1);
     expect(rampPosition(layer('biome'), 3, 0)).toBeNull();
     expect(rampPosition(layer('elevation'), -5, 3)).toBeNull();
+    // Elevation's 400 m stop sits too close to 0 m for both labels.
+    const elevation = rampTicks(layer('elevation')).map((t) => t.label);
+    expect(elevation[0]).toBe('0 m');
+    expect(elevation).not.toContain('400 m');
+    expect(elevation[elevation.length - 1]).toBe('6000 m');
   });
 });

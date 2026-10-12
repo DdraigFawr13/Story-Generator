@@ -20,8 +20,10 @@ export function fillTemplate(template: string, vars: Record<string, string | num
     if (value === undefined) throw new Error(`Template value "${key}" missing: ${template}`);
     return String(value);
   });
-  // "a axe" -> "an axe" once values are in.
-  return filled.replace(/\b([Aa]) (?=[AEIOUaeiou])/g, '$1n ');
+  // "a axe" -> "an axe" once values are in; a line opening on a name ("the Blaidd of ...")
+  // still starts with a capital.
+  const text = filled.replace(/\b([Aa]) (?=[AEIOUaeiou])/g, '$1n ');
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /**
