@@ -16,12 +16,12 @@ src/
     (later: site/, lod/)
   content/   typed data ("raws"): races, abilities, weather, event types, rules, templates
   platform/  browser services: IndexedDB saves (worker host for world generation; later: preferences)
-  app/       React UI for the new engine (served at /?next until Milestone A)
+  app/       React UI for the new engine (served at /?next until the legacy app is deleted at Phase 2 close)
 ```
 
 `npm run boundaries` enforces the import table: `engine` imports only `engine`; `content` imports `engine` (types and helpers); `platform` imports `engine`; `app` may import all three. `engine` and `content` may not touch browser or nondeterministic globals, nor non-safe `Math` functions (below).
 
-The legacy app (`src/sim`, `src/controller`, `src/adapters`, `src/ui`) still serves `/` and is deleted at Milestone A (M3.13). Don't extend it, and don't port its versioned modules into the new engine.
+The legacy app (`src/sim`, `src/controller`, `src/adapters`, `src/ui`) still serves `/` and is deleted at Phase 2 close (decided 2026-10-12; was M3.13). Don't extend it, and don't port its versioned modules into the new engine.
 
 ## Core rules
 

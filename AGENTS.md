@@ -1,6 +1,6 @@
 # Agent instructions
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md), then [docs/REBOOT_PLAN.md](docs/REBOOT_PLAN.md) sections 1–7 and [docs/ROADMAP.md](docs/ROADMAP.md) before code work. These rules bind Claude Code, Codex and any other coding agent.
+Read [docs/AGENT_BRIEF.md](docs/AGENT_BRIEF.md) (one page) and the current spec in `docs/phases/` before code work. [docs/REBOOT_PLAN.md](docs/REBOOT_PLAN.md) is the full plan; open the section you need rather than the whole file. These rules bind Claude Code, Codex and any other coding agent.
 
 ## Working style
 
@@ -17,6 +17,10 @@ The user asked agents to save money by orchestrating cheaper models. The main se
 - If a session started before these agents existed, use the `general-purpose` agent with `model: sonnet` or `model: haiku` and tell it to follow the agent file.
 
 Don't delegate when it costs more than it saves. Every subagent starts cold and re-reads the repo (about 20–60k tokens), so keep small edits, one-line fixes and quick filtered checks in the main session. Delegate when a task needs many file reads or writes, or produces long logs. The orchestrator always reviews delegated diffs before committing; cheaper models make plausible mistakes.
+
+## Cloud sessions
+
+`.claude/hooks/session-start.sh` installs the pinned Node and npm, runs `npm install` and points Playwright at the container's Chromium when its pinned build is missing (`PLAYWRIGHT_CHROMIUM_PATH`, read by `playwright.config.ts`). Don't download Node by hand or keep a local Playwright config.
 
 ## Local checks (run before pushing)
 

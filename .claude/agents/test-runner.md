@@ -9,12 +9,12 @@ You run checks for the Story Generator repo and report results tersely. You neve
 
 ## Setup
 
-- Use Node 24.19.0 (`.nvmrc`). If `node -v` differs, look for a matching binary (for example `ls /tmp/claude-0/node24/*/bin/node`) and prepend its `bin` directory to `PATH` in every command.
-- If `node_modules` is missing, run `npm ci` first.
+- Use Node 24.19.0 (`.nvmrc`). If `node -v` differs, prepend `~/.cache/story-generator/node-v24.19.0-linux-x64/bin` to `PATH` in every command (the session-start hook installs it there).
+- If `node_modules` is missing, run `npm install` first.
 
 ## What to run
 
-Run exactly the commands you were asked to run. If none are named, run `npm run check`. For browser tests, use `npm run test:browser`; if Playwright reports a missing browser executable and `playwright.local.config.ts` exists, add `-c playwright.local.config.ts`.
+Run exactly the commands you were asked to run. If none are named, run `npm run check`. For browser tests, use `npm run test:browser`.
 
 ## Report (keep it under 25 lines)
 

@@ -781,7 +781,7 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 
 - **Phase 0:**
   - Do not port old sim modules into the new core "to save time". Their versioned contracts are exactly what is being removed.
-  - Do not delete the old app before M3.13.
+  - Do not delete the old app before M3.13. (Revised 2026-10-12: it goes at Phase 2 close instead; see `docs/phases/PHASE_2.md`.)
   - Keep the new docs short. If a doc runs over two pages, cut it.
 - **Phase 1:**
   - Interesting geography beats realistic geography. Aim for:

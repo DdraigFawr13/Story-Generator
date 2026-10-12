@@ -2,7 +2,7 @@
 
 A breadth-first world simulator in the spirit of Dwarf Fortress, set in a grounded medieval fantasy. It generates a world with a few centuries of history, then lets you watch one place live day by day, while a historian's chronicle tells what really happened.
 
-**Status:** the project was rebooted on 2026-10-11 ([plan](docs/REBOOT_PLAN.md)). Phase 0 (reset and skeleton) is in progress. The new engine runs at `/?next`. The legacy single-settlement app still serves `/` until the first new playable (Milestone A).
+**Status:** the project was rebooted on 2026-10-11 ([plan](docs/REBOOT_PLAN.md)). Phases 0 and 1 are done and Phase 2 (peoples and legends) is in progress; see [ROADMAP.md](docs/ROADMAP.md). The new engine runs at `/?next`. The legacy single-settlement app still serves `/` until Phase 2 closes.
 
 [Play](https://story-generator-opal.vercel.app) · [Try the new engine](https://story-generator-opal.vercel.app/?next)
 
