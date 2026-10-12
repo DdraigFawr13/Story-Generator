@@ -12,5 +12,17 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
   },
   // One Chromium smoke (REBOOT_PLAN §11). Add engines only for a concrete compatibility need.
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // PLAYWRIGHT_CHROMIUM_PATH (set by .claude/hooks/session-start.sh in cloud sessions) points at
+  // a preinstalled Chromium when the pinned build is missing; CI leaves it unset.
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        ...(process.env.PLAYWRIGHT_CHROMIUM_PATH
+          ? { launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH } }
+          : {}),
+      },
+    },
+  ],
 });

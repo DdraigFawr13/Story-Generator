@@ -43,3 +43,4 @@ Locked decisions from the 2026-10-11 reboot Q&A. Don't reopen them without askin
 | 2026-10-11 | 0 | RNG = `sfc32`, one stream per `(seed, name)`. |
 | 2026-10-11 | 0 | CI = `core` + Chromium smoke; no tiers or batteries. |
 | 2026-10-11 | 1 | Default 3–5 continents plus islands (user choice); `params.continents`. |
+| 2026-10-12 | 2 | Plan review ([doc](https://claude.ai/code/artifact/2b0ad371-743c-4abd-900a-11012026cb0d)), all recommendations accepted: race balance by mechanism with a survival floor instead of a 70% human ceiling; goods per site instead of one stores number; importance scoring pulled forward; legacy app deleted at Phase 2 close; one-page agent brief; cloud session hook. |

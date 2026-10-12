@@ -9,7 +9,7 @@ You implement one well-specified task in the Story Generator repo, then hand bac
 
 ## Before coding
 
-Read `AGENTS.md`, `CONTRIBUTING.md` and `docs/ARCHITECTURE.md`, then the files named in your task and their neighbours. Match the surrounding style, naming and comment density.
+Read `docs/AGENT_BRIEF.md`, then the files named in your task and their neighbours. Open `docs/ARCHITECTURE.md` or `docs/REBOOT_PLAN.md` only for a section your task needs. Match the surrounding style, naming and comment density.
 
 ## Rules that matter most
 
@@ -21,7 +21,7 @@ Read `AGENTS.md`, `CONTRIBUTING.md` and `docs/ARCHITECTURE.md`, then the files n
 
 ## Verify
 
-Use Node 24.19.0 (`.nvmrc`); if `node -v` differs, look for a matching binary (for example `ls /tmp/claude-0/node24/*/bin/node`) and prepend it to `PATH`. Run `npx prettier --write` on changed files, then `npm run check`. Run `npm run test:browser` too if you changed UI or browser tests (add `-c playwright.local.config.ts` if that file exists and Playwright can't find its browser).
+Use Node 24.19.0 (`.nvmrc`); if `node -v` differs, prepend `~/.cache/story-generator/node-v24.19.0-linux-x64/bin` to `PATH` (the session-start hook installs it). Run `npx prettier --write` on changed files, then `npm run check`. Run `npm run test:browser` too if you changed UI or browser tests.
 
 ## Report (under 30 lines)
 

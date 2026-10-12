@@ -17,7 +17,7 @@ Read [docs/REBOOT_PLAN.md](docs/REBOOT_PLAN.md) sections 1–7 once, then [docs/
 - Every state change a person would notice emits an event with a content template and cause links. Chronicle text never invents facts.
 - Prefer content entries over engine special cases, and simple tunable numbers in content over elaborate formulas.
 - Tests are light: unit tests with tiny fixtures, one determinism test, invariant checks and one Chromium smoke. No seed batteries or proof suites.
-- Don't extend or port the legacy app (`src/sim`, `src/controller`, `src/adapters`, `src/ui`); it is deleted at Milestone A.
+- Don't extend or port the legacy app (`src/sim`, `src/controller`, `src/adapters`, `src/ui`); it is deleted at Phase 2 close (decided 2026-10-12).
 
 ## Licensing and assets
 
