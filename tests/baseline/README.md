@@ -1,0 +1,1 @@
+`drama-10-seeds.json` is the history baseline that `npm run drama -- --baseline` diffs against; regenerate it with `npm run drama -- --seeds 10 --years 250 --write-baseline tests/baseline/drama-10-seeds.json`.

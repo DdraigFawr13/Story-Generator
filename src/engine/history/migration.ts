@@ -2,19 +2,30 @@
 // sites of the same civ, or found a new site when there is nowhere to go.
 
 import { culturePlaceName } from '../people/names';
-import type { Id, Site, SiteKind } from '../core/types';
+import type { Civ, Id, Site, SiteFeature, SiteKind } from '../core/types';
 import { emptyGoods } from './goods';
 import { addSiteLinks } from './links';
 import { addParty, movablePop, partySize, takeParty, totalPop, type Party } from './pop';
-import { cellDistance, popBands, siteCapacity, sizeKind } from './settle';
-import { causesOf, civName, liveSites, logOf, type HistoryRun } from './state';
+import {
+  cellDistance,
+  mineralIndexes,
+  mineralsNear,
+  nearestAuraSpot,
+  popBands,
+  siteCapacity,
+  sizeKind,
+} from './settle';
+import { causesOf, civName, isLive, liveSites, logOf, type HistoryRun } from './state';
 
 /** The best free cell for a new site of `source`'s civ, or -1. */
 export function findNewCell(run: HistoryRun, source: Site): number {
   const { cells, rules, search, world, content } = run;
   const civ = source.civId === null ? undefined : world.civs.get(source.civId);
   const culture = content.cultures.find((c) => c.id === civ?.cultureId);
-  if (!civ || !culture) return -1;
+  const race = civ ? run.races.get(civ.raceId) : undefined;
+  if (!civ || !culture || !race) return -1;
+  const founded = run.civLastFounded.get(civ.id);
+  if (founded !== undefined && run.year - founded < rules.civFoundCooldown) return -1;
   const { width, height } = cells;
   const [lo, hi] = rules.expandRange;
   const spacing = rules.newSiteSpacing;
@@ -50,13 +61,49 @@ export function findNewCell(run: HistoryRun, source: Site): number {
       if (owner !== 0 && owner !== civ.id) continue;
       if (crowded(cell)) continue;
       const score = search.scoreCell(culture, cell);
-      if (score > bestScore) {
-        bestScore = score;
-        best = cell;
-      }
+      if (score <= bestScore) continue;
+      // Capacity is costly, so it is only worked out for a cell that would take the lead.
+      const room = siteCapacity(cells, cell, race, content, search.featuresAt[cell]!);
+      if (room < rules.minNewSiteCapacity) continue;
+      bestScore = score;
+      best = cell;
     }
   }
   return best;
+}
+
+/**
+ * What a new site is for: a port at a harbour; a temple for an aura spot its civ has no temple at
+ * yet; a mine for a mineral its civ does not yet mine nearby; otherwise a town by size.
+ */
+function newSiteKind(
+  run: HistoryRun,
+  civ: Civ,
+  cell: number,
+  features: readonly SiteFeature[],
+  pop: number,
+): SiteKind {
+  const { cells, content, world } = run;
+  const rules = content.settlement;
+  if (features.includes('harbour')) return 'port';
+  if (features.includes('aura')) {
+    const spot = nearestAuraSpot(cells, cell, rules.featureRadius.aura);
+    if (spot >= 0 && !run.templeSpots.has(`${civ.id}:${spot}`)) return 'temple';
+  }
+  if (features.includes('deposit')) {
+    const mineral = mineralIndexes(content);
+    const radius = rules.featureRadius.deposit;
+    const here = mineralsNear(cells, cell, radius, mineral);
+    const taken = [...world.sites.values()].some(
+      (mine) =>
+        mine.kind === 'mine' &&
+        mine.civId === civ.id &&
+        isLive(mine) &&
+        [...mineralsNear(cells, mine.cell, radius, mineral)].some((r) => here.has(r)),
+    );
+    if (!taken) return 'mine';
+  }
+  return sizeKind(pop, rules);
 }
 
 /** Creates the new site at `cell` for a party; emits nothing (the caller owns the events). */
@@ -72,13 +119,7 @@ function foundSite(run: HistoryRun, source: Site, cell: number, party: Party[]):
     name = culturePlaceName(culture.names, run.rng.names);
     if (![...world.sites.values()].some((s) => s.name === name)) break;
   }
-  const kind: SiteKind = features.includes('harbour')
-    ? 'port'
-    : features.includes('aura')
-      ? 'temple'
-      : features.includes('deposit')
-        ? 'mine'
-        : sizeKind(pop, content.settlement);
+  const kind = newSiteKind(run, civ, cell, features, pop);
   const site: Site = {
     id: world.nextId.site,
     name,
@@ -98,6 +139,12 @@ function foundSite(run: HistoryRun, source: Site, cell: number, party: Party[]):
   site.goods.food = pop * race.foodNeed * rules.newSiteStoresYears;
   world.sites.set(site.id, site);
   run.siteAtCell.set(cell, site.id);
+  run.civLastFounded.set(civ.id, run.year);
+  if (kind === 'temple') {
+    run.templeSpots.add(
+      `${civ.id}:${nearestAuraSpot(cells, cell, content.settlement.featureRadius.aura)}`,
+    );
+  }
   addSiteLinks(run.links, cells, run.linkSearch, site, liveSites(run), rules);
   run.lastExpansion.set(source.id, run.year);
   run.lastExpansion.set(site.id, run.year);

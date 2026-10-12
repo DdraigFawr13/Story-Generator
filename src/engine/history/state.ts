@@ -1,4 +1,4 @@
-// Per-run state of the history stage. It lives here, not on `WorldState`: plague immunity,
+// Per-run state of the history stage. It lives here, not on `WorldState`: disease immunity,
 // cooldowns, links and the latest event per site only matter while the years run.
 
 import { createEmitter, type EmitInput } from '../core/context';
@@ -6,10 +6,12 @@ import type { ContentBundle, HistoryRules, RaceDef } from '../core/content-types
 import { streamFor, type RngStream } from '../core/rng';
 import type { Civ, Goods, Id, SimEvent, Site, WorldCells, WorldState } from '../core/types';
 import type { SiteLinks, LinkSearch } from './links';
-import type { SettleContent, SettleSearch } from './settle';
+import { emitScored } from './importance';
+import { nearestAuraSpot, type SettleContent, type SettleSearch } from './settle';
 
 /** What the history stage reads from content. */
-export type HistoryContent = SettleContent & Pick<ContentBundle, 'history' | 'creatures'>;
+export type HistoryContent = SettleContent &
+  Pick<ContentBundle, 'history' | 'creatures' | 'diseases'>;
 
 /** The latest events that touched one site, for linking causes. */
 export interface SiteLog {
@@ -17,12 +19,56 @@ export interface SiteLog {
   origin?: Id;
   badHarvest?: { year: number; event: Id };
   famine?: { year: number; event: Id };
-  plague?: { year: number; event: Id };
+  /** The latest disease to strike the site. */
+  disease?: { year: number; event: Id };
+  /** Bad years that stayed under the event threshold (stores held). */
+  badYears?: number;
+  /** The latest bad year inside a climate epoch, and the epoch's opening event. */
+  epoch?: { year: number; event: Id };
   grew?: Id;
   /** The last migration event out of the site. */
   migration?: { year: number; event: Id };
   /** The last beast raid on the site. */
   raided?: { year: number; event: Id };
+}
+
+/** A dry or cold spell over part of the map (M2.4b). */
+export interface Epoch {
+  id: number;
+  kind: 'dry' | 'cold';
+  cell: number;
+  radius: number;
+  start: number;
+  /** Last year the epoch is active. */
+  end: number;
+  /** The dry_years_began or cold_years_began event. */
+  began: Id;
+  /** Set once the ending event is emitted. */
+  ended?: boolean;
+}
+
+/** One disease's spread through the run. */
+export interface DiseaseState {
+  /** Last year a site cannot still be infected. */
+  immuneUntil: Map<Id, number>;
+  /** Sites infected last year, with their event, to spread this year. */
+  infected: Map<Id, Id>;
+}
+
+/** Importance scoring and rollup bookkeeping (importance.ts). */
+export interface ImportanceState {
+  /** The plain emitter; `emitScored` adds the importance bonus on top. */
+  base: (input: EmitInput) => SimEvent;
+  /** Event types emitted so far in the run (novelty). */
+  seen: Set<string>;
+  /** Year of the latest event per `${type}@${place}` (repeat penalty). */
+  lastAt: Map<string, number>;
+  /** Trivial history events by id, kept or pruned at the end. */
+  trivial: Set<Id>;
+  /** This year's trivial events per type, in first-seen order. */
+  yearCounts: Map<string, number>;
+  /** First event id emitted by the history stage; earlier events are settle's and always kept. */
+  firstId: Id;
 }
 
 /** A war between two civs (M2.4); the events are the record, wars are not saved with the world. */
@@ -58,7 +104,8 @@ export interface HistoryRun {
   rng: {
     harvest: RngStream;
     demography: RngStream;
-    plague: RngStream;
+    disease: RngStream;
+    climate: RngStream;
     migration: RngStream;
     expansion: RngStream;
     names: RngStream;
@@ -71,12 +118,15 @@ export interface HistoryRun {
   logs: Map<Id, SiteLog>;
   /** Years of the last expansion from each site. */
   lastExpansion: Map<Id, number>;
-  /** Last year a site can still not be infected. */
-  immuneUntil: Map<Id, number>;
-  /** Sites infected this year, with their plague event, to spread next year. */
-  infected: Map<Id, Id>;
-  /** Sites infected so far in this year's plague step. */
-  nextInfected: Map<Id, Id>;
+  /** Per disease id: immunity and last year's cases. */
+  diseases: Map<string, DiseaseState>;
+  /** Climate epochs, running and ended, in id order. */
+  epochs: Epoch[];
+  /** Year each civ last founded a site (the founding cooldown). */
+  civLastFounded: Map<Id, number>;
+  /** `${civId}:${auraSpotCell}` for every temple already built. */
+  templeSpots: Set<string>;
+  importance: ImportanceState;
   /** Cell to site id for every site, live or ruined (spacing checks). */
   siteAtCell: Map<number, Id>;
   /** Owning civ per cell as of the last recompute. */
@@ -189,11 +239,12 @@ export function createRun(
     linkSearch,
     links,
     races: new Map(content.races.map((r) => [r.id, r])),
-    emit: createEmitter(world, content.eventTypes),
+    emit: (input) => emitScored(run, input),
     rng: {
       harvest: streamFor(world, 'history.harvest'),
       demography: streamFor(world, 'history.demography'),
-      plague: streamFor(world, 'history.plague'),
+      disease: streamFor(world, 'history.disease'),
+      climate: streamFor(world, 'history.climate'),
       migration: streamFor(world, 'history.migration'),
       expansion: streamFor(world, 'history.expansion'),
       names: streamFor(world, 'history.names'),
@@ -204,9 +255,18 @@ export function createRun(
     year: 0,
     logs: new Map(),
     lastExpansion: new Map(),
-    immuneUntil: new Map(),
-    infected: new Map(),
-    nextInfected: new Map(),
+    diseases: new Map(),
+    epochs: [],
+    civLastFounded: new Map(),
+    templeSpots: new Set(),
+    importance: {
+      base: createEmitter(world, content.eventTypes),
+      seen: new Set(),
+      lastAt: new Map(),
+      trivial: new Set(),
+      yearCounts: new Map(),
+      firstId: world.nextId.event,
+    },
     siteAtCell: new Map(),
     territory: cells.territory,
     territoryDirty: false,
@@ -216,7 +276,13 @@ export function createRun(
     tradeOpened: new Map(),
     deposits: new Map(),
   };
-  for (const site of world.sites.values()) run.siteAtCell.set(site.cell, site.id);
+  for (const site of world.sites.values()) {
+    run.siteAtCell.set(site.cell, site.id);
+    if (site.kind === 'temple' && site.civId !== null) {
+      const spot = nearestAuraSpot(cells, site.cell, content.settlement.featureRadius.aura);
+      if (spot >= 0) run.templeSpots.add(`${site.civId}:${spot}`);
+    }
+  }
   // Settle's founding events are the origin every later cause chain can fall back on.
   for (const event of world.events) {
     if (event.type !== 'civ_founded' && event.type !== 'site_founded') continue;

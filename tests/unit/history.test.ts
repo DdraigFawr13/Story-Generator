@@ -99,9 +99,10 @@ const eventsOf = (world: WorldState, type: string) => world.events.filter((e) =>
 
 describe('harvest and famine', () => {
   it('starves a site in a drought cell before an equal site with no drought risk', () => {
-    // Droughts every year at risk 100 and no yield variance, so the outcome is certain.
+    // Droughts every year at risk 100, no yield variance and no climate epochs, so the outcome is certain.
     const rules: HistoryRules = {
       ...DEFAULT_CONTENT.history,
+      climate: { ...DEFAULT_CONTENT.history.climate, startChance: 0 },
       harvestVariance: 0,
       droughtScale: 1,
       expandChance: 0,
@@ -130,22 +131,19 @@ describe('plague', () => {
       [
         { x: 10, pop: 300, capacity: 2000 },
         { x: 20, pop: 100, capacity: 2000 },
-        // Too small to ever start its own outbreak (plagueMinPop 200).
+        // Too small to ever start its own outbreak (minPop 200).
         { x: 90, pop: 100, capacity: 150 },
       ],
       30,
     );
-    const rules: HistoryRules = {
-      ...DEFAULT_CONTENT.history,
-      plagueChance: 1,
-      plagueMinPop: 200,
-      plagueSpread: 1,
-      expandChance: 0,
-    };
+    const rules: HistoryRules = { ...DEFAULT_CONTENT.history, expandChance: 0 };
+    // Certain outbreaks in sites of 200 or more, and certain spread along links.
+    const plague = DEFAULT_CONTENT.diseases.find((d) => d.id === 'plague')!;
+    const diseases = [{ ...plague, outbreak: 1, minPop: 200, infectivity: 1 }];
     const links = buildLinks(world.cells!, [...world.sites.values()], rules);
     expect(links.get(1)).toEqual([2]);
     expect(links.get(3)).toEqual([]);
-    runHistory(world, withRules(rules));
+    runHistory(world, { ...withRules(rules), diseases });
     const hit = new Set(eventsOf(world, 'plague').map((e) => e.data.site));
     expect(hit.has('Site1')).toBe(true);
     expect(hit.has('Site2')).toBe(true);

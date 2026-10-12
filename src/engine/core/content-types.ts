@@ -178,6 +178,30 @@ export interface ContentBundle {
   settlement: SettlementRules;
   history: HistoryRules;
   creatures: CreatureDef[];
+  diseases: DiseaseDef[];
+}
+
+/** A sickness (M2.4b). History uses the yearly fields; Phase 3 reads the per-day ones. */
+export interface DiseaseDef {
+  id: string;
+  name: string;
+  /** Event type emitted when it strikes a site. */
+  event: string;
+  /** History: chance per link per year of spreading from a sick site. Phase 3: per contact-day. */
+  infectivity: number;
+  /** Days before symptoms and days sick (used from Phase 3; a site is sick for one year in history). */
+  incubation: number;
+  duration: number;
+  /** Share of a struck site's people who die, [min, max], before age risk. */
+  severity: [number, number];
+  /** Death multiplier per age band. */
+  ageRisk: { child: number; adult: number; elder: number };
+  season?: 'spring' | 'summer' | 'autumn' | 'winter';
+  /** Yearly chance a site of at least minPop starts an outbreak, times min(outbreakSizeCap, pop / minPop). */
+  outbreak: number;
+  minPop: number;
+  /** Years a struck site cannot catch it again. */
+  immunityYears: number;
 }
 
 export type CreatureTier = 'beast' | 'great' | 'legendary';
@@ -324,8 +348,8 @@ export interface MapLayer {
 
 /** Tunable numbers for the settle stage (M2.2): where peoples found sites and how many people live there. */
 export interface SettlementRules {
-  /** Founding civs = clamp(min, max, floor(landCells / landCellsPerCiv)). */
-  civs: { min: number; max: number; landCellsPerCiv: number };
+  /** Founding civs = clamp(min, max, floor(landCells / landCellsPerCiv) + a seeded draw of +-jitter). */
+  civs: { min: number; max: number; landCellsPerCiv: number; jitter: number };
   /** Chance a civ also founds a second site, and how far from its capital (cells, Chebyshev). */
   secondSiteChance: number;
   secondSiteRange: [number, number];
@@ -371,6 +395,10 @@ export interface SettlementRules {
     foreignBiome: number;
     /** Extra multipliers by race and site feature, e.g. ore traded for food. */
     raceFeature: Record<string, Partial<Record<SiteFeature, number>>>;
+    /** Food multiplier clamp(meanAura / ref, min, max) for races bound to aura, by race id. */
+    raceAura: Record<string, { ref: number; min: number; max: number }>;
+    /** Food multiplier when the feature is absent, by race id. */
+    raceWithout: Record<string, Partial<Record<SiteFeature, number>>>;
   };
   /** Suitability score weights (higher is better). */
   suitability: {
@@ -400,6 +428,41 @@ export interface SettlementRules {
 }
 
 /** Tunable numbers for the yearly history stage (M2.3); see engine/history/. Rates are per year. */
+/** Climate epochs (M2.4b): slow regional dry or cold spells that raise drought and winter odds. */
+export interface ClimateRules {
+  /** Chance per year that a new epoch starts, while fewer than `maxActive` run. */
+  startChance: number;
+  maxActive: number;
+  /** Length range in years. */
+  years: [number, number];
+  /** Radius range in cells; sets the share of the map an epoch covers. */
+  radius: [number, number];
+  /** Share of epochs that are dry (the rest are cold). */
+  dryShare: number;
+  /**
+   * Inside a dry or cold epoch the drought or winter chance is max(chance * mul, floor), and every
+   * harvest there is multiplied by `yield`, bad year or not.
+   */
+  dry: { mul: number; floor: number; yield: number };
+  cold: { mul: number; floor: number; yield: number };
+}
+
+/** Event importance scoring and rollups (M2.4b). */
+export interface ImportanceRules {
+  /** Bonus for events at a live site of this kind, and at a civ's capital. */
+  kindFame: Partial<Record<SiteKind, number>>;
+  capitalFame: number;
+  /** [threshold, bonus] pairs ascending: the largest threshold `dead` (or `count`) reaches gives its bonus. */
+  scale: [number, number][];
+  /** Bonus the first time a type is emitted in a run. */
+  novelty: number;
+  /** Same type at the same place within this many years loses `repeatPenalty`. */
+  repeatYears: number;
+  repeatPenalty: number;
+  /** Events under this importance roll up into the yearly summary and are pruned unless cited. */
+  rollupBelow: number;
+}
+
 export interface HistoryRules {
   /** Harvest yield is 1 plus or minus this much, uniform. */
   harvestVariance: number;
@@ -433,14 +496,8 @@ export interface HistoryRules {
   minElderYears: number;
   /** Share of a starving site's people who die, times the shortfall (0-1). */
   famineDeathShare: number;
-  /** Plague: smallest site that can start an outbreak, yearly chance, share killed (min, max). */
-  plagueMinPop: number;
-  plagueChance: number;
-  plagueDeath: [number, number];
-  /** Chance an infected site infects each linked site the next year. */
-  plagueSpread: number;
-  /** Years a site cannot be infected again. */
-  plagueImmunityYears: number;
+  /** Outbreak chance scales with pop / minPop up to this many times. */
+  outbreakSizeCap: number;
   /** Share of children and adults who leave a starving or overfull site. */
   migrantShare: number;
   /** A site above this share of capacity may found a new site. */
@@ -456,6 +513,14 @@ export interface HistoryRules {
   newSiteStoresYears: number;
   /** No new site within this many cells (Chebyshev) of another, live or ruined. */
   newSiteSpacing: number;
+  /** A new site's capacity (for its civ's race) must reach this, about a village. */
+  minNewSiteCapacity: number;
+  /** Years before a civ may found another site. */
+  civFoundCooldown: number;
+  /** A bad harvest is an event only when stores after it fall under this many years of need. */
+  shortStoresYears: number;
+  climate: ClimateRules;
+  importance: ImportanceRules;
   /** A town or city only drops a kind when under its lower limit by this share. */
   kindHysteresis: number;
   /** Sites under this population are abandoned. */

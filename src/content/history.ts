@@ -1,4 +1,4 @@
-// Yearly history rules (M2.3, M2.4): harvests, births and deaths, famine, plague, migration and
+// Yearly history rules (M2.3, M2.4): harvests, births and deaths, famine, disease, migration and
 // expansion; beasts, trade, grievance and war.
 // Tune the numbers here; the history stage in engine/history/ reads only this table.
 
@@ -23,19 +23,43 @@ export const HISTORY: HistoryRules = {
   minAdultYears: 5,
   minElderYears: 10,
   famineDeathShare: 0.4,
-  plagueMinPop: 200,
-  plagueChance: 0.0005,
-  plagueDeath: [0.1, 0.3],
-  plagueSpread: 0.35,
-  plagueImmunityYears: 20,
+  outbreakSizeCap: 4,
   migrantShare: 0.2,
-  expandAt: 0.8,
+  // Below the crowding at which births fall (0.6-1), so slow-breeding races still send settlers.
+  expandAt: 0.65,
   expandCooldown: 15,
   expandChance: 0.2,
   expandRange: [4, 12],
   expandShare: 0.25,
   newSiteStoresYears: 0.5,
-  newSiteSpacing: 3,
+  newSiteSpacing: 5,
+  minNewSiteCapacity: 100,
+  // Years between new sites of one civ; caps live sites near 40-120 after 250 years.
+  civFoundCooldown: 15,
+  shortStoresYears: 0.25,
+  climate: {
+    startChance: 0.08,
+    maxActive: 2,
+    years: [5, 20],
+    // A radius of 25-60 cells covers roughly 3-17% of a 256x256 map each.
+    radius: [25, 60],
+    dryShare: 0.65,
+    dry: { mul: 3, floor: 0.25, yield: 0.8 },
+    cold: { mul: 2.5, floor: 0.2, yield: 0.85 },
+  },
+  importance: {
+    kindFame: { town: 1, city: 2, fortress: 1 },
+    capitalFame: 1,
+    scale: [
+      [50, 1],
+      [500, 2],
+      [5000, 3],
+    ],
+    novelty: 2,
+    repeatYears: 10,
+    repeatPenalty: 1,
+    rollupBelow: 3,
+  },
   kindHysteresis: 0.1,
   abandonBelow: 8,
   linkReach: 60,

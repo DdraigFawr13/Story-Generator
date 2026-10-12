@@ -1,5 +1,9 @@
 // World stats per seed: npm run drama -- --seeds 5 [--size 256] [--years 250] [--seed NAME]
+//   [--write-baseline FILE] [--baseline FILE [--tolerance 0.1]]
+import { readFileSync, writeFileSync } from 'node:fs';
 import { loadEngine, parseArgs } from './load-engine.mjs';
+import { baselineMetrics, countEvents, historyMetrics } from './history-metrics.mjs';
+import { diffBaseline, formatDiff } from './baseline-diff.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 const size = Number(args.size || 256);
@@ -55,14 +59,17 @@ function stats(seed) {
     peakPop = Math.max(peakPop, livePop());
   });
   ms.history = performance.now() - historyStart;
-  const finalPop = livePop();
-  peakPop = Math.max(peakPop, finalPop);
-  const typeCount = {};
-  for (const e of world.events) {
-    // Settle's second sites are dated day 0; history founds from year 1 on.
-    if (e.type === 'site_founded' && e.day < DAYS_PER_YEAR) continue;
-    typeCount[e.type] = (typeCount[e.type] ?? 0) + 1;
-  }
+  peakPop = Math.max(peakPop, livePop());
+  const rollupBelow = DEFAULT_CONTENT.history.importance?.rollupBelow;
+  const typeCount = countEvents(world, { rollupBelow, DAYS_PER_YEAR });
+  const metrics = historyMetrics(world, {
+    startPop,
+    peakPop,
+    historyMs: ms.history,
+    rollupBelow,
+    DAYS_PER_YEAR,
+    raceIds: DEFAULT_CONTENT.races.map((race) => race.id),
+  });
   // Wars: first year of each war, and the years any war was under way (declared to its last event).
   const warSpan = new Map();
   for (const e of world.events) {
@@ -83,16 +90,7 @@ function stats(seed) {
     else if (from <= 200) warsLate += 1;
   }
   const peaceYears = Math.max(0, years - warYears.size);
-  // Longest chain of causes: events are in id order and causes are older, so one pass works.
-  const depth = new Map();
-  let chain = 0;
-  for (const e of world.events) {
-    const d = 1 + Math.max(0, ...e.causes.map((id) => depth.get(id) ?? 0));
-    depth.set(e.id, d);
-    chain = Math.max(chain, d);
-  }
   let liveSites = 0,
-    ruinedSites = 0,
     totalWealth = 0;
   const goodSums = { food: 0, ore: 0, timber: 0, salt: 0, luxury: 0 };
   for (const site of world.sites.values()) {
@@ -100,12 +98,11 @@ function stats(seed) {
       liveSites += 1;
       totalWealth += site.wealth;
       for (const good of Object.keys(goodSums)) goodSums[good] += site.goods[good];
-    } else ruinedSites += 1;
+    }
   }
   const meanGoods = Object.fromEntries(
     Object.entries(goodSums).map(([good, sum]) => [good, liveSites ? sum / liveSites : 0]),
   );
-  const fallen = [...world.civs.values()].filter((civ) => civ.fell !== undefined).length;
   const c = world.cells;
   const kinds = {};
   for (const region of world.regions.values()) kinds[region.kind] = (kinds[region.kind] ?? 0) + 1;
@@ -263,14 +260,9 @@ function stats(seed) {
     meanCapacity: world.sites.size ? capacitySum / world.sites.size : 0,
     claimed: pct(claimed, land),
     history: {
-      startPop,
-      peakPop,
-      finalPop,
+      ...metrics,
+      metrics,
       typeCount,
-      chain,
-      liveSites,
-      ruinedSites,
-      fallen,
       warsEarly,
       warsLate,
       peaceYears,
@@ -405,7 +397,7 @@ for (const r of rows) {
 }
 
 process.stdout.write(
-  '\nhistory: seed ms live ruined fell | pop start>peak>final | famine plague migr founded | races % | chain\n',
+  '\nhistory: seed ms live ruined fell | pop start>peak>final | famine disease migr founded epochs | races % | chain\n',
 );
 let lopsided = 0;
 for (const r of rows) {
@@ -413,10 +405,9 @@ for (const r of rows) {
   const total = Object.values(r.raceTotals).reduce((a, b) => a + b, 0);
   const shares = Object.entries(r.raceTotals).map(([id, v]) => [id, Math.round(pct(v, total))]);
   if (shares.some(([, share]) => share > 70)) lopsided += 1;
-  const n = (type) => String(h.typeCount[type] ?? 0).padStart(5);
   process.stdout.write(
-    `${r.seed.padEnd(4)} ${r.ms.history.toFixed(0).padStart(5)}ms ${String(h.liveSites).padStart(4)} ${String(h.ruinedSites).padStart(4)} ${String(h.fallen).padStart(2)} | ` +
-      `${h.startPop}>${h.peakPop}>${h.finalPop} | ${n('famine')}${n('plague')}${n('migration')}${n('site_founded')} | ` +
+    `${r.seed.padEnd(4)} ${r.ms.history.toFixed(0).padStart(5)}ms ${String(h.liveSites).padStart(4)} ${String(h.ruinedSites).padStart(4)} ${String(h.civsFell).padStart(2)} | ` +
+      `${h.startPop}>${h.peakPop}>${h.finalPop} | ${f(h.famine, 5)}${f(h.disease, 5)}${f(h.migration, 5)}${f(h.siteFounded, 5)}${f(h.epochs, 5)} | ` +
       `${shares.map(([id, share]) => `${id} ${share}`).join(' ')} | ${h.chain}\n`,
   );
 }
@@ -434,4 +425,23 @@ for (const r of rows) {
       `${String(n('battle')).padStart(3)} ${String(n('site_conquered')).padStart(3)} ${String(n('site_razed')).padStart(3)} | ` +
       `${['food', 'ore', 'timber', 'salt', 'luxury'].map((g) => h.meanGoods[g].toFixed(0)).join('/')} | ${h.totalWealth.toFixed(0)}\n`,
   );
+}
+
+const baselineSeeds = () =>
+  Object.fromEntries(rows.map((r) => [r.seed, baselineMetrics(r.history.metrics)]));
+if (args['write-baseline']) {
+  const file = {
+    command: `npm run drama -- --seeds ${seeds.length} --years ${years}`,
+    size,
+    years,
+    seeds: baselineSeeds(),
+  };
+  writeFileSync(args['write-baseline'], `${JSON.stringify(file, null, 2)}\n`);
+  process.stdout.write(`\nbaseline written to ${args['write-baseline']}\n`);
+}
+if (args.baseline) {
+  const base = JSON.parse(readFileSync(args.baseline, 'utf8'));
+  const tolerance = args.tolerance ? { rel: Number(args.tolerance) } : {};
+  const result = diffBaseline(base.seeds, baselineSeeds(), tolerance);
+  process.stdout.write(`\nbaseline diff (${args.baseline}):\n${formatDiff(result)}\n`);
 }

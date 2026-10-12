@@ -112,7 +112,7 @@ describe('suitability and placement', () => {
       cultures: [RIVER_FOLK],
       settlement: {
         ...RULES,
-        civs: { min: 1, max: 1, landCellsPerCiv: 1 },
+        civs: { min: 1, max: 1, landCellsPerCiv: 1, jitter: 0 },
         secondSiteChance: 0,
       },
     };

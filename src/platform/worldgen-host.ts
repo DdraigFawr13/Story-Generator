@@ -64,6 +64,7 @@ export function generateInWorker(
     settlement,
     history,
     creatures,
+    diseases,
   } = content;
   const request: WorkerRequest = {
     seed,
@@ -79,6 +80,7 @@ export function generateInWorker(
       settlement,
       history,
       creatures,
+      diseases,
     },
   };
   worker.postMessage(request);

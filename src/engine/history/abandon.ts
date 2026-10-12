@@ -77,7 +77,7 @@ export function runAbandonment(run: HistoryRun): void {
     evacuate(run, site);
     site.ruinedYear = run.year;
     const log = logOf(run, site.id);
-    const latest = Math.max(log.famine?.event ?? -1, log.plague?.event ?? -1);
+    const latest = Math.max(log.famine?.event ?? -1, log.disease?.event ?? -1);
     const event = run.emit({
       type: 'site_abandoned',
       place: site.cell,

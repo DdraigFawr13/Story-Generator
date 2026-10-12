@@ -4,7 +4,7 @@
 
 ## Status
 
-Approved 2026-10-11 with all four recommended fork answers. M2.1 done: race and culture sketches approved 2026-10-11 (Tylwyth, Dvergar; Gwerin, Skarn, Tarqai, Ushani, plus one culture each for Tylwyth and Dvergar, 6 in all). M2.2 done: 6 peoples on a default map, territory by travel cost from their sites (reach 150). M2.3 done: 250 yearly steps of harvest, demographics, famine, plague, migration and expansion in a `history` stage; with race fertility tuned (Tylwyth 0.6, Dvergar 0.75) humans end at 62–68% on S1–S5. Plan review 2026-10-12 ([doc](https://claude.ai/code/artifact/2b0ad371-743c-4abd-900a-11012026cb0d)) accepted in full: it adds goods per site to M2.4, inserts M2.4b (history balance, with importance scoring pulled forward), moves the legacy-app deletion to the Phase 2 close, and drafts the Phase 3 spec in parallel. M2.4 done: beasts and lairs, decade trade with goods per site, civ raids, border clashes, insults, and wars with conquest and razing. Next: M2.4b. Builds on Phase 1: fertility, wildness, resources, aura spots, regions (passes, fords, harbours) and the route graph.
+Approved 2026-10-11 with all four recommended fork answers. M2.1 done: race and culture sketches approved 2026-10-11 (Tylwyth, Dvergar; Gwerin, Skarn, Tarqai, Ushani, plus one culture each for Tylwyth and Dvergar, 6 in all). M2.2 done: 6 peoples on a default map, territory by travel cost from their sites (reach 150). M2.3 done: 250 yearly steps of harvest, demographics, famine, plague, migration and expansion in a `history` stage; with race fertility tuned (Tylwyth 0.6, Dvergar 0.75) humans end at 62–68% on S1–S5. Plan review 2026-10-12 ([doc](https://claude.ai/code/artifact/2b0ad371-743c-4abd-900a-11012026cb0d)) accepted in full: it adds goods per site to M2.4, inserts M2.4b (history balance, with importance scoring pulled forward), moves the legacy-app deletion to the Phase 2 close, and drafts the Phase 3 spec in parallel. M2.4 done: beasts and lairs, decade trade with goods per site, civ raids, border clashes, insults, and wars with conquest and razing. M2.4b done: climate epochs, site caps (41–102 live sites on 10 seeds), race balance by aura and ore with the sketch fertility restored, diseases as content, importance scores with yearly rollups, and the 10-seed baseline and sweep tools; ruins on every seed, civs fall on 6 of 10, and every race holds 8% or more on 4 of S1–S5. Next: M2.5. Builds on Phase 1: fertility, wildness, resources, aura spots, regions (passes, fords, harbours) and the route graph.
 
 ## Milestones
 
@@ -117,8 +117,8 @@ Not used: Supabase and Stripe (no backend or payments, R-16); OpenArt (art is Ph
 
 - [ ] 3 seeds each reveal several interlinked stories in 10 minutes of browsing, such as a famine leading to migration and a new town, or a dynasty feud leading to war.
 - [ ] Every chronicle line has a template, and every war, famine and migration has at least one cause link.
-- [ ] Race balance: every race survives to year 250 and holds at least 8% of population on 4 of 5 seeds, with the approved sketch fertility (humans may be the majority, R-08). Replaced the 70% human ceiling on 2026-10-12.
-- [ ] Some civs flourish and some fall; every seed has at least one ruin.
+- [x] Race balance: every race survives to year 250 and holds at least 8% of population on 4 of 5 seeds, with the approved sketch fertility (humans may be the majority, R-08). Replaced the 70% human ceiling on 2026-10-12.
+- [x] Some civs flourish and some fall; every seed has at least one ruin.
 - [ ] At most 3 legends alive at any time on every seed.
 - [ ] 250 years run in under 10 s on desktop without blocking the UI.
 

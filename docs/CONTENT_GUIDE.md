@@ -64,7 +64,7 @@ Skills, abilities and spells share one shape. Requirements are hard gates. Magic
 
 A race lists attribute means, magic tier weights per 100,000 births, lifespan, maturity, fertility, food need, preferred biomes and dependencies. If its magic or physical baseline beats humans, it must pay for it: low fertility, slow maturity or a dependency. See `src/content/races.ts`. Tylwyth live long and are magical but have few children and fade away from high-aura land; Dvergar are strong and enduring but hungry, slow to mature, weak at magic and tied to ore deposits.
 
-Tuning change (M2.3, 2026-10-11, open to revisit): fertility was raised from the approved sketches, Tylwyth 0.3 to 0.6 and Dvergar 0.5 to 0.75, because with the sketch numbers humans grew to 77–94% of all people over 250 years. With the new numbers humans end at 62–68% on S1–S5. Tylwyth still have fewer children than humans and mature twice as slowly.
+Tuning change (M2.4b): fertility is back at the approved sketches (Tylwyth 0.3, Dvergar 0.5). The M2.3 raise to 0.6 and 0.75 is replaced by mechanisms: a Tylwyth site's capacity scales with mean aura in reach (`settlement.capacity.raceAura`), and a Dvergar site with no ore or stone in reach loses most of its food (`raceWithout`).
 
 ## Culture
 
