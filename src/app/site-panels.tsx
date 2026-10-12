@@ -22,6 +22,7 @@ import {
   tierOfPower,
   yearText,
   type Activity,
+  type NeedDef,
   type ActiveSite,
   type BreakdownKind,
   type Building,
@@ -73,6 +74,8 @@ export interface SiteModel {
   /** Day watching began. */
   startDay: number;
   typeDefs: ReadonlyMap<string, EventTypeDef>;
+  /** Day of the last applied people snapshot (the UI's clock can run ahead of it); the view updates it. */
+  clock: { day: number };
 }
 
 export function createSiteModel(
@@ -108,7 +111,28 @@ export function createSiteModel(
     ruleWord,
     startDay: active.enteredDay,
     typeDefs: new Map(content.eventTypes.map((d) => [d.id, d])),
+    clock: { day: world.day },
   };
+}
+
+/** The block whose state is on screen and its day: the one just run, not the next. */
+export function shownBlock(m: SiteModel): { day: number; block: number; restDay: boolean } {
+  const { active, clock, content } = m;
+  const blocks = DAY_BLOCKS.length;
+  // Before anything has run (right after embarking) show the entry day itself, at night.
+  const fresh = clock.day === active.enteredDay && active.block === 0;
+  const block = fresh ? 0 : (active.block + blocks - 1) % blocks;
+  const day = fresh || active.block !== 0 ? clock.day : clock.day - 1;
+  const every = content.life.restDayEvery;
+  return { day, block, restDay: day % every === every - 1 };
+}
+
+/** "Idle: no work for 3 days": the why of a low need, counted from the shown snapshot's day. */
+function needWhy(need: NeedDef, since: number | undefined, now: number): string {
+  const head = `${need.lowWord}: ${need.missing}`;
+  if (since === undefined) return head;
+  const days = Math.max(0, now - since);
+  return days === 0 ? `${head} today` : `${head} for ${days} ${days === 1 ? 'day' : 'days'}`;
 }
 
 const cap = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
@@ -552,6 +576,7 @@ const signed = (n: number) => `${n < 0 ? '−' : '+'}${Math.abs(Math.round(n))}`
 /** "Working in a field", "Sleeping at home": the activity and the place of the last block. */
 function doingText(m: SiteModel, p: Person, homeId: Id | null): string {
   const detail = p.detail;
+  if (detail?.with !== undefined) return `With ${m.names.get(detail.with) ?? 'a carer'}`;
   if (!detail?.activity) return 'Not yet known';
   const verb = ACTIVITY_VERB[detail.activity];
   if (detail.activity === 'wander') return verb;
@@ -570,6 +595,7 @@ function LifePage({ m, p }: { m: SiteModel; p: Person }) {
   const detail = p.detail;
   if (!detail) return null;
   const { content, world } = m;
+  const now = m.clock.day;
   const traits = p.traits.flatMap((id) => content.traits.find((t) => t.id === id) ?? []);
   const needs = content.needs.filter((n) => detail.needs[n.id] !== undefined);
   // The display of a content value: the stress at which this person's breakdown comes.
@@ -584,9 +610,11 @@ function LifePage({ m, p }: { m: SiteModel; p: Person }) {
       if (Math.round(part.value) === 0) return [];
       let text: string | undefined;
       if (part.kind === 'need') {
-        text = content.needs.find((n) => n.id === part.id)?.lowWord;
+        const need = content.needs.find((n) => n.id === part.id);
+        text = need && needWhy(need, detail.lastMet?.[need.id], now);
       } else if (part.kind === 'trait') {
-        text = content.traits.find((t) => t.id === part.id)?.name.toLowerCase();
+        const trait = content.traits.find((t) => t.id === part.id);
+        text = trait && cap(trait.name);
       } else {
         const memory = content.memories.find((d) => d.id === part.id);
         text = memory && fillTemplate(memory.text, { about: nameOf(part.about) });
@@ -599,12 +627,14 @@ function LifePage({ m, p }: { m: SiteModel; p: Person }) {
         },
       ];
     });
-  const ago = detail.lastAte === undefined ? undefined : world.day - detail.lastAte;
+  const foodNeed = content.needs.find((n) => n.id === 'food');
+  const lastMeal = detail.lastMet?.food ?? detail.lastAte;
+  const ago = lastMeal === undefined ? undefined : now - lastMeal;
   const foodWhy =
-    ago === undefined
+    ago === undefined || !foodNeed
       ? null
       : ago >= 2
-        ? `Hungry: no meal for ${ago} days`
+        ? needWhy(foodNeed, lastMeal, now)
         : ago === 1
           ? 'Ate yesterday'
           : 'Ate today';
@@ -1195,7 +1225,7 @@ export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
           </Fact>
         )}
         <Fact term="Today">
-          {today} °C · {cap(DAY_BLOCKS[active.block] ?? 'morning')}
+          {today} °C · {cap(DAY_BLOCKS[shownBlock(m).block] ?? 'morning')}
         </Fact>
       </Facts>
       <div className="sect">
@@ -1284,7 +1314,9 @@ export function PeoplePane({ m, a, sel, ui }: PanelProps) {
   };
   const followed = active.residents.length;
   const activityOf = (id: Id) => {
-    const activity = m.world.people.get(id)?.detail?.activity;
+    const detail = m.world.people.get(id)?.detail;
+    if (detail?.with !== undefined) return ` · With ${m.names.get(detail.with) ?? 'a carer'}`;
+    const activity = detail?.activity;
     return activity ? ` · ${ACTIVITY_SHORT[activity]}` : '';
   };
   const matches = active.residents.filter(match);
