@@ -19,12 +19,15 @@ export type SiteRequest =
   | { type: 'embark'; world: WorldState; content: SiteContent; siteId: Id }
   | { type: 'found'; world: WorldState; content: SiteContent; cell: number; name: string | null }
   | { type: 'speed'; daysPerSecond: SiteSpeed }
+  /** Runs this many days at once (restoring a link), paused. */
+  | { type: 'run'; days: number }
   | { type: 'leave' };
 
 export type SiteReply =
   | { type: 'embarked'; world: WorldState }
   /** `rate` is the measured days per second over the last second. */
   | { type: 'tick'; day: number; events: SimEvent[]; rate: number }
+  | { type: 'ran'; day: number; events: SimEvent[] }
   | { type: 'left'; world: WorldState }
   | { type: 'error'; message: string };
 
@@ -61,7 +64,7 @@ function slice(): void {
   owed -= days;
   const events: SimEvent[] = [];
   try {
-    for (let i = 0; i < days; i += 1) events.push(...stepSite(world, content));
+    for (let i = 0; i < days; i += 1) for (const e of stepSite(world, content)) events.push(e);
   } catch (problem) {
     scope.postMessage({ type: 'error', message: (problem as Error).message });
     return;
@@ -103,7 +106,15 @@ self.addEventListener('message', (event: MessageEvent<SiteRequest>) => {
     } else if (request.type === 'speed') {
       speed = request.daysPerSecond;
       restart();
-    } else if (world && content) {
+    } else if (request.type === 'run') {
+      if (!world || !content) throw new Error('No site is being watched.');
+      const events: SimEvent[] = [];
+      for (let i = 0; i < request.days; i += 1) {
+        for (const e of stepSite(world, content)) events.push(e);
+      }
+      scope.postMessage({ type: 'ran', day: world.day, events });
+    } else {
+      if (!world || !content) throw new Error('No site is being watched.');
       stop();
       speed = 0;
       leaveSite(world, content);

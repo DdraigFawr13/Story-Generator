@@ -189,8 +189,10 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
     const bands = ageBands(race);
     for (let n = 0; n < g.count; n += 1) {
       if (g.band === 'child') {
+        // Notables keep the families history gave them, so only promoted couples take children.
         const mothers = [...residents.values()].filter(
           (r) =>
+            !r.notable &&
             r.person.sex === 'f' &&
             r.person.raceId === g.raceId &&
             r.person.cultureId === g.cultureId &&

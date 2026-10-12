@@ -4,7 +4,7 @@
 
 ## Status
 
-Approved 2026-10-12 with all four recommended fork answers and no zoom-in spike. Starts when Phase 2 closes. Written after the plan review of 2026-10-12, whose answers this spec assumes: Phase 2 delivers a goods vector per site (M2.4), importance scores and yearly rollups (pulled forward into M2.4–M2.5), diseases as content, save compression, and deletes the legacy app at its close, so `/` already shows the new app. No zoom-in spike runs before M2.5; M3.1 is the first zoom-in and carries the performance check the spike would have done.
+Approved 2026-10-12 with all four recommended fork answers and no zoom-in spike. **M3.1 built** (2026-10-12): the site-view mock-up was reviewed and approved (revision 2, [artifact](https://claude.ai/artifact/5TUrhLivRW5Rrr7KXx3wuQ)); the local map spans the site cell plus half of each neighbour (48 tiles per cell) so an adjacent river or coast shows, and the no-op tick runs far above budget (millions of days per second for 150 residents in Node). Left for M3.2, when ticks start changing people: the main thread's copy of the site only refreshes on embark and leave, and browser Back after "Open in Legends" can skip the site entry. Starts when Phase 2 closes. Written after the plan review of 2026-10-12, whose answers this spec assumes: Phase 2 delivers a goods vector per site (M2.4), importance scores and yearly rollups (pulled forward into M2.4–M2.5), diseases as content, save compression, and deletes the legacy app at its close, so `/` already shows the new app. No zoom-in spike runs before M2.5; M3.1 is the first zoom-in and carries the performance check the spike would have done.
 
 ## Milestones
 

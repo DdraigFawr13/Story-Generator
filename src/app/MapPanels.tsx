@@ -21,6 +21,8 @@ import {
   type Site,
   type WorldCells,
 } from '../engine';
+import { OutpostCard, WatchCard } from './EmbarkCards';
+import type { SiteActions } from './legends-ctx';
 import { formatReadout, rampGradient, rampPosition, rampTicks } from './map-view';
 import { explainCell } from './why';
 
@@ -430,6 +432,7 @@ export function Inspector({
   people,
   dynasties,
   year,
+  siteActions,
   onShow,
   onClose,
 }: {
@@ -457,6 +460,8 @@ export function Inspector({
   people: ReadonlyMap<Id, Person>;
   dynasties: ReadonlyMap<Id, Dynasty>;
   year: number;
+  /** Watching a site and founding an outpost (M3.1). */
+  siteActions: SiteActions;
   onShow: (layerId: string) => void;
   onClose: () => void;
 }) {
@@ -534,6 +539,16 @@ export function Inspector({
           ruler={ruler}
           notables={notables}
         />
+      )}
+      {site?.cell === i && site.ruinedYear === undefined && (
+        <div className="site-actions">
+          <WatchCard siteId={site.id} actions={siteActions} />
+        </div>
+      )}
+      {site?.cell !== i && water !== 3 && (
+        <div className="site-actions">
+          <OutpostCard key={i} cell={i} actions={siteActions} />
+        </div>
       )}
       {lair && <LairBlock beast={lair} def={lairDef} num={num} />}
       {!site && landCiv && (

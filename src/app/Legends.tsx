@@ -22,12 +22,14 @@ import {
   cap,
   count,
   plainClick,
+  refName,
   spanText,
   useLegends,
   type CategoryId,
   type LegendNav,
   type LegendsCtx,
   type PageRef,
+  type SiteActions,
   type SiteState,
 } from './legends-ctx';
 
@@ -57,6 +59,7 @@ interface Props {
   ) => void;
   /** Link target for a page, or for the list when null. */
   hrefOf: (ref: PageRef | null) => string;
+  siteActions: SiteActions;
   onShow: (cell: number) => void;
   onOpenOnMap: (cell: number | null, year: number) => void;
   /** Switch to the map tab (narrow layout). */
@@ -189,26 +192,12 @@ export function Legends(props: Props) {
   };
   const raceName = (id: string) => content.races.find((race) => race.id === id)?.name ?? id;
   const nameOf = (ref: PageRef): string => {
-    switch (ref.kind) {
-      case 'civ':
-        return world.civs.get(ref.id)?.name ?? '?';
-      case 'site':
-        return world.sites.get(ref.id)?.name ?? '?';
-      case 'person':
-        return world.people.get(ref.id)?.name ?? '?';
-      case 'beast':
-        return world.creatures.get(ref.id)?.name ?? '?';
-      case 'item':
-        return world.items.get(ref.id)?.name ?? '?';
-      case 'dynasty':
-        return world.dynasties.get(ref.id)?.name ?? '?';
-      case 'race':
-        return raceName(ref.id);
-      case 'event': {
-        const event = index.event(ref.id);
-        return event ? titleOf(event) : '?';
-      }
+    if (ref.kind === 'race') return raceName(ref.id);
+    if (ref.kind === 'event') {
+      const event = index.event(ref.id);
+      return event ? titleOf(event) : '?';
     }
+    return refName(world, ref);
   };
 
   const ctx: LegendsCtx = {
@@ -222,6 +211,7 @@ export function Legends(props: Props) {
     sitesAt: props.sitesAt,
     open: (ref) => go({ open: ref }),
     hrefOf,
+    siteActions: props.siteActions,
     onShow: props.onShow,
     onOpenOnMap: props.onOpenOnMap,
     nameOf,

@@ -2,6 +2,7 @@
 // generate → legends → embark → play → save → reload → continue.
 import { expect, test, type Page } from '@playwright/test';
 import smokeDigest from '../fixtures/smoke-cells-digest.json' with { type: 'json' };
+import smokeMap from '../fixtures/smoke-localmap-digest.json' with { type: 'json' };
 
 function collectErrors(page: Page): string[] {
   const errors: string[] = [];
@@ -140,5 +141,51 @@ test('old /?next links still open the world map', async ({ page }) => {
   ).not.toHaveText('');
   // Links the app writes no longer carry the flag.
   await expect(page).not.toHaveURL(/[?&]next/);
+  expect(errors).toEqual([]);
+});
+
+test('a site can be watched: embark, play, inspect a person and return to the map', async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+  await page.goto(`/?seed=${smokeMap.seed}&size=${smokeMap.size}`);
+  const map = page.getByTestId('world-map');
+  await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
+
+  // The first standing site in the Sites list: open its page, ask to watch it, confirm.
+  const legends = page.getByRole('region', { name: 'Legends' });
+  await legends.getByRole('button', { name: /^Sites/ }).click();
+  await legends.getByLabel(/standing in Year/).check();
+  await legends.locator('.lg-list li a').first().click();
+  await expect(page).toHaveURL(new RegExp(`open=site:${smokeMap.site}\\b`));
+  await legends.getByRole('button', { name: 'Watch this site' }).click();
+  await legends.getByRole('button', { name: 'Start watching' }).click();
+
+  // The local map matches the committed hash, so Chromium and Node agree.
+  const canvas = page.getByTestId('site-canvas');
+  await expect(canvas).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
+  await expect(canvas).toHaveAttribute('data-localmap-digest', smokeMap.digest);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Story Generator — ');
+  await expect(page).toHaveURL(new RegExp(`site=${smokeMap.site}&day=0`));
+
+  // Four days a second: the date moves.
+  const date = page.getByTestId('site-date');
+  const start = await date.textContent();
+  await page.getByRole('button', { name: '4×' }).click();
+  await expect(date).not.toHaveText(start!, { timeout: 10_000 });
+  await page.getByRole('button', { name: 'Pause' }).click();
+
+  // People: the first person's name heads the Inspect page.
+  await page.getByRole('tab', { name: /^People/ }).click();
+  const first = page.locator('.sv-root .pane .pp').first();
+  const name = await first.getAttribute('data-name');
+  await first.click();
+  await expect(page.getByRole('tab', { name: 'Inspect' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.sv-root .pane h3')).toHaveText(name!);
+
+  // The breadcrumb returns to the world map.
+  await page.getByRole('button', { name: 'World map' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('world map');
+  await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
   expect(errors).toEqual([]);
 });

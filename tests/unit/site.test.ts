@@ -21,6 +21,8 @@ import {
   type WorldState,
 } from '../../src/engine';
 
+import smokeMap from '../fixtures/smoke-localmap-digest.json';
+
 const C = DEFAULT_CONTENT;
 /** A small cap makes the biggest 64x64 site a "big" one without a huge world. */
 const SMALL_CAP = { ...C, site: { ...C.site, followCap: 30 } };
@@ -231,5 +233,17 @@ describe('saves and speed', () => {
       `site tick: ${active.residents.length} residents, 336 days in ${ms.toFixed(1)} ms (${(336000 / Math.max(ms, 0.01)).toFixed(0)} days/s)`,
     );
     expect(ms).toBeLessThan(1000);
+  });
+});
+
+describe('smoke local map', () => {
+  it('matches the committed digest of the first standing site of seed SMOKE at 128 (the browser smoke compares the same)', () => {
+    const world = generateWorld(smokeMap.seed, { width: smokeMap.size, height: smokeMap.size }, C);
+    // The Sites list in Legends sorts by peak population, then id; the smoke opens the first standing one.
+    const first = [...world.sites.values()]
+      .filter((s) => s.ruinedYear === undefined)
+      .sort((a, b) => b.peakPop - a.peakPop || a.id - b.id)[0]!;
+    expect(first.id).toBe(smokeMap.site);
+    expect(localMapDigest(embark(world, C, first.id).map)).toBe(smokeMap.digest);
   });
 });

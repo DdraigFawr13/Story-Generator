@@ -82,3 +82,6 @@ export const SITE: SiteRules = {
     arrivals: ['outpost_founded'],
   },
 };
+
+/** Food one person eats in a day, until M3.3 gives each person real needs. Only the Site panel's "days of food left" reads it. */
+export const FOOD_PER_PERSON_DAY = 0.036;

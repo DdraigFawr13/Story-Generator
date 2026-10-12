@@ -16,6 +16,8 @@ export interface SiteHost {
     name: string | null,
   ): Promise<WorldState>;
   setSpeed(daysPerSecond: SiteSpeed): void;
+  /** Runs `days` days at once and resolves with the new day and the events they emitted. */
+  run(days: number): Promise<{ day: number; events: SimEvent[] }>;
   /** Demotes the site; resolves with the world as it stands, activeSite null. */
   leave(): Promise<WorldState>;
   /** Stops the worker without demoting. */
@@ -37,7 +39,7 @@ export function createSiteHost(handlers: SiteHostHandlers): SiteHost {
   let worker: Worker | null = null;
   let waiting: {
     reply: SiteReply['type'];
-    resolve: (world: WorldState) => void;
+    resolve: (reply: SiteReply) => void;
     reject: (error: Error) => void;
   } | null = null;
 
@@ -52,7 +54,7 @@ export function createSiteHost(handlers: SiteHostHandlers): SiteHost {
         waiting?.reject(new Error(reply.message));
         waiting = null;
       } else if (waiting && waiting.reply === reply.type) {
-        waiting.resolve(reply.world);
+        waiting.resolve(reply);
         waiting = null;
       }
     };
@@ -65,12 +67,18 @@ export function createSiteHost(handlers: SiteHostHandlers): SiteHost {
     worker = next;
     return next;
   };
-  const request = (target: Worker, message: SiteRequest, reply: SiteReply['type']) =>
-    new Promise<WorldState>((resolve, reject) => {
+  const request = <T>(
+    target: Worker,
+    message: SiteRequest,
+    reply: SiteReply['type'],
+    pick: (reply: SiteReply) => T,
+  ) =>
+    new Promise<T>((resolve, reject) => {
       waiting?.reject(new Error('cancelled'));
-      waiting = { reply, resolve, reject };
+      waiting = { reply, resolve: (got) => resolve(pick(got)), reject };
       target.postMessage(message);
     });
+  const worldOf = (reply: SiteReply) => (reply as { world: WorldState }).world;
 
   return {
     embark: (world, content, siteId) =>
@@ -78,18 +86,27 @@ export function createSiteHost(handlers: SiteHostHandlers): SiteHost {
         start(),
         { type: 'embark', world, content: siteContentOf(content), siteId },
         'embarked',
+        worldOf,
       ),
     found: (world, content, cell, name) =>
       request(
         start(),
         { type: 'found', world, content: siteContentOf(content), cell, name },
         'embarked',
+        worldOf,
       ),
     setSpeed: (daysPerSecond) =>
       worker?.postMessage({ type: 'speed', daysPerSecond } satisfies SiteRequest),
+    run(days) {
+      if (!worker) return Promise.reject(new Error('No site is being watched.'));
+      return request(worker, { type: 'run', days }, 'ran', (reply) => {
+        const { day, events } = reply as { day: number; events: SimEvent[] };
+        return { day, events };
+      });
+    },
     leave() {
       if (!worker) return Promise.reject(new Error('No site is being watched.'));
-      return request(worker, { type: 'leave' }, 'left');
+      return request(worker, { type: 'leave' }, 'left', worldOf);
     },
     dispose() {
       worker?.terminate();
