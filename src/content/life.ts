@@ -14,6 +14,7 @@ export const NEEDS: NeedDef[] = [
     lowAt: 30,
     moodAtZero: -30,
     lowWord: 'Hungry',
+    missing: 'no meal',
   },
   {
     id: 'water',
@@ -35,6 +36,7 @@ export const NEEDS: NeedDef[] = [
     lowAt: 30,
     moodAtZero: -30,
     lowWord: 'Thirsty',
+    missing: 'no drink',
   },
   {
     id: 'rest',
@@ -46,6 +48,7 @@ export const NEEDS: NeedDef[] = [
     lowAt: 30,
     moodAtZero: -20,
     lowWord: 'Tired',
+    missing: 'no proper sleep',
   },
   {
     id: 'warmth',
@@ -58,6 +61,7 @@ export const NEEDS: NeedDef[] = [
     lowAt: 30,
     moodAtZero: -25,
     lowWord: 'Cold',
+    missing: 'no warm hearth',
   },
   {
     id: 'safety',
@@ -69,6 +73,7 @@ export const NEEDS: NeedDef[] = [
     lowAt: 30,
     moodAtZero: -15,
     lowWord: 'Uneasy',
+    missing: 'no safe night',
   },
   {
     id: 'companionship',
@@ -80,6 +85,7 @@ export const NEEDS: NeedDef[] = [
     lowAt: 30,
     moodAtZero: -15,
     lowWord: 'Lonely',
+    missing: 'no company',
   },
   {
     id: 'purpose',
@@ -90,6 +96,7 @@ export const NEEDS: NeedDef[] = [
     lowAt: 30,
     moodAtZero: -12,
     lowWord: 'Idle',
+    missing: 'no work',
   },
   {
     id: 'faith',
@@ -100,6 +107,7 @@ export const NEEDS: NeedDef[] = [
     lowAt: 30,
     moodAtZero: -10,
     lowWord: 'Faithless',
+    missing: 'no worship',
     // Cultures that weigh faith at 3 or more (of 10) keep the need.
     minCultureFaith: 3,
   },
@@ -227,6 +235,8 @@ export const LIFE: LifeRules = {
     adult: { night: 'sleep', morning: 'work', afternoon: 'work', evening: 'eat' },
     elder: { night: 'sleep', morning: 'work', afternoon: 'socialise', evening: 'eat' },
   },
+  // Infants and toddlers (under 3) are carried along by a household adult, mother first.
+  carriedUnder: 3,
   // One day in seven is a rest day.
   restDayEvery: 7,
   restDayAfternoon: { faithful: 'worship', others: 'socialise' },

@@ -63,6 +63,10 @@ export interface PersonDetail {
   moodParts?: MoodPart[];
   /** Day of the last meal eaten. */
   lastAte?: number;
+  /** Need id → last day something restored it, for "no work for 3 days" lines. */
+  lastMet?: Record<string, number>;
+  /** A small child's carer this block: they go where the carer goes. */
+  with?: Id;
   /** A running breakdown: despair and wandering last days, tantrum and theft one block. */
   breakdown?: { kind: BreakdownKind; untilDay: number; eventId: Id };
 }

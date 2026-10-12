@@ -261,6 +261,8 @@ export interface NeedDef {
   moodAtZero: number;
   /** "why" word when low, e.g. "Hungry". */
   lowWord: string;
+  /** What has been missing, for "why" lines: "Idle: no work for 3 days". */
+  missing: string;
   /** Only people whose culture values faith at least this much have the need. */
   minCultureFaith?: number;
 }
@@ -297,6 +299,8 @@ export interface MemoryDef {
 export interface LifeRules {
   /** Activity per age band and block. */
   schedule: Record<'child' | 'adult' | 'elder', Record<DayBlock, Activity>>;
+  /** Children younger than this (years) go where a household adult goes, mother first. */
+  carriedUnder: number;
   /** Every this many days is a rest day... */
   restDayEvery: number;
   /** ...whose afternoon is worship (for people with a faith need) or socialising. */
