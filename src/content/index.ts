@@ -1,6 +1,7 @@
 // The default content bundle. Add new content modules here.
 import type { ContentBundle } from '../engine';
 import { abilities, schools } from './abilities';
+import { BIOGRAPHIES } from './biographies';
 import { BIOMES, BIOME_RULES } from './biomes';
 import { creatures } from './creatures';
 import { cultures } from './cultures';
@@ -30,8 +31,10 @@ export const DEFAULT_CONTENT: ContentBundle = {
   creatures,
   diseases,
   notables: NOTABLES,
+  biographies: BIOGRAPHIES,
 };
 
+export * from './biographies';
 export * from './biomes';
 export * from './creatures';
 export * from './cultures';

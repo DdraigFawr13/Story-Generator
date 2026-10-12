@@ -7,6 +7,15 @@ import { CULTURE_VALUES, MAX_CREATURE_DANGER } from './content-types';
 import { ATTRIBUTE_KEYS, GOODS, REGION_KINDS } from './types';
 import { BIRTH_TIER_IDS, TIERS, tierOfPower } from '../people/tiers';
 
+/** Every event type needs this many template variants (§2B). */
+const MIN_TEMPLATES = 3;
+/** Placeholders the narrator fills for every event. */
+const ALWAYS_KEYS = ['date', 'year', 'actor', 'actor2', 'actor3'];
+
+function templateKeys(template: string | undefined): string[] {
+  return [...(template ?? '').matchAll(/\{(\w+)\}/g)].map((m) => m[1]!);
+}
+
 export function validateContent(content: ContentBundle): string[] {
   const problems: string[] = [];
   const unique = (kind: string, ids: string[]) => {
@@ -108,6 +117,21 @@ export function validateContent(content: ContentBundle): string[] {
 
   for (const event of content.eventTypes) {
     if (event.templates.length === 0) problems.push(`Event type ${event.id} has no templates.`);
+    else if (event.templates.length < MIN_TEMPLATES)
+      problems.push(`Event type ${event.id} has under ${MIN_TEMPLATES} templates.`);
+    // Variants may print only keys the first one prints (plus the always-present ones), so every
+    // variant fits the same event data.
+    const allowed = new Set([
+      ...ALWAYS_KEYS,
+      ...(event.dataKeys ?? []),
+      ...templateKeys(event.templates[0]),
+    ]);
+    event.templates.forEach((template, index) => {
+      for (const key of templateKeys(template)) {
+        if (!allowed.has(key))
+          problems.push(`Event type ${event.id} template ${index + 1} uses unknown key {${key}}.`);
+      }
+    });
   }
   return problems;
 }

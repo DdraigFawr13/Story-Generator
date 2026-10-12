@@ -397,7 +397,7 @@ for (const r of rows) {
 }
 
 process.stdout.write(
-  '\nhistory: seed ms live ruined fell | pop start>peak>final | famine disease migr founded epochs | races % | chain\n',
+  '\nhistory: seed ms live ruined fell | pop start>peak>final | famine disease migr founded epochs | races % | chain uncaused\n',
 );
 let lopsided = 0;
 for (const r of rows) {
@@ -408,7 +408,7 @@ for (const r of rows) {
   process.stdout.write(
     `${r.seed.padEnd(4)} ${r.ms.history.toFixed(0).padStart(5)}ms ${String(h.liveSites).padStart(4)} ${String(h.ruinedSites).padStart(4)} ${String(h.civsFell).padStart(2)} | ` +
       `${h.startPop}>${h.peakPop}>${h.finalPop} | ${f(h.famine, 5)}${f(h.disease, 5)}${f(h.migration, 5)}${f(h.siteFounded, 5)}${f(h.epochs, 5)} | ` +
-      `${shares.map(([id, share]) => `${id} ${share}`).join(' ')} | ${h.chain}\n`,
+      `${shares.map(([id, share]) => `${id} ${share}`).join(' ')} | ${h.chain} ${h.uncaused}\n`,
   );
 }
 process.stdout.write(`races > 70%: ${lopsided} of ${rows.length} seeds\n`);

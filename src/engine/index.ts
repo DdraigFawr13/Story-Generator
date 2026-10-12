@@ -12,6 +12,7 @@ export * from './people/combat-scale';
 export * from './people/names';
 export * from './people/tiers';
 export * from './narrative/render';
+export * from './narrative/biography';
 export * from './systems';
 export * from './worldgen';
 export * from './worldgen/noise';

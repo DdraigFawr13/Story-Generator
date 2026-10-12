@@ -74,7 +74,8 @@ export function runYearSummary(run: HistoryRun): void {
   const data: SimEvent['data'] = { year: run.year, summary: '' };
   const parts: string[] = [];
   for (const [type, n] of counts) {
-    parts.push(`${n} ${type.replace(/_/g, ' ')}`);
+    const label = run.content.eventTypes.find((t) => t.id === type)?.rollup;
+    parts.push(`${n} ${label ? (n === 1 ? label[0] : label[1]) : type.replace(/_/g, ' ')}`);
     data[`n_${type}`] = n;
   }
   data.summary = parts.join(', ');

@@ -72,6 +72,10 @@ export function historyMetrics(
     depth.set(e.id, d);
     chain = Math.max(chain, d);
   }
+  // Wars, famines and migrations should always have a cause; a kept one without is a gap.
+  const uncaused = world.events.filter(
+    (e) => ['war_declared', 'famine', 'migration'].includes(e.type) && e.causes.length === 0,
+  ).length;
   let liveSites = 0;
   let ruinedSites = 0;
   let finalPop = 0;
@@ -106,6 +110,7 @@ export function historyMetrics(
     epochs: c('dry_years_began') + c('cold_years_began'),
     ruinsAny: ruinedSites > 0 ? 1 : 0,
     chain,
+    uncaused,
     events: world.events.length,
     ...notableMetrics(world, n, DAYS_PER_YEAR),
   };
