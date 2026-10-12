@@ -4,7 +4,7 @@
 
 ## Status
 
-Approved 2026-10-11 with all four recommended fork answers. M2.1 done: race and culture sketches approved 2026-10-11 (Tylwyth, Dvergar; Gwerin, Skarn, Tarqai, Ushani, plus one culture each for Tylwyth and Dvergar, 6 in all). M2.2 done: 6 peoples on a default map, territory by travel cost from their sites (reach 150). M2.3 done: 250 yearly steps of harvest, demographics, famine, plague, migration and expansion in a `history` stage; with race fertility tuned (Tylwyth 0.6, Dvergar 0.75) humans end at 62–68% on S1–S5. Plan review 2026-10-12 ([doc](https://claude.ai/code/artifact/2b0ad371-743c-4abd-900a-11012026cb0d)) accepted in full: it adds goods per site to M2.4, pulls importance scoring forward, inserts M2.4b (history balance), moves the legacy-app deletion to the Phase 2 close, and drafts the Phase 3 spec in parallel. Next: M2.4, then M2.4b. Builds on Phase 1: fertility, wildness, resources, aura spots, regions (passes, fords, harbours) and the route graph.
+Approved 2026-10-11 with all four recommended fork answers. M2.1 done: race and culture sketches approved 2026-10-11 (Tylwyth, Dvergar; Gwerin, Skarn, Tarqai, Ushani, plus one culture each for Tylwyth and Dvergar, 6 in all). M2.2 done: 6 peoples on a default map, territory by travel cost from their sites (reach 150). M2.3 done: 250 yearly steps of harvest, demographics, famine, plague, migration and expansion in a `history` stage; with race fertility tuned (Tylwyth 0.6, Dvergar 0.75) humans end at 62–68% on S1–S5. Plan review 2026-10-12 ([doc](https://claude.ai/code/artifact/2b0ad371-743c-4abd-900a-11012026cb0d)) accepted in full: it adds goods per site to M2.4, inserts M2.4b (history balance, with importance scoring pulled forward), moves the legacy-app deletion to the Phase 2 close, and drafts the Phase 3 spec in parallel. Next: M2.4, then M2.4b. Builds on Phase 1: fertility, wildness, resources, aura spots, regions (passes, fords, harbours) and the route graph.
 
 ## Milestones
 
@@ -31,13 +31,13 @@ Approved 2026-10-11 with all four recommended fork answers. M2.1 done: race and 
 - `content/creatures.ts`: wolves, bears, great beasts and a few rare legendary beasts, each with a biome, a wildness threshold and a danger. Lairs spawn in wild cells and raid sites within reach; a hero can slay them.
 - Goods per site (review item 5): `Site.stores` becomes `goods: { food, ore, timber, salt, luxury }`, filled by the harvest and by deposits, features and biome in reach. Thin trade: once a decade each site swaps surplus for shortage with its route neighbours; salt, ore and luxury matter. Roads gain a `level` from trade and migration traffic that the Roads overlay shows (item 18).
 - Thin war: grievance (raids, border clashes, insults between notables) plus opportunity (strength ratio, route distance, passes and fords in between) over a threshold. A battle resolves on strength plus randomness under R-24. Conquest moves a site to the winner; razing makes a ruin.
-- Importance and rollups, pulled forward from M2.6 (item 4): `importance = base(type) + fame(actors) + scale + novelty`; trivial events roll up into yearly aggregates so the event log stays readable before notables arrive.
 - Tests: no war without a grievance event in its causes; ruins persist; some seeds have no war in a given century.
 
-**M2.4b History balance** (~700 lines; review items 1, 2, 3, 6, 17)
+**M2.4b History balance** (~800 lines; review items 1, 2, 3, 4, 6, 17)
 - Climate epochs: one slow per-region value (own RNG stream, safe math) shifts drought and harsh-winter risk for 5–20 years at a time; `dry_years_began` and `dry_years_ended` events are the causes of the famines inside them. Content: epoch length, strength, share of the map.
 - Site count and variety: expansion needs a candidate cell with at least a village's capacity after foreign-biome penalties, spacing of about 5 cells and a per-civ cooldown; mines only where the civ lacks that deposit, temples once per civ per aura spot; civ count takes a seeded jitter of ±2. Target: 40–120 live sites and 3–8 civs after 250 years.
 - Race balance by mechanism: a Tylwyth site's capacity scales with mean aura in reach; a Dvergar site with no ore in reach shrinks; race fertility returns to the approved sketches (Tylwyth 0.3, Dvergar 0.5). `bad_harvest` is emitted only when stores run short; other bad years are counted in the site log.
+- Importance and rollups, pulled forward from M2.6 (item 4): `importance = base(type) + fame(actors) + scale + novelty`; trivial events roll up into yearly aggregates so the event log stays readable before notables arrive.
 - Diseases as content: `content/diseases.ts` with plague, fever and pox in the Phase 3 shape (`infectivity, incubation, duration, severity, ageRisk, season?`), replacing the single plague rule.
 - Tools: `tests/baseline/drama-10-seeds.json` and a drama diff against it (a tool, not a gate); `npm run sweep -- --rule <name> --values a,b,c --seeds 5` prints one line per value.
 - Tests: an epoch raises famine frequency inside it; no site founded within spacing; a Tylwyth site away from aura shrinks; the baseline diff reports a changed number.
@@ -50,7 +50,7 @@ Approved 2026-10-11 with all four recommended fork answers. M2.1 done: race and 
 - Tests: family links are symmetric; the dead stay dead; legend cap holds over 250 years.
 
 **M2.6 Notability and biographies** (~600 lines)
-- Historian templates for every event type, with 3–5 variants per common type drafted by a Haiku pass as content and reviewed by the orchestrator (item 8; no runtime key, R-16); biography assembly per notable, site and civ. Importance and rollups landed in M2.4.
+- Historian templates for every event type, with 3–5 variants per common type drafted by a Haiku pass as content and reviewed by the orchestrator (item 8; no runtime key, R-16); biography assembly per notable, site and civ. Importance and rollups landed in M2.4b.
 - Drama check: `npm run drama -- --seeds 5 --years 250` adds history time, civ and site counts, peak and final population, wars, famines, plagues, ruins, notables, legends alive, race shares and the longest cause chain.
 
 **M2.7 Legends browser and timeline** (~1,000 lines; mock-up first, fork 4)
