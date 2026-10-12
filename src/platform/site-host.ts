@@ -1,0 +1,118 @@
+// Main-thread side of the site worker (M3.1). One watched site at a time: embarking again
+// replaces the worker. The worker owns the running world; the main thread mirrors it from the
+// whole world sent on embark and leave, and from the events in each tick.
+
+import type { Id, SimEvent, SiteContent, WorldState } from '../engine';
+import type { SiteReply, SiteRequest, SiteSpeed } from './site-worker';
+
+export interface SiteHost {
+  /** Resolves with the world once its activeSite is set. */
+  embark(world: WorldState, content: SiteContent, siteId: Id): Promise<WorldState>;
+  /** Founds an outpost at `cell` (name null = a default one) and embarks on it. */
+  found(
+    world: WorldState,
+    content: SiteContent,
+    cell: number,
+    name: string | null,
+  ): Promise<WorldState>;
+  setSpeed(daysPerSecond: SiteSpeed): void;
+  /** Runs `days` days at once and resolves with the new day and the events they emitted. */
+  run(days: number): Promise<{ day: number; events: SimEvent[] }>;
+  /** Demotes the site; resolves with the world as it stands, activeSite null. */
+  leave(): Promise<WorldState>;
+  /** Stops the worker without demoting. */
+  dispose(): void;
+}
+
+export interface SiteHostHandlers {
+  onTick(day: number, events: SimEvent[], rate: number): void;
+  onError?(message: string): void;
+}
+
+/** Only the plain-data tables cross over: a full content bundle holds functions, which cannot be cloned. */
+export function siteContentOf(content: SiteContent): SiteContent {
+  const { biomes, resources, races, cultures, eventTypes, settlement, site } = content;
+  return { biomes, resources, races, cultures, eventTypes, settlement, site };
+}
+
+export function createSiteHost(handlers: SiteHostHandlers): SiteHost {
+  let worker: Worker | null = null;
+  let waiting: {
+    reply: SiteReply['type'];
+    resolve: (reply: SiteReply) => void;
+    reject: (error: Error) => void;
+  } | null = null;
+
+  const start = (): Worker => {
+    worker?.terminate();
+    const next = new Worker(new URL('./site-worker.ts', import.meta.url), { type: 'module' });
+    next.onmessage = (event: MessageEvent<SiteReply>) => {
+      const reply = event.data;
+      if (reply.type === 'tick') handlers.onTick(reply.day, reply.events, reply.rate);
+      else if (reply.type === 'error') {
+        handlers.onError?.(reply.message);
+        waiting?.reject(new Error(reply.message));
+        waiting = null;
+      } else if (waiting && waiting.reply === reply.type) {
+        waiting.resolve(reply);
+        waiting = null;
+      }
+    };
+    next.onerror = (event) => {
+      const message = event.message || 'Site worker failed.';
+      handlers.onError?.(message);
+      waiting?.reject(new Error(message));
+      waiting = null;
+    };
+    worker = next;
+    return next;
+  };
+  const request = <T>(
+    target: Worker,
+    message: SiteRequest,
+    reply: SiteReply['type'],
+    pick: (reply: SiteReply) => T,
+  ) =>
+    new Promise<T>((resolve, reject) => {
+      waiting?.reject(new Error('cancelled'));
+      waiting = { reply, resolve: (got) => resolve(pick(got)), reject };
+      target.postMessage(message);
+    });
+  const worldOf = (reply: SiteReply) => (reply as { world: WorldState }).world;
+
+  return {
+    embark: (world, content, siteId) =>
+      request(
+        start(),
+        { type: 'embark', world, content: siteContentOf(content), siteId },
+        'embarked',
+        worldOf,
+      ),
+    found: (world, content, cell, name) =>
+      request(
+        start(),
+        { type: 'found', world, content: siteContentOf(content), cell, name },
+        'embarked',
+        worldOf,
+      ),
+    setSpeed: (daysPerSecond) =>
+      worker?.postMessage({ type: 'speed', daysPerSecond } satisfies SiteRequest),
+    run(days) {
+      if (!worker) return Promise.reject(new Error('No site is being watched.'));
+      return request(worker, { type: 'run', days }, 'ran', (reply) => {
+        const { day, events } = reply as { day: number; events: SimEvent[] };
+        return { day, events };
+      });
+    },
+    leave() {
+      if (!worker) return Promise.reject(new Error('No site is being watched.'));
+      return request(worker, { type: 'leave' }, 'left', worldOf);
+    },
+    dispose() {
+      worker?.terminate();
+      worker = null;
+      waiting?.reject(new Error('cancelled'));
+      waiting = null;
+    },
+  };
+}

@@ -6,6 +6,7 @@ import {
   yearText,
   type ContentBundle,
   type Id,
+  type OutpostCheck,
   type LegendIndex,
   type LegendRef,
   type Narrator,
@@ -34,6 +35,17 @@ export interface LegendNav {
   scroll: number;
 }
 
+/** What the world view may do about a live site (M3.1); handed to Legends and the map inspector. */
+export interface SiteActions {
+  world: WorldState;
+  content: ContentBundle;
+  /** False while another site is starting or when the slider is on a past year. */
+  enabled: boolean;
+  watch: (siteId: Id) => void;
+  outpostCheck: (cell: number) => OutpostCheck;
+  found: (cell: number, name: string) => void;
+}
+
 export interface SiteState {
   civId: Id | null;
   pop: number;
@@ -58,6 +70,7 @@ export interface LegendsCtx {
   onShow: (cell: number) => void;
   /** "Open on the map at Year N": set the slider, centre, switch to the map. */
   onOpenOnMap: (cell: number | null, year: number) => void;
+  siteActions: SiteActions;
   nameOf: (ref: PageRef) => string;
   titleOf: (event: SimEvent) => string;
   textOf: (event: SimEvent) => string;
@@ -82,6 +95,24 @@ export const KIND_LABEL: Record<CategoryId, string> = {
   item: 'Artifact',
   event: 'Event',
 };
+
+/** The name of a legend entity (not a race or an event page). */
+export function refName(world: WorldState, ref: LegendRef): string {
+  switch (ref.kind) {
+    case 'civ':
+      return world.civs.get(ref.id)?.name ?? '?';
+    case 'site':
+      return world.sites.get(ref.id)?.name ?? '?';
+    case 'person':
+      return world.people.get(ref.id)?.name ?? '?';
+    case 'beast':
+      return world.creatures.get(ref.id)?.name ?? '?';
+    case 'item':
+      return world.items.get(ref.id)?.name ?? '?';
+    case 'dynasty':
+      return world.dynasties.get(ref.id)?.name ?? '?';
+  }
+}
 
 export const sameRef = (a: PageRef, b: PageRef) => a.kind === b.kind && a.id === b.id;
 export const openOf = (ref: PageRef) => `${ref.kind}:${ref.id}`;

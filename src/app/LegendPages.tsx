@@ -15,6 +15,7 @@ import {
   type LegendRef,
   type SimEvent,
 } from '../engine';
+import { WatchCard } from './EmbarkCards';
 import {
   KIND_LABEL,
   Link,
@@ -382,7 +383,8 @@ function EntityPage({
   all: boolean;
   onAll: (all: boolean) => void;
 }) {
-  const { world, index, content, narrator, year, finalYear, sitesAt, onShow } = useLegends();
+  const { world, index, content, narrator, year, finalYear, sitesAt, onShow, siteActions } =
+    useLegends();
   const bio = biography(world, content, narrator, index, page);
   const cell = locate(world, page);
   const every = index.events(page);
@@ -548,6 +550,9 @@ function EntityPage({
           <button type="button" onClick={() => onShow(cell)}>
             Show on map
           </button>
+          {page.kind === 'site' && sitesAt.get(page.id)?.ruined === false && (
+            <WatchCard siteId={page.id} actions={siteActions} />
+          )}
         </div>
       )}
       {every.length === 0 ? (

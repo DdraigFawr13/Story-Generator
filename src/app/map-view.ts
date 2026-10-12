@@ -109,7 +109,25 @@ export interface ViewState {
   cat: LegendCategory | null;
   /** The Legends search text. */
   q: string;
+  /** A watched site (M3.1): present when the link has `site=`. */
+  site: SiteLink | null;
 }
+
+/** The site-mode part of a link: `?site=6&day=43&open=person:776&z=3&at=65,47`. */
+export interface SiteLink {
+  site: number;
+  /** Days since watching began. */
+  day: number;
+  /** The selection as "person:776", "household:3", "building:5" or "tile:65,47". */
+  open: string | null;
+  /** Zoom step, 0-based (the link's `z` counts from 1). */
+  zoom: number | null;
+  /** Tile at the centre of the view. */
+  at: { x: number; y: number } | null;
+}
+/** Most zoom steps the site view has, for validating `z`. */
+const SITE_ZOOM_STEPS = 5;
+const SITE_OPEN = /^(?:(?:person|household|building):\d{1,9}|tile:\d{1,3},\d{1,3})$/;
 
 export function parseViewUrl(search: string, layerIds: readonly string[]): ViewState {
   const params = new URLSearchParams(search);
@@ -119,22 +137,66 @@ export function parseViewUrl(search: string, layerIds: readonly string[]): ViewS
   const zoom = Number(params.get('z'));
   const year = params.get('year');
   const open = parseOpen(params.get('open'));
+  const site = parseSiteLink(params);
   return {
     seed: params.get('seed') || null,
     size,
     layer: layerIds.includes(layer) ? layer : DEFAULT_LAYER,
-    at: at ? { x: Number(at[1]), y: Number(at[2]) } : null,
-    zoom: Number.isInteger(zoom) && zoom >= 0 && zoom < ZOOM_STEPS.length ? zoom : 0,
+    // With `site=`, open, z and at belong to the site view.
+    at: at && !site ? { x: Number(at[1]), y: Number(at[2]) } : null,
+    zoom: Number.isInteger(zoom) && zoom >= 0 && zoom < ZOOM_STEPS.length && !site ? zoom : 0,
     year: year !== null && /^\d{1,4}$/.test(year) ? Number(year) : null,
-    open: open ? `${open.kind}:${open.id}` : null,
+    open: open && !site ? `${open.kind}:${open.id}` : null,
     cat: LEGEND_CATEGORIES.find((c) => c === params.get('cat')) ?? null,
     q: (params.get('q') ?? '').slice(0, MAX_QUERY),
+    site,
   };
+}
+
+/** Links replay at most this many days on load (four 336-day years), so a bad link can't stall the worker. */
+export const MAX_LINK_DAY = 4 * 336;
+
+function parseSiteLink(params: URLSearchParams): SiteLink | null {
+  const site = params.get('site');
+  if (site === null || !/^\d{1,9}$/.test(site)) return null;
+  const day = params.get('day');
+  const open = params.get('open') ?? '';
+  const z = Number(params.get('z'));
+  const at = /^(\d{1,3}),(\d{1,3})$/.exec(params.get('at') ?? '');
+  return {
+    site: Number(site),
+    day: day !== null && /^\d{1,6}$/.test(day) ? Math.min(Number(day), MAX_LINK_DAY) : 0,
+    open: SITE_OPEN.test(open) ? open : null,
+    zoom: Number.isInteger(z) && z >= 1 && z <= SITE_ZOOM_STEPS ? z - 1 : null,
+    at: at ? { x: Number(at[1]), y: Number(at[2]) } : null,
+  };
+}
+
+/** Path and query for the site view; the world-map fields are left out. */
+export function buildSiteUrl(link: {
+  seed: string;
+  size: WorldSize;
+  site: number;
+  day: number;
+  open: string | null;
+  zoom: number;
+  at: { x: number; y: number };
+}): string {
+  const parts = [
+    `seed=${encodeURIComponent(link.seed)}`,
+    `size=${link.size}`,
+    `site=${link.site}`,
+    `day=${link.day}`,
+  ];
+  if (link.open)
+    parts.push(`open=${encodeURIComponent(link.open).replace(/%3A/g, ':').replace(/%2C/g, ',')}`);
+  parts.push(`z=${link.zoom + 1}`, `at=${link.at.x},${link.at.y}`);
+  return `/?${parts.join('&')}`;
 }
 
 /** Path and query for a view; zoom 0, no selection and empty Legends state are left out. */
 export function buildViewUrl(
-  view: Omit<ViewState, 'seed' | 'year' | 'open' | 'cat' | 'q'> &
+  view: Omit<ViewState, 'seed' | 'year' | 'open' | 'cat' | 'q' | 'site'> &
     Partial<Pick<ViewState, 'year' | 'open' | 'cat' | 'q'>> & { seed: string },
 ): string {
   const parts = [

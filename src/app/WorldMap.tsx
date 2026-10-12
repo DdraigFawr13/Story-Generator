@@ -23,6 +23,7 @@ import {
   type Site,
   type WorldCells,
 } from '../engine';
+import type { SiteActions } from './legends-ctx';
 import { Inspector, LAYER_BY_ID, LAYER_KEYS, Legend, LayerPanel, type Overlays } from './MapPanels';
 import {
   boundCamera,
@@ -72,6 +73,8 @@ interface Props {
   highlight: ReadonlySet<Id> | null;
   /** Shown in the narrow (tabbed) layout when the map was opened from a Legends page. */
   onBackToLegends?: (() => void) | undefined;
+  /** Watching a site and founding an outpost (M3.1), offered in the cell inspector. */
+  siteActions: SiteActions;
 }
 
 /** A drag shorter than this many pixels is a click. */
@@ -278,6 +281,7 @@ export function WorldMap({
   focus,
   highlight,
   onBackToLegends,
+  siteActions,
 }: Props) {
   const [overlays, setOverlays] = useState<Overlays>({
     water: true,
@@ -1020,6 +1024,7 @@ export function WorldMap({
           people={people}
           dynasties={dynasties}
           year={year}
+          siteActions={siteActions}
           onShow={(id) => onView({ layer: id })}
           onClose={() => onView({ at: null })}
         />

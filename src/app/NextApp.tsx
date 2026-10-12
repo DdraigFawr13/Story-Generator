@@ -19,6 +19,7 @@ import {
   historyAt,
   liveSites,
   locate,
+  outpostCheck,
   MONTH_NAMES,
   rollAptitude,
   templateNarrator,
@@ -33,6 +34,7 @@ import {
   type WorldgenStage,
 } from '../engine';
 import { openSaveStore, type SaveStore, type SaveSummary } from '../platform/save-store';
+import { createSiteHost, type SiteHost } from '../platform/site-host';
 import { generateInWorker, type WorldgenJob } from '../platform/worldgen-host';
 import { Legends } from './Legends';
 import {
@@ -42,19 +44,24 @@ import {
   type CategoryId,
   type LegendNav,
   type PageRef,
+  type SiteActions,
 } from './legends-ctx';
 import { VIEWER_LAYER_IDS } from './MapPanels';
+import { SiteView, type SiteLinkParts, type TickListener } from './SiteView';
 import { WorldMap, type ViewChange } from './WorldMap';
 import { YearSlider, finalHistoryYear } from './YearSlider';
 import {
   DEFAULT_LAYER,
   DEFAULT_SEED,
+  buildSiteUrl,
   buildViewUrl,
   parseViewUrl,
+  type SiteLink,
   type ViewState,
   type WorldSize,
 } from './map-view';
 import './world-map.css';
+import './site-view.css';
 
 const SIM: Simulation = { content: DEFAULT_CONTENT, systems: DEFAULT_SYSTEMS };
 const CONTENT_PROBLEMS = validateContent(DEFAULT_CONTENT);
@@ -76,6 +83,8 @@ const STAGE_LABELS: Record<WorldgenStage, string> = {
 };
 /** How long "Link copied" stays on the button. */
 const COPIED_MS = 2000;
+/** The site link reaches the address bar at most once in this many ms. */
+const SITE_LINK_MS = 1000;
 
 type View = Pick<ViewState, 'layer' | 'at' | 'zoom'>;
 const INITIAL_VIEW: View = { layer: DEFAULT_LAYER, at: null, zoom: 0 };
@@ -109,7 +118,25 @@ interface EntryState {
 interface Restore {
   year: number | null;
   nav: LegendNav;
+  /** A watched site to go straight into (a link with `site=`). */
+  site?: SiteLink | null;
 }
+
+/** What the site view is showing: the site, and what to restore from a link. */
+interface Watching {
+  siteId: Id;
+  name: string;
+  key: number;
+  restore: {
+    events: SimEvent[];
+    open: string | null;
+    zoom: number | null;
+    at: { x: number; y: number } | null;
+  };
+}
+/** A site to watch: an existing one, or an outpost to found first. */
+type WatchTarget =
+  { kind: 'site'; id: Id } | { kind: 'outpost'; cell: number; name: string | null };
 
 /** The history-year date line: engine dates count years from 1, the slider and chronicle from 0. */
 function historyDate(day: number): string {
@@ -163,6 +190,14 @@ export function NextApp() {
   /** The map was opened from a Legends page, so it offers a way back (narrow layout). */
   const [fromLegends, setFromLegends] = useState(false);
   const world = useRef<WorldState>(createWorld(initial.seed ?? DEFAULT_SEED));
+  /** The watched site (M3.1): while set, the site view replaces the map and Legends. */
+  const [watching, setWatching] = useState<Watching | null>(null);
+  const watchingRef = useRef<Watching | null>(null);
+  const siteHost = useRef<SiteHost | null>(null);
+  const ticks = useRef<TickListener | null>(null);
+  /** Counts site worker errors; the site view pauses its clock on each. */
+  const [siteFailures, setSiteFailures] = useState(0);
+  const watchKey = useRef(0);
   /** Seed and size of the map on screen (the inputs may be mid-edit). */
   const shown = useRef<{ seed: string; size: WorldSize } | null>(null);
   const job = useRef<WorldgenJob | null>(null);
@@ -208,7 +243,7 @@ export function NextApp() {
       q: n.q.trim(),
     });
   const writeUrl = (mode: 'push' | 'replace', v: View, n: LegendNav, y: number | null) => {
-    if (!shown.current) return;
+    if (!shown.current || watchingRef.current) return;
     const entry: EntryState = { trail: n.trail.map(openOf), all: n.all };
     const url = urlFor(shown.current, v, n, y);
     if (mode === 'push') window.history.pushState(entry, '', url);
@@ -266,7 +301,10 @@ export function NextApp() {
         );
         setProgress(null);
         setRevision((n) => n + 1);
-        writeUrl(mode, next, place.nav, place.year);
+        if (place.site) {
+          // A link into a site: its view is the first history entry; the world URL waits behind it.
+          void watchRef.current({ kind: 'site', id: place.site.site }, place.site, next, place);
+        } else writeUrl(mode, next, place.nav, place.year);
       },
       (problem: Error) => {
         if (problem.message === 'cancelled') return;
@@ -278,6 +316,177 @@ export function NextApp() {
   const generateRef = useRef(generate);
   generateRef.current = generate;
 
+  const hostOf = (): SiteHost => {
+    siteHost.current ??= createSiteHost({
+      onTick: (day, events, rate) => ticks.current?.(day, events, rate),
+      onError: (message) => {
+        setError(message);
+        setSiteFailures((n) => n + 1);
+      },
+    });
+    return siteHost.current;
+  };
+
+  /**
+   * Starts watching a site (or founds an outpost and watches it). `link` restores a day,
+   * selection and view from a URL; then the site URL replaces the current history entry.
+   */
+  const watch = async (
+    target: WatchTarget,
+    link?: SiteLink | null,
+    fallback?: View,
+    place?: Restore,
+  ) => {
+    const host = hostOf();
+    const label =
+      target.kind === 'site'
+        ? (world.current.sites.get(target.id)?.name ?? 'the site')
+        : (target.name ?? 'the outpost');
+    setError(null);
+    setProgress({ label: `Gathering the people of ${label}…`, fraction: 0.4 });
+    try {
+      if (target.kind === 'site') {
+        const site = world.current.sites.get(target.id);
+        if (!site) throw new Error(`There is no site ${target.id} in this world.`);
+        if (site.ruinedYear !== undefined) throw new Error(`${site.name} is a ruin.`);
+      }
+      const embarked =
+        target.kind === 'site'
+          ? await host.embark(world.current, DEFAULT_CONTENT, target.id)
+          : await host.found(world.current, DEFAULT_CONTENT, target.cell, target.name);
+      const active = embarked.activeSite;
+      if (!active) throw new Error('The site did not start.');
+      let events: SimEvent[] = [];
+      if (link && link.day > 0) {
+        const ran = await host.run(link.day);
+        embarked.day = ran.day;
+        events = ran.events;
+        for (const e of events) embarked.events.push(e);
+      }
+      world.current = embarked;
+      const name = embarked.sites.get(active.siteId)?.name ?? label;
+      watchKey.current += 1;
+      const next: Watching = {
+        siteId: active.siteId,
+        name,
+        key: watchKey.current,
+        restore: {
+          events,
+          open: link?.open ?? null,
+          zoom: link?.zoom ?? null,
+          at: link?.at ?? null,
+        },
+      };
+      watchingRef.current = next;
+      const url = buildSiteUrl({
+        seed: embarked.seed,
+        size: shown.current?.size ?? 256,
+        site: active.siteId,
+        day: embarked.day - active.enteredDay,
+        open: next.restore.open,
+        zoom: next.restore.zoom ?? 2,
+        at: next.restore.at ?? { x: 0, y: 0 },
+      });
+      if (link) window.history.replaceState({}, '', url);
+      else window.history.pushState({}, '', url);
+      setWatching(next);
+      setProgress(null);
+      setRevision((n) => n + 1);
+    } catch (problem) {
+      const message = (problem as Error).message;
+      if (message === 'cancelled') return;
+      siteHost.current?.dispose();
+      siteHost.current = null;
+      setProgress(null);
+      setError(message);
+      if (link && fallback && place) writeUrl('replace', fallback, place.nav, place.year);
+    }
+  };
+  const watchRef = useRef(watch);
+  watchRef.current = watch;
+
+  /** Leaves the site: demotes it, takes the world back and shows the map at the site. */
+  const leave = async (pushUrl: boolean): Promise<boolean> => {
+    const current = watchingRef.current;
+    if (!current || !siteHost.current) return true;
+    setProgress({ label: `Leaving ${current.name}…`, fraction: 0.6 });
+    try {
+      const left = await siteHost.current.leave();
+      siteHost.current.dispose();
+      siteHost.current = null;
+      world.current = left;
+      watchingRef.current = null;
+      setWatching(null);
+      setProgress(null);
+      const cell = left.sites.get(current.siteId)?.cell;
+      if (cell !== undefined) focusCell(cell);
+      setTab('map');
+      setNav((n) => ({ ...n, rev: n.rev + 1 }));
+      setRevision((n) => n + 1);
+      if (pushUrl) {
+        window.history.pushState(
+          { trail: latest.current.nav.trail.map(openOf), all: latest.current.nav.all },
+          '',
+          urlFor(
+            shown.current!,
+            latest.current.view,
+            latest.current.nav,
+            latest.current.sliderYear,
+          ),
+        );
+      }
+      return true;
+    } catch (problem) {
+      setProgress(null);
+      setError((problem as Error).message);
+      return false;
+    }
+  };
+  const leaveRef = useRef(leave);
+  leaveRef.current = leave;
+
+  /** "Open in Legends" from the site: back to the world, with that page open. */
+  const leaveToLegends = async (ref: PageRef) => {
+    if (await leave(false)) go({ open: ref });
+  };
+
+  // The site link changes every game day, so the address bar is rewritten at most once a
+  // second (browsers throttle history writes), always ending on the latest parts.
+  const siteLink = useRef<{ parts: SiteLinkParts | null; last: number; timer: number }>({
+    parts: null,
+    last: 0,
+    timer: 0,
+  });
+  const flushSiteLink = () => {
+    const link = siteLink.current;
+    link.timer = 0;
+    const current = watchingRef.current;
+    if (!link.parts || !current || !shown.current) return;
+    link.last = performance.now();
+    try {
+      window.history.replaceState(
+        window.history.state,
+        '',
+        buildSiteUrl({
+          seed: world.current.seed,
+          size: shown.current.size,
+          site: current.siteId,
+          ...link.parts,
+        }),
+      );
+    } catch {
+      // A refused history write only leaves the address bar a little behind.
+    }
+  };
+  const writeSiteLink = (parts: SiteLinkParts) => {
+    const link = siteLink.current;
+    link.parts = parts;
+    if (link.timer) return;
+    const wait = SITE_LINK_MS - (performance.now() - link.last);
+    if (wait <= 0) flushSiteLink();
+    else link.timer = window.setTimeout(flushSiteLink, wait);
+  };
+
   useEffect(() => {
     generateRef.current(
       initial.seed ?? DEFAULT_SEED,
@@ -288,7 +497,7 @@ export function NextApp() {
         zoom: initial.zoom,
       },
       'replace',
-      { year: initial.year, nav: navFromUrl(initial, window.history.state, 0) },
+      { year: initial.year, nav: navFromUrl(initial, window.history.state, 0), site: initial.site },
     );
     const popstate = () => {
       const url = parseViewUrl(window.location.search, VIEWER_LAYER_IDS);
@@ -298,19 +507,37 @@ export function NextApp() {
         year: url.year,
         nav: navFromUrl(url, window.history.state, latest.current.nav.rev + 1),
       };
-      setSeedInput(seed);
-      setSize(url.size);
-      if (place.nav.open) setTab('legends');
-      if (shown.current?.seed === seed && shown.current.size === url.size) {
-        setView(next);
-        setSliderYear(place.year);
-        setNav(place.nav);
-      } else generateRef.current(seed, url.size, next, 'replace', place);
+      const apply = () => {
+        setSeedInput(seed);
+        setSize(url.size);
+        if (place.nav.open) setTab('legends');
+        if (shown.current?.seed === seed && shown.current.size === url.size) {
+          setView(next);
+          setSliderYear(place.year);
+          setNav(place.nav);
+        } else generateRef.current(seed, url.size, next, 'replace', place);
+      };
+      if (watchingRef.current) {
+        // Back out of a site: leave it, then show the world the link names.
+        if (!url.site) {
+          void leaveRef.current(false).then((left) => {
+            if (left) apply();
+          });
+        }
+        return;
+      }
+      if (url.site && shown.current?.seed === seed && shown.current.size === url.size) {
+        void watchRef.current({ kind: 'site', id: url.site.site }, url.site, next, place);
+      } else if (url.site) {
+        generateRef.current(seed, url.size, next, 'replace', { ...place, site: url.site });
+      } else apply();
     };
     window.addEventListener('popstate', popstate);
     return () => {
       window.removeEventListener('popstate', popstate);
       job.current?.cancel();
+      siteHost.current?.dispose();
+      window.clearTimeout(siteLink.current.timer);
     };
   }, [initial]);
 
@@ -445,6 +672,39 @@ export function NextApp() {
     return ids.size > 0 ? ids : null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nav.open, sitesAt, revision]);
+  if (watching && state.activeSite) {
+    return (
+      <main className="sv-root" data-revision={revision}>
+        <h1>Story Generator — {watching.name}</h1>
+        {error && <p role="alert">{error}</p>}
+        <SiteView
+          key={watching.key}
+          world={state}
+          content={DEFAULT_CONTENT}
+          index={legend}
+          narrator={narrator}
+          host={hostOf()}
+          ticks={ticks}
+          failures={siteFailures}
+          restore={watching.restore}
+          onLeave={() => void leave(true)}
+          onOpenLegends={(ref) => void leaveToLegends(ref)}
+          hrefOf={hrefOf}
+          onLink={writeSiteLink}
+        />
+      </main>
+    );
+  }
+  /** Watching and founding act on the present day only, and one thing at a time. */
+  const actions: SiteActions = {
+    world: state,
+    content: DEFAULT_CONTENT,
+    enabled: yearShown >= finalYear && progress === null,
+    watch: (siteId: Id) => void watch({ kind: 'site', id: siteId }),
+    outpostCheck: (cell: number) => outpostCheck(state, DEFAULT_CONTENT, cell),
+    found: (cell: number, name: string) =>
+      void watch({ kind: 'outpost', cell, name: name === '' ? null : name }),
+  };
   return (
     <main className="wm-root" data-revision={revision}>
       <h1>Story Generator — world map</h1>
@@ -543,6 +803,7 @@ export function NextApp() {
               focus={focus}
               highlight={highlight}
               onBackToLegends={fromLegends && tab === 'map' ? () => setTab('legends') : undefined}
+              siteActions={actions}
             />
             <YearSlider
               world={state}
@@ -567,6 +828,7 @@ export function NextApp() {
             nav={nav}
             go={go}
             hrefOf={hrefOf}
+            siteActions={actions}
             onShow={(cell) => {
               focusCell(cell);
               setFromLegends(true);

@@ -6,6 +6,7 @@ import {
   ENTITY_KINDS,
   type EntityKind,
   type Id,
+  type LocalMap,
   type WorldCells,
   type WorldParams,
   type WorldState,
@@ -70,6 +71,7 @@ export function createWorld(seed: string, params: Partial<WorldParams> = {}): Wo
     events: [],
     commands: [],
     weather: { current: 'mild', sinceDay: 0, causeEvent: null },
+    activeSite: null,
   };
 }
 
@@ -160,5 +162,35 @@ export function cellsDigest(cells: WorldCells): string {
   mixNumber(cells.width);
   mixNumber(cells.height);
   walk(cells);
+  return hash.toString(16).padStart(8, '0');
+}
+
+/** An 8-hex-digit FNV-1a hash over the size and every layer of the map, as cellsDigest does for cells. */
+export function localMapDigest(map: LocalMap): string {
+  let hash = FNV_OFFSET;
+  const mix = (byte: number) => {
+    hash = Math.imul(hash ^ (byte & 0xff), FNV_PRIME) >>> 0;
+  };
+  const mixNumber = (value: number) => {
+    for (let shift = 0; shift < 32; shift += 8) mix(value >>> shift);
+  };
+  mixNumber(map.width);
+  mixNumber(map.height);
+  mixNumber(map.cellX);
+  mixNumber(map.cellY);
+  for (const layer of [
+    map.elevation,
+    map.terrain,
+    map.water,
+    map.tree,
+    map.mineral,
+    map.building,
+  ]) {
+    const bytes = new Uint8Array(layer.buffer, layer.byteOffset, layer.byteLength);
+    mixNumber(bytes.length);
+    for (let i = 0; i < bytes.length; i += 1) mix(bytes[i]!);
+  }
+  mixNumber(map.bridges.length);
+  for (const k of map.bridges) mixNumber(k);
   return hash.toString(16).padStart(8, '0');
 }

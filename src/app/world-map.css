@@ -1292,3 +1292,67 @@ dl.facts dd {
     transition: none;
   }
 }
+
+/* Entry points into a live site (M3.1): the confirm cards under "Watch this site" and
+   "Found an outpost". Tile tokens come from site-view.css. */
+.wm-root .site-actions {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0;
+}
+.wm-root .outpost-no {
+  margin: 8px 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.wm-root .emb-confirm {
+  flex: 1 1 100%;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+  font: 0.9rem/1.5 var(--body);
+}
+.wm-root .emb-confirm h4 {
+  margin: 0;
+  font: 600 1.05rem var(--display);
+}
+.wm-root .emb-confirm p {
+  margin: 0;
+}
+.wm-root .emb-confirm .quiet {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.wm-root .emb-confirm .row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+.wm-root .emb-confirm .row > div {
+  flex: 1 1 200px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.wm-root .emb-confirm label {
+  display: grid;
+  gap: 3px;
+  font-size: 0.85rem;
+}
+.wm-root .emb-confirm .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.wm-root .emb-thumb {
+  width: 144px;
+  height: 144px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  image-rendering: pixelated;
+  background: var(--t-void);
+}

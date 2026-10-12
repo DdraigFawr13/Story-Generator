@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   boundCamera,
+  buildSiteUrl,
   buildViewUrl,
+  MAX_LINK_DAY,
   cellAt,
   cellScale,
   clampZoom,
@@ -57,6 +59,7 @@ describe('view URL', () => {
       open: null,
       cat: null,
       q: '',
+      site: null,
     });
   });
 
@@ -71,8 +74,10 @@ describe('view URL', () => {
       open: 'event:412',
       cat: 'site' as const,
       q: 'ash & co',
+      site: null,
     };
-    const url = buildViewUrl(view);
+    const { site: _none, ...built } = view;
+    const url = buildViewUrl(built);
     expect(url).toBe(
       '/?seed=S1&size=256&layer=elevation&year=112&open=event:412&cat=site&q=ash%20%26%20co',
     );
@@ -98,7 +103,56 @@ describe('view URL', () => {
       open: null,
       cat: null,
       q: '',
+      site: null,
     });
+  });
+});
+
+describe('site view URL (M3.1)', () => {
+  it('builds and parses a site link', () => {
+    const url = buildSiteUrl({
+      seed: 'S1',
+      size: 256,
+      site: 6,
+      day: 43,
+      open: 'person:776',
+      zoom: 2,
+      at: { x: 65, y: 47 },
+    });
+    expect(url).toBe('/?seed=S1&size=256&site=6&day=43&open=person:776&z=3&at=65,47');
+    expect(parseViewUrl(url.slice(2), IDS).site).toEqual({
+      site: 6,
+      day: 43,
+      open: 'person:776',
+      zoom: 2,
+      at: { x: 65, y: 47 },
+    });
+  });
+
+  it('keeps tile selections, and leaves the world-map fields at their defaults', () => {
+    const url = buildSiteUrl({
+      seed: 'S1',
+      size: 128,
+      site: 9,
+      day: 0,
+      open: 'tile:12,34',
+      zoom: 0,
+      at: { x: 48, y: 48 },
+    });
+    expect(url).toContain('open=tile:12,34');
+    const view = parseViewUrl(url.slice(2), IDS);
+    expect(view.site?.open).toBe('tile:12,34');
+    expect([view.open, view.at, view.zoom]).toEqual([null, null, 0]);
+  });
+
+  it('ignores bad site values and links without a site', () => {
+    expect(parseViewUrl('?seed=S1&site=x', IDS).site).toBeNull();
+    const view = parseViewUrl('?seed=S1&site=4&day=-1&open=civ:3&z=9&at=oops', IDS).site;
+    expect(view).toEqual({ site: 4, day: 0, open: null, zoom: null, at: null });
+    expect(parseViewUrl('?seed=S1&site=4&day=999999', IDS).site?.day).toBe(MAX_LINK_DAY);
+    // Old links are untouched.
+    const old = parseViewUrl('?seed=S1&open=civ:3&z=2&at=10,20', IDS);
+    expect([old.site, old.open, old.zoom, old.at]).toEqual([null, 'civ:3', 2, { x: 10, y: 20 }]);
   });
 });
 

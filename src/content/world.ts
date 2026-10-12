@@ -84,6 +84,20 @@ export const eventTypes: EventTypeDef[] = [
     ],
   },
   {
+    id: 'outpost_founded',
+    baseImportance: 3,
+    title: 'Outpost {site} founded',
+    category: 'life',
+    precision: 'year',
+    links: { site: 'site', civ: 'civ', from: 'site' },
+    templates: [
+      'In {date} {settlers} settlers from {from} raised the outpost of {site} for the {civ}.',
+      '{date}: {settlers} people left {from} and made a new home at {site}.',
+      'The {civ} sent {settlers} of its people from {from} to found {site} in {date}.',
+      'A band of {settlers} took the road from {from} and built {site} ({date}).',
+    ],
+  },
+  {
     id: 'bad_harvest',
     baseImportance: 2,
     title: 'Bad harvest at {site}',

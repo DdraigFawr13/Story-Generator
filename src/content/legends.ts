@@ -58,6 +58,7 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
     label: 'Places',
     types: [
       'site_founded',
+      'outpost_founded',
       'site_grew',
       'site_abandoned',
       'migration',
