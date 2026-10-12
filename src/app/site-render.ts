@@ -404,6 +404,18 @@ export function buildScene(
   };
 }
 
+/** Moves every mark to where its person now is (after a snapshot) and rebuilds `at`, in place. */
+export function movePeople(scene: Scene, world: WorldState): void {
+  scene.at.clear();
+  for (const mark of scene.marks.values()) {
+    const pos = world.people.get(mark.id)?.detail?.pos;
+    if (pos) mark.k = pos[1] * scene.size + pos[0];
+    const list = scene.at.get(mark.k);
+    if (list) list.push(mark.id);
+    else scene.at.set(mark.k, [mark.id]);
+  }
+}
+
 /** Bounding box (x, y, w, h) of the followed homes and the hall: the "hall quarter". */
 export function quarterOf(buildings: readonly Building[]): Scene['quarter'] {
   const hubs = buildings.filter((b) => (b.defId === 'home' && b.followed) || b.defId === 'hall');
@@ -644,6 +656,12 @@ export class SiteRenderer {
       [...this.scene.marks.values()].map((m) => m.k),
       this.base,
     );
+  }
+
+  /** Redraws after people moved: the pixel-a-tile base (and so the overview) shows them as marks. */
+  refreshPeople(): void {
+    this.rebuildBase();
+    this.draw();
   }
 
   /** Sizes the canvas to its box; returns false while the box has no size. */

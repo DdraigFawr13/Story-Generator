@@ -11,6 +11,7 @@ export type SiteContent = Pick<
   | 'cultures'
   | 'eventTypes'
   | 'settlement'
+  | 'history'
   | 'site'
   | 'needs'
   | 'traits'

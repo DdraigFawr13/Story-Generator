@@ -27,6 +27,8 @@ const SPOUSE_AGE_GAP = 6;
 const NAME_TRIES = 12;
 /** A generated mother is at least this many years past maturity. */
 const MOTHER_MIN_AFTER_MATURITY = 2;
+/** Chance a resident gets a second trait. */
+const SECOND_TRAIT_CHANCE = 0.5;
 /** Condition (0-100) of the buildings at the start. */
 const START_CONDITION = 100;
 
@@ -375,15 +377,45 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
               Math.min(size - 1, layout.origin[1] - 2 + (Math.floor(i / 7) % 5)),
             ];
       person.family.householdId = h.id;
+      const faith = person.cultureId ? (cultures.get(person.cultureId)?.values.faith ?? -1) : -1;
+      const needs: Record<string, number> = {};
+      for (const need of content.needs) {
+        if (need.minCultureFaith === undefined || faith >= need.minCultureFaith)
+          needs[need.id] = 100;
+      }
       person.detail = {
-        needs: {},
+        needs,
         mood: 0,
         stress: 0,
         memories: [],
         relationships: new Map(),
         pos,
+        // Watching begins after the evening meal; the first block run is the night.
+        activity: 'eat',
+        placeId: h.home,
+        moodParts: [],
+        lastAte: world.day,
       };
     });
+  }
+
+  // Traits: one, and often a second, for everyone who has none yet (notables keep what they gain after leaving).
+  const traitRng = streamFor(world, 'site.traits');
+  const traitDefs = new Map(content.traits.map((t) => [t.id, t]));
+  for (const id of [...residents.keys()].sort((a, b) => a - b)) {
+    const person = residents.get(id)!.person;
+    if (person.traits.length > 0) continue;
+    const want = traitRng.chance(SECOND_TRAIT_CHANCE) ? 2 : 1;
+    for (let n = 0; n < want; n += 1) {
+      const options = content.traits.filter(
+        (t) =>
+          !person.traits.includes(t.id) &&
+          !t.excludes.some((x) => person.traits.includes(x)) &&
+          !person.traits.some((x) => traitDefs.get(x)?.excludes.includes(t.id)),
+      );
+      if (options.length === 0) break;
+      person.traits.push(traitRng.weighted(options.map((t) => [t.id, t.weight] as const)));
+    }
   }
 
   // Stock: each good scaled by the followed share.

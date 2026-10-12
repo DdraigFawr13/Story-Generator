@@ -7,3 +7,4 @@ export * from './outpost';
 export * from './promote';
 export * from './tick';
 export * from './life';
+export * from './path';

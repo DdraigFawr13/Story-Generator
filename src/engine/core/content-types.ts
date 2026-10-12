@@ -303,9 +303,10 @@ export interface LifeRules {
   restDayAfternoon: { faithful: Activity; others: Activity };
   /** Food eaten per meal, as a share of the race's yearly food need. */
   mealShare: number;
-  /** Field work (until M3.3 brings jobs): food per work block, as a share of the race's yearly need. */
-  fieldYieldShare: number;
-  /** Work output by age band (children 0). */
+  /**
+   * Work output by age band (children 0). Until M3.3 brings jobs, field work brings in the site's
+   * normal-year history harvest, spread over the expected work blocks by these weights.
+   */
   workOutput: Record<'child' | 'adult' | 'elder', number>;
   warmth: {
     /** Month (0-11) of the coldest day; the warmest is six months on. */
@@ -352,7 +353,7 @@ export interface LifeRules {
     kinWandered: string;
     sawTheft: string;
   };
-  /** Tiles a person walks in one block; a longer route ends part way. */
+  /** Walking cost a person spends in one block; a longer route ends part way. */
   walkPerBlock: number;
   /** A* node expansions allowed per block across everyone; past it, routes are straight lines. */
   pathBudget: number;

@@ -139,13 +139,24 @@ describe('leaving', () => {
     const world = copy();
     const before = copy();
     const site = biggest(world);
-    embark(world, SMALL_CAP, site.id);
+    const active = embark(world, SMALL_CAP, site.id);
+    const notables = active.residents.filter((id) => !active.promoted.includes(id));
     leaveSite(world, SMALL_CAP);
     expect(world.activeSite).toBeNull();
     for (const [id, s] of before.sites) expect(world.sites.get(id)!.pop).toEqual(s.pop);
     for (const [id, s] of before.sites) expect(world.sites.get(id)!.goods).toEqual(s.goods);
     expect([...world.people.keys()]).toEqual([...before.people.keys()]);
-    for (const [id, person] of before.people) expect(world.people.get(id)).toEqual(person);
+    // Notables keep the traits they gained at the site; everything else is as it was.
+    for (const [id, person] of before.people) {
+      const { traits, ...rest } = world.people.get(id)!;
+      const { traits: oldTraits, ...oldRest } = person;
+      expect(rest).toEqual(oldRest);
+      if (notables.includes(id)) {
+        expect(oldTraits).toEqual([]);
+        expect(traits.length).toBeGreaterThanOrEqual(1);
+        expect(traits.length).toBeLessThanOrEqual(2);
+      } else expect(traits).toEqual(oldTraits);
+    }
   });
 
   it('carries the stock change back into goods', () => {
@@ -221,7 +232,7 @@ describe('saves and speed', () => {
     expect(back.activeSite!.households).toBeInstanceOf(Map);
   });
 
-  it('runs a no-op year of 150 residents in well under a second', () => {
+  it('runs a year of daily life for 150 residents in well under a second', () => {
     const world = copy();
     const site = biggest(world);
     const content = { ...C, site: { ...C.site, followCap: 150 } };

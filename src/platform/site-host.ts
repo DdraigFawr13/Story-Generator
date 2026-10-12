@@ -2,7 +2,7 @@
 // replaces the worker. The worker owns the running world; the main thread mirrors it from the
 // whole world sent on embark and leave, and from the events in each tick.
 
-import type { Id, SimEvent, SiteContent, WorldState } from '../engine';
+import type { Id, SimEvent, SiteContent, SiteSnapshot, WorldState } from '../engine';
 import type { SiteReply, SiteRequest, SiteSpeed } from './site-worker';
 
 export interface SiteHost {
@@ -16,8 +16,8 @@ export interface SiteHost {
     name: string | null,
   ): Promise<WorldState>;
   setSpeed(daysPerSecond: SiteSpeed): void;
-  /** Runs `days` days at once and resolves with the new day and the events they emitted. */
-  run(days: number): Promise<{ day: number; events: SimEvent[] }>;
+  /** Runs `days` days at once and resolves with the new day, the events they emitted and the state after. */
+  run(days: number): Promise<{ day: number; events: SimEvent[]; snapshot: SiteSnapshot }>;
   /** Demotes the site; resolves with the world as it stands, activeSite null. */
   leave(): Promise<WorldState>;
   /** Stops the worker without demoting. */
@@ -25,14 +25,15 @@ export interface SiteHost {
 }
 
 export interface SiteHostHandlers {
-  onTick(day: number, events: SimEvent[], rate: number): void;
+  /** `snapshot` rides along at most every 100 ms, and always when the clock stops. */
+  onTick(day: number, events: SimEvent[], rate: number, snapshot?: SiteSnapshot): void;
   onError?(message: string): void;
 }
 
 /** Only the plain-data tables cross over: a full content bundle holds functions, which cannot be cloned. */
 export function siteContentOf(content: SiteContent): SiteContent {
   const { biomes, resources, races, cultures, eventTypes, settlement, site } = content;
-  const { needs, traits, memories, life } = content;
+  const { history, needs, traits, memories, life } = content;
   return {
     biomes,
     resources,
@@ -40,6 +41,7 @@ export function siteContentOf(content: SiteContent): SiteContent {
     cultures,
     eventTypes,
     settlement,
+    history,
     site,
     needs,
     traits,
@@ -61,7 +63,8 @@ export function createSiteHost(handlers: SiteHostHandlers): SiteHost {
     const next = new Worker(new URL('./site-worker.ts', import.meta.url), { type: 'module' });
     next.onmessage = (event: MessageEvent<SiteReply>) => {
       const reply = event.data;
-      if (reply.type === 'tick') handlers.onTick(reply.day, reply.events, reply.rate);
+      if (reply.type === 'tick')
+        handlers.onTick(reply.day, reply.events, reply.rate, reply.snapshot);
       else if (reply.type === 'error') {
         handlers.onError?.(reply.message);
         waiting?.reject(new Error(reply.message));
@@ -113,8 +116,12 @@ export function createSiteHost(handlers: SiteHostHandlers): SiteHost {
     run(days) {
       if (!worker) return Promise.reject(new Error('No site is being watched.'));
       return request(worker, { type: 'run', days }, 'ran', (reply) => {
-        const { day, events } = reply as { day: number; events: SimEvent[] };
-        return { day, events };
+        const { day, events, snapshot } = reply as {
+          day: number;
+          events: SimEvent[];
+          snapshot: SiteSnapshot;
+        };
+        return { day, events, snapshot };
       });
     },
     leave() {

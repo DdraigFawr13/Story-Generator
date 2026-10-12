@@ -3,7 +3,7 @@
 // balance (R-29) and no self-taught magic (R-28). Returns readable problems.
 
 import type { ContentBundle, RaceDef } from './content-types';
-import { CULTURE_VALUES, MAX_CREATURE_DANGER } from './content-types';
+import { ACTIVITIES, CULTURE_VALUES, DAY_BLOCKS, MAX_CREATURE_DANGER } from './content-types';
 import { ATTRIBUTE_KEYS, GOODS, REGION_KINDS } from './types';
 import { BIRTH_TIER_IDS, TIERS, tierOfPower } from '../people/tiers';
 
@@ -91,6 +91,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...diseaseProblems(content));
   problems.push(...notableProblems(content));
   problems.push(...siteProblems(content));
+  problems.push(...lifeProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -522,6 +523,59 @@ export function siteProblems(content: ContentBundle): string[] {
       if (!eventIds.has(id))
         problems.push(`Site autoPause.${category}: unknown event type "${id}".`);
     }
+  }
+  return problems;
+}
+
+const REQUIRED_NEEDS = ['food', 'water', 'rest', 'warmth', 'safety', 'companionship', 'purpose'];
+
+/** Daily-life tables: need ids, memory and event references, trait exclusions, schedule activities. */
+export function lifeProblems(content: ContentBundle): string[] {
+  const { needs, traits, memories, life } = content;
+  if (!needs || !traits || !memories || !life) return ['Content has no daily-life tables.'];
+  const problems: string[] = [];
+  const needIds = new Set<string>();
+  for (const need of needs) {
+    if (needIds.has(need.id)) problems.push(`Need ${need.id}: duplicate id.`);
+    needIds.add(need.id);
+    if (!(need.lowAt > 0)) problems.push(`Need ${need.id}: lowAt must be positive.`);
+    for (const activity of Object.keys(need.restore)) {
+      if (!(ACTIVITIES as readonly string[]).includes(activity))
+        problems.push(`Need ${need.id}: restore names unknown activity "${activity}".`);
+    }
+  }
+  for (const id of REQUIRED_NEEDS) {
+    if (!needIds.has(id)) problems.push(`Needs must include "${id}".`);
+  }
+  const memoryIds = new Set(memories.map((m) => m.id));
+  for (const [key, id] of Object.entries(life.memoryOf)) {
+    if (!memoryIds.has(id)) problems.push(`Life memoryOf.${key}: unknown memory "${id}".`);
+  }
+  const eventIds = new Set(content.eventTypes.map((e) => e.id));
+  for (const [key, id] of Object.entries(life.events)) {
+    if (!eventIds.has(id)) problems.push(`Life events.${key}: unknown event type "${id}".`);
+  }
+  const traitIds = new Set(traits.map((t) => t.id));
+  for (const trait of traits) {
+    for (const other of trait.excludes) {
+      if (!traitIds.has(other))
+        problems.push(`Trait ${trait.id}: excludes unknown trait "${other}".`);
+    }
+    for (const need of Object.keys(trait.needRates ?? {})) {
+      if (!needIds.has(need))
+        problems.push(`Trait ${trait.id}: needRates names unknown need "${need}".`);
+    }
+  }
+  const valid = (activity: string) => (ACTIVITIES as readonly string[]).includes(activity);
+  for (const [band, blocks] of Object.entries(life.schedule)) {
+    for (const block of DAY_BLOCKS) {
+      if (!valid(blocks[block]))
+        problems.push(`Life schedule.${band}.${block}: unknown activity "${blocks[block]}".`);
+    }
+  }
+  for (const [key, activity] of Object.entries(life.restDayAfternoon)) {
+    if (!valid(activity))
+      problems.push(`Life restDayAfternoon.${key}: unknown activity "${activity}".`);
   }
   return problems;
 }

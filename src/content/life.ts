@@ -20,7 +20,17 @@ export const NEEDS: NeedDef[] = [
     name: 'Water',
     // Wells and the river make water easy until droughts arrive (M3.4).
     decayPerDay: 50,
-    restore: { eat: 40, work: 15, play: 15, socialise: 15 },
+    // People in a breakdown still drink, so a breakdown does not feed the next one.
+    restore: {
+      eat: 40,
+      work: 15,
+      play: 15,
+      socialise: 15,
+      despair: 25,
+      wander: 25,
+      tantrum: 10,
+      steal: 10,
+    },
     awayShare: 1,
     lowAt: 30,
     moodAtZero: -30,
@@ -203,7 +213,7 @@ export const MEMORIES: MemoryDef[] = [
   { id: 'ate-together', mood: 3, decayDays: 2, text: 'Ate with the household' },
   { id: 'worshipped', mood: 5, decayDays: 7, text: 'Worshipped at the shrine' },
   // After a breakdown the pressure is let out for a while.
-  { id: 'vented', mood: 15, decayDays: 10, text: 'Let it all out' },
+  { id: 'vented', mood: 25, decayDays: 20, text: 'Let it all out' },
   { id: 'saw-tantrum', mood: -6, decayDays: 10, text: 'Saw {about} fly into a rage' },
   { id: 'saw-despair', mood: -4, decayDays: 7, text: 'Saw {about} sink into despair' },
   { id: 'kin-wandered', mood: -5, decayDays: 6, text: '{about} wandered off' },
@@ -222,8 +232,7 @@ export const LIFE: LifeRules = {
   restDayAfternoon: { faithful: 'worship', others: 'socialise' },
   // One meal a day, so a person eats their yearly need over the 336-day year.
   mealShare: 1 / 336,
-  // Two work blocks a day at 1.3 meals each, matching history's workerOutput of 1.3 per adult.
-  fieldYieldShare: 1.3 / 672,
+  // Elders do half a day's work; field work shares out the history's normal harvest (until M3.3).
   workOutput: { child: 0, adult: 1, elder: 0.5 },
   warmth: {
     // Frostmonth (index 10) is the coldest; Goldmonth (4) the warmest.
@@ -243,7 +252,7 @@ export const LIFE: LifeRules = {
   stressFall: 0.5,
   stressFloorFall: 2,
   breakdownAt: 100,
-  stressAfter: 40,
+  stressAfter: 20,
   defaultBreakdown: 'despair',
   childBreakdown: 'tantrum',
   despairDays: [1, 3],
@@ -264,8 +273,8 @@ export const LIFE: LifeRules = {
     kinWandered: 'kin-wandered',
     sawTheft: 'saw-theft',
   },
-  // A block is six hours; 60 tiles crosses most of the map.
-  walkPerBlock: 60,
+  // A block is six hours: 240 cost (about 120 grass tiles) crosses the map; only rough routes stop short.
+  walkPerBlock: 240,
   // Enough for every resident's routes in a block with room to spare; past it routes are straight.
   pathBudget: 60000,
   pathCache: 4096,
@@ -313,6 +322,8 @@ export const LIFE_EVENTS: EventTypeDef[] = [
     causeWord: 'because of',
     category: 'social',
     links: { site: 'site' },
+    // The first template names no site, the others do.
+    dataKeys: ['site'],
     templates: [
       '{actor} sank into despair and would not leave the house.',
       'At {site}, {actor} gave up on the day and lay staring at the wall.',

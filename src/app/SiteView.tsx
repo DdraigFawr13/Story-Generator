@@ -11,6 +11,8 @@ import {
   type MutableRefObject,
 } from 'react';
 import {
+  DAY_BLOCKS,
+  applySiteSnapshot,
   buildLegendIndex,
   dateOf,
   localMapDigest,
@@ -19,6 +21,7 @@ import {
   type LegendIndex,
   type Narrator,
   type SimEvent,
+  type SiteSnapshot,
   type WorldState,
 } from '../engine';
 import type { SiteHost } from '../platform/site-host';
@@ -44,6 +47,7 @@ import {
   SiteRenderer,
   clampViewport,
   formatSelection,
+  movePeople,
   parseSelection,
   selectionRect,
   tileAtPoint,
@@ -59,7 +63,12 @@ export interface SiteLinkParts {
   at: { x: number; y: number };
 }
 
-export type TickListener = (day: number, events: SimEvent[], rate: number) => void;
+export type TickListener = (
+  day: number,
+  events: SimEvent[],
+  rate: number,
+  snapshot?: SiteSnapshot,
+) => void;
 
 interface Props {
   world: WorldState;
@@ -153,6 +162,9 @@ export function SiteView(props: Props) {
   ]);
 
   const [day, setDay] = useState(world.day);
+  /** Bumped by each snapshot so the panes re-read the people; also the day block shown. */
+  const [block, setBlock] = useState(active.block);
+  const [, setSnapshots] = useState(0);
   const [speed, setSpeedState] = useState<SiteSpeed>(0);
   const [rate, setRate] = useState(0);
   const [sel, setSel] = useState<Selection | null>(() => {
@@ -367,9 +379,18 @@ export function SiteView(props: Props) {
   latest.current = { speed, pauseOn, m, setSpeed };
 
   useEffect(() => {
-    props.ticks.current = (nextDay, events, nextRate) => {
+    props.ticks.current = (nextDay, events, nextRate, snapshot) => {
       const { pauseOn: on, m: model, speed: current } = latest.current;
       world.day = nextDay;
+      if (snapshot) {
+        // The worker owns the running world; this copy mirrors it from the snapshots.
+        applySiteSnapshot(world, snapshot);
+        movePeople(model.scene, world);
+        renderer.current?.refreshPeople();
+        redrawOverview();
+        setBlock(world.activeSite!.block);
+        setSnapshots((n) => n + 1);
+      }
       setDay(nextDay);
       setRate(nextRate);
       if (events.length === 0) return;
@@ -440,7 +461,6 @@ export function SiteView(props: Props) {
 
   // ---- link line ----
 
-  const date = dateOf(day);
   // Until the map first paints (a hidden phone tab may never size it), the link keeps the restored view.
   const painted = renderer.current && viewKey !== '' ? renderer.current.state.view : null;
   const rounded = painted
@@ -642,7 +662,12 @@ export function SiteView(props: Props) {
   const model = m;
   const liveLine = announce && !sel ? announce : selectionAnnouncement(model, sel);
   const selectedName = sel ? selectionName(model, sel) : '';
-  const date_ = dayText(day);
+  // The date line names the block that just ran (what the inspector shows people doing); after
+  // the evening the day has already turned, so that block belongs to the day before.
+  const lastBlock = (block + DAY_BLOCKS.length - 1) % DAY_BLOCKS.length;
+  const blockDay = block === 0 ? day - 1 : day;
+  const blockSeason = dateOf(blockDay).season;
+  const date_ = dayText(blockDay);
   const monthName = date_.split(' ')[1]!.replace(',', '');
   const rateText =
     speed === 0
@@ -958,8 +983,8 @@ export function SiteView(props: Props) {
             <div className="row">
               <div className="date" data-testid="site-date">
                 <span>{date_}</span>
-                <span className={`season ${date.season}`}>
-                  {date.season} · {monthName}
+                <span className={`season ${blockSeason}`}>
+                  {blockSeason} · {monthName} · {DAY_BLOCKS[lastBlock]}
                 </span>
               </div>
               <span className="sp" />
