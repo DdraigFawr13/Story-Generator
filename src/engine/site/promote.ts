@@ -395,6 +395,7 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
         placeId: h.home,
         moodParts: [],
         lastAte: world.day,
+        lastMet: Object.fromEntries(Object.keys(needs).map((id) => [id, world.day])),
       };
     });
   }

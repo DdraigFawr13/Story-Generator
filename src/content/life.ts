@@ -79,7 +79,8 @@ export const NEEDS: NeedDef[] = [
     id: 'companionship',
     name: 'Company',
     decayPerDay: 10,
-    restore: { eat: 8, socialise: 12, play: 8, worship: 6, work: 3 },
+    // The evening meal together is most people's company; a working day adds a little.
+    restore: { eat: 12, socialise: 12, play: 8, worship: 6, work: 3 },
     awayShare: 1,
     needsCompany: true,
     lowAt: 30,
@@ -91,7 +92,8 @@ export const NEEDS: NeedDef[] = [
     id: 'purpose',
     name: 'Purpose',
     decayPerDay: 8,
-    restore: { work: 6, play: 6 },
+    // Elders work one block and pass the afternoon in company, which also keeps them useful.
+    restore: { work: 6, play: 6, socialise: 6 },
     awayShare: 1,
     lowAt: 30,
     moodAtZero: -12,
@@ -102,7 +104,8 @@ export const NEEDS: NeedDef[] = [
     id: 'faith',
     name: 'Faith',
     decayPerDay: 5,
-    restore: { worship: 40 },
+    // One rest-day worship a week covers even the devout (5 × 1.8 × 7 = 63).
+    restore: { worship: 70 },
     awayShare: 1,
     lowAt: 30,
     moodAtZero: -10,
@@ -181,7 +184,7 @@ export const TRAITS: TraitDef[] = [
     excludes: ['solitary'],
     mood: 2,
     breakdownAt: 1,
-    needRates: { companionship: 1.6 },
+    needRates: { companionship: 1.3 },
   },
   {
     id: 'solitary',

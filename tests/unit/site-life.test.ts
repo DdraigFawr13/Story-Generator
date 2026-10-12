@@ -83,6 +83,27 @@ describe('daily life', () => {
     expect(caused.causes.length).toBeGreaterThan(0);
   });
 
+  it('carries small children with a household adult and keeps every need recoverable', () => {
+    const world = copy();
+    const active = embark(world, C, biggest(world).id);
+    for (let d = 0; d < 60; d += 1) {
+      stepSite(world, C);
+      stepBlock(world, C); // stop at varied blocks: night, morning, afternoon, evening
+    }
+    for (const id of active.residents) {
+      const detail = world.people.get(id)!.detail!;
+      if (detail.with !== undefined) {
+        const carer = world.people.get(detail.with)!.detail!;
+        expect(world.params.historyYears - world.people.get(id)!.born).toBeLessThan(
+          LIFE.carriedUnder,
+        );
+        if (carer.activity !== 'wander') expect(detail.pos).toEqual(carer.pos);
+      }
+      // A fed, housed site pins no need at zero.
+      for (const value of Object.values(detail.needs)) expect(value).toBeGreaterThan(0);
+    }
+  });
+
   it('fades memories linearly and drops them when they expire', () => {
     const memory = { moodDelta: -8, createdDay: 10, decayDays: 4 };
     expect(memoryMood(memory, 10)).toBe(-8);

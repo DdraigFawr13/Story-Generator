@@ -53,6 +53,8 @@ interface Profile {
   homeId: Id | null;
   /** Destination tiles; -1 where the site has none. */
   home: number;
+  /** Where the evening meal is eaten: home, or the hall (else the green) for those who live alone. */
+  table: number;
   green: number;
   field: number;
   shrine: number;
@@ -62,6 +64,8 @@ interface Profile {
   tile: number;
   placeId: Id | null;
   band: Band;
+  /** Whole years old this block. */
+  age: number;
   ate: boolean;
 }
 
@@ -162,6 +166,7 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
   const fields = buildings.filter((b) => b.defId === 'field' && b.followed);
   const stockpile = buildings.find((b) => b.defId === 'stockpile');
   const shrine = buildings.find((b) => b.defId === 'shrine');
+  const hall = buildings.find((b) => b.defId === 'hall');
   const centreOf = (b: Building): [number, number] => [b.x + (b.w >> 1), b.y + (b.h >> 1)];
   const cellOf = (b: Building | undefined, id: number, salt: number) =>
     b ? b.cells[mix(id, salt) % b.cells.length]! : -1;
@@ -222,6 +227,13 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
       household,
       homeId: home?.id ?? null,
       home: home ? interiorSpot(home, slot, width) : green,
+      // Someone who lives alone eats at the hall's hearth (or on the green) for company.
+      table:
+        home && (household?.members.length ?? 0) > 1
+          ? interiorSpot(home, slot, width)
+          : hall
+            ? interiorSpot(hall, mix(id, 8), width)
+            : green,
       green,
       field: field ? cellOf(field, id, 4) : cellOf(stockpile, id, 5),
       shrine: shrine ? cellOf(shrine, id, 6) : green,
@@ -230,6 +242,7 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
       tile: 0,
       placeId: null,
       band: 'adult',
+      age: 0,
       ate: false,
     });
   }
@@ -399,10 +412,24 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     }
   };
 
+  /** A small child's carer: their mother in the household, else their father, else its head. */
+  const carerOf = (p: Profile): Profile | undefined => {
+    const members = p.household?.members ?? [];
+    const grown = (id: Id) => {
+      const q = cache.byId.get(id);
+      return q && q !== p && q.age >= life.carriedUnder && q.band !== 'child' ? q : undefined;
+    };
+    const parents = p.person.family.parents.filter((id) => members.includes(id));
+    const mother = parents.map(grown).find((q) => q?.person.sex === 'f');
+    const father = parents.map(grown).find((q) => q !== undefined);
+    return mother ?? father ?? (p.household ? grown(p.household.head) : undefined);
+  };
+
   // Pass 0: breakdowns end or begin.
   for (const p of profiles) {
     const detail = p.person.detail!;
-    p.band = bandOfAge(p.race, history - p.person.born + yearsIn);
+    p.age = history - p.person.born + yearsIn;
+    p.band = bandOfAge(p.race, p.age);
     const running = detail.breakdown;
     if (
       running &&
@@ -421,8 +448,24 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   // Pass 1: activity, destination, walking.
   const budget = { left: life.pathBudget };
   cache.inside.fill(0);
+  /** Settles where a person stands this block and counts them there. */
+  const standAt = (p: Profile, tile: number) => {
+    const building = active.map.building[tile]!;
+    p.tile = tile;
+    p.placeId = building === 0 ? null : building;
+    p.person.detail!.placeId = p.placeId;
+    if (p.placeId === null) cache.outdoors[tile]! += 1;
+    else cache.inside[p.placeId]! += 1;
+  };
+  const carried: Profile[] = [];
   for (const p of profiles) {
     const detail = p.person.detail!;
+    // Small children go where their carer goes, once the grown-ups have moved.
+    if (p.age < life.carriedUnder && carerOf(p)) {
+      carried.push(p);
+      continue;
+    }
+    delete detail.with;
     const bd = detail.breakdown;
     let activity: Activity;
     if (bd?.kind === 'despair') activity = block === 0 ? 'sleep' : 'despair';
@@ -437,17 +480,19 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     const to =
       activity === 'tantrum'
         ? from
-        : activity === 'sleep' || activity === 'eat' || activity === 'despair'
-          ? p.home
-          : activity === 'work'
-            ? p.field
-            : activity === 'worship'
-              ? p.shrine
-              : activity === 'wander'
-                ? p.wander
-                : activity === 'steal'
-                  ? p.stockpile
-                  : p.green;
+        : activity === 'eat'
+          ? p.table
+          : activity === 'sleep' || activity === 'despair'
+            ? p.home
+            : activity === 'work'
+              ? p.field
+              : activity === 'worship'
+                ? p.shrine
+                : activity === 'wander'
+                  ? p.wander
+                  : activity === 'steal'
+                    ? p.stockpile
+                    : p.green;
     let tile = from;
     if (to !== from) {
       const route = findRoute(active, rules, life, from, to, budget);
@@ -460,12 +505,19 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       }
       if (tile !== from) detail.pos = [tile % width, Math.floor(tile / width)];
     }
-    const building = active.map.building[tile]!;
-    p.tile = tile;
-    p.placeId = building === 0 ? null : building;
-    detail.placeId = p.placeId;
-    if (p.placeId === null) cache.outdoors[tile]! += 1;
-    else cache.inside[p.placeId]! += 1;
+    standAt(p, tile);
+  }
+  for (const p of carried) {
+    const detail = p.person.detail!;
+    const carer = carerOf(p)!;
+    const theirs = carer.person.detail!.activity!;
+    // A carer who wandered off or broke down leaves the child asleep at home.
+    const away = theirs === 'wander' || theirs === 'tantrum' || theirs === 'steal';
+    detail.with = carer.id;
+    detail.activity = away ? 'sleep' : theirs;
+    const tile = away ? p.home : carer.tile;
+    detail.pos = [tile % width, Math.floor(tile / width)];
+    standAt(p, tile);
   }
 
   // Pass 2: needs, meals, work, memories, mood, stress.
@@ -539,7 +591,13 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       value -= decay * p.rates[j]!;
       const restore = need.restore[activity];
       if (restore !== undefined && (need.id !== 'food' || fed)) {
-        if (!need.needsCompany || hasCompany(p)) value += restore * (atHome ? 1 : need.awayShare);
+        const gain =
+          !need.needsCompany || hasCompany(p) ? restore * (atHome ? 1 : need.awayShare) : 0;
+        if (gain > 0) {
+          value += gain;
+          // For "why" lines: "Idle: no work for 3 days".
+          (detail.lastMet ??= {})[need.id] = day;
+        }
       }
       needs[need.id] = clamp(value, 0, 100);
     }
