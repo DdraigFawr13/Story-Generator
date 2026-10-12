@@ -542,8 +542,16 @@ export function settleWorld(world: WorldState, content: SettleContent): void {
   };
 
   // 3-4. Civs in order: capital, then maybe a second site.
+  // Once every culture has a people, each further people goes to the race with the fewest so far.
+  const peoples = new Map<string, number>();
   for (let n = 0; n < civCount; n += 1) {
-    const culture = order[n % order.length]!;
+    let culture = order[n % order.length]!;
+    if (n >= order.length) {
+      for (const other of order) {
+        if ((peoples.get(other.raceId) ?? 0) < (peoples.get(culture.raceId) ?? 0)) culture = other;
+      }
+    }
+    peoples.set(culture.raceId, (peoples.get(culture.raceId) ?? 0) + 1);
     const race = raceOf.get(culture.raceId);
     if (!race) throw new Error(`Culture ${culture.id} has unknown race ${culture.raceId}.`);
     let capitalCell: number;

@@ -22,7 +22,7 @@ export const diseases: DiseaseDef[] = [
     id: 'fever',
     name: 'Summer fever',
     event: 'fever',
-    infectivity: 0.3,
+    infectivity: 0.2,
     incubation: 2,
     duration: 7,
     severity: [0.02, 0.06],
@@ -30,7 +30,7 @@ export const diseases: DiseaseDef[] = [
     season: 'summer',
     outbreak: 0.003,
     minPop: 100,
-    immunityYears: 5,
+    immunityYears: 10,
   },
   {
     id: 'pox',

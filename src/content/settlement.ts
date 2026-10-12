@@ -37,9 +37,10 @@ export const SETTLEMENT: SettlementRules = {
     ford: 1.1,
     road: 1.1,
     foreignBiome: 0.5,
-    raceFeature: { dvergar: { deposit: 2 } },
+    // Dvergar trade ore and stone for food, so deposits in reach feed them.
+    raceFeature: { dvergar: { deposit: 3 } },
     // Tylwyth food scales with mean aura in reach (ref = typical capital, x1).
-    raceAura: { tylwyth: { ref: 28, min: 0.3, max: 1.6 } },
+    raceAura: { tylwyth: { ref: 22, min: 0.3, max: 2 } },
     // Dvergar with no ore or stone in reach go hungry.
     raceWithout: { dvergar: { deposit: 0.4 } },
   },

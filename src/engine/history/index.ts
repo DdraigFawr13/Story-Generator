@@ -1,4 +1,4 @@
-// Yearly history (M2.3, M2.4): after settlement, each year runs climate, harvest, goods, trade (each decade),
+// Yearly history (M2.3, M2.4, M2.4b): after settlement, each year runs climate, harvest, goods, trade (each decade),
 // demographics, famine, civ raids, beasts, disease, migration, expansion, war and site upkeep in a
 // fixed order. Per-run state (links, immunity, cooldowns, wars) lives in `HistoryRun`; only sites,
 // civs, creatures, events and territory change in the world. Trivial events roll up into a yearly

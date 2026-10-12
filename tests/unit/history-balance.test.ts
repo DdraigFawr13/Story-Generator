@@ -199,8 +199,10 @@ describe('race balance by mechanism', () => {
     const cell = [...world.sites.values()][0]!.cell;
     const without = siteCapacity(world.cells!, cell, dvergar, DEFAULT_CONTENT, []);
     const withOre = siteCapacity(world.cells!, cell, dvergar, DEFAULT_CONTENT, ['deposit']);
-    // Deposit also doubles food (raceFeature), so the ratio is 2 / 0.4.
-    expect(withOre / without).toBeCloseTo(5, 0);
+    // Deposit also multiplies food (raceFeature), so the ratio is that bonus over the cut.
+    const capacity = DEFAULT_CONTENT.settlement.capacity;
+    const ratio = capacity.raceFeature.dvergar!.deposit! / capacity.raceWithout.dvergar!.deposit!;
+    expect(withOre / without).toBeCloseTo(ratio, 0);
   });
 });
 

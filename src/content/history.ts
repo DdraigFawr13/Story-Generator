@@ -25,7 +25,8 @@ export const HISTORY: HistoryRules = {
   famineDeathShare: 0.4,
   outbreakSizeCap: 4,
   migrantShare: 0.2,
-  expandAt: 0.8,
+  // Below the crowding at which births fall (0.6-1), so slow-breeding races still send settlers.
+  expandAt: 0.65,
   expandCooldown: 15,
   expandChance: 0.2,
   expandRange: [4, 12],
@@ -33,7 +34,8 @@ export const HISTORY: HistoryRules = {
   newSiteStoresYears: 0.5,
   newSiteSpacing: 5,
   minNewSiteCapacity: 100,
-  civFoundCooldown: 12,
+  // Years between new sites of one civ; caps live sites near 40-120 after 250 years.
+  civFoundCooldown: 15,
   shortStoresYears: 0.25,
   climate: {
     startChance: 0.08,
@@ -42,8 +44,8 @@ export const HISTORY: HistoryRules = {
     // A radius of 25-60 cells covers roughly 3-17% of a 256x256 map each.
     radius: [25, 60],
     dryShare: 0.65,
-    dry: { mul: 3, floor: 0.25 },
-    cold: { mul: 2.5, floor: 0.2 },
+    dry: { mul: 3, floor: 0.25, yield: 0.8 },
+    cold: { mul: 2.5, floor: 0.2, yield: 0.85 },
   },
   importance: {
     kindFame: { town: 1, city: 2, fortress: 1 },

@@ -99,9 +99,10 @@ const eventsOf = (world: WorldState, type: string) => world.events.filter((e) =>
 
 describe('harvest and famine', () => {
   it('starves a site in a drought cell before an equal site with no drought risk', () => {
-    // Droughts every year at risk 100 and no yield variance, so the outcome is certain.
+    // Droughts every year at risk 100, no yield variance and no climate epochs, so the outcome is certain.
     const rules: HistoryRules = {
       ...DEFAULT_CONTENT.history,
+      climate: { ...DEFAULT_CONTENT.history.climate, startChance: 0 },
       harvestVariance: 0,
       droughtScale: 1,
       expandChance: 0,

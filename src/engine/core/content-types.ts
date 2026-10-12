@@ -439,9 +439,12 @@ export interface ClimateRules {
   radius: [number, number];
   /** Share of epochs that are dry (the rest are cold). */
   dryShare: number;
-  /** Inside a dry or cold epoch the drought or winter chance is max(chance * mul, floor). */
-  dry: { mul: number; floor: number };
-  cold: { mul: number; floor: number };
+  /**
+   * Inside a dry or cold epoch the drought or winter chance is max(chance * mul, floor), and every
+   * harvest there is multiplied by `yield`, bad year or not.
+   */
+  dry: { mul: number; floor: number; yield: number };
+  cold: { mul: number; floor: number; yield: number };
 }
 
 /** Event importance scoring and rollups (M2.4b). */

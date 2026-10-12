@@ -28,6 +28,8 @@ export function runHarvest(run: HistoryRun): void {
       inEpoch((cells.risk.snow[site.cell]! / 100) * rules.winterScale, cold, rules.climate.cold),
     );
     let yieldFactor = 1 + spread * rules.harvestVariance;
+    if (dry) yieldFactor *= rules.climate.dry.yield;
+    if (cold) yieldFactor *= rules.climate.cold.yield;
     if (drought) yieldFactor *= rules.droughtYield;
     if (winter) yieldFactor *= rules.winterYield;
     const need = siteNeed(site, run.races);
