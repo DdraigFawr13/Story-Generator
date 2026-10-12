@@ -12,7 +12,6 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256Ã
 - Prefer a content entry over an engine special case; put tunable numbers in `src/content/` with a one-line comment.
 - Every state change a person would notice emits an event with a content template and cause links. Chronicle text never invents facts.
 - Tests are light: tiny fixtures, one determinism test, invariant checkers, one Chromium smoke. No seed batteries. Never skip or weaken a test to get green.
-- Don't extend the legacy app (`src/sim`, `src/controller`, `src/adapters`, `src/ui`); it is deleted at Phase 2 close.
 - No new runtime dependencies, API keys or backend without the user.
 
 ## How work flows
@@ -43,6 +42,6 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256Ã
 | `src/engine/people/` | attributes, aptitude, magic tiers, combat scale (R-24) |
 | `src/content/` | races, cultures, biomes, resources, names, history rules, event types, map layers |
 | `src/platform/` | IndexedDB saves, world-gen worker host |
-| `src/app/` | the React world map at `/?next` |
+| `src/app/` | the React world map and legends browser at `/` |
 | `scripts/` | boundaries check, drama, worldmap |
 | `tests/unit/`, `tests/browser/` | Vitest units, the Playwright smoke |

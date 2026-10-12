@@ -32,7 +32,8 @@ describe('event templates', () => {
     for (const event of world.events) {
       const count = DEFAULT_CONTENT.eventTypes.find((t) => t.id === event.type)!.templates.length;
       for (let i = 0; i < count; i += 1) {
-        expect(() => narrator.renderVariant(event, i), `${event.type} #${i}`).not.toThrow();
+        // Every line opens with a capital, even one that starts on "the <beast>".
+        expect(narrator.renderVariant(event, i), `${event.type} #${i}`).not.toMatch(/^[a-z]/);
       }
     }
   });

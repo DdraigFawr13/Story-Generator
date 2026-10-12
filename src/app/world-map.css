@@ -1,5 +1,22 @@
 /* World-map viewer (M1.4). Copied from the approved design; everything sits
-   under .wm-root so the legacy styles.css is unaffected. System fonts only. */
+   under .wm-root. System fonts only. */
+/* Page reset, carried over from the legacy styles.css (deleted at Phase 2 close). */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+h2,
+p {
+  margin: 0;
+}
+:focus-visible {
+  outline: 3px solid #97640f;
+  outline-offset: 3px;
+}
 :root:has(.wm-root) {
   --paper: #eff1e8;
   --panel: #fafbf6;
@@ -466,6 +483,10 @@ dl.facts dd {
   margin: 0;
   font-weight: 400;
   font-variant-numeric: tabular-nums;
+}
+.wm-inspector dl.facts dd {
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 .bars {
   display: flex;
@@ -1051,6 +1072,7 @@ dl.facts dd {
 .wm-root .lg-facts dd {
   margin: 0;
   font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 .wm-root .lg-actions {
   display: flex;

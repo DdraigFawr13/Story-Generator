@@ -65,7 +65,7 @@ export function cellAt(
   return x < 0 || x >= columns || y < 0 || y >= rows ? null : { x, y };
 }
 
-// ---- URL: /?next&seed=S1&size=256&layer=rainfall&at=118,40&z=3&year=112&open=event:412&cat=site&q=ash ----
+// ---- URL: /?seed=S1&size=256&layer=rainfall&at=118,40&z=3&year=112&open=event:412&cat=site&q=ash ----
 
 /** Legends list categories, in tab order. */
 export const LEGEND_CATEGORIES = [
@@ -138,7 +138,6 @@ export function buildViewUrl(
     Partial<Pick<ViewState, 'year' | 'open' | 'cat' | 'q'>> & { seed: string },
 ): string {
   const parts = [
-    'next',
     `seed=${encodeURIComponent(view.seed)}`,
     `size=${view.size}`,
     `layer=${view.layer}`,
@@ -192,13 +191,34 @@ export function rampGradient(layer: MapLayer): string {
   return `linear-gradient(90deg, ${stops.join(', ')})`;
 }
 
-/** Labelled ticks along the bar, 0–1; the labels come from the layer's legend. */
+/** Width of one tick-label character as a share of the bar (0.66rem mono on a ~260 px bar). */
+const TICK_CHAR = 0.025;
+
+/**
+ * Labelled ticks along the bar, 0–1; the labels come from the layer's legend. An inner tick
+ * whose label would overlap its neighbour's is dropped (elevation's 0 m and 400 m).
+ */
 export function rampTicks(layer: MapLayer): { pos: number; label: string }[] {
   const [lo, hi] = stopSpan(layer);
-  return (layer.stops ?? []).map((s, i) => ({
+  const ticks = (layer.stops ?? []).map((s, i) => ({
     pos: (s.at - lo) / (hi - lo),
     label: layer.legend[i]?.label ?? String(s.at),
   }));
+  // The first label starts at its tick, the last ends at it, the rest are centred (world-map.css).
+  const span = (i: number) => {
+    const { pos, label } = ticks[i]!;
+    const width = (label.length + 1) * TICK_CHAR;
+    if (i === 0) return [pos, pos + width] as const;
+    if (i === ticks.length - 1) return [pos - width, pos] as const;
+    return [pos - width / 2, pos + width / 2] as const;
+  };
+  const kept: number[] = [];
+  for (let i = 0; i < ticks.length; i++) {
+    const last = i === ticks.length - 1;
+    while (last && kept.length > 1 && span(kept[kept.length - 1]!)[1] > span(i)[0]) kept.pop();
+    if (kept.length === 0 || last || span(kept[kept.length - 1]!)[1] <= span(i)[0]) kept.push(i);
+  }
+  return kept.map((i) => ticks[i]!);
 }
 
 /** Where a cell value sits on the bar, 0–1, or null (categories, sea). */

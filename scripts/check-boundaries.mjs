@@ -5,19 +5,14 @@ import { parse } from '@babel/parser';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const allowed = {
-  sim: new Set(['sim']),
-  controller: new Set(['controller', 'sim', 'adapters']),
-  adapters: new Set(['adapters', 'sim']),
-  // Legacy ui may only reach `app` through the `?next` entry; removed at Milestone A.
-  ui: new Set(['ui', 'controller', 'app']),
-  // New layers (REBOOT_PLAN §7.1). Engine data shapes live in engine; content is data only.
+  // Layers (REBOOT_PLAN §7.1). Engine data shapes live in engine; content is data only.
   engine: new Set(['engine']),
   content: new Set(['content', 'engine']),
   platform: new Set(['platform', 'engine']),
   app: new Set(['app', 'engine', 'content', 'platform']),
 };
-const pureLayers = new Set(['sim', 'engine', 'content']);
-const reactLayers = new Set(['ui', 'app']);
+const pureLayers = new Set(['engine', 'content']);
+const reactLayers = new Set(['app']);
 const forbiddenCoreNames = new Set([
   'Date',
   'performance',

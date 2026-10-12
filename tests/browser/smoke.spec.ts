@@ -23,7 +23,7 @@ function collectErrors(page: Page): string[] {
 
 test('the world map generates, inspects, saves, reloads and advances', async ({ page }) => {
   const errors = collectErrors(page);
-  await page.goto('/?next&seed=SMOKE&size=128');
+  await page.goto('/?seed=SMOKE&size=128');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('world map');
   const map = page.getByTestId('world-map');
   await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
@@ -129,12 +129,16 @@ test('the world map generates, inspects, saves, reloads and advances', async ({ 
   expect(errors).toEqual([]);
 });
 
-test('the legacy app still founds and steps a settlement', async ({ page }) => {
+test('old /?next links still open the world map', async ({ page }) => {
   const errors = collectErrors(page);
-  await page.goto('/');
-  await page.getByRole('button', { name: 'New world', exact: true }).click();
-  await expect(page.getByTestId('tick')).toHaveText('0');
-  await page.getByRole('button', { name: 'Step one week' }).click();
-  await expect(page.getByTestId('tick')).toHaveText('1');
+  await page.goto('/?next&seed=SMOKE&size=128&open=race:human');
+  const map = page.getByTestId('world-map');
+  await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
+  await expect(map).toHaveAttribute('data-seed', 'SMOKE');
+  await expect(
+    page.getByRole('region', { name: 'Legends' }).getByRole('heading', { level: 3 }),
+  ).not.toHaveText('');
+  // Links the app writes no longer carry the flag.
+  await expect(page).not.toHaveURL(/[?&]next/);
   expect(errors).toEqual([]);
 });
