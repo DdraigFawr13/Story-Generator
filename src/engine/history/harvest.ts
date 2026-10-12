@@ -80,10 +80,22 @@ export function runFamine(run: HistoryRun): void {
     const log = logOf(run, site.id);
     const harvest = log.badHarvest?.year === run.year ? log.badHarvest.event : undefined;
     const spell = log.epoch?.year === run.year ? log.epoch.event : undefined;
+    // Stores can run short with no bad year this year: blame the nearest earlier trouble.
+    const recent = (entry: { year: number; event: number } | undefined) =>
+      entry && run.year - entry.year <= rules.famineCauseYears ? entry.event : undefined;
+    const fallback =
+      harvest === undefined && spell === undefined
+        ? (recent(log.badHarvest) ??
+          recent(log.epoch) ??
+          recent(log.raided) ??
+          recent(log.famine) ??
+          log.grew ??
+          log.origin)
+        : undefined;
     const event = run.emit({
       type: 'famine',
       place: site.cell,
-      causes: causesOf(harvest, spell),
+      causes: causesOf(harvest, spell, fallback),
       data: { site: site.name, civ: civName(run, site), dead },
     });
     log.famine = { year: run.year, event: event.id };

@@ -17,6 +17,7 @@
     "boundaries": "node scripts/check-boundaries.mjs",
     "test": "vitest run",
     "test:browser": "playwright test",
+    "bios": "node scripts/biographies.mjs",
     "drama": "node scripts/drama.mjs",
     "sweep": "node scripts/sweep.mjs",
     "worldmap": "node scripts/worldmap.mjs",

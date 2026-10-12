@@ -23,6 +23,8 @@ export const HISTORY: HistoryRules = {
   minAdultYears: 5,
   minElderYears: 10,
   famineDeathShare: 0.4,
+  // How far back a famine without a bad year this year looks for its cause.
+  famineCauseYears: 5,
   outbreakSizeCap: 4,
   migrantShare: 0.2,
   // Below the crowding at which births fall (0.6-1), so slow-breeding races still send settlers.

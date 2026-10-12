@@ -155,7 +155,18 @@ export interface EventTypeDef {
   category: 'nature' | 'social' | 'threat' | 'politics' | 'magic' | 'life' | 'world';
   /** At least one; three or more for common events (§2B). Use {name} placeholders. */
   templates: string[];
+  /** `'year'`: history events carry no real day, so `{date}` prints as "Year N". */
+  precision?: 'year';
+  /** Which `data` keys name an entity, so biographies can index the event under it. */
+  links?: Record<string, LinkKind>;
+  /** The label in the yearly `year_summary` rollup, for types that are usually trivial. */
+  rollup?: [singular: string, plural: string];
+  /** Data keys that only some variants print (the first variant sets the key whitelist). */
+  dataKeys?: string[];
 }
+
+/** The kind of entity a `links` data key names (by name; ids collide across kinds). */
+export type LinkKind = 'civ' | 'site' | 'beast' | 'item' | 'dynasty';
 
 /**
  * Data-driven event rule (§7.5). Today `subject` is only 'world'; Phase 2/3
@@ -188,6 +199,19 @@ export interface ContentBundle {
   creatures: CreatureDef[];
   diseases: DiseaseDef[];
   notables: NotableRules;
+  biographies: BiographyRules;
+}
+
+/** Biographies (M2.6): how many chronicle lines an entity keeps and the words of its summary. */
+export interface BiographyRules {
+  /** Most chronicle lines in one biography; the first and last events are always kept. */
+  maxLines: number;
+  /** Per `NotableRole`: the noun in "stood as {title} of the {civ}". */
+  roles: Record<NotableRole, string>;
+  /** Per `DeathCause`: the phrase after "died", with its preposition ("of old age", "in a raid"). */
+  causes: Record<DeathCause, string>;
+  /** Summary sentence variants by name, filled with `fillTemplate`; the variant is chosen by id hash. */
+  sentences: Record<string, string[]>;
 }
 
 /** Notables, families, succession and items (M2.5). Every number is a tunable; see content/notables.ts. */
@@ -600,6 +624,8 @@ export interface HistoryRules {
   minElderYears: number;
   /** Share of a starving site's people who die, times the shortfall (0-1). */
   famineDeathShare: number;
+  /** A famine with no bad year of its own names the site's earlier trouble up to this many years back. */
+  famineCauseYears: number;
   /** Outbreak chance scales with pop / minPop up to this many times. */
   outbreakSizeCap: number;
   /** Share of children and adults who leave a starving or overfull site. */

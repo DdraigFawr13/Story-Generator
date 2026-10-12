@@ -10,6 +10,8 @@ import {
   DEFAULT_SYSTEMS,
   RngStream,
   advance,
+  biography,
+  buildLegendIndex,
   createWorld,
   formatDate,
   rollAptitude,
@@ -81,6 +83,13 @@ export function NextApp() {
   const narrator = useMemo(
     () => templateNarrator(DEFAULT_CONTENT, (id) => world.current.people.get(id)?.name ?? `#${id}`),
     [],
+  );
+
+  // Rebuilt when a world is generated, loaded or stepped (the revision), never per render.
+  const legend = useMemo(
+    () => buildLegendIndex(world.current, DEFAULT_CONTENT),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [revision],
   );
 
   const writeUrl = (mode: 'push' | 'replace', next: View) => {
@@ -257,8 +266,9 @@ export function NextApp() {
           people={state.people}
           dynasties={state.dynasties}
           year={Math.floor(state.day / DAYS_PER_YEAR)}
-          events={state.events}
-          renderEvent={(event) => narrator.renderEvent(event)}
+          siteBiography={(siteId) =>
+            biography(state, DEFAULT_CONTENT, narrator, legend, { kind: 'site', id: siteId })
+          }
           cultures={DEFAULT_CONTENT.cultures}
           seed={state.seed}
           content={DEFAULT_CONTENT}

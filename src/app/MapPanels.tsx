@@ -17,7 +17,7 @@ import {
   type Region,
   type ResourceDef,
   type Rgb,
-  type SimEvent,
+  type Biography,
   type Site,
   type WorldCells,
 } from '../engine';
@@ -305,9 +305,9 @@ function SiteBlock({
   civ,
   culture,
   num,
-  history,
   ruler,
   notables,
+  biography,
 }: {
   site: Site;
   civ: Civ | null;
@@ -317,8 +317,8 @@ function SiteBlock({
   ruler: string | null;
   /** The site's best known living notables: name, role and age. */
   notables: readonly string[];
-  /** Rendered chronicle lines for this site, newest first. */
-  history: readonly string[];
+  /** The site's summary and chronicle lines, when it has a biography. */
+  biography: Biography | null;
 }) {
   const bandCount = (band: (typeof BAND_ORDER)[number]) =>
     site.pop.filter((p) => p.band === band).reduce((n, p) => n + p.count, 0);
@@ -354,19 +354,25 @@ function SiteBlock({
         </Fact>
         <Fact label="Wealth">{num(Math.round(site.wealth))}</Fact>
         {/* Calendar years count from 1 (core/clock.ts); history year N is calendar year N + 1. */}
-        <Fact label="Founded">Year {site.founded + 1}</Fact>
-        {site.ruinedYear !== undefined && <Fact label="Ruined">Year {site.ruinedYear + 1}</Fact>}
+        <Fact label="Founded">Year {site.founded}</Fact>
+        {site.ruinedYear !== undefined && <Fact label="Ruined">Year {site.ruinedYear}</Fact>}
         <Fact label="Founded here for">
           {site.features.length === 0 ? 'open ground' : site.features.join(', ')}
         </Fact>
       </dl>
-      {history.length > 0 && (
+      {biography && biography.summary.length > 0 && (
+        <p className="site-summary">{biography.summary.join(' ')}</p>
+      )}
+      {biography && biography.lines.length > 0 && (
         <>
           <h4>History</h4>
           <ul className="site-history" aria-label="Site history">
-            {history.map((line, k) => (
-              <li key={k}>{line}</li>
-            ))}
+            {biography.lines
+              .slice(-SITE_HISTORY_LINES)
+              .reverse()
+              .map((line) => (
+                <li key={line.eventId}>{line.text}</li>
+              ))}
           </ul>
         </>
       )}
@@ -402,7 +408,7 @@ function LairBlock({
   );
 }
 
-/** How many of a site's latest events the inspector lists. */
+/** How many of a site's most important chronicle lines the inspector lists. */
 const SITE_HISTORY_LINES = 5;
 
 export function Inspector({
@@ -420,8 +426,7 @@ export function Inspector({
   landCiv,
   landCulture,
   places,
-  events,
-  renderEvent,
+  siteBiography,
   people,
   dynasties,
   year,
@@ -446,9 +451,8 @@ export function Inspector({
   landCulture: CultureDef | null;
   /** Regions containing the cell, in id order. */
   places: readonly Region[];
-  /** The world's events, oldest first, and how to tell one in words. */
-  events: readonly SimEvent[];
-  renderEvent: (event: SimEvent) => string;
+  /** The biography of a site by id. */
+  siteBiography: (siteId: Id) => Biography;
   /** Notables and their dynasties, and the history year the ages count to. */
   people: ReadonlyMap<Id, Person>;
   dynasties: ReadonlyMap<Id, Dynasty>;
@@ -473,7 +477,7 @@ export function Inspector({
     return { kind, level };
   });
   const num = (n: number) => n.toLocaleString('en-US');
-  const history: string[] = [];
+  let bio: Biography | null = null;
   let ruler: string | null = null;
   const notables: string[] = [];
   if (site) {
@@ -487,9 +491,7 @@ export function Inspector({
     for (const person of here.slice(0, SITE_NOTABLES)) {
       notables.push(`${person.name}, ${person.title ?? 'kin'}, aged ${year - person.born}`);
     }
-    for (let k = events.length - 1; k >= 0 && history.length < SITE_HISTORY_LINES; k -= 1) {
-      if (events[k]!.place === site.cell) history.push(renderEvent(events[k]!));
-    }
+    bio = siteBiography(site.id);
   }
   return (
     <aside className="float wm-inspector" aria-label="Cell inspector">
@@ -528,7 +530,7 @@ export function Inspector({
           civ={siteCiv}
           culture={siteCulture}
           num={num}
-          history={history}
+          biography={bio}
           ruler={ruler}
           notables={notables}
         />

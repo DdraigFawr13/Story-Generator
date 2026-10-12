@@ -17,7 +17,7 @@ import {
   type Person,
   type Region,
   type RouteGraph,
-  type SimEvent,
+  type Biography,
   type Site,
   type WorldCells,
 } from '../engine';
@@ -51,9 +51,8 @@ interface Props {
   people: ReadonlyMap<Id, Person>;
   dynasties: ReadonlyMap<Id, Dynasty>;
   year: number;
-  /** The world's events (oldest first) and how to tell one; the site inspector lists its latest. */
-  events: readonly SimEvent[];
-  renderEvent: (event: SimEvent) => string;
+  /** The biography of a site (by id), shown in the site inspector. */
+  siteBiography: (siteId: Id) => Biography;
   cultures: readonly CultureDef[];
   seed: string;
   content: Pick<ContentBundle, 'biomes' | 'resources' | 'creatures'>;
@@ -241,8 +240,7 @@ export function WorldMap({
   people,
   dynasties,
   year,
-  events,
-  renderEvent,
+  siteBiography,
   cultures,
   seed,
   content,
@@ -849,8 +847,7 @@ export function WorldMap({
           landCiv={landCiv}
           landCulture={cultureOf(landCiv?.cultureId)}
           places={placesOf(cells, regions).lookup.get(selected.y * cells.width + selected.x) ?? []}
-          events={events}
-          renderEvent={renderEvent}
+          siteBiography={siteBiography}
           people={people}
           dynasties={dynasties}
           year={year}
