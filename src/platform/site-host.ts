@@ -32,7 +32,20 @@ export interface SiteHostHandlers {
 /** Only the plain-data tables cross over: a full content bundle holds functions, which cannot be cloned. */
 export function siteContentOf(content: SiteContent): SiteContent {
   const { biomes, resources, races, cultures, eventTypes, settlement, site } = content;
-  return { biomes, resources, races, cultures, eventTypes, settlement, site };
+  const { needs, traits, memories, life } = content;
+  return {
+    biomes,
+    resources,
+    races,
+    cultures,
+    eventTypes,
+    settlement,
+    site,
+    needs,
+    traits,
+    memories,
+    life,
+  };
 }
 
 export function createSiteHost(handlers: SiteHostHandlers): SiteHost {

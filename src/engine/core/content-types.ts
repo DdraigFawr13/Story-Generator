@@ -214,6 +214,162 @@ export interface ContentBundle {
   notables: NotableRules;
   biographies: BiographyRules;
   site: SiteRules;
+  /** Daily life (M3.2): needs, traits, memories and the day's rhythm. */
+  needs: NeedDef[];
+  traits: TraitDef[];
+  memories: MemoryDef[];
+  life: LifeRules;
+}
+
+/** The four blocks of a site day (M3.2), in the order they run. */
+export const DAY_BLOCKS = ['night', 'morning', 'afternoon', 'evening'] as const;
+export type DayBlock = (typeof DAY_BLOCKS)[number];
+
+/** What a resident does in one block. Breakdowns override the schedule. */
+export const ACTIVITIES = [
+  'sleep',
+  'work',
+  'play',
+  'eat',
+  'socialise',
+  'worship',
+  'tantrum',
+  'despair',
+  'wander',
+  'steal',
+] as const;
+export type Activity = (typeof ACTIVITIES)[number];
+
+export const BREAKDOWN_KINDS = ['tantrum', 'despair', 'wandering', 'theft'] as const;
+export type BreakdownKind = (typeof BREAKDOWN_KINDS)[number];
+
+/** One need (REBOOT_PLAN §6A), 0-100 with 100 satisfied. */
+export interface NeedDef {
+  id: string;
+  name: string;
+  /** Points lost per day, applied a quarter per block. Warmth instead uses `LifeRules.warmth`. */
+  decayPerDay: number;
+  /** Points restored per block spent in an activity. */
+  restore: Partial<Record<Activity, number>>;
+  /** Share of `restore` kept when the block is not spent in the person's own home (0 = home only). */
+  awayShare: number;
+  /** Restored only when someone else shares the place. */
+  needsCompany?: boolean;
+  /** Below this the need costs mood. */
+  lowAt: number;
+  /** Mood at 0; the cost grows linearly from 0 at `lowAt`. */
+  moodAtZero: number;
+  /** "why" word when low, e.g. "Hungry". */
+  lowWord: string;
+  /** Only people whose culture values faith at least this much have the need. */
+  minCultureFaith?: number;
+}
+
+/** A personality trait (M3.2). People get one or two at promotion. */
+export interface TraitDef {
+  id: string;
+  name: string;
+  description: string;
+  /** Roll weight at promotion. */
+  weight: number;
+  /** Trait ids that cannot be held with this one. */
+  excludes: string[];
+  /** Mood always added. */
+  mood: number;
+  /** Multiplies the stress at which a breakdown comes (below 1 breaks sooner). */
+  breakdownAt: number;
+  /** The kind of breakdown this trait causes; the first such trait a person has decides. */
+  breakdown?: BreakdownKind;
+  /** Multipliers on need decay, by need id. */
+  needRates?: Record<string, number>;
+}
+
+/** A remembered happening (§6A); its mood fades linearly to 0 over `decayDays`. */
+export interface MemoryDef {
+  id: string;
+  mood: number;
+  decayDays: number;
+  /** Inspector line; `{about}` is the person it concerns. */
+  text: string;
+}
+
+/** The day's rhythm and the stress rules (M3.2). Every number is a tunable in content/life.ts. */
+export interface LifeRules {
+  /** Activity per age band and block. */
+  schedule: Record<'child' | 'adult' | 'elder', Record<DayBlock, Activity>>;
+  /** Every this many days is a rest day... */
+  restDayEvery: number;
+  /** ...whose afternoon is worship (for people with a faith need) or socialising. */
+  restDayAfternoon: { faithful: Activity; others: Activity };
+  /** Food eaten per meal, as a share of the race's yearly food need. */
+  mealShare: number;
+  /** Field work (until M3.3 brings jobs): food per work block, as a share of the race's yearly need. */
+  fieldYieldShare: number;
+  /** Work output by age band (children 0). */
+  workOutput: Record<'child' | 'adult' | 'elder', number>;
+  warmth: {
+    /** Month (0-11) of the coldest day; the warmest is six months on. */
+    coldestMonth: number;
+    /** No warmth is lost at or above this temperature (°C). */
+    comfortC: number;
+    /** Warmth lost per day per degree below comfort... */
+    perDegree: number;
+    /** ...at most this much. */
+    maxPerDay: number;
+  };
+  /** Stress builds while mood is below this... */
+  stressBelow: number;
+  /** ...by this much per day per point below. */
+  stressRise: number;
+  /** Stress falls by this much per day per point of mood above 0, and by `stressFloorFall` at least while mood is above 0. */
+  stressFall: number;
+  stressFloorFall: number;
+  /** A breakdown comes at this stress, times the traits' `breakdownAt`. */
+  breakdownAt: number;
+  /** Stress left after a breakdown. */
+  stressAfter: number;
+  /** Kind for people with no breakdown trait, and for children. */
+  defaultBreakdown: BreakdownKind;
+  childBreakdown: BreakdownKind;
+  /** Days a despair or wandering breakdown lasts (inclusive range). */
+  despairDays: [number, number];
+  wanderDays: [number, number];
+  /** Meals a thief takes from the stores. */
+  theftMeals: number;
+  /** People within this many tiles (Chebyshev) see a breakdown. */
+  witnessRange: number;
+  /** Most memories a person keeps; the weakest go first. */
+  memoryCap: number;
+  /** Memory ids the engine gives, by happening. */
+  memoryOf: {
+    hungry: string;
+    sleptRough: string;
+    ateTogether: string;
+    worshipped: string;
+    vented: string;
+    sawTantrum: string;
+    sawDespair: string;
+    kinWandered: string;
+    sawTheft: string;
+  };
+  /** Tiles a person walks in one block; a longer route ends part way. */
+  walkPerBlock: number;
+  /** A* node expansions allowed per block across everyone; past it, routes are straight lines. */
+  pathBudget: number;
+  /** Routes kept in the path cache. */
+  pathCache: number;
+  /** Walking cost per tile by terrain id; trees and minerals add theirs. Water and walls block. */
+  walkCost: Record<string, number>;
+  treeCost: number;
+  /** Event type ids the engine emits. */
+  events: {
+    tantrum: string;
+    despair: string;
+    wandering: string;
+    theft: string;
+    returned: string;
+    storesEmpty: string;
+  };
 }
 
 /** A named glyph entry; the array index is the value stored in a `LocalMap` layer. */

@@ -407,6 +407,8 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
     goodsAtEntry: { ...site.goods },
     stockAtEntry,
     origin: layout.origin,
+    block: 0,
+    storesEmptyEvent: null,
   };
   world.activeSite = active;
   return active;

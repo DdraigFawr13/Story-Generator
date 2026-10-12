@@ -4,6 +4,7 @@
 // per-version compatibility layers (R-02, R-03).
 
 import type { RngState } from './rng';
+import type { Activity, BreakdownKind } from './content-types';
 
 export type Id = number;
 
@@ -47,6 +48,7 @@ export interface Family {
 
 /** Site-tier-only detail (§6). Absent while a person lives only at world tier. */
 export interface PersonDetail {
+  /** Need id → 0-100 (100 satisfied); only the needs this person has. */
   needs: Record<string, number>;
   mood: number;
   stress: number;
@@ -54,6 +56,25 @@ export interface PersonDetail {
   relationships: Map<Id, Relationship>;
   jobId?: string;
   pos?: [number, number];
+  /** M3.2: what they did in the last block run, and where (a building id, or null outdoors). */
+  activity?: Activity;
+  placeId?: Id | null;
+  /** The parts mood was summed from in the last block, for the inspector's "why" lines. */
+  moodParts?: MoodPart[];
+  /** Day of the last meal eaten. */
+  lastAte?: number;
+  /** A running breakdown: despair and wandering last days, tantrum and theft one block. */
+  breakdown?: { kind: BreakdownKind; untilDay: number; eventId: Id };
+}
+
+/** One term of a person's mood: a low need, a memory or a trait. */
+export interface MoodPart {
+  kind: 'need' | 'memory' | 'trait';
+  /** Need, memory or trait id. */
+  id: string;
+  value: number;
+  /** The person a memory is about. */
+  about?: Id;
 }
 
 export interface Memory {
@@ -62,6 +83,8 @@ export interface Memory {
   moodDelta: number;
   createdDay: number;
   decayDays: number;
+  /** The event behind it, for cause links. */
+  eventId?: Id;
 }
 
 export interface Relationship {
@@ -486,6 +509,10 @@ export interface ActiveSite {
   stockAtEntry: Record<string, number>;
   /** Tile the layout grew from (the village green). */
   origin: [number, number];
+  /** M3.2: the next day block to run (0 = night, see DAY_BLOCKS). */
+  block: number;
+  /** The open `stores_empty` event while the stores are bare, for cause links; null once refilled. */
+  storesEmptyEvent: Id | null;
 }
 
 export interface WorldState {
