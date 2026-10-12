@@ -4,12 +4,12 @@
 import { createEmitter, type EmitInput } from '../core/context';
 import type { ContentBundle, HistoryRules, RaceDef } from '../core/content-types';
 import { streamFor, type RngStream } from '../core/rng';
-import type { Civ, Id, SimEvent, Site, WorldCells, WorldState } from '../core/types';
+import type { Civ, Goods, Id, SimEvent, Site, WorldCells, WorldState } from '../core/types';
 import type { SiteLinks, LinkSearch } from './links';
 import type { SettleContent, SettleSearch } from './settle';
 
 /** What the history stage reads from content. */
-export type HistoryContent = SettleContent & Pick<ContentBundle, 'history'>;
+export type HistoryContent = SettleContent & Pick<ContentBundle, 'history' | 'creatures'>;
 
 /** The latest events that touched one site, for linking causes. */
 export interface SiteLog {
@@ -21,6 +21,28 @@ export interface SiteLog {
   grew?: Id;
   /** The last migration event out of the site. */
   migration?: { year: number; event: Id };
+  /** The last beast raid on the site. */
+  raided?: { year: number; event: Id };
+}
+
+/** A war between two civs (M2.4); the events are the record, wars are not saved with the world. */
+export interface War {
+  id: number;
+  attacker: Id;
+  defender: Id;
+  started: number;
+  ended?: number;
+  /** The war_declared event. */
+  cause: Id;
+  /** The latest event of the war, the cause of the next battle. */
+  lastEvent: Id;
+  /** Adults killed in all, and on each side. */
+  dead: number;
+  attackerDead: number;
+  defenderDead: number;
+  /** Adults at the start, for war weariness. */
+  attackerAdults: number;
+  defenderAdults: number;
 }
 
 export interface HistoryRun {
@@ -40,6 +62,9 @@ export interface HistoryRun {
     migration: RngStream;
     expansion: RngStream;
     names: RngStream;
+    beasts: RngStream;
+    trade: RngStream;
+    war: RngStream;
   };
   /** Current year, 1..historyYears. */
   year: number;
@@ -56,6 +81,59 @@ export interface HistoryRun {
   siteAtCell: Map<number, Id>;
   /** Owning civ per cell as of the last recompute. */
   territory: Uint16Array;
+  /** Set when a site changed hands or fell, so territory is recomputed at the end of the year. */
+  territoryDirty: boolean;
+  wars: War[];
+  /** Latest wrongs per `${aggrieved}>${offender}` civ pair (most recent three event ids). */
+  grievanceEvents: Map<string, Id[]>;
+  /** Year before which a `${low}-${high}` civ pair cannot declare war on each other. */
+  truce: Map<string, number>;
+  /** The trade_opened event per `${low}-${high}` civ pair. */
+  tradeOpened: Map<string, Id>;
+  /** Cached deposit counts per good near each site. */
+  deposits: Map<Id, Goods>;
+}
+
+/** Key for an unordered pair of civs. */
+export function pairKey(a: Id, b: Id): string {
+  return a < b ? `${a}-${b}` : `${b}-${a}`;
+}
+
+/** The most recent wrong event ids `from` holds against `to`. */
+export function grievanceEventsOf(run: HistoryRun, from: Id, to: Id): Id[] {
+  return run.grievanceEvents.get(`${from}>${to}`) ?? [];
+}
+
+/** Adds to `from`'s grievance against `to` and remembers the event behind it (keeps the latest three). */
+export function addGrievance(run: HistoryRun, from: Id, to: Id, amount: number, event: Id): void {
+  const civ = run.world.civs.get(from);
+  if (!civ) return;
+  civ.grievances.set(to, (civ.grievances.get(to) ?? 0) + amount);
+  const key = `${from}>${to}`;
+  run.grievanceEvents.set(key, [...(run.grievanceEvents.get(key) ?? []), event].slice(-3));
+}
+
+/** Forgets all grievance between two civs, both ways. */
+export function clearGrievance(run: HistoryRun, a: Id, b: Id): void {
+  run.world.civs.get(a)?.grievances.delete(b);
+  run.world.civs.get(b)?.grievances.delete(a);
+  run.grievanceEvents.delete(`${a}>${b}`);
+  run.grievanceEvents.delete(`${b}>${a}`);
+}
+
+/** True when the two civs have an unended war. */
+export function atWar(run: HistoryRun, a: Id | null, b: Id | null): boolean {
+  if (a === null || b === null) return false;
+  return run.wars.some(
+    (w) =>
+      w.ended === undefined &&
+      ((w.attacker === a && w.defender === b) || (w.attacker === b && w.defender === a)),
+  );
+}
+
+/** The civ's culture definition. */
+export function cultureOf(run: HistoryRun, civ: Civ) {
+  return run.content.cultures.find((c) => c.id === civ.cultureId);
 }
 
 export function isLive(site: Site): boolean {
@@ -119,6 +197,9 @@ export function createRun(
       migration: streamFor(world, 'history.migration'),
       expansion: streamFor(world, 'history.expansion'),
       names: streamFor(world, 'history.names'),
+      beasts: streamFor(world, 'history.beasts'),
+      trade: streamFor(world, 'history.trade'),
+      war: streamFor(world, 'history.war'),
     },
     year: 0,
     logs: new Map(),
@@ -128,6 +209,12 @@ export function createRun(
     nextInfected: new Map(),
     siteAtCell: new Map(),
     territory: cells.territory,
+    territoryDirty: false,
+    wars: [],
+    grievanceEvents: new Map(),
+    truce: new Map(),
+    tradeOpened: new Map(),
+    deposits: new Map(),
   };
   for (const site of world.sites.values()) run.siteAtCell.set(site.cell, site.id);
   // Settle's founding events are the origin every later cause chain can fall back on.

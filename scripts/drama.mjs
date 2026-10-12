@@ -63,6 +63,26 @@ function stats(seed) {
     if (e.type === 'site_founded' && e.day < DAYS_PER_YEAR) continue;
     typeCount[e.type] = (typeCount[e.type] ?? 0) + 1;
   }
+  // Wars: first year of each war, and the years any war was under way (declared to its last event).
+  const warSpan = new Map();
+  for (const e of world.events) {
+    const war = e.data?.war;
+    if (war === undefined) continue;
+    const year = Math.floor(e.day / DAYS_PER_YEAR);
+    const span = warSpan.get(war) ?? { from: year, to: year };
+    span.from = Math.min(span.from, year);
+    span.to = Math.max(span.to, year);
+    warSpan.set(war, span);
+  }
+  const warYears = new Set();
+  let warsEarly = 0;
+  let warsLate = 0;
+  for (const { from, to } of warSpan.values()) {
+    for (let y = from; y <= to; y += 1) warYears.add(y);
+    if (from <= 100) warsEarly += 1;
+    else if (from <= 200) warsLate += 1;
+  }
+  const peaceYears = Math.max(0, years - warYears.size);
   // Longest chain of causes: events are in id order and causes are older, so one pass works.
   const depth = new Map();
   let chain = 0;
@@ -72,11 +92,19 @@ function stats(seed) {
     chain = Math.max(chain, d);
   }
   let liveSites = 0,
-    ruinedSites = 0;
+    ruinedSites = 0,
+    totalWealth = 0;
+  const goodSums = { food: 0, ore: 0, timber: 0, salt: 0, luxury: 0 };
   for (const site of world.sites.values()) {
-    if (site.ruinedYear === undefined) liveSites += 1;
-    else ruinedSites += 1;
+    if (site.ruinedYear === undefined) {
+      liveSites += 1;
+      totalWealth += site.wealth;
+      for (const good of Object.keys(goodSums)) goodSums[good] += site.goods[good];
+    } else ruinedSites += 1;
   }
+  const meanGoods = Object.fromEntries(
+    Object.entries(goodSums).map(([good, sum]) => [good, liveSites ? sum / liveSites : 0]),
+  );
   const fallen = [...world.civs.values()].filter((civ) => civ.fell !== undefined).length;
   const c = world.cells;
   const kinds = {};
@@ -234,7 +262,21 @@ function stats(seed) {
     ),
     meanCapacity: world.sites.size ? capacitySum / world.sites.size : 0,
     claimed: pct(claimed, land),
-    history: { startPop, peakPop, finalPop, typeCount, chain, liveSites, ruinedSites, fallen },
+    history: {
+      startPop,
+      peakPop,
+      finalPop,
+      typeCount,
+      chain,
+      liveSites,
+      ruinedSites,
+      fallen,
+      warsEarly,
+      warsLate,
+      peaceYears,
+      meanGoods,
+      totalWealth,
+    },
     problems:
       checkSites(world).length +
       checkWorldCells(c).length +
@@ -379,3 +421,17 @@ for (const r of rows) {
   );
 }
 process.stdout.write(`races > 70%: ${lopsided} of ${rows.length} seeds\n`);
+process.stdout.write(
+  '\nconflict: seed | beasts seen/slain | raids beast/civ | trade opened/relief | wars 1-100/101-200 (all) | peace yrs | battles conquered razed | mean goods per live site food/ore/timber/salt/luxury | wealth\n',
+);
+for (const r of rows) {
+  const h = r.history;
+  const n = (type) => h.typeCount[type] ?? 0;
+  process.stdout.write(
+    `${r.seed.padEnd(4)} | ${String(n('beast_appeared')).padStart(3)}/${String(n('beast_slain')).padEnd(3)} | ` +
+      `${String(n('beast_raid')).padStart(4)}/${String(n('civ_raid')).padEnd(3)} | ${String(n('trade_opened')).padStart(2)}/${String(n('grain_relief')).padEnd(3)} | ` +
+      `${h.warsEarly}/${h.warsLate} (${n('war_declared')}) | ${String(h.peaceYears).padStart(3)} | ` +
+      `${String(n('battle')).padStart(3)} ${String(n('site_conquered')).padStart(3)} ${String(n('site_razed')).padStart(3)} | ` +
+      `${['food', 'ore', 'timber', 'salt', 'luxury'].map((g) => h.meanGoods[g].toFixed(0)).join('/')} | ${h.totalWealth.toFixed(0)}\n`,
+  );
+}

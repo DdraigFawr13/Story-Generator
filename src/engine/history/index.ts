@@ -1,21 +1,28 @@
-// Yearly history (M2.3): after settlement, each year runs harvest, demographics, famine, plague,
-// migration, expansion and site upkeep in a fixed order. Per-run state (links, immunity,
-// cooldowns) lives in `HistoryRun`; only sites, civs, events and territory change in the world.
+// Yearly history (M2.3, M2.4): after settlement, each year runs harvest, goods, trade (each decade),
+// demographics, famine, civ raids, beasts, plague, migration, expansion, war and site upkeep in a
+// fixed order. Per-run state (links, immunity, cooldowns, wars) lives in `HistoryRun`; only sites,
+// civs, creatures, events and territory change in the world.
 
 import { DAYS_PER_YEAR } from '../core/clock';
 import type { WorldState } from '../core/types';
 import { runAbandonment } from './abandon';
+import { runBeasts } from './beasts';
 import { runDemography, runKinds } from './demography';
+import { runGoods } from './goods';
 import { runFamine, runHarvest } from './harvest';
 import { buildLinks, createLinkSearch } from './links';
 import { runExpansion, runMigration } from './migration';
 import { runPlague } from './plague';
+import { runCivRaids, runDiplomacy } from './raids';
 import { buildSettlePlaces, buildSettleSearch, computeTerritory } from './settle';
 import { createRun, isLive, liveSites, type HistoryContent, type HistoryRun } from './state';
 import { totalPop } from './pop';
+import { runTrade } from './trade';
+import { runWar } from './war';
 
 export type { HistoryContent } from './state';
 export * from './links';
+export { emptyGoods } from './goods';
 
 /** Years between territory recomputes and progress reports. */
 const DECADE = 10;
@@ -50,18 +57,28 @@ export function runHistory(
     run.year = year;
     world.day = year * DAYS_PER_YEAR;
     runHarvest(run);
+    runGoods(run);
+    if (year % DECADE === 0) runTrade(run);
     runDemography(run);
     runFamine(run);
+    runCivRaids(run);
+    runBeasts(run);
     runPlague(run);
     runMigration(run);
     runExpansion(run);
+    runWar(run);
     runKinds(run);
     runAbandonment(run);
     for (const site of world.sites.values()) {
       if (isLive(site)) site.peakPop = Math.max(site.peakPop, totalPop(site));
     }
-    if (year % DECADE === 0 || year === years) {
+    const decade = year % DECADE === 0;
+    if (decade || year === years || run.territoryDirty) {
       recomputeTerritory(run);
+      run.territoryDirty = false;
+    }
+    if (decade) runDiplomacy(run);
+    if (decade || year === years) {
       onYear?.(year, years);
     }
   }

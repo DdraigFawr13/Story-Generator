@@ -4,7 +4,7 @@
 
 import type { Cadence, Season } from './clock';
 import type { SimContext } from './context';
-import type { Attributes, SiteFeature, SiteKind } from './types';
+import type { Attributes, GoodId, Goods, SiteFeature, SiteKind } from './types';
 import type { BirthTierId } from '../people/tiers';
 
 export interface RaceDef {
@@ -177,7 +177,38 @@ export interface ContentBundle {
   rules: EventRuleDef[];
   settlement: SettlementRules;
   history: HistoryRules;
+  creatures: CreatureDef[];
 }
+
+export type CreatureTier = 'beast' | 'great' | 'legendary';
+
+/** A kind of beast (M2.4). Danger is in soldier equivalents (R-24). */
+export interface CreatureDef {
+  id: string;
+  name: string;
+  tier: CreatureTier;
+  /** Biome ids a lair can sit in. */
+  biomes: string[];
+  /** The lair cell's wildness must reach this (0-100). */
+  minWildness: number;
+  /** Soldier equivalents, 1..1000 (R-24). */
+  danger: number;
+  /** Most that live in a world at once. */
+  maxAlive: number;
+  /** Chance per decade, per free slot, that a new one appears. */
+  spawnChance: number;
+  /** Years a beast lives (min, max). */
+  lifespan: [number, number];
+  /** Chance per year of a raid, when a live site is in range. */
+  raidChance: number;
+  /** Chebyshev cells from the lair to a site it can raid. */
+  raidRange: number;
+  /** Name templates; `{near}` is the nearest live site at the time it appears. */
+  names: string[];
+}
+
+/** Hard cap on a creature's danger, in soldier equivalents (R-24). */
+export const MAX_CREATURE_DANGER = 1000;
 
 /** Syllable and pattern tables for naming regions (M1.5). */
 export interface NameTables {
@@ -232,6 +263,8 @@ export interface ResourceDef {
   id: string;
   name: string;
   category: 'metal' | 'stone' | 'mineral' | 'food' | 'material' | 'magic';
+  /** The good a deposit of this resource feeds (M2.4); omit if it feeds none. */
+  good?: GoodId;
   /** Biome ids the resource can sit in (omit = any land). */
   biomes?: string[];
   /** Elevation window in metres (omit = no limit). */
@@ -430,4 +463,99 @@ export interface HistoryRules {
   /** Travel cost within which two sites are linked, and the range (cells) of sea lanes between harbours. */
   linkReach: number;
   seaLinkRange: number;
+
+  // Beasts (M2.4).
+  /** Random land cells tried per spawn to find a lair. */
+  beastSpawnTries: number;
+  /** A lair is more than this many cells (Chebyshev) from any live site. */
+  lairSpacing: number;
+  /** A beast raid kills at most this share of a site, and about `danger` times the per-danger rate, at 0.5-1.5. */
+  raidKillCap: number;
+  raidKillPerDanger: number;
+  /** Share of a raided site's stores that is lost. */
+  raidStoresLoss: number;
+  /** Chance the raided site slays the beast = base * min(1, adults / (danger * adultsPerDanger)) * tier factor. */
+  slayBase: number;
+  slayAdultsPerDanger: number;
+  slayTierFactor: Record<CreatureTier, number>;
+
+  // Trade (M2.4), once a decade.
+  /** Resource deposits within this many cells (Chebyshev) of a site are its goods. */
+  tradeGoodsRange: number;
+  /** A site keeps this many years of food before it has a surplus, and wants this many before it has a shortage. */
+  tradeKeepYears: number;
+  /** Wealth both sides gain per unit of a good moved in trade. */
+  goodValue: Goods;
+  /** Wealth lost per decade, as a share. */
+  wealthDecay: number;
+  /** Share of its luxury stock a site sends to a partner with less, each trade round (at most half the gap). */
+  luxuryTradeShare: number;
+
+  // Goods (M2.4), yearly. Food is in `workerOutput` and `storesCapYears`.
+  /** Units of each non-food good one adult makes a year when deposits are plentiful. */
+  goodsPerWorker: Goods;
+  /** Deposits (cells within `tradeGoodsRange`) of a good that give full output; fewer give a proportion. */
+  depositsForFull: number;
+  /** A stock of a non-food good never exceeds this many years of full output. */
+  goodsCapYears: number;
+  /** Yearly need: ore and timber per adult, salt per person; luxury and food are not listed here. */
+  need: Goods;
+  /** Food stores cap multiplier while the salt stock is under a year's need (below 1). */
+  saltShortStoresCap: number;
+  /** Civ strength is multiplied by 1 + this * min(1, ore stock per adult). */
+  oreStrength: number;
+  /** Each year a site's wealth rises by luxury stock * goodValue.luxury * this. */
+  luxuryWealthShare: number;
+  /** Richer civ's wealth over this multiple of the poorer's, and at least `envyMinWealth`, breeds envy. */
+  envyRatio: number;
+  envyMinWealth: number;
+
+  // Grievance (M2.4).
+  /** A famished site of a culture with `values.war` at or above this may raid a neighbour. */
+  raidWarValue: number;
+  /** Chance per year = this * values.war / 10. */
+  civRaidChance: number;
+  /** Share of the target's food taken, at most one year of the raider's food; luxury is taken too when food falls short. */
+  raidLootShare: number;
+  /** Share of the target's people killed (min, max). */
+  civRaidDeaths: [number, number];
+  /** Grievance added by each kind of wrong. */
+  grievance: { raid: number; border: number; insult: number; envy: number };
+  /** Two civs with at least this many neighbouring territory cells may clash. */
+  borderCells: number;
+  /** Chance per decade = this * (warA + warB) / 20. */
+  borderClashChance: number;
+  /** Chance per decade that one of two linked civs insults the other. */
+  insultChance: number;
+  /** Grievance is multiplied by this each year and forgotten under 0.5. */
+  grievanceDecay: number;
+
+  // War (M2.4).
+  /** Soldiers per adult = (strength + agility + endurance) / this * levyShare. */
+  soldierBase: number;
+  levyShare: number;
+  /** Strength ratio of attacker to defender is capped here. */
+  maxStrengthRatio: number;
+  /** Opportunity multiplier when every defender site in reach holds a pass or ford. */
+  crossingPenalty: number;
+  /** A war starts when grievance * opportunity reaches this. */
+  warThreshold: number;
+  /** Share of a civ's strength in the field each year. */
+  campaignShare: number;
+  /** Defence multipliers by site feature (heights, pass, ford), kind (fortress) and 'capital'. */
+  defence: Record<string, number>;
+  /** Each side's strength is multiplied by 1 plus or minus this. */
+  battleLuck: number;
+  /** Share of the army lost by the loser and the winner. */
+  loserLoss: number;
+  winnerLoss: number;
+  /** Chance a conquered site is razed instead (doubled when the races differ). */
+  razeChance: number;
+  /** Share of a razed site's people who die; the rest flee. */
+  razeDeathShare: number;
+  /** A war ends after this many years, or when a side's war dead pass this share of its starting adults. */
+  maxWarYears: number;
+  wearyShare: number;
+  /** Years after peace before either side can declare again. */
+  peaceYears: number;
 }

@@ -10,6 +10,7 @@ import {
   sitePopulation,
   type Civ,
   type ContentBundle,
+  type Creature,
   type CultureDef,
   type Id,
   type Region,
@@ -43,12 +44,13 @@ interface Props {
   routes: RouteGraph;
   sites: ReadonlyMap<Id, Site>;
   civs: ReadonlyMap<Id, Civ>;
+  creatures: ReadonlyMap<Id, Creature>;
   /** The world's events (oldest first) and how to tell one; the site inspector lists its latest. */
   events: readonly SimEvent[];
   renderEvent: (event: SimEvent) => string;
   cultures: readonly CultureDef[];
   seed: string;
-  content: Pick<ContentBundle, 'biomes' | 'resources'>;
+  content: Pick<ContentBundle, 'biomes' | 'resources' | 'creatures'>;
   layer: string;
   at: { x: number; y: number } | null;
   zoom: number;
@@ -61,6 +63,10 @@ interface Props {
 const DRAG_THRESHOLD = 4;
 /** Half-size in pixels of the cross drawn on a ruined site. */
 const RUIN_RADIUS = 3;
+/** Lair triangle half-width (px); legendary beasts are drawn larger and outlined. */
+const LAIR_RADIUS = 4;
+const LEGENDARY_LAIR_RADIUS = 6;
+const LAIR_COLOR = '#7a1010';
 /** Minimum ms between wheel zoom steps, so one trackpad flick is one step. */
 const WHEEL_STEP_MS = 120;
 /** Zoom step used when the minimap recentres a fully zoomed-out map. */
@@ -196,6 +202,21 @@ function drawRuin(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.stroke();
 }
 
+/** A lair: a dark red triangle, larger and outlined in dark for legendary beasts. */
+function drawLair(ctx: CanvasRenderingContext2D, x: number, y: number, legendary: boolean) {
+  const r = legendary ? LEGENDARY_LAIR_RADIUS : LAIR_RADIUS;
+  ctx.lineWidth = legendary ? 2 : 1.5;
+  ctx.strokeStyle = legendary ? '#1b1b1b' : '#fff';
+  ctx.fillStyle = LAIR_COLOR;
+  ctx.beginPath();
+  ctx.moveTo(x, y - r);
+  ctx.lineTo(x + r, y + r);
+  ctx.lineTo(x - r, y + r);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.fill();
+}
+
 interface Cache {
   cells: WorldCells | null;
   bitmaps: Map<string, HTMLCanvasElement>;
@@ -210,6 +231,7 @@ export function WorldMap({
   routes,
   sites,
   civs,
+  creatures,
   events,
   renderEvent,
   cultures,
@@ -239,8 +261,34 @@ export function WorldMap({
     values: new Map(),
     places: null,
   });
-  const latest = useRef({ cells, regions, routes, sites, civs, layer, overlays, at, zoom, onView });
-  latest.current = { cells, regions, routes, sites, civs, layer, overlays, at, zoom, onView };
+  const latest = useRef({
+    cells,
+    regions,
+    routes,
+    sites,
+    civs,
+    creatures,
+    content,
+    layer,
+    overlays,
+    at,
+    zoom,
+    onView,
+  });
+  latest.current = {
+    cells,
+    regions,
+    routes,
+    sites,
+    civs,
+    creatures,
+    content,
+    layer,
+    overlays,
+    at,
+    zoom,
+    onView,
+  };
 
   const layerDef = LAYER_BY_ID.get(layer) ?? LAYER_BY_ID.get(DEFAULT_LAYER)!;
   const selected = cells && at && at.x < cells.width && at.y < cells.height ? at : null;
@@ -387,7 +435,45 @@ export function WorldMap({
       ctx.fillStyle = '#1b1b1b';
       ctx.fillText(site.name, sx, ty);
     }
+    drawLairs(ctx, c, scale, ox, oy, width, height, taken);
     return taken;
+  }
+
+  /** Draws the lairs of living beasts, named at the same zoom as ordinary sites. */
+  function drawLairs(
+    ctx: CanvasRenderingContext2D,
+    c: WorldCells,
+    scale: number,
+    ox: number,
+    oy: number,
+    width: number,
+    height: number,
+    taken: [number, number, number, number][],
+  ) {
+    const { creatures: beasts, content: bundle } = latest.current;
+    const tiers = new Map(bundle.creatures.map((d) => [d.id, d.tier]));
+    for (const beast of beasts.values()) {
+      if (beast.died !== undefined) continue;
+      const sx = ox + ((beast.lair % c.width) + 0.5) * scale;
+      const sy = oy + (Math.floor(beast.lair / c.width) + 0.5) * scale;
+      if (sx < -20 || sy < -20 || sx > width + 20 || sy > height + 20) continue;
+      const legendary = tiers.get(beast.defId) === 'legendary';
+      drawLair(ctx, sx, sy, legendary);
+      const r = legendary ? LEGENDARY_LAIR_RADIUS : LAIR_RADIUS;
+      taken.push([sx - r - 1, sy - r - 1, r * 2 + 2, r * 2 + 2]);
+      if (scale < SITE_LABEL_SCALE) continue;
+      ctx.font = '11px system-ui, sans-serif';
+      const w = ctx.measureText(beast.name).width;
+      const ty = sy + r + 8;
+      const box: [number, number, number, number] = [sx - w / 2 - 2, ty - 6, w + 4, 13];
+      if (taken.some((other, k) => k < taken.length - 1 && boxesOverlap(box, other))) continue;
+      taken.push(box);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.strokeText(beast.name, sx, ty);
+      ctx.fillStyle = LAIR_COLOR;
+      ctx.fillText(beast.name, sx, ty);
+    }
   }
 
   /** Draws land routes as brown lines and sea lanes as dashed pale blue, then route nodes as dots. */
@@ -623,6 +709,15 @@ export function WorldMap({
       }
     }
   }
+  // The lair on or beside the cell, a living beast's first.
+  let lairHere: Creature | null = null;
+  if (cells && selected) {
+    const here = selected.y * cells.width + selected.x;
+    for (const beast of creatures.values()) {
+      if (cellDistance(cells.width, beast.lair, here) > 1) continue;
+      if (!lairHere || (lairHere.died !== undefined && beast.died === undefined)) lairHere = beast;
+    }
+  }
   const ownerOf = (id: Id | null | undefined) => (id ? (civs.get(id) ?? null) : null);
   const cultureOf = (id: string | undefined) =>
     cultures.find((culture) => culture.id === id) ?? null;
@@ -738,6 +833,8 @@ export function WorldMap({
           resources={content.resources}
           raw={overlays.raw}
           site={siteHere}
+          lair={lairHere}
+          lairDef={content.creatures.find((d) => d.id === lairHere?.defId) ?? null}
           siteCiv={ownerOf(siteHere?.civId)}
           siteCulture={cultureOf(ownerOf(siteHere?.civId)?.cultureId)}
           landCiv={landCiv}

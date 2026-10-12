@@ -1,7 +1,13 @@
 // Invariant checker for generated world layers, used by tests and dev builds.
 // Returns human-readable problems; an empty list means the world is sound.
 
-import type { Region, RouteGraph, WorldCells, WorldState } from '../core/types';
+import {
+  GOODS,
+  type Region,
+  type RouteGraph,
+  type WorldCells,
+  type WorldState,
+} from '../core/types';
 import { D8_DX, D8_DY } from './grid';
 import { saddleAxis } from './regions';
 
@@ -272,7 +278,9 @@ export function checkRoutes(cells: WorldCells, routes: RouteGraph): string[] {
 }
 
 /** Invariant checker for civs, sites and territory (M2.2, M2.3); empty means sound. */
-export function checkSites(world: Pick<WorldState, 'cells' | 'civs' | 'sites'>): string[] {
+export function checkSites(
+  world: Pick<WorldState, 'cells' | 'civs' | 'sites'> & Partial<Pick<WorldState, 'creatures'>>,
+): string[] {
   const { cells, civs, sites } = world;
   if (!cells) return ['the world has no cells'];
   const size = cells.width * cells.height;
@@ -292,9 +300,12 @@ export function checkSites(world: Pick<WorldState, 'cells' | 'civs' | 'sites'>):
     }
     if (cells.water[site.cell] !== 0) report(`${label} at ${site.cell} is not on dry land`);
     if (site.civId !== null) {
-      if (civs.has(site.civId)) {
-        if (site.ruinedYear === undefined)
+      const owner = civs.get(site.civId);
+      if (owner) {
+        if (site.ruinedYear === undefined) {
           perCiv.set(site.civId, (perCiv.get(site.civId) ?? 0) + 1);
+          if (owner.fell !== undefined) report(`${label} is live but its civ ${owner.id} fell`);
+        }
       } else report(`${label} belongs to unknown civ ${site.civId}`);
     }
     let pop = 0;
@@ -305,7 +316,9 @@ export function checkSites(world: Pick<WorldState, 'cells' | 'civs' | 'sites'>):
       pop += band.count;
     }
     if (site.ruinedYear !== undefined && pop !== 0) report(`${label} is ruined but holds ${pop}`);
-    if (!(site.stores >= 0)) report(`${label} has stores ${site.stores}`);
+    for (const good of GOODS) {
+      if (!(site.goods[good] >= 0)) report(`${label} has ${good} ${site.goods[good]}`);
+    }
     if (!(site.peakPop >= pop)) report(`${label} has peak population ${site.peakPop} below ${pop}`);
     if (!(site.capacity >= 0)) report(`${label} has capacity ${site.capacity}`);
   }
@@ -318,6 +331,14 @@ export function checkSites(world: Pick<WorldState, 'cells' | 'civs' | 'sites'>):
       if (capital.ruinedYear !== undefined) report(`${label} capital is in ruins`);
       if ((perCiv.get(civ.id) ?? 0) < 1) report(`${label} has no live site`);
     }
+  }
+  for (const beast of world.creatures?.values() ?? []) {
+    const label = `creature ${beast.id} "${beast.name}"`;
+    if (!(beast.lair >= 0 && beast.lair < size)) report(`${label} lair is off the map`);
+    else if (cells.water[beast.lair] !== 0)
+      report(`${label} lair at ${beast.lair} is not on dry land`);
+    if (beast.slainBy !== undefined && beast.died === undefined)
+      report(`${label} is slain but not dead`);
   }
   for (let i = 0; i < size; i += 1) {
     const owner = cells.territory[i]!;

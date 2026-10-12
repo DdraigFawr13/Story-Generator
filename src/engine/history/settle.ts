@@ -8,6 +8,7 @@
 import { createEmitter } from '../core/context';
 import type { ContentBundle, CultureDef, RaceDef, SettlementRules } from '../core/content-types';
 import { streamFor, type RngStream } from '../core/rng';
+import { emptyGoods } from './goods';
 import type {
   Civ,
   Id,
@@ -449,7 +450,10 @@ export function settleWorld(world: WorldState, content: SettleContent): void {
       civId,
       founded: 0,
       pop: popBands(total, race, culture, rules),
-      stores: Math.round(total * race.foodNeed * rules.storesYears),
+      goods: {
+        ...emptyGoods(),
+        food: Math.round(total * race.foodNeed * rules.storesYears),
+      },
       wealth: 0,
       capacity,
       features: [...features],

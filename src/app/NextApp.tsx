@@ -252,6 +252,7 @@ export function NextApp() {
           routes={state.routes}
           sites={state.sites}
           civs={state.civs}
+          creatures={state.creatures}
           events={state.events}
           renderEvent={(event) => narrator.renderEvent(event)}
           cultures={DEFAULT_CONTENT.cultures}

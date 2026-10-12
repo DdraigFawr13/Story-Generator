@@ -298,6 +298,11 @@ export interface Civ {
   grievances: Map<Id, number>;
 }
 
+/** The goods a site stocks (M2.4): food plus four traded materials. */
+export const GOODS = ['food', 'ore', 'timber', 'salt', 'luxury'] as const;
+export type GoodId = (typeof GOODS)[number];
+export type Goods = Record<GoodId, number>;
+
 /** A settlement (M2.2). `founded` is a year number. */
 export interface Site {
   id: Id;
@@ -308,13 +313,30 @@ export interface Site {
   founded: number;
   ruinedYear?: number;
   pop: PopBand[];
-  stores: number;
+  /** Stocks of each good; `goods.food` is the old stores. */
+  goods: Goods;
   wealth: number;
   /** People the land within reach feeds (the M2.3 growth target). */
   capacity: number;
   features: SiteFeature[];
   /** Highest total population the site has held (M2.3). */
   peakPop: number;
+}
+
+/** A beast with a lair (M2.4). Lairs are cells, not sites. `deeds` are the event ids of its appearance and raids. */
+export interface Creature {
+  id: Id;
+  defId: string;
+  name: string;
+  /** Cell index of the lair. */
+  lair: number;
+  born: number;
+  /** Years it can live; it dies quietly of age when it passes this. */
+  lifespan: number;
+  died?: number;
+  /** Name of the hero who killed it. */
+  slainBy?: string;
+  deeds: Id[];
 }
 
 export interface WorldState {
@@ -334,11 +356,13 @@ export interface WorldState {
   /** Founding peoples and their settlements, filled by the settle stage; empty until then. */
   civs: Map<Id, Civ>;
   sites: Map<Id, Site>;
+  /** Beasts, living and dead, filled by the history stage (M2.4). */
+  creatures: Map<Id, Creature>;
   people: Map<Id, Person>;
   events: SimEvent[];
   commands: Command[];
   /** Demo climate state for the scaffold; Phase 1 moves weather to per-cell climate. */
   weather: { current: string; sinceDay: number; causeEvent: Id | null };
-  // Phase 2 adds `creatures`, `items`;
+  // Phase 2 adds `items`;
   // Phase 3 adds `activeSite`.
 }
