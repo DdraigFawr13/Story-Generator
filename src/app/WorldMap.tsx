@@ -1,9 +1,10 @@
 // Canvas 2D world map (M1.4). Each (layer, hillshade, water) bitmap is rendered
 // once per world at one pixel per cell, then only redrawn on pan and zoom.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MAP_LAYERS, civColor } from '../content';
 import {
+  cellsDigest,
   layerValues,
   renderLayer,
   cellDistance,
@@ -13,6 +14,7 @@ import {
   type Creature,
   type CultureDef,
   type Dynasty,
+  type HistoryAt,
   type Id,
   type Person,
   type Region,
@@ -62,6 +64,10 @@ interface Props {
   /** A new world is generating: keep the old map, dimmed. */
   busy: boolean;
   onView: (change: ViewChange) => void;
+  /** The world as of a past year (year slider); null shows the present day. */
+  history: HistoryAt | null;
+  /** Centre the camera on a cell when `key` changes (Legends "Show on map"). */
+  focus: { x: number; y: number; key: number } | null;
 }
 
 /** A drag shorter than this many pixels is a click. */
@@ -74,6 +80,9 @@ const LEGENDARY_LAIR_RADIUS = 6;
 const LAIR_COLOR = '#7a1010';
 /** Minimum ms between wheel zoom steps, so one trackpad flick is one step. */
 const WHEEL_STEP_MS = 120;
+/** Lowest zoom step a focus request raises the map to, and the ring drawn round its cell. */
+const FOCUS_ZOOM = 2;
+const FOCUS_COLOR = '#ffd34d';
 /** Zoom step used when the minimap recentres a fully zoomed-out map. */
 const MINIMAP_ZOOM = 2;
 /** Radius (px) of the pass, ford and harbour markers. */
@@ -207,6 +216,12 @@ function drawRuin(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.stroke();
 }
 
+/** Whether a beast lived in `year` (the present day when undefined). */
+function aliveIn(beast: Creature, year: number | undefined): boolean {
+  if (year === undefined) return beast.died === undefined;
+  return beast.born <= year && (beast.died === undefined || beast.died > year);
+}
+
 /** A lair: a dark red triangle, larger and outlined in dark for legendary beasts. */
 function drawLair(ctx: CanvasRenderingContext2D, x: number, y: number, legendary: boolean) {
   const r = legendary ? LEGENDARY_LAIR_RADIUS : LAIR_RADIUS;
@@ -249,6 +264,8 @@ export function WorldMap({
   zoom,
   busy,
   onView,
+  history,
+  focus,
 }: Props) {
   const [overlays, setOverlays] = useState<Overlays>({
     water: true,
@@ -281,6 +298,8 @@ export function WorldMap({
     at,
     zoom,
     onView,
+    history,
+    focus,
   });
   latest.current = {
     cells,
@@ -295,6 +314,8 @@ export function WorldMap({
     at,
     zoom,
     onView,
+    history,
+    focus,
   };
 
   const layerDef = LAYER_BY_ID.get(layer) ?? LAYER_BY_ID.get(DEFAULT_LAYER)!;
@@ -303,11 +324,14 @@ export function WorldMap({
   function bitmap(c: WorldCells, id: string, shade: boolean, water: boolean): HTMLCanvasElement {
     if (cache.current.cells !== c)
       cache.current = { cells: c, bitmaps: new Map(), values: new Map(), places: null };
-    const key = `${id}|${shade}|${water}`;
+    // The territory layer follows the year slider; its bitmaps are keyed by snapshot year.
+    const past = id === 'territory' ? latest.current.history : null;
+    const key = `${id}|${shade}|${water}|${past ? past.snapshotYear : 'now'}`;
     let made = cache.current.bitmaps.get(key);
     if (!made) {
       const def = LAYER_BY_ID.get(id) ?? ELEVATION;
-      const pixels = renderLayer(c, def, {
+      const source = past ? { ...c, territory: past.territory } : c;
+      const pixels = renderLayer(source, def, {
         hillshade: shade,
         water,
         ...(ELEVATION.seaStops ? { seaStops: ELEVATION.seaStops } : {}),
@@ -394,32 +418,39 @@ export function WorldMap({
     width: number,
     height: number,
   ): [number, number, number, number][] {
-    const { sites: all, civs: owners } = latest.current;
+    const { sites: all, civs: owners, history: past } = latest.current;
     const capitals = new Set([...owners.values()].map((civ) => civ.capital));
     const taken: [number, number, number, number][] = [];
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
     // Capitals first, then larger sites, so the important names win collisions.
-    const order = [...all.values()].sort(
+    // In a past year only the sites that existed then, as they stood then.
+    const stateOf = (site: Site) =>
+      past
+        ? past.sites.get(site.id)
+        : { civId: site.civId, pop: sitePopulation(site), ruined: site.ruinedYear !== undefined };
+    const standing = [...all.values()].filter((site) => stateOf(site) !== undefined);
+    const order = standing.sort(
       (a, b) =>
         Number(capitals.has(b.id)) - Number(capitals.has(a.id)) ||
-        sitePopulation(b) - sitePopulation(a) ||
+        stateOf(b)!.pop - stateOf(a)!.pop ||
         a.id - b.id,
     );
     for (const site of order) {
+      const state = stateOf(site)!;
       const sx = ox + ((site.cell % c.width) + 0.5) * scale;
       const sy = oy + (Math.floor(site.cell / c.width) + 0.5) * scale;
       if (sx < -20 || sy < -20 || sx > width + 20 || sy > height + 20) continue;
-      if (site.ruinedYear !== undefined) {
+      if (state.ruined) {
         drawRuin(ctx, sx, sy);
         continue;
       }
       const r = Math.min(
         SITE_RADIUS_MAX,
-        SITE_RADIUS_BASE + Math.sqrt(sitePopulation(site)) / SITE_RADIUS_DIVISOR,
+        SITE_RADIUS_BASE + Math.sqrt(state.pop) / SITE_RADIUS_DIVISOR,
       );
-      const [cr, cg, cb] = civColor(site.civId ?? 0);
+      const [cr, cg, cb] = civColor(state.civId ?? 0);
       drawSiteGlyph(ctx, site.kind, sx, sy, r, `rgb(${cr},${cg},${cb})`);
       taken.push([sx - r - 1, sy - r - 1, r * 2 + 2, r * 2 + 2]);
       const minScale = capitals.has(site.id) ? CAPITAL_LABEL_SCALE : SITE_LABEL_SCALE;
@@ -457,10 +488,10 @@ export function WorldMap({
     height: number,
     taken: [number, number, number, number][],
   ) {
-    const { creatures: beasts, content: bundle } = latest.current;
+    const { creatures: beasts, content: bundle, history: past } = latest.current;
     const tiers = new Map(bundle.creatures.map((d) => [d.id, d.tier]));
     for (const beast of beasts.values()) {
-      if (beast.died !== undefined) continue;
+      if (!aliveIn(beast, past?.year)) continue;
       const sx = ox + ((beast.lair % c.width) + 0.5) * scale;
       const sy = oy + (Math.floor(beast.lair / c.width) + 0.5) * scale;
       if (sx < -20 || sy < -20 || sx > width + 20 || sy > height + 20) continue;
@@ -608,6 +639,23 @@ export function WorldMap({
       }
     }
 
+    const mark = latest.current.focus;
+    if (mark && mark.x < c.width && mark.y < c.height) {
+      const cx = ox + (mark.x + 0.5) * scale;
+      const cy = oy + (mark.y + 0.5) * scale;
+      const r = Math.max(10, scale * 1.8);
+      for (const [width, color] of [
+        [5, 'rgba(0,0,0,0.45)'],
+        [2.5, FOCUS_COLOR],
+      ] as const) {
+        ctx.lineWidth = width;
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
     const mini = miniRef.current;
     if (mini) {
       const m = mini.getContext('2d')!;
@@ -634,6 +682,20 @@ export function WorldMap({
   }, [cells]);
 
   useEffect(draw);
+
+  // Legends: centre on the cell and zoom in to at least FOCUS_ZOOM. The cell gets a gold ring
+  // rather than the selection, so the present-day inspector does not cover a past-year map.
+  useEffect(() => {
+    const c = latest.current.cells;
+    if (!focus || !c) return;
+    camRef.current = { x: focus.x + 0.5, y: focus.y + 0.5 };
+    const { rect, fit } = viewport();
+    const raised = Math.max(latest.current.zoom, FOCUS_ZOOM);
+    // The re-render this causes draws at the new zoom; drawing first would clamp the camera.
+    latest.current.onView({ zoom: rect.width > 0 ? clampZoom(fit, raised) : raised });
+    // Only a new request moves the camera.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus?.key]);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -698,9 +760,11 @@ export function WorldMap({
     );
   };
 
+  const valuesNow = (c: WorldCells) =>
+    layerDef.id === 'territory' && history ? history.territory : valuesOf(c, layerDef.id);
   const hoverValue =
     cells && hoverCell !== null
-      ? { value: valuesOf(cells, layerDef.id)?.[hoverCell] ?? 0, water: cells.water[hoverCell]! }
+      ? { value: valuesNow(cells)?.[hoverCell] ?? 0, water: cells.water[hoverCell]! }
       : null;
 
   // The site under the selected cell or the nearest within one cell, and who owns the land.
@@ -709,6 +773,7 @@ export function WorldMap({
     const here = selected.y * cells.width + selected.x;
     let nearest = Infinity;
     for (const site of sites.values()) {
+      if (history && !history.sites.has(site.id)) continue;
       const d = cellDistance(cells.width, site.cell, here);
       if (d <= 1 && d < nearest) {
         nearest = d;
@@ -721,6 +786,7 @@ export function WorldMap({
   if (cells && selected) {
     const here = selected.y * cells.width + selected.x;
     for (const beast of creatures.values()) {
+      if (history && !aliveIn(beast, history.year)) continue;
       if (cellDistance(cells.width, beast.lair, here) > 1) continue;
       if (!lairHere || (lairHere.died !== undefined && beast.died === undefined)) lairHere = beast;
     }
@@ -743,7 +809,15 @@ export function WorldMap({
         ]
       : undefined;
   const landCiv =
-    cells && selected ? ownerOf(cells.territory[selected.y * cells.width + selected.x]) : null;
+    cells && selected
+      ? ownerOf((history?.territory ?? cells.territory)[selected.y * cells.width + selected.x])
+      : null;
+  const siteCivId = siteHere
+    ? history
+      ? history.sites.get(siteHere.id)?.civId
+      : siteHere.civId
+    : null;
+  const digest = useMemo(() => (cells ? cellsDigest(cells) : undefined), [cells]);
 
   return (
     <div
@@ -751,6 +825,8 @@ export function WorldMap({
       data-testid="world-map"
       data-state={cells ? (busy ? 'busy' : 'ready') : 'empty'}
       data-seed={seed}
+      data-cells-digest={digest}
+      data-focus={focus ? `${focus.x},${focus.y}` : undefined}
     >
       <canvas
         ref={canvasRef}
@@ -842,8 +918,8 @@ export function WorldMap({
           site={siteHere}
           lair={lairHere}
           lairDef={content.creatures.find((d) => d.id === lairHere?.defId) ?? null}
-          siteCiv={ownerOf(siteHere?.civId)}
-          siteCulture={cultureOf(ownerOf(siteHere?.civId)?.cultureId)}
+          siteCiv={ownerOf(siteCivId)}
+          siteCulture={cultureOf(ownerOf(siteCivId)?.cultureId)}
           landCiv={landCiv}
           landCulture={cultureOf(landCiv?.cultureId)}
           places={placesOf(cells, regions).lookup.get(selected.y * cells.width + selected.x) ?? []}

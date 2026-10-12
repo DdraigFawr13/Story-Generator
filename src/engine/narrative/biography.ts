@@ -21,6 +21,10 @@ export interface LegendIndex {
   /** An indexed event by id. */
   event(id: Id): SimEvent | undefined;
   byName(kind: Exclude<LegendKind, 'person'>, name: string): Id | undefined;
+  /** Every entity the event is indexed under: actors (in order) first, then links and the site. */
+  refs(eventId: Id): readonly LegendRef[];
+  /** Later events whose `causes` include this one, in event order. */
+  effects(eventId: Id): readonly Id[];
 }
 
 export interface BiographyLine {
@@ -67,23 +71,38 @@ export function buildLegendIndex(
 
   const byEntity = new Map<string, Id[]>();
   const byId = new Map<Id, SimEvent>();
+  const refsOf = new Map<Id, LegendRef[]>();
+  const ledTo = new Map<Id, Id[]>();
   for (const event of world.events) {
     byId.set(event.id, event);
+    for (const cause of event.causes) {
+      const list = ledTo.get(cause);
+      if (list) list.push(event.id);
+      else ledTo.set(cause, [event.id]);
+    }
     const keys = new Set<string>();
-    for (const actor of event.actors) keys.add(keyOf('person', actor));
+    const refs: LegendRef[] = [];
+    const mark = (kind: LegendKind, id: Id) => {
+      const key = keyOf(kind, id);
+      if (keys.has(key)) return;
+      keys.add(key);
+      refs.push({ kind, id });
+    };
+    for (const actor of event.actors) mark('person', actor);
     const linkDef = links.get(event.type);
     if (linkDef) {
       for (const [field, kind] of Object.entries(linkDef)) {
         const value = event.data[field];
         if (typeof value !== 'string' || value === '') continue;
         const id = names[kind].get(value);
-        if (id !== undefined) keys.add(keyOf(kind, id));
+        if (id !== undefined) mark(kind, id);
       }
     }
     if (event.place !== null) {
       const siteId = siteAtCell.get(event.place);
-      if (siteId !== undefined) keys.add(keyOf('site', siteId));
+      if (siteId !== undefined) mark('site', siteId);
     }
+    refsOf.set(event.id, refs);
     for (const key of keys) {
       const list = byEntity.get(key);
       if (list) list.push(event.id);
@@ -94,6 +113,8 @@ export function buildLegendIndex(
     events: (ref) => byEntity.get(keyOf(ref.kind, ref.id)) ?? [],
     event: (id) => byId.get(id),
     byName: (kind, name) => names[kind].get(name),
+    refs: (eventId) => refsOf.get(eventId) ?? [],
+    effects: (eventId) => ledTo.get(eventId) ?? [],
   };
 }
 

@@ -1,6 +1,7 @@
 // The one Chromium smoke (REBOOT_PLAN §11). Grows with each phase toward
 // generate → legends → embark → play → save → reload → continue.
 import { expect, test, type Page } from '@playwright/test';
+import smokeDigest from '../fixtures/smoke-cells-digest.json' with { type: 'json' };
 
 function collectErrors(page: Page): string[] {
   const errors: string[] = [];
@@ -28,6 +29,21 @@ test('the world map generates, inspects, saves, reloads and advances', async ({ 
   await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
   await expect(map).toHaveAttribute('data-seed', 'SMOKE');
   await expect(page.getByRole('alert')).toHaveCount(0);
+  // The generated cells match the committed hash, so Chromium and Node agree (no float drift).
+  await expect(map).toHaveAttribute('data-cells-digest', smokeDigest.digest);
+
+  // Legends: open the first civ, unfold a "why?", follow a cause to its event, show it on the map.
+  const legends = page.getByRole('region', { name: 'Legends' });
+  await legends.getByRole('button', { name: /^Civs/ }).click();
+  await legends.locator('.lg-list li button').first().click();
+  await legends
+    .getByRole('button', { name: /^why\?/ })
+    .first()
+    .click();
+  await legends.locator('.lg-tree .y button').first().click();
+  await expect(legends.getByRole('heading', { level: 3 })).toHaveText(/^Year \d+/);
+  await legends.getByRole('button', { name: 'Show on map' }).click();
+  await expect(map).toHaveAttribute('data-focus', /^\d+,\d+$/);
 
   const rainfall = page.getByRole('button', { name: 'Rainfall' });
   await rainfall.click();

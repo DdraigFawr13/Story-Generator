@@ -14,6 +14,7 @@ import {
   buildLegendIndex,
   createWorld,
   formatDate,
+  historyAt,
   rollAptitude,
   templateNarrator,
   tierOfPower,
@@ -26,8 +27,10 @@ import {
 } from '../engine';
 import { openSaveStore, type SaveStore, type SaveSummary } from '../platform/save-store';
 import { generateInWorker, type WorldgenJob } from '../platform/worldgen-host';
+import { Legends, type PageRef } from './Legends';
 import { VIEWER_LAYER_IDS } from './MapPanels';
 import { WorldMap, type ViewChange } from './WorldMap';
+import { YearSlider, finalHistoryYear } from './YearSlider';
 import {
   DEFAULT_LAYER,
   DEFAULT_SEED,
@@ -74,6 +77,11 @@ export function NextApp() {
     zoom: initial.zoom,
   });
   const [copy, setCopy] = useState<'idle' | 'ok' | 'failed'>('idle');
+  /** The year slider; null means the present day (the final history year). */
+  const [sliderYear, setSliderYear] = useState<number | null>(null);
+  const [focus, setFocus] = useState<{ x: number; y: number; key: number } | null>(null);
+  /** On narrow screens the map and the Legends pane are tabs. */
+  const [tab, setTab] = useState<'map' | 'legends'>('map');
   const world = useRef<WorldState>(createWorld(initial.seed ?? DEFAULT_SEED));
   /** Seed and size of the map on screen (the inputs may be mid-edit). */
   const shown = useRef<{ seed: string; size: WorldSize } | null>(null);
@@ -135,6 +143,8 @@ export function NextApp() {
         world.current = generated;
         shown.current = { seed, size: worldSize };
         setView(next);
+        setSliderYear(null);
+        setFocus(null);
         setProgress(null);
         setRevision((n) => n + 1);
         writeUrl(mode, next);
@@ -197,13 +207,30 @@ export function NextApp() {
     window.setTimeout(() => setCopy('idle'), COPIED_MS);
   };
 
+  const focusCell = (cell: number) => {
+    const width = world.current.cells?.width;
+    if (!width) return;
+    setFocus((f) => ({ x: cell % width, y: Math.floor(cell / width), key: (f?.key ?? 0) + 1 }));
+  };
+  const openPage = (_ref: PageRef, cell: number | null, eventYear?: number) => {
+    if (cell !== null) focusCell(cell);
+    if (eventYear !== undefined) setSliderYear(eventYear);
+  };
+
   const run = (days: number) => {
     advance(world.current, SIM, days);
     setRevision((n) => n + 1);
   };
 
   const state = world.current;
-  const recent = state.events.slice(-60).reverse();
+  const finalYear = finalHistoryYear(state);
+  const yearShown = Math.min(sliderYear ?? finalYear, finalYear);
+  // The world as of the slider year; the map only gets it when that is before the present.
+  const past = useMemo(
+    () => historyAt(world.current, yearShown),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [revision, yearShown],
+  );
   return (
     <main className="wm-root" data-revision={revision}>
       <h1>Story Generator — world map</h1>
@@ -246,6 +273,18 @@ export function NextApp() {
           <button type="button" onClick={() => void copyLink()}>
             {copy === 'ok' ? 'Link copied' : copy === 'failed' ? 'Copy failed' : 'Copy link'}
           </button>
+          <div className="tabs" role="group" aria-label="View">
+            <button type="button" aria-pressed={tab === 'map'} onClick={() => setTab('map')}>
+              Map
+            </button>
+            <button
+              type="button"
+              aria-pressed={tab === 'legends'}
+              onClick={() => setTab('legends')}
+            >
+              Legends
+            </button>
+          </div>
           {seedError && (
             <p role="alert" className="field-error">
               {seedError}
@@ -256,28 +295,54 @@ export function NextApp() {
           <i style={{ width: progress ? `${progress.fraction * 100}%` : 0 }} />
           <span className="progress-label">{progress?.label ?? ''}</span>
         </div>
-        <WorldMap
-          cells={state.cells}
-          regions={state.regions}
-          routes={state.routes}
-          sites={state.sites}
-          civs={state.civs}
-          creatures={state.creatures}
-          people={state.people}
-          dynasties={state.dynasties}
-          year={Math.floor(state.day / DAYS_PER_YEAR)}
-          siteBiography={(siteId) =>
-            biography(state, DEFAULT_CONTENT, narrator, legend, { kind: 'site', id: siteId })
-          }
-          cultures={DEFAULT_CONTENT.cultures}
-          seed={state.seed}
-          content={DEFAULT_CONTENT}
-          layer={view.layer}
-          at={view.at}
-          zoom={view.zoom}
-          busy={progress !== null}
-          onView={changeView}
-        />
+        <div className="wm-main" data-tab={tab}>
+          <div className="wm-mapcol">
+            <WorldMap
+              cells={state.cells}
+              regions={state.regions}
+              routes={state.routes}
+              sites={state.sites}
+              civs={state.civs}
+              creatures={state.creatures}
+              people={state.people}
+              dynasties={state.dynasties}
+              year={Math.floor(state.day / DAYS_PER_YEAR)}
+              siteBiography={(siteId) =>
+                biography(state, DEFAULT_CONTENT, narrator, legend, { kind: 'site', id: siteId })
+              }
+              cultures={DEFAULT_CONTENT.cultures}
+              seed={state.seed}
+              content={DEFAULT_CONTENT}
+              layer={view.layer}
+              at={view.at}
+              zoom={view.zoom}
+              busy={progress !== null}
+              onView={changeView}
+              history={yearShown < finalYear ? past : null}
+              focus={focus}
+            />
+            <YearSlider
+              world={state}
+              narrator={narrator}
+              revision={revision}
+              year={yearShown}
+              snapshotYear={past.snapshotYear}
+              onYear={setSliderYear}
+            />
+          </div>
+          <Legends
+            world={state}
+            index={legend}
+            narrator={narrator}
+            content={DEFAULT_CONTENT}
+            year={yearShown}
+            onOpen={openPage}
+            onShow={(cell) => {
+              focusCell(cell);
+              setTab('map');
+            }}
+          />
+        </div>
       </div>
       {error && <p role="alert">{error}</p>}
       <div className="wm-below">
@@ -301,16 +366,12 @@ export function NextApp() {
             setSize(loadedSize);
             setProgress(null);
             setView((v) => ({ ...v, at: null, zoom: 0 }));
+            setSliderYear(null);
+            setFocus(null);
             setRevision((n) => n + 1);
           }}
         />
         <AptitudePreview seed={state.seed} />
-        <h2 style={{ fontSize: 18 }}>Chronicle</h2>
-        <ol style={{ paddingLeft: 20 }}>
-          {recent.map((event) => (
-            <li key={event.id}>{narrator.renderEvent(event)}</li>
-          ))}
-        </ol>
       </div>
     </main>
   );
