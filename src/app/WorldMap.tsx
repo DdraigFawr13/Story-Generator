@@ -12,7 +12,9 @@ import {
   type ContentBundle,
   type Creature,
   type CultureDef,
+  type Dynasty,
   type Id,
+  type Person,
   type Region,
   type RouteGraph,
   type SimEvent,
@@ -45,6 +47,10 @@ interface Props {
   sites: ReadonlyMap<Id, Site>;
   civs: ReadonlyMap<Id, Civ>;
   creatures: ReadonlyMap<Id, Creature>;
+  /** Notables and their dynasties; `year` is the history year their ages count to. */
+  people: ReadonlyMap<Id, Person>;
+  dynasties: ReadonlyMap<Id, Dynasty>;
+  year: number;
   /** The world's events (oldest first) and how to tell one; the site inspector lists its latest. */
   events: readonly SimEvent[];
   renderEvent: (event: SimEvent) => string;
@@ -232,6 +238,9 @@ export function WorldMap({
   sites,
   civs,
   creatures,
+  people,
+  dynasties,
+  year,
   events,
   renderEvent,
   cultures,
@@ -842,6 +851,9 @@ export function WorldMap({
           places={placesOf(cells, regions).lookup.get(selected.y * cells.width + selected.x) ?? []}
           events={events}
           renderEvent={renderEvent}
+          people={people}
+          dynasties={dynasties}
+          year={year}
           onShow={(id) => onView({ layer: id })}
           onClose={() => onView({ at: null })}
         />

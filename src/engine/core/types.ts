@@ -7,7 +7,15 @@ import type { RngState } from './rng';
 
 export type Id = number;
 
-export const ENTITY_KINDS = ['event', 'person', 'site', 'civ', 'creature', 'item'] as const;
+export const ENTITY_KINDS = [
+  'event',
+  'person',
+  'site',
+  'civ',
+  'creature',
+  'item',
+  'dynasty',
+] as const;
 export type EntityKind = (typeof ENTITY_KINDS)[number];
 
 export const ATTRIBUTE_KEYS = [
@@ -67,8 +75,10 @@ export interface Person {
   raceId: string;
   cultureId: string | null;
   sex: 'f' | 'm';
+  /** History year of birth (world tier); negative for people born before settlement. */
   born: number;
   birthplaceCell: number | null;
+  /** History year of death. */
   died?: number;
   family: Family;
   attributes: Attributes;
@@ -82,6 +92,83 @@ export interface Person {
   /** 0–100 summary; detailed conditions arrive with the Phase 3 health system. */
   health: number;
   detail?: PersonDetail;
+  /** World tier (M2.5): the site a notable lives at and the civ they serve; null once both are gone. */
+  siteId?: Id | null;
+  civId?: Id | null;
+  /** Why they are notable: a `NotableRole`. */
+  title?: NotableRole;
+  dynastyId?: Id;
+  /** A `DeathCause`, set with `died`. */
+  causeOfDeath?: DeathCause;
+  /** The notable who killed them, when one did. */
+  killerId?: Id;
+  /** Symmetric rivalries (disputed thrones, insults). */
+  rivals?: Id[];
+  /** People this person has sworn vengeance on (one-way). */
+  enemies?: Id[];
+}
+
+/** Why a world-tier person is tracked individually (M2.5). */
+export const NOTABLE_ROLES = [
+  'ruler',
+  'kin',
+  'founder',
+  'hero',
+  'captain',
+  'raider',
+  'crafter',
+  'scholar',
+  'mage',
+] as const;
+export type NotableRole = (typeof NOTABLE_ROLES)[number];
+
+export const DEATH_CAUSES = [
+  'old-age',
+  'famine',
+  'disease',
+  'battle',
+  'beast',
+  'raid',
+  'razing',
+  'murder',
+] as const;
+export type DeathCause = (typeof DEATH_CAUSES)[number];
+
+/** A family line (M2.5): founded by a ruler, hero or founder; children take the line of the more famous parent. */
+export interface Dynasty {
+  id: Id;
+  name: string;
+  founderId: Id;
+  civId: Id | null;
+  /** History year. */
+  founded: number;
+}
+
+/** An artifact or book (M2.5). `holder` is a person id; null while lost. */
+export interface Item {
+  id: Id;
+  kind: 'artifact' | 'book';
+  name: string;
+  /** What it is, for templates: "sword", "torc", "herbal". */
+  form: string;
+  /** History year it was made. */
+  made: number;
+  makerId: Id | null;
+  holder: Id | null;
+  /** Cell where it was lost, while lost. */
+  lostAt?: number;
+  /** Event ids of its making, inheritance, loss, theft and finding. */
+  deeds: Id[];
+}
+
+/** Borders and sites at one decade (M2.5), for the M2.7 year slider. */
+export interface DecadeSnapshot {
+  /** History year. */
+  year: number;
+  /** `cells.territory` run-length encoded as [civId, runLength] pairs, row-major; runs ≤ 65535. */
+  territory: Uint16Array;
+  /** Per site existing at that year, in id order: [siteId, civId (0 none), population, ruined (0 or 1)]. */
+  sites: Uint32Array;
 }
 
 /** Every chronicle line renders one of these (R-20, principle "simulation first"). */
@@ -336,6 +423,8 @@ export interface Creature {
   died?: number;
   /** Name of the hero who killed it. */
   slainBy?: string;
+  /** The hero notable who killed it. */
+  slayerId?: Id;
   deeds: Id[];
 }
 
@@ -358,11 +447,16 @@ export interface WorldState {
   sites: Map<Id, Site>;
   /** Beasts, living and dead, filled by the history stage (M2.4). */
   creatures: Map<Id, Creature>;
+  /** Notables, living and dead (M2.5); everyone else is a count in `Site.pop`. */
   people: Map<Id, Person>;
+  dynasties: Map<Id, Dynasty>;
+  /** Artifacts and books (M2.5). */
+  items: Map<Id, Item>;
+  /** Decade snapshots of borders and sites (M2.5), oldest first. */
+  snapshots: DecadeSnapshot[];
   events: SimEvent[];
   commands: Command[];
   /** Demo climate state for the scaffold; Phase 1 moves weather to per-cell climate. */
   weather: { current: string; sinceDay: number; causeEvent: Id | null };
-  // Phase 2 adds `items`;
   // Phase 3 adds `activeSite`.
 }

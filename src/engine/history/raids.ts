@@ -2,6 +2,9 @@
 // war is made of; each wrong is remembered as an event so a war can name its causes.
 
 import type { Civ, Id, Site } from '../core/types';
+import { raidSteal } from './items';
+import { makeRivals, addDeed } from './people';
+import { raidDeaths, raiderFor, rulerOf } from './notables';
 import { removePeople, siteNeed, stochasticRound, totalPop } from './pop';
 import {
   addGrievance,
@@ -85,9 +88,11 @@ function runFamineRaids(run: HistoryRun): void {
       'child',
       'elder',
     ]);
+    const raider = raiderFor(run, civ, site);
     const event = run.emit({
       type: 'civ_raid',
       place: target.cell,
+      actors: raider ? [raider.id] : [],
       causes: causesOf(famine.event),
       data: {
         site: site.name,
@@ -98,6 +103,11 @@ function runFamineRaids(run: HistoryRun): void {
         loot: Math.round(loot),
       },
     });
+    if (raider) {
+      addDeed(raider, event.id);
+      raidDeaths(run, raider, target, event.id);
+      raidSteal(run, raider, target, event.id);
+    }
     addGrievance(run, victim.id, civ.id, rules.grievance.raid, event.id);
   }
 }
@@ -198,12 +208,16 @@ function runInsults(run: HistoryRun): void {
     const [victim, offender, place, honour] =
       honourB > honourA ? [civB, civA, link.siteB, honourB] : [civA, civB, link.siteA, honourA];
     const opened = run.tradeOpened.get(pairKey(civA.id, civB.id));
+    // The two rulers are the faces of the quarrel.
+    const rulers = [rulerOf(run, civA), rulerOf(run, civB)];
     const event = run.emit({
       type: 'insult',
       place: place.cell,
+      actors: rulers.flatMap((r) => (r ? [r.id] : [])),
       causes: causesOf(opened),
       data: { civ: offender.name, victim: victim.name },
     });
+    if (rulers[0] && rulers[1]) makeRivals(rulers[0], rulers[1]);
     addGrievance(run, victim.id, offender.id, (rules.grievance.insult * honour) / 10, event.id);
     // The poorer people envies the richer one.
     const [wealthV, wealthO] = [civWealth(run, victim), civWealth(run, offender)];

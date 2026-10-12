@@ -4,7 +4,15 @@
 
 import type { Cadence, Season } from './clock';
 import type { SimContext } from './context';
-import type { Attributes, GoodId, Goods, SiteFeature, SiteKind } from './types';
+import type {
+  Attributes,
+  DeathCause,
+  GoodId,
+  Goods,
+  NotableRole,
+  SiteFeature,
+  SiteKind,
+} from './types';
 import type { BirthTierId } from '../people/tiers';
 
 export interface RaceDef {
@@ -179,6 +187,102 @@ export interface ContentBundle {
   history: HistoryRules;
   creatures: CreatureDef[];
   diseases: DiseaseDef[];
+  notables: NotableRules;
+}
+
+/** Notables, families, succession and items (M2.5). Every number is a tunable; see content/notables.ts. */
+export interface NotableRules {
+  /** Living notables at most; kin spouses and children stop here, deed notables never do. */
+  notableCap: number;
+  /** Per culture id: the dynasty name pattern, `{name}` being the founder's given name. */
+  dynastyNames: Record<string, string>;
+  /** Fame (0-100) each way of becoming known starts with. */
+  fame: {
+    ruler: number;
+    founder: number;
+    captain: number;
+    raider: number;
+    crafter: number;
+    scholar: number;
+    /** A hero's fame is base plus per-danger times the beast's danger, at most `heroMax`. */
+    hero: number;
+    heroPerDanger: number;
+    heroMax: number;
+    /** Gained by a captain who wins a battle. */
+    victory: number;
+    legend: number;
+    /** Fame of a mage by birth tier id (tiers not listed get 0). */
+    mage: Partial<Record<string, number>>;
+  };
+  /** An event's importance gains floor(best actor fame / this), at most `actorFameCap`. */
+  famePerImportance: number;
+  actorFameCap: number;
+  /** Names for roles and death causes in event text. */
+  roleNames: Record<NotableRole, string>;
+  deathPhrases: Record<DeathCause, string>;
+  /** Succession clause per rule, for `ruler_succeeded`. */
+  successionPhrases: Record<SuccessionRule, string>;
+  /** Succession clause when no kin or notable of the civ was left to take the seat. */
+  noHeirPhrase: string;
+  /** Yearly death chance of an adult before elder age, and of a child. */
+  adultDeath: number;
+  childDeath: number;
+  /** Extra yearly chance of dying in a famine or disease at the notable's site that year. */
+  famineDeath: number;
+  diseaseDeath: number;
+  /** Chance a beast raid kills one notable at the site. */
+  beastKill: number;
+  /** Chance a civ raid kills one notable at the target, and takes one artifact held there. */
+  raidKill: number;
+  raidStealChance: number;
+  /** Chance a raiding civ without a living raider gets one. */
+  raiderChance: number;
+  /** Share of a razed site's notables who die; the rest flee. */
+  razeDeathShare: number;
+  /** A ruler leads the army himself when the culture's war value is at least this. */
+  rulerLeadsWar: number;
+  /** Chance the losing and the winning captain of a battle die. */
+  captainDeath: number;
+  captainDeathWin: number;
+  /** Yearly chance an unmarried adult marries. */
+  marryChance: number;
+  /** Chance a ruler's child in an arranged-marriage culture marries into a linked civ. */
+  allianceChance: number;
+  /** Share of the two civs' grievance against each other that an alliance marriage removes. */
+  allianceGrievanceCut: number;
+  /** Yearly chance a married ruler of a many-spouses culture takes another spouse. */
+  extraSpouseChance: number;
+  /** Yearly chance of a child for a fertile married woman, times race fertility and room under the cap. */
+  childChance: number;
+  /** Mage births among commoners: per adult per year, times race fertility and strong-or-better odds. */
+  mageBirthRate: number;
+  /** Share of those mages who become notable. */
+  mageNotice: number;
+  /** Each living strong-or-better mage adds their tier's soldier midpoint times this to civ strength. */
+  mageStrength: number;
+  /** Yearly chance a living adult of power 13 or more grows legendary, while a slot is open. */
+  legendChance: number;
+  /** Chance a contested succession becomes a dispute, the top two scores of an election count as contested within this margin, and the winner's roll is 0..disputeLuck. */
+  disputeChance: number;
+  disputeMargin: number;
+  disputeLuck: number;
+  /** Artifacts (each decade): a town or city with this much luxury stock makes one with this chance. */
+  artifactMinLuxury: number;
+  artifactChance: number;
+  /** Chance per decade a notable of power 3 or more writes a book, and a temple without a scholar gets one. */
+  bookChance: number;
+  scholarChance: number;
+  /** Chance an item with no heir goes to the ruler, and chance per decade a lost item is found. */
+  itemToRulerChance: number;
+  itemFindChance: number;
+  /** Item names: `{epithet}`, `{form}`, `{maker}`. */
+  artifactNames: string[];
+  artifactForms: string[];
+  artifactEpithets: string[];
+  /** Book names: `{form}`, `{writer}`, `{site}`. */
+  bookNames: string[];
+  /** Book forms by school id; `mundane` is for scholars and for schools not listed. */
+  bookForms: Record<string, string[]>;
 }
 
 /** A sickness (M2.4b). History uses the yearly fields; Phase 3 reads the per-day ones. */
@@ -584,8 +688,8 @@ export interface HistoryRules {
   raidLootShare: number;
   /** Share of the target's people killed (min, max). */
   civRaidDeaths: [number, number];
-  /** Grievance added by each kind of wrong. */
-  grievance: { raid: number; border: number; insult: number; envy: number };
+  /** Grievance added by each kind of wrong; vengeance is added when a ruler's kin swear an oath against a foreign killer. */
+  grievance: { raid: number; border: number; insult: number; envy: number; vengeance: number };
   /** Two civs with at least this many neighbouring territory cells may clash. */
   borderCells: number;
   /** Chance per decade = this * (warA + warB) / 20. */

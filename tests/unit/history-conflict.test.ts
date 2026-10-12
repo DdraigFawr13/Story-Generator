@@ -111,7 +111,7 @@ const QUARRELSOME: HistoryRules = {
   borderCells: 1,
   borderClashChance: 1,
   insultChance: 1,
-  grievance: { raid: 3, border: 3, insult: 6, envy: 3 },
+  grievance: { raid: 3, border: 3, insult: 6, envy: 3, vengeance: 3 },
   warThreshold: 0.5,
 };
 
@@ -144,7 +144,7 @@ describe('war', () => {
     const rules: HistoryRules = {
       ...STILL,
       insultChance: 1,
-      grievance: { raid: 20, border: 20, insult: 20, envy: 20 },
+      grievance: { raid: 20, border: 20, insult: 20, envy: 20, vengeance: 20 },
       warThreshold: 0.01,
     };
     // 80 cells apart is past the link reach; 10 cells apart is within it.

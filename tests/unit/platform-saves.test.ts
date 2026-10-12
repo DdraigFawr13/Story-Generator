@@ -1,13 +1,20 @@
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
 import {
   DEFAULT_SYSTEMS,
   advance,
   createWorld,
+  serializeWorld,
   worldDigest,
   type Simulation,
 } from '../../src/engine';
-import { createSaveStore, memoryBackend, type SaveBackend } from '../../src/platform/save-store';
+import {
+  createSaveStore,
+  decompress,
+  memoryBackend,
+  type SaveBackend,
+} from '../../src/platform/save-store';
 
 const SIM: Simulation = { content: DEFAULT_CONTENT, systems: DEFAULT_SYSTEMS };
 
@@ -36,12 +43,31 @@ describe('named world saves', () => {
     const store = createSaveStore(backend);
     await store.save('slot', createWorld('DAMAGE'));
     const record = backend.records.get('slot')!;
-    backend.records.set('slot', { ...record, data: record.data.replace('DAMAGE', 'DAMAGF') });
+    const bytes = Uint8Array.from(record.data as Uint8Array);
+    const middle = bytes.length >> 1;
+    bytes[middle] = bytes[middle]! ^ 0xff;
+    backend.records.set('slot', { ...record, data: bytes });
     await expect(store.load('slot')).rejects.toThrow(/damaged/);
     await expect(store.load('nothing')).rejects.toThrow(/No save/);
     await expect(store.save('   ', createWorld('X'))).rejects.toThrow(/1–60/);
     await store.remove('slot');
     expect(await store.list()).toEqual([]);
+  });
+
+  it('stores worlds gzipped and still reads uncompressed older records', async () => {
+    const backend = memoryBackend();
+    const store = createSaveStore(backend);
+    const world = createWorld('SQUEEZE');
+    advance(world, SIM, 200);
+    await store.save('slot', world);
+    const record = backend.records.get('slot')!;
+    expect(record.data).toBeInstanceOf(Uint8Array);
+    expect((record.data as Uint8Array).length).toBeLessThan(serializeWorld(world).length / 2);
+    expect(await decompress(record.data)).toBe(serializeWorld(world));
+    const text = serializeWorld(world);
+    const sum = createHash('sha256').update(text).digest('hex');
+    backend.records.set('slot', { name: 'slot', checksum: sum, data: text });
+    expect(worldDigest(await store.load('slot'))).toBe(worldDigest(world));
   });
 
   it('keeps the previous save when a write fails', async () => {

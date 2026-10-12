@@ -11,7 +11,7 @@ import { nearestAuraSpot, type SettleContent, type SettleSearch } from './settle
 
 /** What the history stage reads from content. */
 export type HistoryContent = SettleContent &
-  Pick<ContentBundle, 'history' | 'creatures' | 'diseases'>;
+  Pick<ContentBundle, 'history' | 'creatures' | 'diseases' | 'notables'>;
 
 /** The latest events that touched one site, for linking causes. */
 export interface SiteLog {
@@ -89,6 +89,21 @@ export interface War {
   /** Adults at the start, for war weariness. */
   attackerAdults: number;
   defenderAdults: number;
+  /** The commanders, chosen at the declaration and replaced if they die (notables). */
+  attackerCaptain?: Id | undefined;
+  defenderCaptain?: Id | undefined;
+}
+
+/** Per-run notable bookkeeping (notables.ts); the people themselves live in `world.people`. */
+export interface NotableState {
+  /** Living notables in id order. */
+  living: Set<Id>;
+  /** Living notables by site id, rebuilt once a year (ids in order, may hold a few who since died or moved). */
+  bySite: Map<Id, Id[]>;
+  /** The current raider of each civ. */
+  raiders: Map<Id, Id>;
+  /** Cache of the odds a birth is strong or better, by `${raceId}:${highAura}`. */
+  mageOdds: Map<string, number>;
 }
 
 export interface HistoryRun {
@@ -112,6 +127,7 @@ export interface HistoryRun {
     beasts: RngStream;
     trade: RngStream;
     war: RngStream;
+    notables: RngStream;
   };
   /** Current year, 1..historyYears. */
   year: number;
@@ -142,6 +158,7 @@ export interface HistoryRun {
   tradeOpened: Map<string, Id>;
   /** Cached deposit counts per good near each site. */
   deposits: Map<Id, Goods>;
+  notables: NotableState;
 }
 
 /** Key for an unordered pair of civs. */
@@ -251,6 +268,7 @@ export function createRun(
       beasts: streamFor(world, 'history.beasts'),
       trade: streamFor(world, 'history.trade'),
       war: streamFor(world, 'history.war'),
+      notables: streamFor(world, 'history.notables'),
     },
     year: 0,
     logs: new Map(),
@@ -275,6 +293,12 @@ export function createRun(
     truce: new Map(),
     tradeOpened: new Map(),
     deposits: new Map(),
+    notables: {
+      living: new Set(),
+      bySite: new Map(),
+      raiders: new Map(),
+      mageOdds: new Map(),
+    },
   };
   for (const site of world.sites.values()) {
     run.siteAtCell.set(site.cell, site.id);

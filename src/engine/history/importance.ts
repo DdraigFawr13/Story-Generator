@@ -1,6 +1,6 @@
 // Event importance and yearly rollups (M2.4b): importance = base(type) + fame + scale + novelty,
 // and events under `rollupBelow` become a count in that year's `year_summary`. After the last year
-// the trivial events nobody cites are pruned from the world's event list.
+// the trivial events nobody cites are pruned from the world's event list, and deeds drop with them.
 
 import type { EmitInput } from '../core/context';
 import type { Id, SimEvent } from '../core/types';
@@ -30,12 +30,24 @@ function scaleBonus(run: HistoryRun, data: SimEvent['data'] | undefined): number
   return bonus;
 }
 
+/** Bonus for the best known actor: one point per `famePerImportance` fame, at most `actorFameCap`. */
+function actorFameBonus(run: HistoryRun, actors: readonly Id[] | undefined): number {
+  const rules = run.content.notables;
+  let best = 0;
+  for (const id of actors ?? []) best = Math.max(best, run.world.people.get(id)?.fame ?? 0);
+  return Math.min(rules.actorFameCap, Math.floor(best / rules.famePerImportance));
+}
+
 /** Emits an event with its importance scored; trivial events are counted for the yearly summary. */
 export function emitScored(run: HistoryRun, input: EmitInput): SimEvent {
   const rules = run.rules.importance;
   const state = run.importance;
   const place = input.place ?? null;
-  let bonus = (input.importanceBonus ?? 0) + fameAt(run, place) + scaleBonus(run, input.data);
+  let bonus =
+    (input.importanceBonus ?? 0) +
+    fameAt(run, place) +
+    scaleBonus(run, input.data) +
+    actorFameBonus(run, input.actors);
   const key = `${input.type}@${place ?? -1}`;
   if (!state.seen.has(input.type)) {
     bonus += rules.novelty;
@@ -87,4 +99,10 @@ export function pruneEvents(run: HistoryRun): void {
     for (const cause of event.causes) keep.add(cause);
   }
   world.events = events.filter((event) => keep.has(event.id));
+  // Deeds that point at a pruned event would dangle.
+  const exists = new Set<Id>(world.events.map((event) => event.id));
+  const live = (ids: Id[]) => ids.filter((id) => exists.has(id));
+  for (const person of world.people.values()) person.deeds = live(person.deeds);
+  for (const item of world.items.values()) item.deeds = live(item.deeds);
+  for (const creature of world.creatures.values()) creature.deeds = live(creature.deeds);
 }

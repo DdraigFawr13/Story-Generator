@@ -12,6 +12,8 @@ export interface AptitudeInput {
   parents?: readonly Pick<Person, 'potential' | 'magic'>[];
   /** World-cell aura 0–100 at the birthplace (Phase 1 layer). */
   birthplaceAura?: number;
+  /** Birth tiers below this get weight 0, for rolling "a strong-or-better birth" directly. */
+  minTier?: BirthTierId | undefined;
 }
 
 export interface Aptitude {
@@ -52,9 +54,11 @@ export function rollAptitude(input: AptitudeInput, rng: RngStream): Aptitude {
 }
 
 function rollMagic(input: AptitudeInput, rng: RngStream): Magic {
-  const { race, parents = [], birthplaceAura = 0 } = input;
+  const { race, parents = [], birthplaceAura = 0, minTier } = input;
+  const floor = minTier === undefined ? 0 : BIRTH_TIER_IDS.indexOf(minTier);
   const parentGifted = parents.some((p) => TIERS[tierOfPower(p.magic.power)].minPower >= 3);
-  const entries = BIRTH_TIER_IDS.map((id): [BirthTierId, number] => {
+  const entries = BIRTH_TIER_IDS.map((id, index): [BirthTierId, number] => {
+    if (index < floor) return [id, 0];
     let weight = race.magicTierWeights[id];
     // Bloodlines pass on real talent: gifted-or-better odds double. High-aura
     // birthplaces nudge every magical tier (§5.4A).
