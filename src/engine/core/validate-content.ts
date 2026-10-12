@@ -4,7 +4,7 @@
 
 import type { ContentBundle, RaceDef } from './content-types';
 import { CULTURE_VALUES, MAX_CREATURE_DANGER } from './content-types';
-import { ATTRIBUTE_KEYS, REGION_KINDS } from './types';
+import { ATTRIBUTE_KEYS, GOODS, REGION_KINDS } from './types';
 import { BIRTH_TIER_IDS, TIERS, tierOfPower } from '../people/tiers';
 
 export function validateContent(content: ContentBundle): string[] {
@@ -300,6 +300,9 @@ function worldgenContentProblems(content: ContentBundle): string[] {
     }
     if (resource.maxCellShare <= 0 || resource.maxCellShare > 1) {
       problems.push(`Resource ${resource.id}: maxCellShare must be in (0, 1].`);
+    }
+    if (resource.good !== undefined && !(GOODS as readonly string[]).includes(resource.good)) {
+      problems.push(`Resource ${resource.id}: unknown good "${resource.good}".`);
     }
   }
   problems.push(...nameProblems(content));

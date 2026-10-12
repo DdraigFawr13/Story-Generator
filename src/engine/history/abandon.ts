@@ -1,6 +1,7 @@
 // Abandonment (M2.3): a site whose people dwindle is left to ruin; a people with no site left falls.
 
 import type { Civ, Id, SimEvent, Site } from '../core/types';
+import { emptyGoods } from './goods';
 import { addParty, totalPop, type Party } from './pop';
 import { cellDistance } from './settle';
 import { causesOf, civName, isLive, logOf, type HistoryRun } from './state';
@@ -39,7 +40,7 @@ export function evacuate(run: HistoryRun, site: Site): void {
   const refuge = findRefuge(run, site);
   if (refuge) addParty(refuge, survivors);
   for (const band of site.pop) band.count = 0;
-  site.stores = 0;
+  site.goods = emptyGoods();
 }
 
 /**

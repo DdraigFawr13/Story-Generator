@@ -3,6 +3,7 @@
 import { Fragment, type ReactNode } from 'react';
 import { MAP_LAYERS } from '../content';
 import {
+  GOODS,
   sitePopulation,
   type BiomeDef,
   type Civ,
@@ -321,7 +322,9 @@ function SiteBlock({
         </Fact>
         <Fact label="Peak population">{num(site.peakPop)}</Fact>
         <Fact label="Capacity">{num(site.capacity)}</Fact>
-        <Fact label="Stores">{num(Math.round(site.stores))}</Fact>
+        <Fact label="Goods">
+          {GOODS.map((good) => `${good} ${num(Math.round(site.goods[good]))}`).join(', ')}
+        </Fact>
         <Fact label="Wealth">{num(Math.round(site.wealth))}</Fact>
         {/* Calendar years count from 1 (core/clock.ts); history year N is calendar year N + 1. */}
         <Fact label="Founded">Year {site.founded + 1}</Fact>

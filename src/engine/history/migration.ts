@@ -3,6 +3,7 @@
 
 import { culturePlaceName } from '../people/names';
 import type { Id, Site, SiteKind } from '../core/types';
+import { emptyGoods } from './goods';
 import { addSiteLinks } from './links';
 import { addParty, movablePop, partySize, takeParty, totalPop, type Party } from './pop';
 import { cellDistance, popBands, siteCapacity, sizeKind } from './settle';
@@ -86,7 +87,7 @@ function foundSite(run: HistoryRun, source: Site, cell: number, party: Party[]):
     civId: civ.id,
     founded: run.year,
     pop: popBands(0, race, culture, content.settlement),
-    stores: 0,
+    goods: emptyGoods(),
     wealth: 0,
     capacity: siteCapacity(cells, cell, race, content, features),
     features: [...features],
@@ -94,7 +95,7 @@ function foundSite(run: HistoryRun, source: Site, cell: number, party: Party[]):
   };
   world.nextId.site += 1;
   addParty(site, party);
-  site.stores = pop * race.foodNeed * rules.newSiteStoresYears;
+  site.goods.food = pop * race.foodNeed * rules.newSiteStoresYears;
   world.sites.set(site.id, site);
   run.siteAtCell.set(cell, site.id);
   addSiteLinks(run.links, cells, run.linkSearch, site, liveSites(run), rules);

@@ -1,7 +1,8 @@
-// Trade (M2.4): once a decade, linked sites swap food from surplus to shortage and learn of each
-// other's goods. Salt keeps stores, iron arms a civ, gems and gold make wealth (and envy).
+// Trade (M2.4): once a decade, linked sites of civs at peace swap each good from surplus to
+// shortage. Both sides gain wealth for every unit that moves.
 
-import type { Id, Site } from '../core/types';
+import { GOODS, type GoodId, type Id, type Site } from '../core/types';
+import { goodNeed } from './goods';
 import { siteNeed } from './pop';
 import {
   atWar,
@@ -14,63 +15,52 @@ import {
   type HistoryRun,
 } from './state';
 
-/** Resource ids with a deposit within `tradeGoodsRange` cells of the site (cached per site). */
-export function goodsOf(run: HistoryRun, site: Site): string[] {
-  const cached = run.goods.get(site.id);
-  if (cached) return cached;
-  const { cells, rules, content } = run;
-  const { width, height } = cells;
-  const range = rules.tradeGoodsRange;
-  const cx = site.cell % width;
-  const cy = (site.cell - cx) / width;
-  const found = new Set<number>();
-  for (let y = Math.max(0, cy - range); y <= Math.min(height - 1, cy + range); y += 1) {
-    for (let x = Math.max(0, cx - range); x <= Math.min(width - 1, cx + range); x += 1) {
-      for (const deposit of cells.resources.get(y * width + x) ?? []) found.add(deposit.resource);
-    }
+/** Smallest amount worth carrying. */
+const MIN_TRADE = 1;
+
+/** What a site uses of a good in a year (food is the whole population's food). */
+function yearlyNeed(run: HistoryRun, site: Site, good: GoodId): number {
+  return good === 'food' ? siteNeed(site, run.races) : goodNeed(run, site, good);
+}
+
+/** Units of `good` moved from `from` to `to` (0 if none). */
+function moveGood(run: HistoryRun, from: Site, to: Site, good: GoodId): number {
+  const { rules } = run;
+  let amount: number;
+  if (good === 'luxury') {
+    // Luxury has no need: the richer sends a share, at most half the gap so it never flips.
+    if (from.goods.luxury <= to.goods.luxury) return 0;
+    amount = Math.min(
+      from.goods.luxury * rules.luxuryTradeShare,
+      (from.goods.luxury - to.goods.luxury) / 2,
+    );
+  } else {
+    const surplus = from.goods[good] - yearlyNeed(run, from, good) * rules.tradeKeepYears;
+    const shortage = yearlyNeed(run, to, good) * rules.tradeKeepYears - to.goods[good];
+    amount = Math.min(surplus, shortage);
   }
-  const goods = [...found]
-    .sort((a, b) => a - b)
-    .map((n) => content.resources[n]?.id)
-    .filter((id): id is string => id !== undefined);
-  run.goods.set(site.id, goods);
-  return goods;
-}
-
-/** Goods `from` has that `to` lacks. */
-function missingFor(run: HistoryRun, from: Site, to: Site): string[] {
-  const have = goodsOf(run, to);
-  return goodsOf(run, from).filter((id) => !have.includes(id));
-}
-
-function moveFood(run: HistoryRun, from: Site, to: Site): number {
-  const { rules, races } = run;
-  const surplus = from.stores - siteNeed(from, races) * rules.tradeKeepYears;
-  const shortage = siteNeed(to, races) * rules.tradeKeepYears - to.stores;
-  const amount = Math.min(surplus, shortage);
-  if (amount < 1) return 0;
-  from.stores -= amount;
-  to.stores += amount;
+  if (amount < MIN_TRADE) return 0;
+  from.goods[good] -= amount;
+  to.goods[good] += amount;
   return amount;
 }
 
 /** One trade round for a linked pair; returns true if anything changed hands. */
-function tradePair(
-  run: HistoryRun,
-  a: Site,
-  b: Site,
-  relieved: Set<Id>,
-  gained: Map<Id, string[]>,
-) {
+function tradePair(run: HistoryRun, a: Site, b: Site, relieved: Set<Id>): boolean {
   const { rules } = run;
   let traded = false;
   for (const [from, to] of [
     [a, b],
     [b, a],
   ] as const) {
-    const amount = moveFood(run, from, to);
-    if (amount > 0) {
+    for (const good of GOODS) {
+      const amount = moveGood(run, from, to, good);
+      if (amount <= 0) continue;
       traded = true;
+      const value = amount * rules.goodValue[good];
+      from.wealth += value;
+      to.wealth += value;
+      if (good !== 'food') continue;
       const famine = logOf(run, to.id).famine;
       if (famine && run.year - famine.year <= 10 && !relieved.has(to.id)) {
         relieved.add(to.id);
@@ -87,12 +77,6 @@ function tradePair(
         });
       }
     }
-    const goods = missingFor(run, from, to);
-    if (goods.length > 0) {
-      traded = true;
-      for (const id of goods) to.wealth += rules.goodValue[id] ?? 1;
-      gained.set(to.id, [...(gained.get(to.id) ?? []), ...goods]);
-    }
   }
   return traded;
 }
@@ -102,14 +86,13 @@ export function runTrade(run: HistoryRun): void {
   const { rules, links, world } = run;
   const sites = liveSites(run);
   for (const site of sites) site.wealth *= 1 - rules.wealthDecay;
-  const gained = new Map<Id, string[]>();
   const relieved = new Set<Id>();
   for (const a of sites) {
     for (const id of links.get(a.id) ?? []) {
       const b = world.sites.get(id);
       if (!b || id < a.id || !isLive(b)) continue;
       if (atWar(run, a.civId, b.civId)) continue;
-      if (!tradePair(run, a, b, relieved, gained)) continue;
+      if (!tradePair(run, a, b, relieved)) continue;
       if (a.civId === null || b.civId === null || a.civId === b.civId) continue;
       const key = pairKey(a.civId, b.civId);
       if (run.tradeOpened.has(key)) continue;
@@ -121,13 +104,5 @@ export function runTrade(run: HistoryRun): void {
       });
       run.tradeOpened.set(key, event.id);
     }
-  }
-  // Salt and iron last until the next round.
-  run.ironCivs = new Set();
-  for (const site of sites) {
-    const own = goodsOf(run, site);
-    const all = [...own, ...(gained.get(site.id) ?? [])];
-    logOf(run, site.id).salt = all.includes(rules.saltId);
-    if (site.civId !== null && all.includes(rules.ironId)) run.ironCivs.add(site.civId);
   }
 }

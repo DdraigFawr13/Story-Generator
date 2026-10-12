@@ -4,7 +4,7 @@
 
 ## Status
 
-Approved 2026-10-11 with all four recommended fork answers. M2.1 done: race and culture sketches approved 2026-10-11 (Tylwyth, Dvergar; Gwerin, Skarn, Tarqai, Ushani, plus one culture each for Tylwyth and Dvergar, 6 in all). M2.2 done: 6 peoples on a default map, territory by travel cost from their sites (reach 150). M2.3 done: 250 yearly steps of harvest, demographics, famine, plague, migration and expansion in a `history` stage; with race fertility tuned (Tylwyth 0.6, Dvergar 0.75) humans end at 62–68% on S1–S5. Next: M2.4. Builds on Phase 1: fertility, wildness, resources, aura spots, regions (passes, fords, harbours) and the route graph.
+Approved 2026-10-11 with all four recommended fork answers. M2.1 done: race and culture sketches approved 2026-10-11 (Tylwyth, Dvergar; Gwerin, Skarn, Tarqai, Ushani, plus one culture each for Tylwyth and Dvergar, 6 in all). M2.2 done: 6 peoples on a default map, territory by travel cost from their sites (reach 150). M2.3 done: 250 yearly steps of harvest, demographics, famine, plague, migration and expansion in a `history` stage; with race fertility tuned (Tylwyth 0.6, Dvergar 0.75) humans end at 62–68% on S1–S5. M2.4 done: beasts and lairs, decade trade, civ raids, border clashes, insults and wars with conquest and razing; site stores became a goods vector (food, ore, timber, salt, luxury), approved by Morgan 2026-10-12 in the plan review. Next: M2.5. Builds on Phase 1: fertility, wildness, resources, aura spots, regions (passes, fords, harbours) and the route graph.
 
 ## Milestones
 
@@ -56,7 +56,7 @@ Approved 2026-10-11 with all four recommended fork answers. M2.1 done: race and 
 interface Civ { id: Id; name: string; raceId: string; cultureId: string; capital: Id;
   founded: number; fell?: number; rulerId?: Id; grievances: Map<Id, number> }
 interface Site { id: Id; name: string; kind: SiteKind; cell: number; civId: Id | null;
-  founded: number; ruinedYear?: number; pop: PopBand[]; stores: number; wealth: number }
+  founded: number; ruinedYear?: number; pop: PopBand[]; goods: Record<'food' | 'ore' | 'timber' | 'salt' | 'luxury', number>; wealth: number }
 interface PopBand { raceId: string; cultureId: string; band: 'child' | 'adult' | 'elder'; count: number }
 interface Creature { id: Id; defId: string; lair: number; born: number; died?: number; deeds: Id[] }
 interface Item { id: Id; kind: 'artifact' | 'book'; name: string; made: number; holder: Id | null; deeds: Id[] }

@@ -130,7 +130,7 @@ function raid(run: HistoryRun, creature: Creature, def: CreatureDef): void {
   const pop = totalPop(site);
   const wanted = Math.min(pop * rules.raidKillCap, def.danger * rules.raidKillPerDanger * factor);
   const dead = removePeople(site, stochasticRound(rng.beasts, wanted), ['adult', 'child', 'elder']);
-  site.stores *= 1 - rules.raidStoresLoss;
+  site.goods.food *= 1 - rules.raidStoresLoss;
   const event = run.emit({
     type: 'beast_raid',
     place: site.cell,

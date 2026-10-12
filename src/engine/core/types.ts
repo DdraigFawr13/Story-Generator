@@ -298,6 +298,11 @@ export interface Civ {
   grievances: Map<Id, number>;
 }
 
+/** The goods a site stocks (M2.4): food plus four traded materials. */
+export const GOODS = ['food', 'ore', 'timber', 'salt', 'luxury'] as const;
+export type GoodId = (typeof GOODS)[number];
+export type Goods = Record<GoodId, number>;
+
 /** A settlement (M2.2). `founded` is a year number. */
 export interface Site {
   id: Id;
@@ -308,7 +313,8 @@ export interface Site {
   founded: number;
   ruinedYear?: number;
   pop: PopBand[];
-  stores: number;
+  /** Stocks of each good; `goods.food` is the old stores. */
+  goods: Goods;
   wealth: number;
   /** People the land within reach feeds (the M2.3 growth target). */
   capacity: number;

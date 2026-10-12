@@ -3,6 +3,7 @@
 // a win conquers or razes the site. Strength is in soldier equivalents (R-24).
 
 import type { Civ, Id, Site } from '../core/types';
+import { timberShort } from './goods';
 import { cultureOf } from './state';
 import { civLosesSite, evacuate } from './abandon';
 import { bandCount, removePeople, removeProportional, stochasticRound, totalPop } from './pop';
@@ -42,15 +43,20 @@ function soldierFactor(run: HistoryRun, raceId: string): number {
   );
 }
 
-/** A civ's strength in soldier equivalents: adults by race, with the iron bonus. */
+/** A civ's strength in soldier equivalents: adults by race, with the ore bonus. */
 export function civStrength(run: HistoryRun, civ: Civ): number {
   let strength = 0;
+  let adults = 0;
+  let ore = 0;
   for (const site of civSites(run, civ)) {
+    ore += site.goods.ore;
+    adults += bandCount(site, 'adult');
     for (const band of site.pop) {
       if (band.band === 'adult') strength += band.count * soldierFactor(run, band.raceId);
     }
   }
-  return strength * (run.ironCivs.has(civ.id) ? run.rules.ironStrength : 1);
+  const armed = adults > 0 ? Math.min(1, ore / adults) : 0;
+  return strength * (1 + run.rules.oreStrength * armed);
 }
 
 /** Linked site pairs between two civs: sites of `b` that touch a site of `a`. */
@@ -137,8 +143,13 @@ function declareWars(run: HistoryRun): void {
 function siteDefence(run: HistoryRun, site: Site, defender: Civ): number {
   const table = run.rules.defence;
   let bonus = 1;
-  for (const feature of site.features) bonus *= table[feature] ?? 1;
-  if (site.kind === 'fortress') bonus *= table.fortress ?? 1;
+  // Without timber the walls and palisades are neglected: the fortress and heights bonus is halved.
+  const worn = (multiplier: number) =>
+    timberShort(run, site) ? 1 + (multiplier - 1) / 2 : multiplier;
+  for (const feature of site.features) {
+    bonus *= feature === 'heights' ? worn(table[feature] ?? 1) : (table[feature] ?? 1);
+  }
+  if (site.kind === 'fortress') bonus *= worn(table.fortress ?? 1);
   if (defender.capital === site.id) bonus *= table.capital ?? 1;
   return bonus;
 }

@@ -1,6 +1,7 @@
 // Harvest and famine (M2.3). Each year a site grows food from its land; bad weather cuts the
 // yield, and when stores run out people starve.
 
+import { goodNeed } from './goods';
 import { removePeople, siteNeed, stochasticRound, totalPop } from './pop';
 import { causesOf, civName, liveSites, logOf, type HistoryRun } from './state';
 
@@ -34,9 +35,10 @@ export function runHarvest(run: HistoryRun): void {
     }
     const need = siteNeed(site, run.races);
     const produced = Math.min(pop * rules.workerOutput, site.capacity) * (need / pop) * yieldFactor;
-    // Salt keeps food longer, so a site with salt stores more.
-    const cap = rules.storesCapYears * (logOf(run, site.id).salt ? rules.saltStoresBonus : 1);
-    site.stores = Math.min(site.stores + produced - need, cap * need);
+    // Food spoils without salt, so a site short of salt stores less.
+    const salted = site.goods.salt >= goodNeed(run, site, 'salt');
+    const cap = rules.storesCapYears * (salted ? 1 : rules.saltShortStoresCap);
+    site.goods.food = Math.min(site.goods.food + produced - need, cap * need);
   }
 }
 
@@ -44,11 +46,11 @@ export function runHarvest(run: HistoryRun): void {
 export function runFamine(run: HistoryRun): void {
   const { rules, rng } = run;
   for (const site of liveSites(run)) {
-    if (site.stores >= 0) continue;
+    if (site.goods.food >= 0) continue;
     const pop = totalPop(site);
     const need = siteNeed(site, run.races);
-    const shortfall = need > 0 ? Math.min(1, -site.stores / need) : 0;
-    site.stores = 0;
+    const shortfall = need > 0 ? Math.min(1, -site.goods.food / need) : 0;
+    site.goods.food = 0;
     const dead = Math.min(
       pop,
       stochasticRound(rng.demography, pop * shortfall * rules.famineDeathShare),

@@ -1,4 +1,4 @@
-// Yearly history (M2.3, M2.4): after settlement, each year runs harvest, trade (each decade),
+// Yearly history (M2.3, M2.4): after settlement, each year runs harvest, goods, trade (each decade),
 // demographics, famine, civ raids, beasts, plague, migration, expansion, war and site upkeep in a
 // fixed order. Per-run state (links, immunity, cooldowns, wars) lives in `HistoryRun`; only sites,
 // civs, creatures, events and territory change in the world.
@@ -8,6 +8,7 @@ import type { WorldState } from '../core/types';
 import { runAbandonment } from './abandon';
 import { runBeasts } from './beasts';
 import { runDemography, runKinds } from './demography';
+import { runGoods } from './goods';
 import { runFamine, runHarvest } from './harvest';
 import { buildLinks, createLinkSearch } from './links';
 import { runExpansion, runMigration } from './migration';
@@ -21,6 +22,7 @@ import { runWar } from './war';
 
 export type { HistoryContent } from './state';
 export * from './links';
+export { emptyGoods } from './goods';
 
 /** Years between territory recomputes and progress reports. */
 const DECADE = 10;
@@ -55,6 +57,7 @@ export function runHistory(
     run.year = year;
     world.day = year * DAYS_PER_YEAR;
     runHarvest(run);
+    runGoods(run);
     if (year % DECADE === 0) runTrade(run);
     runDemography(run);
     runFamine(run);

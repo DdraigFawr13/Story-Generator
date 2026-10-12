@@ -36,7 +36,7 @@ function decayGrievances(run: HistoryRun): void {
   }
 }
 
-/** The richest (stores plus wealth) linked foreign live site of a civ not at war with `site`'s civ. */
+/** The richest (food plus wealth) linked foreign live site of a civ not at war with `site`'s civ. */
 function richestTarget(run: HistoryRun, site: Site): Site | undefined {
   let best: Site | undefined;
   let bestWealth = -Infinity;
@@ -45,7 +45,7 @@ function richestTarget(run: HistoryRun, site: Site): Site | undefined {
     if (!other || !isLive(other) || other.civId === site.civId || !liveCiv(run, other.civId))
       continue;
     if (atWar(run, site.civId, other.civId)) continue;
-    const wealth = other.stores + other.wealth;
+    const wealth = other.goods.food + other.wealth;
     if (wealth > bestWealth) {
       best = other;
       bestWealth = wealth;
@@ -68,9 +68,16 @@ function runFamineRaids(run: HistoryRun): void {
     const victim = target ? liveCiv(run, target.civId) : undefined;
     if (!target || !victim) continue;
     // A year of the raider's food is the most it can carry home.
-    const loot = Math.min(target.stores * rules.raidLootShare, siteNeed(site, run.races));
-    target.stores -= loot;
-    site.stores += loot;
+    const need = siteNeed(site, run.races);
+    const loot = Math.min(target.goods.food * rules.raidLootShare, need);
+    target.goods.food -= loot;
+    site.goods.food += loot;
+    // If the grain does not fill the need, they carry off luxuries too.
+    if (loot < need) {
+      const spoils = target.goods.luxury * rules.raidLootShare;
+      target.goods.luxury -= spoils;
+      site.goods.luxury += spoils;
+    }
     const [lo, hi] = rules.civRaidDeaths;
     const share = rng.war.between(Math.round(lo * 1000), Math.round(hi * 1000)) / 1000;
     const dead = removePeople(target, stochasticRound(rng.war, totalPop(target) * share), [

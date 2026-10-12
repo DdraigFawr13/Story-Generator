@@ -1,7 +1,13 @@
 // Invariant checker for generated world layers, used by tests and dev builds.
 // Returns human-readable problems; an empty list means the world is sound.
 
-import type { Region, RouteGraph, WorldCells, WorldState } from '../core/types';
+import {
+  GOODS,
+  type Region,
+  type RouteGraph,
+  type WorldCells,
+  type WorldState,
+} from '../core/types';
 import { D8_DX, D8_DY } from './grid';
 import { saddleAxis } from './regions';
 
@@ -310,7 +316,9 @@ export function checkSites(
       pop += band.count;
     }
     if (site.ruinedYear !== undefined && pop !== 0) report(`${label} is ruined but holds ${pop}`);
-    if (!(site.stores >= 0)) report(`${label} has stores ${site.stores}`);
+    for (const good of GOODS) {
+      if (!(site.goods[good] >= 0)) report(`${label} has ${good} ${site.goods[good]}`);
+    }
     if (!(site.peakPop >= pop)) report(`${label} has peak population ${site.peakPop} below ${pop}`);
     if (!(site.capacity >= 0)) report(`${label} has capacity ${site.capacity}`);
   }

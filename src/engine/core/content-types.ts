@@ -4,7 +4,7 @@
 
 import type { Cadence, Season } from './clock';
 import type { SimContext } from './context';
-import type { Attributes, SiteFeature, SiteKind } from './types';
+import type { Attributes, GoodId, Goods, SiteFeature, SiteKind } from './types';
 import type { BirthTierId } from '../people/tiers';
 
 export interface RaceDef {
@@ -263,6 +263,8 @@ export interface ResourceDef {
   id: string;
   name: string;
   category: 'metal' | 'stone' | 'mineral' | 'food' | 'material' | 'magic';
+  /** The good a deposit of this resource feeds (M2.4); omit if it feeds none. */
+  good?: GoodId;
   /** Biome ids the resource can sit in (omit = any land). */
   biomes?: string[];
   /** Elevation window in metres (omit = no limit). */
@@ -482,17 +484,28 @@ export interface HistoryRules {
   tradeGoodsRange: number;
   /** A site keeps this many years of food before it has a surplus, and wants this many before it has a shortage. */
   tradeKeepYears: number;
-  /** Wealth a site gains for each good a partner has and it lacks, by resource id; others count 1. */
-  goodValue: Record<string, number>;
+  /** Wealth both sides gain per unit of a good moved in trade. */
+  goodValue: Goods;
   /** Wealth lost per decade, as a share. */
   wealthDecay: number;
-  /** Resource ids whose goods matter beyond wealth. */
-  saltId: string;
-  ironId: string;
-  /** Stores cap multiplier for a site with salt. */
-  saltStoresBonus: number;
-  /** Army strength multiplier for a civ with iron. */
-  ironStrength: number;
+  /** Share of its luxury stock a site sends to a partner with less, each trade round (at most half the gap). */
+  luxuryTradeShare: number;
+
+  // Goods (M2.4), yearly. Food is in `workerOutput` and `storesCapYears`.
+  /** Units of each non-food good one adult makes a year when deposits are plentiful. */
+  goodsPerWorker: Goods;
+  /** Deposits (cells within `tradeGoodsRange`) of a good that give full output; fewer give a proportion. */
+  depositsForFull: number;
+  /** A stock of a non-food good never exceeds this many years of full output. */
+  goodsCapYears: number;
+  /** Yearly need: ore and timber per adult, salt per person; luxury and food are not listed here. */
+  need: Goods;
+  /** Food stores cap multiplier while the salt stock is under a year's need (below 1). */
+  saltShortStoresCap: number;
+  /** Civ strength is multiplied by 1 + this * min(1, ore stock per adult). */
+  oreStrength: number;
+  /** Each year a site's wealth rises by luxury stock * goodValue.luxury * this. */
+  luxuryWealthShare: number;
   /** Richer civ's wealth over this multiple of the poorer's, and at least `envyMinWealth`, breeds envy. */
   envyRatio: number;
   envyMinWealth: number;
@@ -502,7 +515,7 @@ export interface HistoryRules {
   raidWarValue: number;
   /** Chance per year = this * values.war / 10. */
   civRaidChance: number;
-  /** Share of the target's stores taken, at most one year of the raider's food. */
+  /** Share of the target's food taken, at most one year of the raider's food; luxury is taken too when food falls short. */
   raidLootShare: number;
   /** Share of the target's people killed (min, max). */
   civRaidDeaths: [number, number];

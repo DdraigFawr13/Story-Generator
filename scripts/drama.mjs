@@ -92,11 +92,19 @@ function stats(seed) {
     chain = Math.max(chain, d);
   }
   let liveSites = 0,
-    ruinedSites = 0;
+    ruinedSites = 0,
+    totalWealth = 0;
+  const goodSums = { food: 0, ore: 0, timber: 0, salt: 0, luxury: 0 };
   for (const site of world.sites.values()) {
-    if (site.ruinedYear === undefined) liveSites += 1;
-    else ruinedSites += 1;
+    if (site.ruinedYear === undefined) {
+      liveSites += 1;
+      totalWealth += site.wealth;
+      for (const good of Object.keys(goodSums)) goodSums[good] += site.goods[good];
+    } else ruinedSites += 1;
   }
+  const meanGoods = Object.fromEntries(
+    Object.entries(goodSums).map(([good, sum]) => [good, liveSites ? sum / liveSites : 0]),
+  );
   const fallen = [...world.civs.values()].filter((civ) => civ.fell !== undefined).length;
   const c = world.cells;
   const kinds = {};
@@ -266,6 +274,8 @@ function stats(seed) {
       warsEarly,
       warsLate,
       peaceYears,
+      meanGoods,
+      totalWealth,
     },
     problems:
       checkSites(world).length +
@@ -412,7 +422,7 @@ for (const r of rows) {
 }
 process.stdout.write(`races > 70%: ${lopsided} of ${rows.length} seeds\n`);
 process.stdout.write(
-  '\nconflict: seed | beasts seen/slain | raids beast/civ | trade opened/relief | wars 1-100/101-200 (all) | peace yrs | battles conquered razed\n',
+  '\nconflict: seed | beasts seen/slain | raids beast/civ | trade opened/relief | wars 1-100/101-200 (all) | peace yrs | battles conquered razed | mean goods per live site food/ore/timber/salt/luxury | wealth\n',
 );
 for (const r of rows) {
   const h = r.history;
@@ -421,6 +431,7 @@ for (const r of rows) {
     `${r.seed.padEnd(4)} | ${String(n('beast_appeared')).padStart(3)}/${String(n('beast_slain')).padEnd(3)} | ` +
       `${String(n('beast_raid')).padStart(4)}/${String(n('civ_raid')).padEnd(3)} | ${String(n('trade_opened')).padStart(2)}/${String(n('grain_relief')).padEnd(3)} | ` +
       `${h.warsEarly}/${h.warsLate} (${n('war_declared')}) | ${String(h.peaceYears).padStart(3)} | ` +
-      `${String(n('battle')).padStart(3)} ${String(n('site_conquered')).padStart(3)} ${String(n('site_razed')).padStart(3)}\n`,
+      `${String(n('battle')).padStart(3)} ${String(n('site_conquered')).padStart(3)} ${String(n('site_razed')).padStart(3)} | ` +
+      `${['food', 'ore', 'timber', 'salt', 'luxury'].map((g) => h.meanGoods[g].toFixed(0)).join('/')} | ${h.totalWealth.toFixed(0)}\n`,
   );
 }

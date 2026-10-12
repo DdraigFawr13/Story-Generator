@@ -4,7 +4,7 @@
 import { createEmitter, type EmitInput } from '../core/context';
 import type { ContentBundle, HistoryRules, RaceDef } from '../core/content-types';
 import { streamFor, type RngStream } from '../core/rng';
-import type { Civ, Id, SimEvent, Site, WorldCells, WorldState } from '../core/types';
+import type { Civ, Goods, Id, SimEvent, Site, WorldCells, WorldState } from '../core/types';
 import type { SiteLinks, LinkSearch } from './links';
 import type { SettleContent, SettleSearch } from './settle';
 
@@ -23,8 +23,6 @@ export interface SiteLog {
   migration?: { year: number; event: Id };
   /** The last beast raid on the site. */
   raided?: { year: number; event: Id };
-  /** The site has salt (its own or traded for) until the next trade. */
-  salt?: boolean;
 }
 
 /** A war between two civs (M2.4); the events are the record, wars are not saved with the world. */
@@ -92,10 +90,8 @@ export interface HistoryRun {
   truce: Map<string, number>;
   /** The trade_opened event per `${low}-${high}` civ pair. */
   tradeOpened: Map<string, Id>;
-  /** Cached goods (resource ids) near each site. */
-  goods: Map<Id, string[]>;
-  /** Civs with iron (their own or traded for) as of the last trade. */
-  ironCivs: Set<Id>;
+  /** Cached deposit counts per good near each site. */
+  deposits: Map<Id, Goods>;
 }
 
 /** Key for an unordered pair of civs. */
@@ -218,8 +214,7 @@ export function createRun(
     grievanceEvents: new Map(),
     truce: new Map(),
     tradeOpened: new Map(),
-    goods: new Map(),
-    ironCivs: new Set(),
+    deposits: new Map(),
   };
   for (const site of world.sites.values()) run.siteAtCell.set(site.cell, site.id);
   // Settle's founding events are the origin every later cause chain can fall back on.
