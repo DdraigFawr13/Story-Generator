@@ -4,11 +4,17 @@ import {
   buildLegendIndex,
   cellsDigest,
   decodeTerritory,
+  eventTitle,
   generateWorld,
+  importanceStars,
   historyAt,
   linkSegments,
+  liveSites,
   locate,
+  yearText,
   type LegendRef,
+  type SimEvent,
+  validateContent,
   type WorldState,
 } from '../../src/engine';
 import smoke from '../fixtures/smoke-cells-digest.json';
@@ -139,5 +145,99 @@ describe('cellsDigest', () => {
       DEFAULT_CONTENT,
     );
     expect(cellsDigest(world.cells!)).toBe(smoke.digest);
+  });
+});
+
+const ev = (type: string, data: SimEvent['data'], day = 336 * 12): SimEvent => ({
+  id: 1,
+  day,
+  type,
+  importance: 5,
+  actors: [],
+  place: null,
+  causes: [],
+  data,
+});
+
+describe('eventTitle', () => {
+  const migration = { title: 'Migration from {from} to {to}' };
+
+  it('fills every placeholder from the event data', () => {
+    expect(eventTitle(ev('migration', { from: 'Karn', to: 'Ash' }), migration)).toBe(
+      'Migration from Karn to Ash',
+    );
+  });
+
+  it('drops a missing or empty placeholder with the word before it', () => {
+    expect(eventTitle(ev('migration', { from: 'Karn' }), migration)).toBe('Migration from Karn');
+    expect(eventTitle(ev('migration', { from: 'Karn', to: '' }), migration)).toBe(
+      'Migration from Karn',
+    );
+  });
+
+  it('uses the history year for {year} and falls back to the type label when nothing is left', () => {
+    expect(eventTitle(ev('year_summary', {}), { title: 'Year {year} in brief' })).toBe(
+      'Year 12 in brief',
+    );
+    expect(eventTitle(ev('migration', {}), { title: '{from}' })).toBe('Migration');
+    expect(eventTitle(ev('site_razed', {}), {})).toBe('Site razed');
+  });
+
+  it('has a title that validates for every event type', () => {
+    for (const def of DEFAULT_CONTENT.eventTypes) expect(def.title, def.id).toBeTruthy();
+  });
+});
+
+describe('small formatters', () => {
+  it('writes negative years with a real minus sign', () => {
+    expect(yearText(-30)).toBe('\u221230');
+    expect(yearText(28)).toBe('28');
+  });
+
+  it('puts importance in star bands and nothing below 3', () => {
+    expect([2, 3, 5, 6, 8, 9, 12].map(importanceStars)).toEqual([
+      '',
+      '\u2605',
+      '\u2605',
+      '\u2605\u2605',
+      '\u2605\u2605',
+      '\u2605\u2605\u2605',
+      '\u2605\u2605\u2605',
+    ]);
+  });
+
+  it('shares decoded territory through a cache and matches the live sites in the final year', () => {
+    const world = base();
+    const cache = new Map<number, Uint16Array>();
+    const a = historyAt(world, 37, cache);
+    expect(historyAt(world, 39, cache).territory).toBe(a.territory);
+    expect(cache.size).toBe(1);
+    expect(liveSites(world).size).toBe(world.sites.size);
+  });
+});
+
+describe('legend content rules', () => {
+  it('rejects a title placeholder the type has no data for, and a group naming an unknown type', () => {
+    const eventTypes = DEFAULT_CONTENT.eventTypes.map((t) =>
+      t.id === 'famine' ? { ...t, title: 'Famine in {nowhere}' } : t,
+    );
+    const typeGroups = [
+      ...(DEFAULT_CONTENT.typeGroups ?? []),
+      { id: 'x', label: 'X', types: ['nope'] },
+    ];
+    const problems = validateContent({ ...DEFAULT_CONTENT, eventTypes, typeGroups }).join('\n');
+    expect(problems).toMatch(/famine title uses unknown key \{nowhere\}/);
+    expect(problems).toMatch(/group x names unknown event type "nope"/);
+    expect(validateContent(DEFAULT_CONTENT)).toEqual([]);
+  });
+
+  it('puts every event type in at most one group', () => {
+    const seen = new Set<string>();
+    for (const group of DEFAULT_CONTENT.typeGroups ?? []) {
+      for (const type of group.types) {
+        expect(seen.has(type), type).toBe(false);
+        seen.add(type);
+      }
+    }
   });
 });

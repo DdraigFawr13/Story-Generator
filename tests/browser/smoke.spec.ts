@@ -35,15 +35,42 @@ test('the world map generates, inspects, saves, reloads and advances', async ({ 
   // Legends: open the first civ, unfold a "why?", follow a cause to its event, show it on the map.
   const legends = page.getByRole('region', { name: 'Legends' });
   await legends.getByRole('button', { name: /^Civs/ }).click();
-  await legends.locator('.lg-list li button').first().click();
+  await legends.locator('.lg-list li a').first().click();
+  const civHeading = await legends.getByRole('heading', { level: 3 }).textContent();
   await legends
     .getByRole('button', { name: /^why\?/ })
     .first()
     .click();
-  await legends.locator('.lg-tree .y button').first().click();
-  await expect(legends.getByRole('heading', { level: 3 })).toHaveText(/^Year \d+/);
-  await legends.getByRole('button', { name: 'Show on map' }).click();
+  await legends.locator('.lg-tree .y a').first().click();
+  // An event page is headed by its title, with the year as the eyebrow.
+  const heading = legends.getByRole('heading', { level: 3 });
+  await expect(heading).not.toHaveText(/^Year \d+/);
+  await expect(heading).not.toHaveText('');
+  await expect(legends.locator('.lg-kind')).toHaveText(/^Year \d+/);
+  await expect(page).toHaveURL(/open=event:\d+/);
+  await legends.getByRole('button', { name: /^Open on the map at Year \d+/ }).click();
   await expect(map).toHaveAttribute('data-focus', /^\d+,\d+$/);
+
+  // "Expand all" unfolds the causes of the causes.
+  await expect(legends.locator('.lg-tree')).toHaveCount(0);
+  await legends.getByRole('button', { name: 'Expand all' }).click();
+  await expect(legends.locator('.lg-tree').first()).toBeVisible();
+
+  // Browser back returns to the previous Legends page, and forward to the event again.
+  await page.goBack();
+  await expect(page).toHaveURL(/open=civ:\d+/);
+  await expect(heading).toHaveText(civHeading!);
+  await page.goForward();
+  await expect(page).toHaveURL(/open=event:\d+/);
+
+  // Phone width: the Legends body is capped at the viewport and shows text below the heading.
+  const desktop = page.viewportSize()!;
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('group', { name: 'View' }).getByRole('button', { name: 'Legends' }).click();
+  await expect(legends.locator('.lg-summary')).toBeInViewport();
+  const body = await legends.locator('.lg-body').boundingBox();
+  expect(body!.height).toBeGreaterThan(150);
+  await page.setViewportSize(desktop);
 
   const rainfall = page.getByRole('button', { name: 'Rainfall' });
   await rainfall.click();

@@ -35,6 +35,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'season_turned',
     baseImportance: 1,
+    title: 'The season turned',
     category: 'nature',
     rollup: ['season', 'seasons'],
     templates: [
@@ -46,6 +47,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'cold_snap',
     baseImportance: 4,
+    title: 'Cold snap',
     category: 'nature',
     templates: [
       'On {date} a killing cold settled over the land, the worst of a harsh winter.',
@@ -56,6 +58,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'civ_founded',
     baseImportance: 6,
+    title: '{civ} founded at {site}',
     category: 'world',
     precision: 'year',
     links: { civ: 'civ', site: 'site' },
@@ -68,6 +71,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'site_founded',
     baseImportance: 3,
+    title: '{site} founded',
     category: 'world',
     precision: 'year',
     links: { site: 'site', civ: 'civ' },
@@ -82,6 +86,8 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'bad_harvest',
     baseImportance: 2,
+    title: 'Bad harvest at {site}',
+    causeWord: 'because of',
     category: 'nature',
     precision: 'year',
     links: { site: 'site', civ: 'civ' },
@@ -97,6 +103,8 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'famine',
     baseImportance: 5,
+    title: 'Famine at {site}',
+    causeWord: 'because of',
     category: 'threat',
     precision: 'year',
     links: { site: 'site', civ: 'civ' },
@@ -111,8 +119,11 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'plague',
     baseImportance: 6,
+    title: '{disease} at {site}',
+    causeWord: 'because of',
     category: 'threat',
     precision: 'year',
+    dataKeys: ['disease'],
     links: { site: 'site', civ: 'civ', from: 'site' },
     templates: [
       'In {date} plague struck {site}, and {dead} of the {civ} were buried.',
@@ -125,8 +136,11 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'fever',
     baseImportance: 4,
+    title: '{disease} at {site}',
+    causeWord: 'because of',
     category: 'nature',
     precision: 'year',
+    dataKeys: ['disease'],
     links: { site: 'site', civ: 'civ', from: 'site' },
     templates: [
       'In {date} a summer fever ran through {site}, and {dead} of the {civ} did not rise from it.',
@@ -139,8 +153,11 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'pox',
     baseImportance: 4,
+    title: '{disease} at {site}',
+    causeWord: 'because of',
     category: 'nature',
     precision: 'year',
+    dataKeys: ['disease'],
     links: { site: 'site', civ: 'civ', from: 'site' },
     templates: [
       'In {date} the pox came to {site}, and {dead} of the {civ} died of it.',
@@ -153,6 +170,8 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'dry_years_began',
     baseImportance: 4,
+    title: 'Dry years began near {site}',
+    causeWord: 'because of',
     category: 'nature',
     precision: 'year',
     links: { site: 'site' },
@@ -165,6 +184,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'dry_years_ended',
     baseImportance: 3,
+    title: 'Dry years ended near {site}',
     category: 'nature',
     precision: 'year',
     links: { site: 'site' },
@@ -177,6 +197,8 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'cold_years_began',
     baseImportance: 4,
+    title: 'Cold years began near {site}',
+    causeWord: 'because of',
     category: 'nature',
     precision: 'year',
     links: { site: 'site' },
@@ -189,6 +211,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'cold_years_ended',
     baseImportance: 3,
+    title: 'Cold years ended near {site}',
     category: 'nature',
     precision: 'year',
     links: { site: 'site' },
@@ -201,6 +224,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'year_summary',
     baseImportance: 3,
+    title: 'Year {year} in brief',
     category: 'world',
     precision: 'year',
     templates: [
@@ -214,6 +238,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'migration',
     baseImportance: 3,
+    title: 'Migration from {from} to {to}',
     category: 'social',
     precision: 'year',
     links: { from: 'site', to: 'site', civ: 'civ' },
@@ -228,6 +253,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'site_grew',
     baseImportance: 2,
+    title: '{site} grew into a {kind}',
     category: 'world',
     precision: 'year',
     links: { site: 'site', civ: 'civ' },
@@ -243,6 +269,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'site_abandoned',
     baseImportance: 5,
+    title: '{site} abandoned',
     category: 'world',
     precision: 'year',
     links: { site: 'site', civ: 'civ' },
@@ -255,6 +282,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'civ_fell',
     baseImportance: 8,
+    title: 'Fall of {civ}',
     category: 'politics',
     precision: 'year',
     links: { civ: 'civ' },
@@ -267,6 +295,8 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'beast_appeared',
     baseImportance: 4,
+    title: '{beast} appeared near {near}',
+    causeWord: 'because of',
     category: 'threat',
     precision: 'year',
     links: { beast: 'beast', near: 'site' },
@@ -281,6 +311,8 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'beast_raid',
     baseImportance: 5,
+    title: '{beast} raided {site}',
+    causeWord: 'because of',
     category: 'threat',
     precision: 'year',
     links: { beast: 'beast', site: 'site', civ: 'civ' },
@@ -295,6 +327,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'beast_slain',
     baseImportance: 7,
+    title: '{hero} slew {beast}',
     category: 'threat',
     precision: 'year',
     links: { beast: 'beast', site: 'site', civ: 'civ' },
@@ -308,6 +341,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'trade_opened',
     baseImportance: 3,
+    title: 'Trade opened: {civ} and {other}',
     category: 'politics',
     precision: 'year',
     links: { civ: 'civ', other: 'civ', site: 'site', partner: 'site' },
@@ -320,6 +354,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'grain_relief',
     baseImportance: 3,
+    title: 'Grain from {from} to {site}',
     category: 'social',
     precision: 'year',
     links: { site: 'site', from: 'site', civ: 'civ' },
@@ -334,6 +369,8 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'civ_raid',
     baseImportance: 5,
+    title: '{civ} raided {target}',
+    causeWord: 'because of',
     category: 'politics',
     precision: 'year',
     links: { site: 'site', target: 'site', civ: 'civ', victim: 'civ' },
@@ -347,6 +384,8 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'border_clash',
     baseImportance: 4,
+    title: 'Border clash: {civ} and {other}',
+    causeWord: 'because of',
     category: 'politics',
     precision: 'year',
     links: { civ: 'civ', other: 'civ' },
@@ -361,6 +400,8 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'insult',
     baseImportance: 3,
+    title: 'Insult: {civ} against {victim}',
+    causeWord: 'because of',
     category: 'politics',
     precision: 'year',
     links: { civ: 'civ', victim: 'civ' },
@@ -373,6 +414,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'war_declared',
     baseImportance: 8,
+    title: 'War declared: {civ} against {enemy}',
     category: 'politics',
     precision: 'year',
     links: { civ: 'civ', enemy: 'civ' },
@@ -385,6 +427,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'battle',
     baseImportance: 6,
+    title: 'Battle at {site}',
     category: 'politics',
     precision: 'year',
     links: { civ: 'civ', enemy: 'civ', site: 'site' },
@@ -397,6 +440,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'site_conquered',
     baseImportance: 7,
+    title: '{site} conquered by {civ}',
     category: 'politics',
     precision: 'year',
     links: { site: 'site', civ: 'civ', loser: 'civ' },
@@ -409,6 +453,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'site_razed',
     baseImportance: 8,
+    title: '{site} razed by {civ}',
     category: 'politics',
     precision: 'year',
     links: { site: 'site', civ: 'civ', loser: 'civ' },
@@ -421,6 +466,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'peace_made',
     baseImportance: 6,
+    title: 'Peace: {civ} and {enemy}',
     category: 'politics',
     precision: 'year',
     links: { civ: 'civ', enemy: 'civ' },
@@ -434,6 +480,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'notable_born',
     baseImportance: 1,
+    title: 'Birth of {child}',
     category: 'life',
     precision: 'year',
     links: { site: 'site', dynasty: 'dynasty' },
@@ -449,6 +496,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'mage_born',
     baseImportance: 3,
+    title: 'Birth of {child}, a mage',
     category: 'magic',
     precision: 'year',
     links: { site: 'site', civ: 'civ' },
@@ -463,6 +511,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'marriage',
     baseImportance: 1,
+    title: 'Marriage of {a} and {b}',
     category: 'life',
     precision: 'year',
     links: { site: 'site' },
@@ -478,6 +527,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'notable_died',
     baseImportance: 2,
+    title: 'Death of {name}',
     category: 'life',
     precision: 'year',
     links: { site: 'site', civ: 'civ' },
@@ -493,6 +543,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'ruler_succeeded',
     baseImportance: 5,
+    title: '{ruler} succeeded {prior}',
     category: 'politics',
     precision: 'year',
     links: { civ: 'civ' },
@@ -507,6 +558,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'succession_disputed',
     baseImportance: 6,
+    title: 'Disputed succession: {a} and {b}',
     category: 'politics',
     precision: 'year',
     links: { civ: 'civ' },
@@ -519,6 +571,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'dynasty_founded',
     baseImportance: 2,
+    title: '{dynasty} founded',
     category: 'politics',
     precision: 'year',
     links: { dynasty: 'dynasty', civ: 'civ', site: 'site' },
@@ -534,6 +587,8 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'oath_sworn',
     baseImportance: 2,
+    title: '{name} swore vengeance on {enemy}',
+    causeWord: 'in revenge for',
     category: 'social',
     precision: 'year',
     links: { civ: 'civ' },
@@ -549,6 +604,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'legend_risen',
     baseImportance: 7,
+    title: '{name} became a legend',
     category: 'magic',
     precision: 'year',
     links: { site: 'site', civ: 'civ' },
@@ -561,6 +617,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'artifact_made',
     baseImportance: 4,
+    title: '{item} made',
     category: 'social',
     precision: 'year',
     links: { item: 'item', site: 'site', civ: 'civ' },
@@ -576,6 +633,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'book_written',
     baseImportance: 2,
+    title: '{item} written',
     category: 'magic',
     precision: 'year',
     links: { item: 'item', site: 'site' },
@@ -591,6 +649,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'item_inherited',
     baseImportance: 2,
+    title: '{item} passed to {heir}',
     category: 'life',
     precision: 'year',
     links: { item: 'item', site: 'site' },
@@ -606,6 +665,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'item_lost',
     baseImportance: 3,
+    title: '{item} lost',
     category: 'life',
     precision: 'year',
     links: { item: 'item', site: 'site' },
@@ -620,6 +680,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'item_stolen',
     baseImportance: 5,
+    title: '{item} stolen',
     category: 'politics',
     precision: 'year',
     links: { item: 'item', site: 'site', civ: 'civ' },
@@ -632,6 +693,7 @@ export const eventTypes: EventTypeDef[] = [
   {
     id: 'item_found',
     baseImportance: 4,
+    title: '{item} found by {finder}',
     category: 'social',
     precision: 'year',
     links: { item: 'item', site: 'site', civ: 'civ' },

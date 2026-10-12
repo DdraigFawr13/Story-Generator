@@ -163,6 +163,17 @@ export interface EventTypeDef {
   rollup?: [singular: string, plural: string];
   /** Data keys that only some variants print (the first variant sets the key whitelist). */
   dataKeys?: string[];
+  /** Short heading for lists and event pages; `{key}` placeholders are data keys (M2.7). */
+  title?: string;
+  /** The word a cause of this event carries in "why?" chains, e.g. "because of". Default "after". */
+  causeWord?: string;
+}
+
+/** A named set of event types, for filters and colour keys in the Legends browser. */
+export interface EventTypeGroup {
+  id: string;
+  label: string;
+  types: string[];
 }
 
 /** The kind of entity a `links` data key names (by name; ids collide across kinds). */
@@ -193,6 +204,8 @@ export interface ContentBundle {
   abilities: AbilityDef[];
   weather: WeatherDef[];
   eventTypes: EventTypeDef[];
+  /** Event type groups for Legends filters; optional so test bundles may omit them. */
+  typeGroups?: EventTypeGroup[];
   rules: EventRuleDef[];
   settlement: SettlementRules;
   history: HistoryRules;

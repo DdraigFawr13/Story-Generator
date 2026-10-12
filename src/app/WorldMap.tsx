@@ -68,6 +68,10 @@ interface Props {
   history: HistoryAt | null;
   /** Centre the camera on a cell when `key` changes (Legends "Show on map"). */
   focus: { x: number; y: number; key: number } | null;
+  /** Sites of the open Legends page: ringed, while the other sites dim. Null dims nothing. */
+  highlight: ReadonlySet<Id> | null;
+  /** Shown in the narrow (tabbed) layout when the map was opened from a Legends page. */
+  onBackToLegends?: (() => void) | undefined;
 }
 
 /** A drag shorter than this many pixels is a click. */
@@ -83,6 +87,12 @@ const WHEEL_STEP_MS = 120;
 /** Lowest zoom step a focus request raises the map to, and the ring drawn round its cell. */
 const FOCUS_ZOOM = 2;
 const FOCUS_COLOR = '#ffd34d';
+/** Opacity of sites outside the open Legends page. */
+const DIM_ALPHA = 0.4;
+/** Gap (px) between the pointer and the site tooltip. */
+const TIP_OFFSET_PX = 14;
+/** A focus target this close to the view's edge counts as off screen. */
+const EDGE_MARGIN_PX = 24;
 /** Zoom step used when the minimap recentres a fully zoomed-out map. */
 const MINIMAP_ZOOM = 2;
 /** Radius (px) of the pass, ford and harbour markers. */
@@ -266,6 +276,8 @@ export function WorldMap({
   onView,
   history,
   focus,
+  highlight,
+  onBackToLegends,
 }: Props) {
   const [overlays, setOverlays] = useState<Overlays>({
     water: true,
@@ -276,6 +288,8 @@ export function WorldMap({
     raw: false,
   });
   const [hoverCell, setHoverCell] = useState<number | null>(null);
+  /** Where in the map the pointer entered the hovered cell, for the site tooltip. */
+  const [hoverAt, setHoverAt] = useState<{ x: number; y: number } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const miniRef = useRef<HTMLCanvasElement>(null);
   const camRef = useRef<Camera>({ x: 0, y: 0 });
@@ -300,6 +314,7 @@ export function WorldMap({
     onView,
     history,
     focus,
+    highlight,
   });
   latest.current = {
     cells,
@@ -316,6 +331,7 @@ export function WorldMap({
     onView,
     history,
     focus,
+    highlight,
   };
 
   const layerDef = LAYER_BY_ID.get(layer) ?? LAYER_BY_ID.get(DEFAULT_LAYER)!;
@@ -418,7 +434,7 @@ export function WorldMap({
     width: number,
     height: number,
   ): [number, number, number, number][] {
-    const { sites: all, civs: owners, history: past } = latest.current;
+    const { sites: all, civs: owners, history: past, highlight: marked } = latest.current;
     const capitals = new Set([...owners.values()].map((civ) => civ.capital));
     const taken: [number, number, number, number][] = [];
     ctx.textAlign = 'center';
@@ -442,8 +458,12 @@ export function WorldMap({
       const sx = ox + ((site.cell % c.width) + 0.5) * scale;
       const sy = oy + (Math.floor(site.cell / c.width) + 0.5) * scale;
       if (sx < -20 || sy < -20 || sx > width + 20 || sy > height + 20) continue;
+      // With an entity page open, its sites are ringed and the others dim.
+      const lit = marked === null || marked.has(site.id);
+      ctx.globalAlpha = lit ? 1 : DIM_ALPHA;
       if (state.ruined) {
         drawRuin(ctx, sx, sy);
+        ctx.globalAlpha = 1;
         continue;
       }
       const r = Math.min(
@@ -452,9 +472,19 @@ export function WorldMap({
       );
       const [cr, cg, cb] = civColor(state.civId ?? 0);
       drawSiteGlyph(ctx, site.kind, sx, sy, r, `rgb(${cr},${cg},${cb})`);
+      if (marked !== null && lit) {
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = FOCUS_COLOR;
+        ctx.beginPath();
+        ctx.arc(sx, sy, r + 4, 0, Math.PI * 2);
+        ctx.stroke();
+      }
       taken.push([sx - r - 1, sy - r - 1, r * 2 + 2, r * 2 + 2]);
       const minScale = capitals.has(site.id) ? CAPITAL_LABEL_SCALE : SITE_LABEL_SCALE;
-      if (scale < minScale) continue;
+      if (scale < minScale) {
+        ctx.globalAlpha = 1;
+        continue;
+      }
       const size = capitals.has(site.id) ? 13 : 11;
       ctx.font = `${capitals.has(site.id) ? 'bold ' : ''}${size}px system-ui, sans-serif`;
       const w = ctx.measureText(site.name).width;
@@ -465,14 +495,19 @@ export function WorldMap({
         w + 4,
         size + 2,
       ];
-      if (taken.some((other, k) => k < taken.length - 1 && boxesOverlap(box, other))) continue;
+      if (taken.some((other, k) => k < taken.length - 1 && boxesOverlap(box, other))) {
+        ctx.globalAlpha = 1;
+        continue;
+      }
       taken.push(box);
       ctx.lineWidth = 3;
       ctx.strokeStyle = 'rgba(255,255,255,0.9)';
       ctx.strokeText(site.name, sx, ty);
       ctx.fillStyle = '#1b1b1b';
       ctx.fillText(site.name, sx, ty);
+      ctx.globalAlpha = 1;
     }
+    ctx.globalAlpha = 1;
     drawLairs(ctx, c, scale, ox, oy, width, height, taken);
     return taken;
   }
@@ -683,14 +718,23 @@ export function WorldMap({
 
   useEffect(draw);
 
-  // Legends: centre on the cell and zoom in to at least FOCUS_ZOOM. The cell gets a gold ring
-  // rather than the selection, so the present-day inspector does not cover a past-year map.
+  // Legends: zoom to FOCUS_ZOOM only when the map is fully zoomed out or the cell is off screen,
+  // never zoom out, and centre only when something moves. The cell gets a gold ring rather than the
+  // selection, so the present-day inspector does not cover a past-year map.
   useEffect(() => {
     const c = latest.current.cells;
     if (!focus || !c) return;
-    camRef.current = { x: focus.x + 0.5, y: focus.y + 0.5 };
     const { rect, fit } = viewport();
-    const raised = Math.max(latest.current.zoom, FOCUS_ZOOM);
+    const current = clampZoom(fit, latest.current.zoom);
+    const scale = cellScale(fit, current);
+    const cam = camRef.current;
+    const onScreen =
+      rect.width > 0 &&
+      Math.abs(focus.x + 0.5 - cam.x) * scale < rect.width / 2 - EDGE_MARGIN_PX &&
+      Math.abs(focus.y + 0.5 - cam.y) * scale < rect.height / 2 - EDGE_MARGIN_PX;
+    if (current > 0 && onScreen) return;
+    camRef.current = { x: focus.x + 0.5, y: focus.y + 0.5 };
+    const raised = Math.max(current, FOCUS_ZOOM);
     // The re-render this causes draws at the new zoom; drawing first would clamp the camera.
     latest.current.onView({ zoom: rect.width > 0 ? clampZoom(fit, raised) : raised });
     // Only a new request moves the camera.
@@ -817,6 +861,20 @@ export function WorldMap({
       ? history.sites.get(siteHere.id)?.civId
       : siteHere.civId
     : null;
+  // The site under the pointer, as it stood in the slider year, with who held it and how many lived there.
+  const tipSite =
+    hoverCell !== null && hoverAt !== null
+      ? [...sites.values()].find((site) => site.cell === hoverCell)
+      : undefined;
+  const tipState = tipSite
+    ? history
+      ? history.sites.get(tipSite.id)
+      : {
+          civId: tipSite.civId,
+          pop: sitePopulation(tipSite),
+          ruined: tipSite.ruinedYear !== undefined,
+        }
+    : undefined;
   const digest = useMemo(() => (cells ? cellsDigest(cells) : undefined), [cells]);
 
   return (
@@ -832,6 +890,7 @@ export function WorldMap({
         ref={canvasRef}
         className="map"
         aria-label="World map"
+        tabIndex={0}
         onPointerDown={(event) => {
           drag.current = { x: event.clientX, y: event.clientY, cam: camRef.current, moved: false };
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -852,7 +911,11 @@ export function WorldMap({
           }
           const cell = cellUnder(event);
           const index = cell && cells ? cell.y * cells.width + cell.x : null;
-          if (index !== hoverCell) setHoverCell(index);
+          if (index !== hoverCell) {
+            setHoverCell(index);
+            const box = event.currentTarget.getBoundingClientRect();
+            setHoverAt({ x: event.clientX - box.left, y: event.clientY - box.top });
+          }
         }}
         onPointerUp={(event) => {
           const d = drag.current;
@@ -896,6 +959,25 @@ export function WorldMap({
           }}
         />
       </div>
+      {tipSite && tipState && hoverAt && (
+        <div
+          className="float wm-tip"
+          role="tooltip"
+          style={{ left: hoverAt.x + TIP_OFFSET_PX, top: hoverAt.y + TIP_OFFSET_PX }}
+        >
+          <strong>{tipSite.name}</strong>
+          <span>
+            {tipState.ruined
+              ? 'ruin'
+              : `${(tipState.civId != null && civs.get(tipState.civId)?.name) || 'no people'} · population ${tipState.pop.toLocaleString('en-US')}`}
+          </span>
+        </div>
+      )}
+      {onBackToLegends && (
+        <button type="button" className="float back-legends" onClick={onBackToLegends}>
+          ← Back to Legends
+        </button>
+      )}
       <div className="float zoom">
         <button
           aria-label="Zoom in"
@@ -907,6 +989,17 @@ export function WorldMap({
           −
         </button>
       </div>
+      <button
+        aria-label="Whole world"
+        title="Whole world"
+        className="float whole"
+        onClick={() => {
+          if (cells) camRef.current = { x: cells.width / 2, y: cells.height / 2 };
+          onView({ zoom: 0 });
+        }}
+      >
+        Whole world
+      </button>
       {cells && selected && (
         <Inspector
           cells={cells}

@@ -7,6 +7,7 @@ import { creatures } from './creatures';
 import { cultures } from './cultures';
 import { diseases } from './diseases';
 import { HISTORY } from './history';
+import { TYPE_GROUPS } from './legends';
 import { NAMES } from './names';
 import { NOTABLES } from './notables';
 import { races } from './races';
@@ -25,6 +26,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   abilities,
   weather,
   eventTypes,
+  typeGroups: TYPE_GROUPS,
   rules,
   settlement: SETTLEMENT,
   history: HISTORY,
@@ -40,6 +42,7 @@ export * from './creatures';
 export * from './cultures';
 export * from './diseases';
 export * from './history';
+export * from './legends';
 export * from './map-layers';
 export * from './names';
 export * from './notables';

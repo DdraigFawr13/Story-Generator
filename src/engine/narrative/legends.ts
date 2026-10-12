@@ -3,7 +3,9 @@
 
 import { decodeTerritory } from '../history/snapshots';
 import { sitePopulation } from '../history/settle';
-import type { Id, WorldState } from '../core/types';
+import type { EventTypeDef } from '../core/content-types';
+import { DAYS_PER_YEAR } from '../core/clock';
+import type { Id, SimEvent, WorldState } from '../core/types';
 import type { LegendRef } from './biography';
 
 export interface LinkSegment {
@@ -50,6 +52,63 @@ export function linkSegments(
   return out;
 }
 
+/** An event type id as a label: "site_razed" becomes "Site razed". */
+export function typeLabel(type: string): string {
+  return type.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+}
+
+/** A year for display, with a real minus sign (U+2212) for years before the start. */
+export function yearText(year: number): string {
+  return year < 0 ? `\u2212${-year}` : `${year}`;
+}
+
+/** The history year (0-based) an event happened in. */
+export function eventYear(event: SimEvent): number {
+  return Math.floor(event.day / DAYS_PER_YEAR);
+}
+
+/**
+ * The short heading for an event from its type's `title` template. A placeholder whose data value
+ * is missing or empty is dropped together with the word before it ("Migration from X to {to}"
+ * becomes "Migration from X"); an empty result falls back to the type's label.
+ */
+export function eventTitle(event: SimEvent, def?: Pick<EventTypeDef, 'title'>): string {
+  const template = def?.title;
+  if (template === undefined) return typeLabel(event.type);
+  const value = (key: string): string => {
+    if (key === 'year') return `${eventYear(event)}`;
+    const raw = event.data[key];
+    return raw === undefined ? '' : String(raw).trim();
+  };
+  const words = template.split(/\s+/).filter((word) => word !== '');
+  const gone = new Set<number>();
+  words.forEach((word, k) => {
+    const empty = [...word.matchAll(/\{(\w+)\}/g)].some((m) => value(m[1]!) === '');
+    if (!empty) return;
+    gone.add(k);
+    if (k > 0) gone.add(k - 1);
+  });
+  const text = words
+    .filter((_word, k) => !gone.has(k))
+    .join(' ')
+    .replace(/\{(\w+)\}/g, (_m, key: string) => value(key))
+    .replace(/[\s,:;]+$/, '')
+    .trim();
+  if (text === '') return typeLabel(event.type);
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** Importance as stars: none below 3, then one per band (3-5, 6-8, 9+). */
+export function importanceStars(importance: number): string {
+  return importance >= 9
+    ? '\u2605\u2605\u2605'
+    : importance >= 6
+      ? '\u2605\u2605'
+      : importance >= 3
+        ? '\u2605'
+        : '';
+}
+
 export interface HistoryAt {
   year: number;
   /** The decade snapshot the borders come from (at or before `year`). */
@@ -58,8 +117,23 @@ export interface HistoryAt {
   sites: Map<Id, { civId: Id | null; pop: number; ruined: boolean }>;
 }
 
+/** Every site as it stands now, in the same shape `historyAt` gives for a past year. */
+export function liveSites(world: WorldState): HistoryAt['sites'] {
+  const sites: HistoryAt['sites'] = new Map();
+  for (const site of world.sites.values()) {
+    const ruined = site.ruinedYear !== undefined;
+    sites.set(site.id, { civId: site.civId, pop: ruined ? 0 : sitePopulation(site), ruined });
+  }
+  return sites;
+}
+
 /** Borders, and the sites that existed with their owner, size and ruin state, as of `year`. */
-export function historyAt(world: WorldState, year: number): HistoryAt {
+export function historyAt(
+  world: WorldState,
+  year: number,
+  /** Decoded territory by snapshot year; pass one Map to keep scrubbing cheap. */
+  territoryCache?: Map<number, Uint16Array>,
+): HistoryAt {
   const sites: HistoryAt['sites'] = new Map();
   const snapshots = world.snapshots;
   let snap = snapshots[0];
@@ -82,14 +156,18 @@ export function historyAt(world: WorldState, year: number): HistoryAt {
     });
   }
   const { width, height } = world.params;
-  return {
-    year,
-    snapshotYear: snap ? snap.year : year,
-    territory: snap
-      ? decodeTerritory(snap.territory, width * height)
-      : (world.cells?.territory ?? new Uint16Array(width * height)),
-    sites,
-  };
+  let territory: Uint16Array;
+  if (snap) {
+    let cached = territoryCache?.get(snap.year);
+    if (!cached) {
+      cached = decodeTerritory(snap.territory, width * height);
+      territoryCache?.set(snap.year, cached);
+    }
+    territory = cached;
+  } else {
+    territory = world.cells?.territory ?? new Uint16Array(width * height);
+  }
+  return { year, snapshotYear: snap ? snap.year : year, territory, sites };
 }
 
 /** The cell to centre the map on for an entity, or null when it has no place. */
