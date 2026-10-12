@@ -4,7 +4,7 @@
 
 ## Status
 
-Draft (2026-10-12), awaiting approval. Starts when Phase 2 closes. Written after the plan review of 2026-10-12, whose answers this spec assumes: Phase 2 delivers a goods vector per site (M2.4), importance scores and yearly rollups (pulled forward into M2.4–M2.5), diseases as content, save compression, and deletes the legacy app at its close, so `/` already shows the new app. No zoom-in spike runs before M2.5; M3.1 is the first zoom-in and carries the performance check the spike would have done.
+Approved 2026-10-12 with all four recommended fork answers and no zoom-in spike. Starts when Phase 2 closes. Written after the plan review of 2026-10-12, whose answers this spec assumes: Phase 2 delivers a goods vector per site (M2.4), importance scores and yearly rollups (pulled forward into M2.4–M2.5), diseases as content, save compression, and deletes the legacy app at its close, so `/` already shows the new app. No zoom-in spike runs before M2.5; M3.1 is the first zoom-in and carries the performance check the spike would have done.
 
 ## Milestones
 
@@ -97,12 +97,12 @@ interface Condition { defId: string; severity: number; sinceDay: number; healDay
 - **Observer only (R-01):** the steward AI decides; the command queue seam stays unused.
 - **Content first:** needs, traits, memories, jobs, items, buildings, interactions and cantrips are content entries with one-line comments; tuning is by weights only.
 
-## Design forks
+## Design forks (decided 2026-10-12)
 
-1. **Local map size:** 64×64, **96×96 (recommended, the plan's default)**, or 128×128.
-2. **Glyph style:** **coloured letters on tinted tiles (recommended: cheapest, readable on a phone, art waits for Phase 9 under R-17)**, simple shape icons, or small pixel sprites.
-3. **Auto-pause defaults:** **pause on deaths, breakdowns, fires, raids and arrivals; births, marriages and festivals only in the chronicle (recommended)**, or pause on nothing by default.
-4. **Site view mock-up:** approve a mock-up before M3.1's UI is built, as with the map viewer? **Recommended: yes.**
+1. **Local map size:** 64×64, 96×96 or 128×128. **Decided: 96×96** (the plan's default).
+2. **Glyph style:** coloured letters on tinted tiles, simple shape icons or small pixel sprites. **Decided: coloured letters** (cheapest, readable on a phone; art waits for Phase 9 under R-17).
+3. **Auto-pause defaults:** pause on deaths, breakdowns, fires, raids and arrivals, or on nothing by default. **Decided: pause on those**; births, marriages and festivals go only in the chronicle.
+4. **Site view mock-up:** approve a mock-up before M3.1's UI is built, as with the map viewer? **Decided: yes.**
 
 ## Tools and connectors
 
