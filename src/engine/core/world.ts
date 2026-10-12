@@ -55,6 +55,7 @@ export function createWorld(seed: string, params: Partial<WorldParams> = {}): Wo
     routes: { nodes: [], edges: [] },
     civs: new Map(),
     sites: new Map(),
+    creatures: new Map(),
     people: new Map(),
     events: [],
     commands: [],

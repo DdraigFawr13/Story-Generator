@@ -317,6 +317,22 @@ export interface Site {
   peakPop: number;
 }
 
+/** A beast with a lair (M2.4). Lairs are cells, not sites. `deeds` are the event ids of its appearance and raids. */
+export interface Creature {
+  id: Id;
+  defId: string;
+  name: string;
+  /** Cell index of the lair. */
+  lair: number;
+  born: number;
+  /** Years it can live; it dies quietly of age when it passes this. */
+  lifespan: number;
+  died?: number;
+  /** Name of the hero who killed it. */
+  slainBy?: string;
+  deeds: Id[];
+}
+
 export interface WorldState {
   seed: string;
   /** Number of completed days. The next step simulates day `day`. */
@@ -334,11 +350,13 @@ export interface WorldState {
   /** Founding peoples and their settlements, filled by the settle stage; empty until then. */
   civs: Map<Id, Civ>;
   sites: Map<Id, Site>;
+  /** Beasts, living and dead, filled by the history stage (M2.4). */
+  creatures: Map<Id, Creature>;
   people: Map<Id, Person>;
   events: SimEvent[];
   commands: Command[];
   /** Demo climate state for the scaffold; Phase 1 moves weather to per-cell climate. */
   weather: { current: string; sinceDay: number; causeEvent: Id | null };
-  // Phase 2 adds `creatures`, `items`;
+  // Phase 2 adds `items`;
   // Phase 3 adds `activeSite`.
 }

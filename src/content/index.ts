@@ -2,6 +2,7 @@
 import type { ContentBundle } from '../engine';
 import { abilities, schools } from './abilities';
 import { BIOMES, BIOME_RULES } from './biomes';
+import { creatures } from './creatures';
 import { cultures } from './cultures';
 import { HISTORY } from './history';
 import { NAMES } from './names';
@@ -24,9 +25,11 @@ export const DEFAULT_CONTENT: ContentBundle = {
   rules,
   settlement: SETTLEMENT,
   history: HISTORY,
+  creatures,
 };
 
 export * from './biomes';
+export * from './creatures';
 export * from './cultures';
 export * from './history';
 export * from './map-layers';

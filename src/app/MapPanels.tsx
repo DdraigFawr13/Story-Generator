@@ -6,6 +6,8 @@ import {
   sitePopulation,
   type BiomeDef,
   type Civ,
+  type Creature,
+  type CreatureDef,
   type CultureDef,
   type MapLayer,
   type Region,
@@ -320,6 +322,7 @@ function SiteBlock({
         <Fact label="Peak population">{num(site.peakPop)}</Fact>
         <Fact label="Capacity">{num(site.capacity)}</Fact>
         <Fact label="Stores">{num(Math.round(site.stores))}</Fact>
+        <Fact label="Wealth">{num(Math.round(site.wealth))}</Fact>
         {/* Calendar years count from 1 (core/clock.ts); history year N is calendar year N + 1. */}
         <Fact label="Founded">Year {site.founded + 1}</Fact>
         {site.ruinedYear !== undefined && <Fact label="Ruined">Year {site.ruinedYear + 1}</Fact>}
@@ -341,6 +344,34 @@ function SiteBlock({
   );
 }
 
+function LairBlock({
+  beast,
+  def,
+  num,
+}: {
+  beast: Creature;
+  def: CreatureDef | null;
+  num: (n: number) => string;
+}) {
+  return (
+    <section className="site" aria-label="Lair">
+      <h3>
+        {beast.name} <span>{def?.name ?? beast.defId}</span>
+      </h3>
+      <dl className="facts">
+        {def && <Fact label="Danger">{num(def.danger)} soldiers</Fact>}
+        <Fact label="Since">Year {beast.born + 1}</Fact>
+        <Fact label="Raids">{num(Math.max(0, beast.deeds.length - 1))}</Fact>
+        {beast.died !== undefined && (
+          <Fact label={beast.slainBy ? 'Slain' : 'Died'}>
+            {beast.slainBy ? `by ${beast.slainBy}, ` : ''}year {beast.died + 1}
+          </Fact>
+        )}
+      </dl>
+    </section>
+  );
+}
+
 /** How many of a site's latest events the inspector lists. */
 const SITE_HISTORY_LINES = 5;
 
@@ -352,6 +383,8 @@ export function Inspector({
   resources,
   raw,
   site,
+  lair,
+  lairDef,
   siteCiv,
   siteCulture,
   landCiv,
@@ -370,6 +403,9 @@ export function Inspector({
   raw: boolean;
   /** The site on or beside the cell (nearest wins), its civ and culture. */
   site: Site | null;
+  /** A beast whose lair is on or beside the cell, and its kind. */
+  lair: Creature | null;
+  lairDef: CreatureDef | null;
   siteCiv: Civ | null;
   siteCulture: CultureDef | null;
   /** The civ whose territory holds the cell, if any. */
@@ -440,6 +476,7 @@ export function Inspector({
       {site && (
         <SiteBlock site={site} civ={siteCiv} culture={siteCulture} num={num} history={history} />
       )}
+      {lair && <LairBlock beast={lair} def={lairDef} num={num} />}
       {!site && landCiv && (
         <p className="land-of">
           Land of {landCiv.name} ({landCulture?.name ?? landCiv.cultureId})

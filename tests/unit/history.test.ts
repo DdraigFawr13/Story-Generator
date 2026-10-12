@@ -50,6 +50,7 @@ function strip(specs: SiteSpec[], years: number): WorldState {
     floodplain: new Uint8Array(size),
     biome: new Uint8Array(size).fill(GRASS),
     fertility: new Uint8Array(size).fill(50),
+    wildness: new Uint8Array(size),
     aura: new Uint8Array(size),
     auraSpots: [],
     resources: new Map(),

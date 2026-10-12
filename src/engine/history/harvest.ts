@@ -34,7 +34,9 @@ export function runHarvest(run: HistoryRun): void {
     }
     const need = siteNeed(site, run.races);
     const produced = Math.min(pop * rules.workerOutput, site.capacity) * (need / pop) * yieldFactor;
-    site.stores = Math.min(site.stores + produced - need, rules.storesCapYears * need);
+    // Salt keeps food longer, so a site with salt stores more.
+    const cap = rules.storesCapYears * (logOf(run, site.id).salt ? rules.saltStoresBonus : 1);
+    site.stores = Math.min(site.stores + produced - need, cap * need);
   }
 }
 

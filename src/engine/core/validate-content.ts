@@ -3,7 +3,7 @@
 // balance (R-29) and no self-taught magic (R-28). Returns readable problems.
 
 import type { ContentBundle, RaceDef } from './content-types';
-import { CULTURE_VALUES } from './content-types';
+import { CULTURE_VALUES, MAX_CREATURE_DANGER } from './content-types';
 import { ATTRIBUTE_KEYS, REGION_KINDS } from './types';
 import { BIRTH_TIER_IDS, TIERS, tierOfPower } from '../people/tiers';
 
@@ -78,6 +78,7 @@ export function validateContent(content: ContentBundle): string[] {
 
   problems.push(...cultureProblems(content));
   problems.push(...settlementProblems(content));
+  problems.push(...creatureProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -138,6 +139,36 @@ export function cultureProblems(content: ContentBundle): string[] {
   return problems;
 }
 
+/** Creatures: unique ids, known biomes, danger within R-24, sane numbers and a name to use. */
+export function creatureProblems(content: ContentBundle): string[] {
+  const problems: string[] = [];
+  const biomeIds = new Set(content.biomes.map((b) => b.id));
+  const seen = new Set<string>();
+  for (const def of content.creatures) {
+    const where = `Creature ${def.id}`;
+    if (seen.has(def.id)) problems.push(`Duplicate creature id "${def.id}".`);
+    seen.add(def.id);
+    if (!(def.danger >= 1 && def.danger <= MAX_CREATURE_DANGER)) {
+      problems.push(
+        `${where}: danger ${def.danger} must be 1-${MAX_CREATURE_DANGER} soldiers (R-24).`,
+      );
+    }
+    if (def.biomes.length === 0) problems.push(`${where}: no biomes.`);
+    for (const b of def.biomes) {
+      if (!biomeIds.has(b)) problems.push(`${where}: unknown biome "${b}".`);
+    }
+    if (!(def.minWildness >= 0 && def.minWildness <= 100)) {
+      problems.push(`${where}: minWildness ${def.minWildness} is outside 0-100.`);
+    }
+    if (def.lifespan[0] < 1 || def.lifespan[0] > def.lifespan[1]) {
+      problems.push(`${where}: lifespan needs 1 <= min <= max.`);
+    }
+    if (def.maxAlive < 1) problems.push(`${where}: maxAlive must be at least 1.`);
+    if (def.names.length === 0) problems.push(`${where}: no names.`);
+  }
+  return problems;
+}
+
 /** Event types the settle and history stages emit; content must define them. */
 const HISTORY_EVENT_IDS = [
   'civ_founded',
@@ -149,6 +180,19 @@ const HISTORY_EVENT_IDS = [
   'site_grew',
   'site_abandoned',
   'civ_fell',
+  'beast_appeared',
+  'beast_raid',
+  'beast_slain',
+  'trade_opened',
+  'grain_relief',
+  'civ_raid',
+  'border_clash',
+  'insult',
+  'war_declared',
+  'battle',
+  'site_conquered',
+  'site_razed',
+  'peace_made',
 ];
 
 /** Settlement rules: present, capitalKind keys are culture ids, a civ name template per government used. */

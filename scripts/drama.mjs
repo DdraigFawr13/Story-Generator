@@ -63,6 +63,26 @@ function stats(seed) {
     if (e.type === 'site_founded' && e.day < DAYS_PER_YEAR) continue;
     typeCount[e.type] = (typeCount[e.type] ?? 0) + 1;
   }
+  // Wars: first year of each war, and the years any war was under way (declared to its last event).
+  const warSpan = new Map();
+  for (const e of world.events) {
+    const war = e.data?.war;
+    if (war === undefined) continue;
+    const year = Math.floor(e.day / DAYS_PER_YEAR);
+    const span = warSpan.get(war) ?? { from: year, to: year };
+    span.from = Math.min(span.from, year);
+    span.to = Math.max(span.to, year);
+    warSpan.set(war, span);
+  }
+  const warYears = new Set();
+  let warsEarly = 0;
+  let warsLate = 0;
+  for (const { from, to } of warSpan.values()) {
+    for (let y = from; y <= to; y += 1) warYears.add(y);
+    if (from <= 100) warsEarly += 1;
+    else if (from <= 200) warsLate += 1;
+  }
+  const peaceYears = Math.max(0, years - warYears.size);
   // Longest chain of causes: events are in id order and causes are older, so one pass works.
   const depth = new Map();
   let chain = 0;
@@ -234,7 +254,19 @@ function stats(seed) {
     ),
     meanCapacity: world.sites.size ? capacitySum / world.sites.size : 0,
     claimed: pct(claimed, land),
-    history: { startPop, peakPop, finalPop, typeCount, chain, liveSites, ruinedSites, fallen },
+    history: {
+      startPop,
+      peakPop,
+      finalPop,
+      typeCount,
+      chain,
+      liveSites,
+      ruinedSites,
+      fallen,
+      warsEarly,
+      warsLate,
+      peaceYears,
+    },
     problems:
       checkSites(world).length +
       checkWorldCells(c).length +
@@ -379,3 +411,16 @@ for (const r of rows) {
   );
 }
 process.stdout.write(`races > 70%: ${lopsided} of ${rows.length} seeds\n`);
+process.stdout.write(
+  '\nconflict: seed | beasts seen/slain | raids beast/civ | trade opened/relief | wars 1-100/101-200 (all) | peace yrs | battles conquered razed\n',
+);
+for (const r of rows) {
+  const h = r.history;
+  const n = (type) => h.typeCount[type] ?? 0;
+  process.stdout.write(
+    `${r.seed.padEnd(4)} | ${String(n('beast_appeared')).padStart(3)}/${String(n('beast_slain')).padEnd(3)} | ` +
+      `${String(n('beast_raid')).padStart(4)}/${String(n('civ_raid')).padEnd(3)} | ${String(n('trade_opened')).padStart(2)}/${String(n('grain_relief')).padEnd(3)} | ` +
+      `${h.warsEarly}/${h.warsLate} (${n('war_declared')}) | ${String(h.peaceYears).padStart(3)} | ` +
+      `${String(n('battle')).padStart(3)} ${String(n('site_conquered')).padStart(3)} ${String(n('site_razed')).padStart(3)}\n`,
+  );
+}
