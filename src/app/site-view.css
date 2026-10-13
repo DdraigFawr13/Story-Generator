@@ -1216,6 +1216,21 @@
   .sv-root .bar .sub {
     display: none;
   }
+  /* M3.8: the map fills the screen down to the clock; the pause chips fold behind a button. */
+  .sv-root .mapbox {
+    aspect-ratio: auto;
+    height: max(300px, calc(100dvh - var(--timeh, 90px) - 150px));
+  }
+  .sv-root .banner .chipfold {
+    display: inline-block;
+  }
+  .sv-root .banner .chips.folded {
+    display: none;
+  }
+}
+.sv-root .banner .chipfold {
+  display: none;
+  font-size: 12px;
 }
 @media (prefers-reduced-motion: reduce) {
   .sv-root *,

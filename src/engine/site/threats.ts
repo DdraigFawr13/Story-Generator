@@ -1,9 +1,11 @@
 // Threats at the watched site (M3.8). Wild prowlers take a lone worker far from the village; a
-// beast out of its lair or a band of raiders from a civ with a grievance comes in from the map edge
-// toward the stores. A great or legendary beast and a raid may be seen a few days ahead; if the
-// able adults are too weak against a beast, everyone walks to a camp toward the nearest other site
-// and comes home when it has gone. Otherwise the militia (the strongest able adults) goes out to
-// meet the attackers, everyone else shelters at home, and blows are traded each block.
+// beast out of its lair or a band of raiders from a civ with a grievance is first seen outside the
+// town on its side and makes for the stores. A great or legendary beast and a raid are seen days
+// ahead; the day before a beast comes, if the able adults are too weak, everyone walks to a camp
+// toward the nearest other site and comes home when it has gone. Otherwise the militia (the
+// strongest able adults, up to twice the attackers' strength) goes out to meet the attackers,
+// everyone else shelters at home, and blows are traded each block. Beaten or done, the attackers
+// are gone from the map at once: nothing wanders off across it.
 //
 // A day (block 0) `runThreatsDay` rolls prowlers and new threats, turns a warning into an arrival
 // and settles a threat that has left. A block `planThreat` says who defends, shelters or flees
@@ -28,6 +30,7 @@ import type {
   Creature,
   Id,
   Person,
+  RegionKind,
   SimEvent,
   Site,
   SiteThreat,
@@ -107,59 +110,81 @@ function compassWord(rules: ThreatRules, dx: number, dy: number): string {
   return rules.compass[at]!;
 }
 
-/** Tile on the map's edge for step `p` of a walk around the perimeter. */
-function perimeterTile(size: number, p: number): number {
-  const ring = 4 * (size - 1);
-  const q = ((p % ring) + ring) % ring;
-  const side = Math.floor(q / (size - 1));
-  const off = q % (size - 1);
-  const x = side === 0 ? off : side === 1 ? size - 1 : side === 2 ? size - 1 - off : 0;
-  const y = side === 0 ? 0 : side === 1 ? off : side === 2 ? size - 1 : size - 1 - off;
-  return y * size + x;
-}
+/** Region kinds a lair can be named by (rivers and seas are not places to den in). */
+const LAIR_REGIONS: readonly RegionKind[] = [
+  'range',
+  'forest',
+  'desert',
+  'lake',
+  'island',
+  'volcano',
+  'pass',
+];
 
-function perimeterIndex(size: number, x: number, y: number): number {
-  const n = size - 1;
-  if (y === 0 && x < n) return x;
-  if (x === n && y < n) return n + y;
-  if (y === n && x > 0) return 2 * n + (n - x);
-  return 3 * n + (n - y);
-}
-
-/** Tiles in from the map's edge where attackers are first seen, so they stand clear of its border. */
-const EDGE_INSET = 8;
-
-/** Steps an edge tile up to `EDGE_INSET` tiles in toward the origin, onto walkable ground. */
-function inset(content: SiteContent, active: ActiveSite, tile: number): number {
-  const { map, origin } = active;
-  const w = map.width;
-  const ex = tile % w;
-  const ey = Math.floor(tile / w);
-  const sx = Math.sign(origin[0] - ex);
-  const sy = Math.sign(origin[1] - ey);
-  for (let i = EDGE_INSET; i > 0; i -= 1) {
-    const k = (ey + sy * i) * w + ex + sx * i;
-    if (tileCost(active, content.site, content.life, k) > 0) return k;
+/** ", out of its lair in the Ironteeth", or in the wild to the {dir} when no named region holds it. */
+function lairClause(world: WorldState, rules: ThreatRules, lair: number, dir: string): string {
+  let place = rules.beasts.wild.replace('{dir}', dir);
+  for (const region of sortedById(world.regions.values())) {
+    if (!LAIR_REGIONS.includes(region.kind)) continue;
+    // Region cells are ascending: a binary search finds the lair.
+    let lo = 0;
+    let hi = region.cells.length - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      const c = region.cells[mid]!;
+      if (c === lair) break;
+      if (c < lair) lo = mid + 1;
+      else hi = mid - 1;
+    }
+    if (lo <= hi) {
+      place = region.name;
+      break;
+    }
   }
-  return tile;
+  return rules.beasts.lair.replace('{place}', place);
 }
 
-/** The walkable map-edge tile nearest the ray from the origin along (dx, dy). */
-function edgeToward(content: SiteContent, active: ActiveSite, dx: number, dy: number): number {
+/** Tiles kept between where attackers are first seen and the map's edge, so they show with ground around them. */
+const EDGE_MARGIN = 8;
+
+/** The farthest home (Chebyshev tiles from the origin, up to `walls.maxRing`) on the side of (ex, ey). */
+function homeReach(content: SiteContent, active: ActiveSite, ex: number, ey: number): number {
+  const w = active.map.width;
+  const [ox, oy] = active.origin;
+  let reach = 0;
+  for (const b of active.buildings.values()) {
+    if (b.defId !== content.steward.homeBuilding) continue;
+    for (const k of b.cells) {
+      const x = (k % w) - ox;
+      const y = Math.floor(k / w) - oy;
+      const far = Math.max(Math.abs(x), Math.abs(y));
+      if (x * ex + y * ey > 0 && far <= content.threats.walls.maxRing) reach = Math.max(reach, far);
+    }
+  }
+  return reach;
+}
+
+/**
+ * Where attackers coming along (dx, dy) are first seen: `approach` tiles beyond the outermost home
+ * on that side, on walkable ground, clear of the map's edge. The camp of a flight uses it too.
+ */
+function approachToward(content: SiteContent, active: ActiveSite, dx: number, dy: number): number {
   const { map, origin } = active;
   const size = map.width;
   // A lair in the site's own cell is taken to lie to the north.
   const [ux, uy] = dx === 0 && dy === 0 ? [0, -1] : [dx, dy];
   const um = Math.max(Math.abs(ux), Math.abs(uy));
-  const x = clamp(origin[0] + Math.round((ux * size) / um), 0, size - 1);
-  const y = clamp(origin[1] + Math.round((uy * size) / um), 0, size - 1);
-  const at = perimeterIndex(size, x, y);
-  const ring = 4 * (size - 1);
-  for (let k = 0; k <= ring / 2; k += 1) {
-    for (const s of k === 0 ? [0] : [k, -k]) {
-      const tile = perimeterTile(size, at + s);
-      if (tileCost(active, content.site, content.life, tile) > 0)
-        return inset(content, active, tile);
+  const r = homeReach(content, active, ux, uy) + content.threats.approach;
+  const margin = Math.min(EDGE_MARGIN, Math.floor(size / 4));
+  const x0 = clamp(origin[0] + Math.round((ux * r) / um), margin, size - 1 - margin);
+  const y0 = clamp(origin[1] + Math.round((uy * r) / um), margin, map.height - 1 - margin);
+  for (let k = 0; k <= margin; k += 1) {
+    for (let y = y0 - k; y <= y0 + k; y += 1) {
+      for (let x = x0 - k; x <= x0 + k; x += 1) {
+        if (Math.max(Math.abs(x - x0), Math.abs(y - y0)) !== k) continue;
+        const tile = y * size + x;
+        if (tileCost(active, content.site, content.life, tile) > 0) return tile;
+      }
     }
   }
   return origin[1] * size + origin[0];
@@ -348,12 +373,24 @@ function grievanceEvent(world: WorldState, from: Civ, to: Civ): Id | undefined {
   return undefined;
 }
 
-/** The size of a band that rides from a home with `adults` grown people, `share` of whom are followed. */
-export function raidBand(rules: ThreatRules, adults: number, share: number): number {
-  return clamp(
-    Math.round(adults * rules.raids.bandShare * share),
-    rules.raids.band[0],
-    rules.raids.band[1],
+/**
+ * The size of a band that rides from a home with `adults` grown people, `share` of whom are
+ * followed, against a site with `targetAdults` able adults: never more than `targetShare` of them.
+ */
+export function raidBand(
+  rules: ThreatRules,
+  adults: number,
+  share: number,
+  targetAdults: number,
+): number {
+  const most = Math.max(rules.raids.band[0], Math.floor(targetAdults * rules.raids.targetShare));
+  return Math.min(
+    most,
+    clamp(
+      Math.round(adults * rules.raids.bandShare * share),
+      rules.raids.band[0],
+      rules.raids.band[1],
+    ),
   );
 }
 
@@ -449,17 +486,22 @@ function rollRaid(
   return null;
 }
 
-/** Everyone on their feet walks to the camp when the able adults cannot stand against the beast. */
+/**
+ * Everyone on their feet walks to the camp when the able adults cannot stand against a great or
+ * legendary beast. Judged once, the day before it comes (or as it comes, unannounced).
+ */
 function judgeFlight(
   world: WorldState,
   content: SiteContent,
   active: ActiveSite,
   site: Site,
   t: SiteThreat,
-  danger: number,
   emit: Emit,
   label: SiteLabel,
 ): void {
+  t.judged = true;
+  if (t.kind !== 'beast' || t.tier === 'beast') return;
+  const danger = content.creatures.find((d) => d.id === t.defId)?.danger ?? 0;
   const walls = wallsFacing(content, active, t.edge);
   const weapons = weaponsOf(world, content, active);
   let strength = 0;
@@ -472,7 +514,7 @@ function judgeFlight(
   const width = world.params.width;
   t.fled = true;
   t.refugeId = dest.id;
-  t.camp = edgeToward(
+  t.camp = approachToward(
     content,
     active,
     (dest.cell % width) - (site.cell % width),
@@ -504,7 +546,9 @@ function openThreat(
   const to = 'creature' in source ? source.creature.lair : source.home.cell;
   const dx = (to % width) - (site.cell % width);
   const dy = Math.floor(to / width) - Math.floor(site.cell / width);
-  const edge = edgeToward(content, active, dx, dy);
+  const edge = approachToward(content, active, dx, dy);
+  const dir = compassWord(rules, dx, dy);
+  active.threats.lastThreatDay = world.day;
   const base = {
     stage: 'warned' as const,
     count: 1,
@@ -514,6 +558,8 @@ function openThreat(
     edge,
     target: targetOf(active),
     arriveDay: world.day,
+    dir,
+    whence: '',
     rounds: 0,
     ravaged: 0,
     fled: false,
@@ -526,8 +572,8 @@ function openThreat(
   };
   let warn: boolean;
   let sign = '';
-  let danger = 0;
   let t: SiteThreat;
+  const causes: Id[] = [];
   if ('creature' in source) {
     const { creature, def } = source;
     setLast(active.threats.lastBeast, creature.id, world.day);
@@ -539,22 +585,20 @@ function openThreat(
       creatureId: creature.id,
       defId: def.id,
       tier: def.tier,
+      whence: lairClause(world, rules, creature.lair, dir),
     };
-    danger = def.danger;
     warn = def.tier !== 'beast';
     const signs = rules.beasts.signs[def.id] ?? [];
     if (warn && signs.length > 0) {
-      sign = rng
-        .pick(signs)
-        .replace('{dir}', compassWord(rules, dx, dy))
-        .replace('{site}', label.name);
+      sign = rng.pick(signs).replace('{dir}', dir).replace('{site}', label.name);
     } else warn = false;
     if (warn)
       t.arriveDay = world.day + rng.between(rules.beasts.warnDays[0], rules.beasts.warnDays[1]);
   } else {
     const { civ, home } = source;
     setLast(active.threats.lastRaid, civ.id, world.day);
-    const count = raidBand(rules, bandCount(home, 'adult'), active.share);
+    const able = ableAdults(world, content, active).length;
+    const count = raidBand(rules, bandCount(home, 'adult'), active.share, able);
     t = {
       ...base,
       kind: 'raid',
@@ -570,23 +614,25 @@ function openThreat(
       sign = rules.raids.warning.replace('{from}', home.name);
       t.arriveDay = world.day + 1;
     }
+    const mine = site.civId === null ? undefined : world.civs.get(site.civId);
+    const why = mine ? grievanceEvent(world, civ, mine) : undefined;
+    if (why !== undefined) causes.push(why);
   }
   active.threat = t;
-  // Only a great or legendary beast can send everyone running.
-  const flees = t.kind === 'beast' && t.tier !== 'beast';
   if (!warn) {
+    judgeFlight(world, content, active, site, t, emit, label);
     arrive(world, content, active, emit, label, t);
-    if (flees) judgeFlight(world, content, active, site, t, danger, emit, label);
-    if (t.fled) t.militia = [];
     return;
   }
   const event = emit({
     type: rules.events.sign,
     place: label.cell,
-    data: { site: label.name, sign, threat: t.name },
+    causes,
+    data: { site: label.name, sign, threat: t.name, whence: t.whence },
   });
   t.signEvent = event.id;
-  if (flees) judgeFlight(world, content, active, site, t, danger, emit, label);
+  if (t.arriveDay - world.day <= rules.flight.judgeDaysAhead)
+    judgeFlight(world, content, active, site, t, emit, label);
 }
 
 /** The attackers come onto the map: the arrival line, the militia, and the fear of everyone. */
@@ -603,10 +649,10 @@ function arrive(
   let event: SimEvent;
   if (t.kind === 'beast') {
     event = emit({
-      type: rules.events.beastArrived,
+      type: t.fled ? rules.events.beastCameEmpty : rules.events.beastArrived,
       place: label.cell,
-      causes,
-      data: { site: label.name, beast: t.name },
+      causes: t.fled && t.fleeEvent !== undefined ? [t.fleeEvent] : causes,
+      data: { site: label.name, beast: t.name, dir: t.dir, whence: t.whence },
     });
     active.threats.stats.beasts += 1;
   } else {
@@ -629,7 +675,8 @@ function arrive(
     active.threats.stats.raids += 1;
   }
   t.stage = 'coming';
-  t.tile = t.edge;
+  // Into an empty town a beast goes straight to the stores and stays there till it has eaten.
+  t.tile = t.fled ? t.target : t.edge;
   t.held = true;
   t.arriveEvent = event.id;
   t.residentsAtArrival = active.residents.length;
@@ -637,22 +684,31 @@ function arrive(
     const p = world.people.get(id);
     if (p) remember(content, world, p, rules.memoryOf.fearRaid, event.id);
   }
-  // The strongest able adults stand to arms; against a great or legendary beast, all of them.
+  if (t.fled) {
+    t.militia = [];
+    return;
+  }
+  // The strongest able adults stand to arms until they are worth `militiaOdds` times the attackers.
   const weapons = weaponsOf(world, content, active);
-  const able = ableAdults(world, content, active).sort(
-    (a, b) =>
-      soldierEquivalent(b) +
-        rules.combat.weaponMul * (weapons.get(b.id) ?? 0) -
-        (soldierEquivalent(a) + rules.combat.weaponMul * (weapons.get(a.id) ?? 0)) || a.id - b.id,
-  );
-  const all = t.kind === 'beast' && t.tier !== 'beast';
-  const n = all
-    ? able.length
-    : Math.min(
-        able.length,
-        Math.max(rules.combat.militiaMin, Math.ceil(able.length * rules.combat.militiaShare)),
-      );
-  t.militia = able.slice(0, n).map((p) => p.id);
+  const walls = wallsFacing(content, active, t.edge);
+  const able = ableAdults(world, content, active)
+    .map((p) => ({ p, s: strengthOf(content, p, weapons.get(p.id) ?? 0, walls) }))
+    .sort((a, b) => b.s - a.s || a.p.id - b.p.id);
+  const want = rules.combat.militiaOdds * attackOf(content, t);
+  let sum = 0;
+  t.militia = [];
+  for (const { p, s } of able) {
+    if (t.militia.length >= rules.combat.militiaMin && sum >= want) break;
+    t.militia.push(p.id);
+    sum += s;
+  }
+}
+
+/** The attackers' strength in soldier equivalents now. */
+function attackOf(content: SiteContent, t: SiteThreat): number {
+  if (t.kind === 'raid') return t.count * content.threats.raids.perHead;
+  const def = content.creatures.find((d) => d.id === t.defId);
+  return (def?.danger ?? 1) * t.vigour;
 }
 
 // ---- The day ----
@@ -694,16 +750,7 @@ function planWalls(content: SiteContent, active: ActiveSite, edge: number): void
   const [ox, oy] = active.origin;
   const ex = (edge % w) - ox;
   const ey = Math.floor(edge / w) - oy;
-  let reach = 0;
-  for (const b of active.buildings.values()) {
-    if (b.defId !== content.steward.homeBuilding) continue;
-    for (const k of b.cells) {
-      const x = (k % w) - ox;
-      const y = Math.floor(k / w) - oy;
-      const far = Math.max(Math.abs(x), Math.abs(y));
-      if (x * ex + y * ey > 0 && far <= rules.maxRing) reach = Math.max(reach, far);
-    }
-  }
+  const reach = homeReach(content, active, ex, ey);
   // Walls already waiting are raised first.
   if (active.threats.wallPlan.length >= rules.segments) return;
   const radius = reach + rules.ringPad;
@@ -774,6 +821,7 @@ function finish(
   }
   if (t.arriveEvent !== undefined) {
     planWalls(content, active, t.edge);
+    if (active.threats.wallPlan.length > 0) active.threats.wallsAfter = t.arriveEvent;
     // A raid sours both civs: the site's against the raiders, and theirs too if they lost men.
     const site = world.sites.get(active.siteId);
     const mine = site?.civId == null ? undefined : world.civs.get(site.civId);
@@ -815,9 +863,14 @@ export function runThreatsDay(
   if (!site) return;
   const t = active.threat;
   if (t) {
+    if (
+      t.stage === 'warned' &&
+      !t.judged &&
+      world.day >= t.arriveDay - content.threats.flight.judgeDaysAhead
+    )
+      judgeFlight(world, content, active, site, t, emit, label);
     if (t.stage === 'warned' && world.day >= t.arriveDay) {
       arrive(world, content, active, emit, label, t);
-      if (t.fled) t.militia = [];
     } else if (
       t.stage === 'leaving' &&
       t.tile < 0 &&
@@ -829,6 +882,9 @@ export function runThreatsDay(
   }
   const rng = streamFor(world, 'site.threats');
   prowl(world, content, active, rng, emit, label);
+  // A year's quiet after a beast or a raid before the next may come.
+  const last = active.threats.lastThreatDay;
+  if (last !== undefined && world.day - last < content.threats.quietDays) return;
   const beast = rollBeast(world, content, active, site, rng);
   if (beast) return openThreat(world, content, active, site, rng, emit, label, beast);
   const raid = rollRaid(world, content, active, site, rng);
@@ -965,7 +1021,7 @@ function fight(
   let defence = 0;
   if (armed)
     for (const p of defenders) defence += strengthOf(content, p, weapons.get(p.id) ?? 0, walls);
-  const attack = t.kind === 'raid' ? t.count * rules.raids.perHead : (def?.danger ?? 1) * t.vigour;
+  const attack = attackOf(content, t);
   const cap = Math.floor(content.history.raidKillCap * t.residentsAtArrival) - t.killed;
   const { landed, struck } = combatRound(rules.combat, rng, {
     tier: tierOf(t),
@@ -1010,7 +1066,7 @@ function fight(
   }
 }
 
-/** The attackers turn for the edge; the stores are not theirs to take any more. */
+/** The attackers turn away; they stand one more block (the outcome shows) and are gone, with no walk back. */
 function startLeaving(t: SiteThreat): void {
   t.stage = 'leaving';
   t.rounds = 0;
@@ -1094,10 +1150,11 @@ function plunder(
     });
     return;
   }
+  const most = t.residentsAtArrival * rules.beasts.mealCapDays;
   const taken = takeFood(
     active,
     content,
-    Math.floor(meals * content.history.raidStoresLoss),
+    Math.min(most, Math.floor(meals * content.history.raidStoresLoss)),
     false,
   ).taken;
   t.loot += taken;
@@ -1145,11 +1202,8 @@ export function resolveThreat(
   const rng = streamFor(world, 'site.threats');
   const width = active.map.width;
   if (t.stage === 'leaving') {
-    advance(content, active, t, t.edge);
-    if (t.tile === t.edge) {
-      t.tile = -1;
-      t.leftDay = world.day;
-    }
+    t.tile = -1;
+    t.leftDay = world.day;
     return;
   }
   const near = militiaOf(world, t).filter(
@@ -1186,9 +1240,9 @@ export function resolveThreat(
         near.filter((p) => alive(p)),
       );
       crowned(world, content, t);
+      startLeaving(t);
       t.tile = -1;
       t.leftDay = world.day;
-      startLeaving(t);
     } else if (t.kind === 'beast' && t.vigour < rules.combat.leavesAt) {
       emit({
         type: rules.events.beastDrivenOff,

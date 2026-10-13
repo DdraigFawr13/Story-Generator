@@ -351,5 +351,8 @@ export function threatLine(ctx: Ctx): string | null {
       : `the beast is ${vigourWord(threat.vigour)}`;
   const guard = defending > 0 ? `${count(defending)} standing to arms` : 'no one standing to arms';
   const homes = sheltering > 0 ? ` · ${count(sheltering)} sheltering at home` : '';
-  return `${guard}${homes} · ${foe} · ${hurt}.`;
+  // Everyone is counted: those on the road or out of reach of the order are "elsewhere".
+  const rest = active.residents.length - defending - sheltering - fleeing;
+  const away = rest > 0 ? ` · ${count(rest)} elsewhere` : '';
+  return `${guard}${homes}${away} · ${foe} · ${hurt}.`;
 }

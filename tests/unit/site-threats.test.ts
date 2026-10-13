@@ -80,8 +80,10 @@ describe('threats', () => {
       expect(new Set(r.struck.map((s) => s.who)).size).toBe(r.struck.length);
     }
     // A thousand adults at home send no more than the band clamp, whose blows are capped too.
-    const band = raidBand(C.threats, 1000, 1);
+    const band = raidBand(C.threats, 1000, 1, 1000);
     expect(band).toBe(C.threats.raids.band[1]);
+    // A hamlet of 30 able adults faces at most a third of that many.
+    expect(raidBand(C.threats, 1000, 1, 30)).toBe(Math.floor(30 * C.threats.raids.targetShare));
     const raid = combatRound(rules, rng, {
       tier: 'raid',
       attack: band * C.threats.raids.perHead,
@@ -115,7 +117,12 @@ describe('threats', () => {
     stepBlock(world, content);
     const t = active.threat!;
     expect(t.stage).toBe('warned');
+    // The sign comes with everyone still at home; they judge the day before it arrives.
+    expect(t.fled).toBe(false);
+    for (let i = 0; i < 4 * C.threats.beasts.warnDays[1] && !t.fled; i += 1)
+      stepBlock(world, content);
     expect(t.fled).toBe(true);
+    expect(t.stage).toBe('warned');
     expect(t.camp).toBeGreaterThanOrEqual(0);
     const sign = world.events.find((e) => e.type === C.threats.events.sign)!;
     expect(world.events.find((e) => e.type === C.threats.events.flight)!.causes).toEqual([sign.id]);

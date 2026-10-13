@@ -99,6 +99,10 @@ export const THREATS: ThreatRules = {
     // 1 = the history rate (a raid chance a year spread over its days), as M3.5 matched history.
     chanceMul: 1,
     fireBreath: ['draig', 'wyvern'],
+    // A beast eats about a month of the site's food, not its whole winter.
+    mealCapDays: 28,
+    wild: 'the wild to the {dir}',
+    lair: ', out of its lair in {place}',
   },
   raids: {
     minGrievance: 0.5,
@@ -108,7 +112,10 @@ export const THREATS: ThreatRules = {
     cooldownDays: 168,
     bandShare: 0.25,
     band: [4, 30],
-    warnChance: 0.5,
+    // A third of the site's adults at most, so a hamlet faces a band it can stand against.
+    targetShare: 0.34,
+    // Every band is seen on the road the day before.
+    warnChance: 1,
     warning: 'riders were seen on the road from {from}',
     retreatAt: 0.34,
     lootShare: 0.4,
@@ -125,7 +132,8 @@ export const THREATS: ThreatRules = {
     wallBonus: 1.5,
     // A sword (combat 2) makes a defender worth one more soldier.
     weaponMul: 0.5,
-    militiaShare: 0.25,
+    // Twice the attackers' strength: 12 raiders bring out about 24 soldiers' worth, a great beast everyone.
+    militiaOdds: 2,
     militiaMin: 3,
     // About 30 tiles of grass: the attackers take two or three blocks from the edge to the stores.
     advance: 60,
@@ -136,6 +144,8 @@ export const THREATS: ThreatRules = {
   },
   flight: {
     fleeBelow: 0.5,
+    // The people decide the day before it comes, so the sign is seen with everyone still at home.
+    judgeDaysAhead: 1,
     returnAfterDays: 1,
     ravageBlocks: 2,
     strike: 12,
@@ -157,6 +167,10 @@ export const THREATS: ThreatRules = {
     'west',
     'north-west',
   ],
+  // About a year between beasts and raids at one site; prowlers are not counted.
+  quietDays: 336,
+  // First seen ten tiles out from the last houses on their side, not at the map's edge.
+  approach: 10,
   memoryOf: { foughtOff: 'fought-off', fearRaid: 'fear-attack' },
   events: {
     prowler: 'site_prowler',
@@ -166,6 +180,7 @@ export const THREATS: ThreatRules = {
     flight: 'site_flight',
     flightReturned: 'site_flight_returned',
     beastArrived: 'site_beast_arrived',
+    beastCameEmpty: 'site_beast_came_empty',
     raidArrived: 'site_raid_arrived',
     beastSlain: 'site_beast_slain',
     beastDrivenOff: 'site_beast_driven_off',
@@ -230,9 +245,9 @@ export const THREAT_EVENTS: EventTypeDef[] = [
     category: 'threat',
     links: { site: 'site' },
     templates: [
-      'At {site}, word came that {sign}. Folk spoke of {threat}.',
-      'Near {site}, {sign}. The people feared {threat}.',
-      'It was said at {site} that {sign}, and none slept easy for fear of {threat}.',
+      'At {site}, word came that {sign}. Folk spoke of {threat}{whence}.',
+      'Near {site}, {sign}. The people feared {threat}{whence}.',
+      'It was said at {site} that {sign}, and none slept easy for fear of {threat}{whence}.',
     ],
   },
   {
@@ -269,9 +284,22 @@ export const THREAT_EVENTS: EventTypeDef[] = [
     category: 'threat',
     links: { site: 'site', beast: 'beast' },
     templates: [
-      '{beast} came down on {site}.',
-      'At {site}, the watch saw {beast} at the edge of the fields, coming in.',
-      '{beast} came out of the wild toward {site}.',
+      '{beast} came down on {site} from the {dir}{whence}.',
+      'At {site}, the watch saw {beast} coming in from the {dir}{whence}.',
+      '{beast} came out of the {dir} toward {site}{whence}.',
+    ],
+  },
+  {
+    id: 'site_beast_came_empty',
+    baseImportance: 7,
+    title: '{beast} came to an empty {site}',
+    causeWord: 'because of',
+    category: 'threat',
+    links: { site: 'site', beast: 'beast' },
+    templates: [
+      '{beast} came to an empty {site} and made for the stores.',
+      'With its people gone, {site} lay open, and {beast} came in.',
+      '{beast} found the houses of {site} empty and went straight to the stores.',
     ],
   },
   {
@@ -283,8 +311,8 @@ export const THREAT_EVENTS: EventTypeDef[] = [
     links: { site: 'site', from: 'site', civ: 'civ' },
     templates: [
       '{count} raiders from {from} came to {site}, for the {civ} had not forgotten its grievance.',
-      'Riders of the {civ}, {count} of them from {from}, came on {site}.',
-      'A band of {count} out of {from} fell upon {site}.',
+      'Riders of the {civ}, {count} of them from {from}, came on {site} to settle an old grievance.',
+      'A band of {count} out of {from} fell upon {site}, for the {civ} held a grudge against it.',
     ],
   },
   {
@@ -295,9 +323,9 @@ export const THREAT_EVENTS: EventTypeDef[] = [
     category: 'threat',
     links: { site: 'site', beast: 'beast' },
     templates: [
-      'At {site}, {actor} slew {beast}.',
-      'At {site}, {beast} fell to the blows of {actor} and the men and women beside them.',
-      '{beast} came to {site} and did not leave: {actor} struck it down.',
+      '{actor} slew {beast} at the edge of the fields.',
+      '{beast} fell to the blows of {actor} and the men and women beside them.',
+      '{beast} came and did not leave: {actor} struck it down.',
     ],
   },
   {
@@ -360,9 +388,9 @@ export const THREAT_EVENTS: EventTypeDef[] = [
     category: 'threat',
     links: { site: 'site' },
     templates: [
-      '{site} fell: none were left alive there.',
-      'No one remained at {site}; the place was given up to the wild.',
-      'The last of {site} was gone, and the houses stood empty.',
+      '{site} fell: no one was left to keep it.',
+      'The people of {site} were dead or scattered, and the place was given up to the wild.',
+      'The last of {site} was gone, and the place stood empty.',
     ],
   },
 ];

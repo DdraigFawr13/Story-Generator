@@ -1039,7 +1039,7 @@ export interface SiteRules {
   /** Summed world travel cost walked per day on foot. */
   travelCostPerDay: number;
   /** Event type ids that pause play, per category. */
-  autoPause: Record<'deaths' | 'breakdowns' | 'fires' | 'raids' | 'arrivals', string[]>;
+  autoPause: Record<'deaths' | 'breakdowns' | 'fires' | 'threats' | 'arrivals', string[]>;
 }
 
 /** Biographies (M2.6): how many chronicle lines an entity keeps and the words of its summary. */
@@ -1992,6 +1992,12 @@ export interface ThreatRules {
     chanceMul: number;
     /** Creature def ids whose arrival sets a building alight. */
     fireBreath: string[];
+    /** A beast eats at most this many days of the site's meals (one a resident a day). */
+    mealCapDays: number;
+    /** Where the lair lies when no named region holds it: `{dir}` is the compass word. */
+    wild: string;
+    /** The lair clause: `{place}` is the region's name or `wild`. */
+    lair: string;
   };
   raids: {
     /** The raiders' civ holds at least this much grievance against the site's civ. */
@@ -2004,6 +2010,8 @@ export interface ThreatRules {
     /** Share of the home's adults that ride (times the followed share), clamped to `band`. */
     bandShare: number;
     band: [number, number];
+    /** Most raiders against a site: this share of its adults (at least `band[0]`). */
+    targetShare: number;
     /** Chance of a one-day warning. */
     warnChance: number;
     warning: string;
@@ -2030,8 +2038,11 @@ export interface ThreatRules {
     wallBonus: number;
     /** Soldier equivalents added per point of a held weapon's combat value. */
     weaponMul: number;
-    /** Share of able adults who stand to arms, at least `militiaMin`; against great and legendary beasts, all. */
-    militiaShare: number;
+    /**
+     * The strongest able adults stand to arms until their strength reaches this many times the
+     * attackers' (at least `militiaMin`, at most everyone able); the rest shelter at home.
+     */
+    militiaOdds: number;
     militiaMin: number;
     /** Walking cost the attackers cover in a block (people cover `LifeRules.walkPerBlock`). */
     advance: number;
@@ -2047,6 +2058,8 @@ export interface ThreatRules {
   flight: {
     /** The able adults' strength under this share of a beast's danger sends everyone fleeing. */
     fleeBelow: number;
+    /** Days before the arrival the people judge whether to flee (so the sign is seen first). */
+    judgeDaysAhead: number;
     /** Days after the attackers leave before the people come home. */
     returnAfterDays: number;
     /** Blocks a beast with no one in reach stays to take the stores. */
@@ -2068,6 +2081,10 @@ export interface ThreatRules {
   death: { word: string; span: string };
   /** Compass words, clockwise from north in eighths. */
   compass: string[];
+  /** Days after a threat opens before another beast or raid may come to the site. */
+  quietDays: number;
+  /** Attackers are first seen this many tiles beyond the outermost home on their side. */
+  approach: number;
   memoryOf: { foughtOff: string; fearRaid: string };
   events: {
     prowler: string;
@@ -2077,6 +2094,8 @@ export interface ThreatRules {
     flight: string;
     flightReturned: string;
     beastArrived: string;
+    /** A beast comes to a town its people have fled. */
+    beastCameEmpty: string;
     raidArrived: string;
     beastSlain: string;
     beastDrivenOff: string;

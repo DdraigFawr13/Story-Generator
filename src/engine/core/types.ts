@@ -871,19 +871,24 @@ export interface SiteThreat {
   came: number;
   /** A beast's remaining vigour, 0-1 (1 = unhurt). */
   vigour: number;
-  /** Where the attackers stand now (tile index; -1 once off the map), the map-edge tile they enter by, and what they make for. */
+  /** Where the attackers stand now (tile index; -1 once off the map), the tile they are first seen at (outside the town on their side), and what they make for. */
   tile: number;
   edge: number;
   target: number;
   /** Day they arrive on the map (for 'warned'). */
   arriveDay: number;
+  /** Compass word for the side they come from, and the lair clause for a beast ("" for raiders). */
+  dir: string;
+  whence: string;
+  /** The people have judged whether to flee (the day before a warned arrival, or on arrival). */
+  judged?: boolean;
   /** Blocks spent fighting so far. */
   rounds: number;
   /** Set on arrival: the attackers stand at the edge for one block while the militia gathers. */
   held?: boolean;
   /** Blocks spent ravaging the stores. */
   ravaged: number;
-  /** The steward ordered flight: everyone walks to `camp` (the map edge toward `refugeId`). */
+  /** The steward ordered flight: everyone walks to `camp` (outside the town toward `refugeId`). */
   fled: boolean;
   refugeId?: Id;
   camp?: number;
@@ -910,6 +915,10 @@ export interface SiteThreats {
   lastRaid: [Id, number][];
   /** Wall segments the steward still wants (tile indices), raised one at a time. */
   wallPlan: number[];
+  /** Day the last beast or raid opened here (the site's quiet time runs from it). */
+  lastThreatDay?: number;
+  /** The arrival that made the steward plan walls (the Site tab names it). */
+  wallsAfter?: Id;
   /** Day the site fell, if it did (everyone dead or gone). */
   fellDay?: number;
   stats: {

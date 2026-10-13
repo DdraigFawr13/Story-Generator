@@ -909,7 +909,8 @@ export function threatsProblems(content: ContentBundle): string[] {
   fraction('Threats raids retreatAt', rules.raids.retreatAt);
   fraction('Threats raids lootShare', rules.raids.lootShare);
   fraction('Threats raids bandShare', rules.raids.bandShare);
-  fraction('Threats combat militiaShare', rules.combat.militiaShare);
+  fraction('Threats raids targetShare', rules.raids.targetShare);
+  if (!(rules.combat.militiaOdds > 0)) problems.push('Threats combat militiaOdds must be above 0.');
   fraction('Threats combat fatigueBase', rules.combat.fatigueBase);
   fraction('Threats combat leavesAt', rules.combat.leavesAt);
   for (const [tier, x] of Object.entries(rules.combat.slainShare))
@@ -920,6 +921,8 @@ export function threatsProblems(content: ContentBundle): string[] {
     problems.push('Threats raids band must run low to high.');
   if (rules.beasts.warnDays[0] > rules.beasts.warnDays[1])
     problems.push('Threats beasts warnDays must run low to high.');
+  if (rules.beasts.warnDays[0] <= rules.flight.judgeDaysAhead)
+    problems.push('Threats beasts warnDays must start after flight judgeDaysAhead.');
   if (rules.compass.length !== 8) problems.push('Threats compass needs eight words.');
   known('Threats walls', 'building', buildings.has(rules.walls.building), rules.walls.building);
   for (const id of Object.values(rules.memoryOf))

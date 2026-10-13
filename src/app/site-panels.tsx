@@ -1762,6 +1762,18 @@ export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
   const threat = m.active.threat;
   const danger = threatLine({ world: m.world, active: m.active, content: m.content });
   const dangerEvent = threat ? (threat.arriveEvent ?? threat.signEvent) : undefined;
+  // M3.8: walls the steward planned after an attack: standing, rising and still planned.
+  const wallsAfter = m.active.threats.wallsAfter;
+  const wallsEvent = wallsAfter === undefined ? undefined : eventOf(m, wallsAfter);
+  const wallId = m.content.threats.walls.building;
+  let wallsUp = 0;
+  let wallsRising = 0;
+  for (const b of m.active.buildings.values()) {
+    if (b.defId !== wallId) continue;
+    if (b.progress === undefined) wallsUp += 1;
+    else wallsRising += 1;
+  }
+  const wallsWaiting = m.active.threats.wallPlan.length;
   const season = seasonRows({ world, active, content });
   const steward = stewardLine({ world, active, content }, (id) => eventOf(m, id));
   const rulerName = m.ruler ? m.scene.marks.get(m.ruler.id)?.name : undefined;
@@ -1854,6 +1866,21 @@ export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
               </EventLink>
             )}
             <span className="warnw">: {danger}</span>
+          </Fact>
+        )}
+        {wallsEvent && (
+          <Fact term="Walls">
+            {[
+              wallsUp > 0 && `${wallsUp} standing`,
+              wallsRising > 0 && `${wallsRising} rising`,
+              wallsWaiting > 0 && `${wallsWaiting} planned`,
+            ]
+              .filter(Boolean)
+              .join(', ') || 'none yet'}
+            , begun after{' '}
+            <EventLink a={a} id={wallsEvent.id}>
+              the attack of {briefDate(wallsEvent.day)}
+            </EventLink>
           </Fact>
         )}
       </Facts>

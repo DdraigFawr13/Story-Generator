@@ -71,11 +71,17 @@ export const SITE: SiteRules = {
     deaths: ['site_died'],
     breakdowns: ['site_tantrum', 'site_despair', 'site_wandered', 'site_theft', 'site_item_stolen'],
     fires: ['site_fire', 'site_wildfire'],
-    raids: [
+    threats: [
       'site_threat_sign',
       'site_beast_arrived',
+      'site_beast_came_empty',
       'site_raid_arrived',
       'site_flight',
+      'site_raiders_repelled',
+      'site_raid_looted',
+      'site_beast_slain',
+      'site_beast_driven_off',
+      'site_beast_ravaged',
       'site_fell',
     ],
     arrivals: ['outpost_founded'],

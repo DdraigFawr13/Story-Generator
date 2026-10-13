@@ -108,9 +108,7 @@ const SPEEDS: [SiteSpeed, string, string][] = [
   [4, '4×', '4 days a second (3)'],
   [16, '16×', '16 days a second (4)'],
 ];
-/** Tiles the view may lean from the attackers toward the town when a threat pauses play. */
-const THREAT_LEAD = 12;
-const PAUSE_CATEGORIES = ['deaths', 'breakdowns', 'fires', 'raids', 'arrivals'] as const;
+const PAUSE_CATEGORIES = ['deaths', 'breakdowns', 'fires', 'threats', 'arrivals'] as const;
 type PauseCategory = (typeof PAUSE_CATEGORIES)[number];
 /** Zoom step a selection centres to, and the step "Show on map" raises to. */
 const SELECT_ZOOM = 2;
@@ -210,6 +208,8 @@ export function SiteView(props: Props) {
   const [banner, setBanner] = useState<Banner | null>(null);
   const [whyOpen, setWhyOpen] = useState(false);
   const [pauseOn, setPauseOn] = useState<ReadonlySet<PauseCategory>>(new Set(PAUSE_CATEGORIES));
+  /** On a phone the pause chips fold behind a button so the map keeps the screen. */
+  const [chipsOpen, setChipsOpen] = useState(false);
   const [keyOpen, setKeyOpen] = useState(false);
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -449,7 +449,13 @@ export function SiteView(props: Props) {
         }, INDEX_REBUILD_MS);
       }
       setLive((lines) => [...lines, ...events.map((e) => ({ day: e.day, eventId: e.id }))]);
-      for (const event of events) {
+      // A threat's own line wins the banner over a death in the same block: its count names the dead.
+      const threatFirst = [...events].sort(
+        (x, y) =>
+          Number(!content.site.autoPause.threats.includes(x.type)) -
+          Number(!content.site.autoPause.threats.includes(y.type)),
+      );
+      for (const event of threatFirst) {
         const category = PAUSE_CATEGORIES.find(
           (c) => content.site.autoPause[c].includes(event.type) && on.has(c),
         );
@@ -467,7 +473,7 @@ export function SiteView(props: Props) {
           eventId: event.id,
           text: props.narrator.renderEvent(event),
           fire: category === 'fires',
-          threat: category === 'raids',
+          threat: category === 'threats',
           causes,
         });
         setWhyOpen(false);
@@ -487,30 +493,22 @@ export function SiteView(props: Props) {
               r.draw();
             }
           }
-        } else if (category === 'raids') {
-          // M3.8: a threat with no one to select: look at the attackers, or where the fled gathered.
-          // On the attackers, nudged toward what they make for so the town shows beside them.
+        } else if (category === 'threats') {
+          // M3.8: a threat has no one to select: cut (no pan) to the attackers, or to where the
+          // people gathered if they fled, centred in the part of the map the banner leaves clear.
           const mark = model.scene.live.threat;
-          const target = world.activeSite?.threat?.target ?? -1;
-          const width = world.activeSite?.map.width ?? 1;
-          const head = mark?.at[0];
-          const toward = (from: number, to: number) =>
-            from + Math.max(-THREAT_LEAD, Math.min(THREAT_LEAD, (to - from) / 2));
-          const spot =
-            head && target >= 0
-              ? {
-                  x: toward(head.x, target % width),
-                  y: toward(head.y, Math.floor(target / width)),
-                }
-              : (head ?? mark?.camp);
+          const spot = mark?.at[0] ?? mark?.camp;
           const r = renderer.current;
-          if (spot && r) {
-            r.state.view.cx = spot.x + 0.5;
-            r.state.view.cy = spot.y + 0.5;
-            if (r.state.view.z < SELECT_ZOOM) r.state.view.z = SELECT_ZOOM;
-            r.clamp();
-            r.draw();
-          }
+          // After the banner has rendered, so its height is known.
+          if (spot && r)
+            window.requestAnimationFrame(() => {
+              if (r.state.view.z < SELECT_ZOOM) r.state.view.z = SELECT_ZOOM;
+              const below = (bannerRef.current?.offsetHeight ?? 0) / 2 / r.scale;
+              r.state.view.cx = spot.x + 0.5;
+              r.state.view.cy = spot.y + 0.5 - below;
+              r.clamp();
+              r.draw();
+            });
         }
         break;
       }
@@ -777,7 +775,11 @@ export function SiteView(props: Props) {
   // A fire banner says who is fighting it and with what water, read from the live state.
   const fire = banner?.fire ? fireLine({ world, active, content }) : null;
   // A threat banner says who stands to arms and how the fight goes (M3.8).
-  const danger = banner?.threat ? threatLine({ world, active, content }) : null;
+  // The fight's running count shows under any banner while attackers are on the map (a death in it too).
+  const danger =
+    banner?.threat || (banner && active.threat && active.threat.stage !== 'warned')
+      ? threatLine({ world, active, content })
+      : null;
 
   // On a phone the Key sits beside the speed buttons, so the date and both chips share one row.
   const keyButton = (
@@ -818,6 +820,14 @@ export function SiteView(props: Props) {
           <button type="button" className="primary" onClick={resume}>
             Resume (Space)
           </button>
+          <button
+            type="button"
+            className="chipfold"
+            aria-expanded={chipsOpen}
+            onClick={() => setChipsOpen((o) => !o)}
+          >
+            Pause on…
+          </button>
         </div>
         {fire && <div className="spread">{fire}</div>}
         {danger && <div className="spread">{danger}</div>}
@@ -830,7 +840,7 @@ export function SiteView(props: Props) {
             ))}
           </div>
         )}
-        <div className="chips" role="group" aria-label="Pause on">
+        <div className={`chips${chipsOpen ? '' : ' folded'}`} role="group" aria-label="Pause on">
           <span className="lbl">Pause on:</span>
           {PAUSE_CATEGORIES.map((c) => (
             <button
