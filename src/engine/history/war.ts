@@ -289,8 +289,9 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ): void
     1 - rules.battleLuck + (2 * rules.battleLuck * rng.war.between(0, 1000)) / 1000;
   const army = attackStrength * rules.campaignShare;
   const defenders = defendStrength * rules.campaignShare;
+  const walls = siteDefence(run, target, defender);
   const attackForce = army * luck();
-  const defendForce = defenders * siteDefence(run, target, defender) * luck();
+  const defendForce = defenders * walls * luck();
   const attackerWins = attackForce > defendForce;
   const attackerLost = army * (attackerWins ? rules.winnerLoss : rules.loserLoss);
   const defenderLost = defenders * (attackerWins ? rules.loserLoss : rules.winnerLoss);
@@ -327,6 +328,13 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ): void
       attackerLost: Math.round(attackerLost),
       defenderLost: Math.round(defenderLost),
       lost: Math.round(attackerLost + defenderLost),
+      // What the battle was settled on, for its play-by-play: soldiers each side brought (allies'
+      // included), the defence factor of the ground and walls (x100), and the forces after luck.
+      army: Math.round(army),
+      defenders: Math.round(defenders),
+      walls: Math.round(walls * 100),
+      attackForce: Math.round(attackForce),
+      defendForce: Math.round(defendForce),
     },
   });
   war.lastEvent = battle.id;

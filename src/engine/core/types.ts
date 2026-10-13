@@ -594,6 +594,10 @@ export interface Creature {
   slainBy?: string;
   /** The hero notable who killed it. */
   slayerId?: Id;
+  /** Where a roaming beast is this year (absent: at its lair). */
+  haunt?: number;
+  /** Figures it killed, in order. */
+  kills?: Id[];
   deeds: Id[];
 }
 

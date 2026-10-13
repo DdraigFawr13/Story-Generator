@@ -138,11 +138,13 @@ function lairsNear(world: WorldState, content: SiteContent, active: ActiveSite, 
     const live = sortedById(world.sites.values()).filter((s) => s.ruinedYear === undefined);
     for (const c of sortedById(world.creatures.values())) {
       const def = defs.get(c.defId);
-      if (!def || cellDistance(width, c.lair, site.cell) > def.raidRange) continue;
+      // A roaming beast comes from where it roamed to by the end of history.
+      const at = c.haunt ?? c.lair;
+      if (!def || cellDistance(width, at, site.cell) > def.raidRange) continue;
       let best: Site | undefined;
       let bestDistance = Infinity;
       for (const s of live) {
-        const d = cellDistance(width, c.lair, s.cell);
+        const d = cellDistance(width, at, s.cell);
         if (d <= def.raidRange && d < bestDistance) {
           best = s;
           bestDistance = d;
@@ -276,7 +278,8 @@ function openThreat(
 ): void {
   const rules = content.threats;
   const width = world.params.width;
-  const to = 'creature' in source ? source.creature.lair : source.home.cell;
+  const to =
+    'creature' in source ? (source.creature.haunt ?? source.creature.lair) : source.home.cell;
   const dx = (to % width) - (site.cell % width);
   const dy = Math.floor(to / width) - Math.floor(site.cell / width);
   const edge = approachToward(content, active, dx, dy);
@@ -318,7 +321,7 @@ function openThreat(
       creatureId: creature.id,
       defId: def.id,
       tier: def.tier,
-      whence: lairClause(world, rules, creature.lair, dir),
+      whence: lairClause(world, rules, creature.haunt ?? creature.lair, dir),
     };
     warn = def.tier !== 'beast';
     const signs = rules.beasts.signs[def.id] ?? [];

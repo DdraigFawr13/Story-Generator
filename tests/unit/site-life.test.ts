@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
 import {
   embark,
+  generateWorld,
   findRoute,
   foodDaysLeft,
   memoryMood,
@@ -13,7 +14,7 @@ import {
   type SimEvent,
   type WorldState,
 } from '../../src/engine';
-import { baseB, biggest, copy } from './helpers/site-fixture';
+import { biggest, copy } from './helpers/site-fixture';
 
 const C = DEFAULT_CONTENT;
 const LIFE = C.life;
@@ -75,8 +76,10 @@ describe('daily life', () => {
 
   it('carries small children with a household adult and keeps every need recoverable', () => {
     // SITE-B: after the colleges and free cities change, SITE-A's biggest town is another one, where
-    // a forager's purpose sits at zero at the checked moment (logged as a playtest follow-up).
-    const world = structuredClone(baseB());
+    // a forager's purpose sits at zero at the checked moment (logged as a playtest follow-up). Since
+    // roaming beasts (2026-10-13) SITE-B's biggest town ends history short of food, so six residents
+    // are hungry at day 60; SITE-D's is fed.
+    const world = generateWorld('SITE-D', { width: 64, height: 64 }, C);
     const active = embark(world, C, biggest(world).id);
     for (let d = 0; d < 60; d += 1) {
       stepSite(world, C);

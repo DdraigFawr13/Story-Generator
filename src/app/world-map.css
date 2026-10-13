@@ -1238,6 +1238,16 @@ dl.facts dd {
   white-space: nowrap;
   cursor: pointer;
 }
+.wm-root .lg-beats {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 2px;
+  padding-left: 1.4em;
+  max-width: 62ch;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
 .wm-root a.lg-why {
   text-decoration: none;
 }

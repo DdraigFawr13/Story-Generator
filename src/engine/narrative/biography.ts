@@ -316,13 +316,16 @@ function otherSummary(world: WorldState, content: BioContent, ref: LegendRef): s
     if (!beast) return [];
     const kind = content.creatures.find((c) => c.id === beast.defId)?.name ?? beast.defId;
     const base = { name: beast.name, kind, born: beast.born };
-    if (beast.died === undefined) return [say('beastLive', base)];
+    const killed = (beast.kills ?? []).flatMap((id) => world.people.get(id)?.name ?? []);
+    const kills = killed.length > 0 ? [say('beastKills', { names: nameList(killed) })] : [];
+    if (beast.died === undefined) return [say('beastLive', base), ...kills];
     return [
       say('beastDead', {
         ...base,
         died: beast.died,
         slain: beast.slainBy ? `, slain by ${beast.slainBy}` : '',
       }),
+      ...kills,
     ];
   }
   if (ref.kind === 'item') {

@@ -9,6 +9,7 @@ import {
   importanceStars,
   linkSegments,
   locate,
+  playByPlay,
   typeLabel,
   yearText,
   type Id,
@@ -139,6 +140,15 @@ function DimNote() {
   return <p className="lg-dim">Dimmed: after Year {yearText(year)} (year locked).</p>;
 }
 
+/** The play-by-play beats of an epic fight (none for other events). */
+function useBeats(event: SimEvent | undefined): string[] {
+  const { world, content, index } = useLegends();
+  return useMemo(
+    () => (event ? playByPlay(world, content, index, event) : []),
+    [world, content, index, event],
+  );
+}
+
 /** One chronicle line: year link, linked names, and a "why?" that unfolds its causes. */
 function EventLine({
   id,
@@ -157,7 +167,9 @@ function EventLine({
   const { index, year, locked, open, hrefOf } = useLegends();
   const causeWord = useCauseWord();
   const [unfolded, setUnfolded] = useState(Boolean(autoOpen) && depth < MAX_TREE_DEPTH);
+  const [fightOpen, setFightOpen] = useState(false);
   const event = index.event(id);
+  const beats = useBeats(event);
   if (!event) return null;
   const when = eventYear(event);
   const causes = event.causes.filter((cause) => index.event(cause) !== undefined);
@@ -189,6 +201,17 @@ function EventLine({
               open this event →
             </a>
           ))}
+        {beats.length > 0 && (
+          <button
+            type="button"
+            className="lg-why"
+            aria-expanded={fightOpen}
+            onClick={() => setFightOpen(!fightOpen)}
+          >
+            the fight {fightOpen ? '▾' : '▸'}
+          </button>
+        )}
+        {fightOpen && <Beats beats={beats} />}
         {unfolded && (
           <Chronicle ids={causes} empty="" depth={depth + 1} parent={event} autoOpen={autoOpen} />
         )}
@@ -589,10 +612,21 @@ function EntityPage({
   );
 }
 
+function Beats({ beats }: { beats: string[] }) {
+  return (
+    <ol className="lg-beats">
+      {beats.map((beat, k) => (
+        <li key={k}>{beat}</li>
+      ))}
+    </ol>
+  );
+}
+
 function EventPage({ id }: { id: Id }) {
   const { world, index, content, titleOf, onOpenOnMap, nameOf } = useLegends();
   const [expanded, setExpanded] = useState(false);
   const event = index.event(id);
+  const beats = useBeats(event);
   const when = event ? eventYear(event) : 0;
   const siblings = useMemo(() => {
     if (!event) return [];
@@ -626,6 +660,14 @@ function EventPage({ id }: { id: Id }) {
       <p className="lg-summary">
         <EventText event={event} />
       </p>
+      {beats.length > 0 && (
+        <>
+          <div className="lg-sect">
+            <span>How it went</span>
+          </div>
+          <Beats beats={beats} />
+        </>
+      )}
       <dl className="lg-facts">
         {importanceStars(event.importance) && (
           <>

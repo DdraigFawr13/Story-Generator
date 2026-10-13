@@ -332,8 +332,13 @@ export function checkSites(
       if ((perCiv.get(civ.id) ?? 0) < 1) report(`${label} has no live site`);
     }
   }
+  const beastNames = new Set<string>();
   for (const beast of world.creatures?.values() ?? []) {
     const label = `creature ${beast.id} "${beast.name}"`;
+    if (beastNames.has(beast.name)) report(`${label} has the name of an earlier beast`);
+    beastNames.add(beast.name);
+    if (beast.haunt !== undefined && cells.water[beast.haunt] !== 0)
+      report(`${label} roams to ${beast.haunt}, which is not dry land`);
     if (!(beast.lair >= 0 && beast.lair < size)) report(`${label} lair is off the map`);
     else if (cells.water[beast.lair] !== 0)
       report(`${label} lair at ${beast.lair} is not on dry land`);

@@ -76,6 +76,7 @@ export const BIOGRAPHIES: BiographyRules = {
     // Beast, item, dynasty
     beastLive: ['{name}, a {kind}, has haunted the land since Year {born}.'],
     beastDead: ['{name}, a {kind}, haunted the land from Year {born} until Year {died}{slain}.'],
+    beastKills: ['It killed {names}.', '{names} died fighting it.'],
     itemHeld: ['{name}, a {form}, was made in Year {made} and is held by {holder}.'],
     itemLost: ['{name}, a {form}, was made in Year {made} and is lost.'],
     dynasty: ['{Name} was founded in Year {founded} by {founder}{civ}.'],

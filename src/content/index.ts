@@ -15,6 +15,7 @@ import { THREATS, THREAT_EVENTS, THREAT_MEMORIES } from './threats';
 import { LORE, LORE_EVENTS, LORE_MEMORIES } from './lore';
 import { AWAKENINGS } from './awakenings';
 import { CHRONICLE, CHRONICLE_EVENTS } from './chronicle';
+import { PLAY_BY_PLAY } from './playbyplay';
 import { POLITICS, POLITICS_EVENTS } from './politics';
 import { ITEMS } from './items';
 import { JOBS, STEWARD, WORK_EVENTS } from './jobs';
@@ -89,6 +90,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   awakenings: AWAKENINGS,
   politics: POLITICS,
   chronicle: CHRONICLE,
+  playByPlay: PLAY_BY_PLAY,
 };
 
 export * from './biographies';
@@ -114,6 +116,7 @@ export * from './map-layers';
 export * from './names';
 export * from './notables';
 export * from './playback';
+export * from './playbyplay';
 export * from './resources';
 export * from './settlement';
 export * from './site';

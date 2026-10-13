@@ -1,10 +1,13 @@
 // Beasts (M2.4): lairs appear in wild land, creatures raid the nearest site in range, and the
-// raided people sometimes kill them. Lairs are cells, not sites.
+// raided people sometimes kill them. Lairs are cells, not sites. Some kinds roam: they raid and are
+// hunted from a haunt that shifts within `roam` of the lair. A beast that wins a fight may kill the
+// figure who faced it, the likelier the weaker they are; the death shows in both histories.
 
 import { cultureGivenName } from '../people/names';
 import type { CreatureDef } from '../core/content-types';
-import type { Creature, Id, Site } from '../core/types';
+import type { Creature, Id, Person, Site } from '../core/types';
 import {
+  beastKillChance,
   beastRaidDeaths,
   createHero,
   creditSlaying,
@@ -21,8 +24,15 @@ import { causesOf, civName, cultureOf, isLive, liveSites, logOf, type HistoryRun
 
 /** Years between spawn rolls. */
 const DECADE = 10;
+/** Cells tried when a roaming beast looks for a new haunt. */
+const ROAM_TRIES = 6;
 /** Stand-in for the nearest site when a world has none. */
 const NO_NEAR = 'the wilds';
+
+/** Where a beast is this year: its haunt if it roams, else its lair. */
+export function whereIs(creature: Creature): number {
+  return creature.haunt ?? creature.lair;
+}
 
 /** Living creatures in id order. */
 export function livingCreatures(run: HistoryRun): Creature[] {
@@ -130,9 +140,29 @@ function atSite(creature: Creature, site: Site): string {
   return creature.name.includes(site.name) ? '' : ` at ${site.name}`;
 }
 
+/** Per run: the towns each beast's roaming was told at, and the figures who already fought it. */
+const memory = new WeakMap<HistoryRun, Map<string, Set<Id>>>();
+/** True the first time `key` is seen for this beast in this run, so a story is told once. */
+function firstTime(run: HistoryRun, creature: Creature, kind: string, key: Id): boolean {
+  let byBeast = memory.get(run);
+  if (!byBeast) memory.set(run, (byBeast = new Map()));
+  const slot = `${creature.id}:${kind}`;
+  let seen = byBeast.get(slot);
+  if (!seen) byBeast.set(slot, (seen = new Set()));
+  if (seen.has(key)) return false;
+  seen.add(key);
+  return true;
+}
+
+/** Rounded numbers a fight was settled on, kept on the event for its play-by-play. */
+function fightData(fighters: number, def: CreatureDef, chance: number) {
+  return { fighters: Math.round(fighters), danger: def.danger, odds: Math.round(chance * 100) };
+}
+
 /**
  * The raided site may kill the beast; returns true if it did. The strongest figure of its people
- * nearby leads the fight and adds their soldier equivalent; without one, a new hero rises.
+ * nearby leads the fight and adds their soldier equivalent; without one, a new hero rises. A figure
+ * who rode out and lost may be killed.
  */
 function trySlay(
   run: HistoryRun,
@@ -151,14 +181,18 @@ function trySlay(
   const fighters = bandCount(site, 'adult') + (slayer ? deedSoldiers(run, slayer) : 0);
   const strength = Math.min(1, fighters / need);
   const chance = rules.slayBase * strength * rules.slayTierFactor[def.tier];
-  if (!rng.beasts.chance(chance)) return false;
+  if (!rng.beasts.chance(chance)) {
+    if (slayer)
+      answerLost(run, creature, def, slayer, site, raid, fightData(fighters, def, chance));
+    return false;
+  }
   const hero = slayer ? slayer.name : cultureGivenName(culture.names, rng.names);
   creature.died = run.year;
   creature.slainBy = hero;
   const notable = slayer ?? createHero(run, site, hero, def.danger);
   const event = run.emit({
     type: 'beast_slain',
-    place: creature.lair,
+    place: whereIs(creature),
     actors: notable ? [notable.id] : [],
     causes: [raid],
     data: {
@@ -168,8 +202,10 @@ function trySlay(
       site: site.name,
       civ: civ.name,
       at: atSite(creature, site),
+      ...fightData(fighters, def, chance),
     },
   });
+  creature.deeds.push(event.id);
   if (notable) {
     creature.slayerId = notable.id;
     if (slayer) creditSlaying(run, slayer, def.danger, event.id);
@@ -178,9 +214,51 @@ function trySlay(
   return true;
 }
 
+/** A figure who rode out against a raiding beast lost: driven back, or killed (`beastKillChance`). */
+function answerLost(
+  run: HistoryRun,
+  creature: Creature,
+  def: CreatureDef,
+  figure: Person,
+  site: Site,
+  raid: Id,
+  fight: ReturnType<typeof fightData>,
+): void {
+  const phrases = run.content.notables.deeds.answerPhrases;
+  const dies = run.rng.beasts.chance(beastKillChance(run, figure, def.danger));
+  markDeed(run, figure);
+  // A figure beaten again by the same beast is not news; a death always is.
+  if (!firstTime(run, creature, 'fought', figure.id) && !dies) return;
+  const event = run.emit({
+    type: 'beast_fought',
+    place: site.cell,
+    actors: [figure.id],
+    causes: [raid],
+    data: {
+      name: figure.name,
+      beast: creature.name,
+      kind: def.name,
+      site: site.name,
+      civ: civName(run, site),
+      outcome: dies ? phrases.died : phrases.survived,
+      ...fight,
+    },
+  });
+  creature.deeds.push(event.id);
+  addDeed(figure, event.id);
+  if (dies)
+    killNotable(run, figure, {
+      cause: 'beast',
+      causes: [event.id],
+      at: site,
+      beast: creature,
+      fought: true,
+    });
+}
+
 function raid(run: HistoryRun, creature: Creature, def: CreatureDef): void {
   const { rules, rng } = run;
-  const site = nearestSite(run, creature.lair, def.raidRange);
+  const site = nearestSite(run, whereIs(creature), def.raidRange);
   if (!site) return;
   const factor = rng.beasts.between(500, 1500) / 1000;
   const pop = totalPop(site);
@@ -195,14 +273,14 @@ function raid(run: HistoryRun, creature: Creature, def: CreatureDef): void {
   });
   creature.deeds.push(event.id);
   logOf(run, site.id).raided = { year: run.year, event: event.id };
-  beastRaidDeaths(run, site, event.id);
+  beastRaidDeaths(run, site, event.id, creature, def.danger);
   trySlay(run, creature, def, site, event.id);
 }
 
 /**
  * Idle legends go hunting: each takes on the nearest living beast within `huntRange` of home, alone,
  * with their soldier equivalent against the beast's danger (the slay odds of a raided town). A
- * failed hunt may cost their life (`beastKill`).
+ * failed hunt may cost their life (`beastKillChance`).
  */
 function runHunts(run: HistoryRun): void {
   const { rules, rng, world } = run;
@@ -215,7 +293,7 @@ function runHunts(run: HistoryRun): void {
     let prey: Creature | undefined;
     let best = Infinity;
     for (const creature of livingCreatures(run)) {
-      const distance = cellDistance(run.cells.width, home.cell, creature.lair);
+      const distance = cellDistance(run.cells.width, home.cell, whereIs(creature));
       if (distance <= deeds.huntRange && distance < best) {
         prey = creature;
         best = distance;
@@ -225,15 +303,17 @@ function runHunts(run: HistoryRun): void {
     if (!prey || !def) continue;
     markDeed(run, legend);
     const need = def.danger * rules.slayAdultsPerDanger;
-    const strength = Math.min(1, deedSoldiers(run, legend) / need);
-    const near = nearestSite(run, prey.lair, Infinity) ?? home;
-    if (rng.beasts.chance(rules.slayBase * strength * rules.slayTierFactor[def.tier])) {
+    const soldiers = deedSoldiers(run, legend);
+    const strength = Math.min(1, soldiers / need);
+    const near = nearestSite(run, whereIs(prey), Infinity) ?? home;
+    const chance = rules.slayBase * strength * rules.slayTierFactor[def.tier];
+    if (rng.beasts.chance(chance)) {
       prey.died = run.year;
       prey.slainBy = legend.name;
       prey.slayerId = legend.id;
       const event = run.emit({
         type: 'beast_slain',
-        place: prey.lair,
+        place: whereIs(prey),
         actors: [legend.id],
         causes: causesOf(prey.deeds[prey.deeds.length - 1]),
         data: {
@@ -243,16 +323,18 @@ function runHunts(run: HistoryRun): void {
           site: home.name,
           civ: civ.name,
           at: atSite(prey, near).replace(' at ', ' near '),
+          hunt: 1,
+          ...fightData(soldiers, def, chance),
         },
       });
       prey.deeds.push(event.id);
       creditSlaying(run, legend, def.danger, event.id);
       continue;
     }
-    const dies = rng.beasts.chance(run.content.notables.beastKill);
+    const dies = rng.beasts.chance(beastKillChance(run, legend, def.danger));
     const event = run.emit({
       type: 'beast_hunt_failed',
-      place: prey.lair,
+      place: whereIs(prey),
       actors: [legend.id],
       causes: legend.deeds.slice(-1),
       data: {
@@ -262,15 +344,75 @@ function runHunts(run: HistoryRun): void {
         site: home.name,
         civ: civ.name,
         outcome: dies ? deeds.huntPhrases.died : deeds.huntPhrases.survived,
+        ...fightData(soldiers, def, chance),
       },
     });
     prey.deeds.push(event.id);
     addDeed(legend, event.id);
-    if (dies) killNotable(run, legend, { cause: 'beast', causes: [event.id] });
+    if (dies)
+      killNotable(run, legend, { cause: 'beast', causes: [event.id], beast: prey, fought: true });
   }
 }
 
-/** Yearly: new lairs, old age, raids and the answers to them. */
+/** The compass word for a move of (dx, dy), y growing southward. */
+function compass(run: HistoryRun, dx: number, dy: number): string {
+  const words = run.content.threats.compass;
+  const ax = Math.abs(dx);
+  const ay = Math.abs(dy);
+  let at: number;
+  if (ay * 2 <= ax) at = dx > 0 ? 2 : 6;
+  else if (ax * 2 <= ay) at = dy > 0 ? 4 : 0;
+  else if (dx > 0) at = dy < 0 ? 1 : 3;
+  else at = dy > 0 ? 5 : 7;
+  return words[at]!;
+}
+
+/**
+ * A roaming beast may shift its haunt to a dry cell within `roam` of its lair. When that brings a
+ * different town nearest for the first time, the land hears of it (`beast_roamed`).
+ */
+function roam(run: HistoryRun, creature: Creature, def: CreatureDef): void {
+  const range = def.roam ?? 0;
+  if (range <= 0 || !run.rng.beasts.chance(run.rules.beastRoamChance)) return;
+  const { width, height, water } = run.cells;
+  const lairX = creature.lair % width;
+  const lairY = Math.floor(creature.lair / width);
+  let to = -1;
+  // A fixed number of draws, so the stream advances the same however early a cell is found.
+  for (let tries = 0; tries < ROAM_TRIES; tries += 1) {
+    const x = lairX + run.rng.beasts.between(-range, range);
+    const y = lairY + run.rng.beasts.between(-range, range);
+    if (to >= 0 || x < 0 || y < 0 || x >= width || y >= height) continue;
+    if (water[y * width + x] === 0) to = y * width + x;
+  }
+  if (to < 0 || to === whereIs(creature)) return;
+  const from = whereIs(creature);
+  const before = nearestSite(run, from, def.raidRange);
+  creature.haunt = to;
+  const after = nearestSite(run, to, def.raidRange);
+  if (!after || after.id === before?.id || !run.rules.beastRoamNoticed.includes(def.tier)) return;
+  // Told once per town: a beast wandering back to old ground is not news.
+  if (!firstTime(run, creature, 'roamed', after.id)) return;
+  const event = run.emit({
+    type: 'beast_roamed',
+    place: to,
+    causes: causesOf(creature.deeds[creature.deeds.length - 1]),
+    data: {
+      beast: creature.name,
+      kind: def.name,
+      site: after.name,
+      civ: civName(run, after),
+      dir: compass(
+        run,
+        (to % width) - (from % width),
+        Math.floor(to / width) - Math.floor(from / width),
+      ),
+    },
+  });
+  creature.deeds.push(event.id);
+}
+
+/** Yearly: new lairs, old age, wandering, raids and the answers to them. */
 export function runBeasts(run: HistoryRun): void {
   runSpawns(run);
   const defs = new Map(run.content.creatures.map((d) => [d.id, d]));
@@ -281,6 +423,7 @@ export function runBeasts(run: HistoryRun): void {
       creature.died = run.year;
       continue;
     }
+    roam(run, creature, def);
     // One draw per beast per year, whether or not a site is in range.
     if (run.rng.beasts.chance(def.raidChance)) raid(run, creature, def);
   }
