@@ -664,6 +664,8 @@ export interface NotableRules {
   successionPhrases: Record<SuccessionRule, string>;
   /** Succession clause when no kin or notable of the civ was left to take the seat. */
   noHeirPhrase: string;
+  /** Succession clause after a dispute: `held` when the heir by custom won, `seized` when the rival did ({rule}, {rival}). */
+  disputePhrases: { held: string; seized: string };
   /** Yearly death chance of an adult before elder age, and of a child. */
   adultDeath: number;
   childDeath: number;
@@ -1046,6 +1048,8 @@ export interface HistoryRules {
   outbreakSizeCap: number;
   /** Share of children and adults who leave a starving or overfull site. */
   migrantShare: number;
+  /** Migrants shun a site that starved within this many years (word of hunger travels). */
+  famineShunYears: number;
   /** A site above this share of capacity may found a new site. */
   expandAt: number;
   /** Years between expansions from one site. */

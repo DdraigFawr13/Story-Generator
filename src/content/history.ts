@@ -27,6 +27,8 @@ export const HISTORY: HistoryRules = {
   famineCauseYears: 5,
   outbreakSizeCap: 4,
   migrantShare: 0.2,
+  // Without this, a drought-struck town with spare room drew migrants every year and never shrank.
+  famineShunYears: 5,
   // Below the crowding at which births fall (0.6-1), so slow-breeding races still send settlers.
   expandAt: 0.65,
   expandCooldown: 15,

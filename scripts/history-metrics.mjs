@@ -88,6 +88,21 @@ export function historyMetrics(
       raceTotals[band.raceId] = (raceTotals[band.raceId] ?? 0) + band.count;
     }
   }
+  // The Phase 2 playtest oddity: a site that starved 3+ times in the last 25 years yet ends at its
+  // peak (kept famine events only, matched by cell; a rolled-up famine has no place).
+  const recentFamines = new Map();
+  const since = (world.params.historyYears - 25) * DAYS_PER_YEAR;
+  for (const e of world.events) {
+    if (e.type !== 'famine' || e.day <= since) continue;
+    recentFamines.set(e.place, (recentFamines.get(e.place) ?? 0) + 1);
+  }
+  let faminePeak = 0;
+  for (const site of world.sites.values()) {
+    if (site.ruinedYear !== undefined || (recentFamines.get(site.cell) ?? 0) < 3) continue;
+    let pop = 0;
+    for (const band of site.pop) pop += band.count;
+    if (pop >= 0.97 * site.peakPop) faminePeak += 1;
+  }
   const ids = raceIds ?? Object.keys(raceTotals).sort();
   const shares = ids.map((id) => (finalPop ? (100 * (raceTotals[id] ?? 0)) / finalPop : 0));
   const out = {
@@ -102,6 +117,7 @@ export function historyMetrics(
     disease: c('plague') + c('fever') + c('pox'),
     plague: c('plague'),
     migration: c('migration'),
+    faminePeak,
     siteFounded: c('site_founded'),
     wars: c('war_declared'),
     battles: c('battle'),

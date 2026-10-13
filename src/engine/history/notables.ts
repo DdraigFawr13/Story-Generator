@@ -269,7 +269,10 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
   if (killer) person.killerId = killer.id;
   run.notables.living.delete(person.id);
   const civ = civOfPerson(run, person);
-  const phrase = rules.deathPhrases[options.cause];
+  const phrase = rules.deathPhrases[options.cause].replace(
+    '{kind}',
+    siteOf(run, person)?.kind ?? 'town',
+  );
   const event = run.emit({
     type: 'notable_died',
     actors: killer ? [person.id, killer.id] : [person.id],
@@ -589,6 +592,10 @@ function succeed(run: HistoryRun, civ: Civ, dead: Person, death: SimEvent): void
     addDeed(winner, dispute.id);
     addDeed(loser, dispute.id);
     swearOath(run, loser, winner, dead, dispute.id);
+    const custom = phrase;
+    phrase = rules.disputePhrases[winner.id === heir.id ? 'held' : 'seized']
+      .replace('{rule}', custom)
+      .replace('{rival}', loser.name);
     heir = winner;
     causes.push(dispute.id);
   }

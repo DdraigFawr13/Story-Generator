@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
 import {
+  DAYS_PER_YEAR,
   buildLinks,
   checkSites,
   createWorld,
@@ -121,6 +122,40 @@ describe('harvest and famine', () => {
     const first = famines.find((e) => e.data.site === 'Site1')!;
     expect(first.causes.length).toBeGreaterThan(0);
     expect(world.events.find((e) => e.id === first.causes[0])?.type).toBe('bad_harvest');
+  });
+});
+
+describe('migration', () => {
+  it('never sends migrants to a site that starved in the last famineShunYears', () => {
+    // Site1 starves in droughts; Site2 is overfull and spills over to its linked neighbour.
+    const rules: HistoryRules = {
+      ...LIVELY,
+      climate: { ...DEFAULT_CONTENT.history.climate, startChance: 0 },
+      droughtScale: 0.6,
+      expandChance: 0,
+    };
+    const arrivalsAfterFamine = (shun: number) => {
+      const world = strip(
+        [
+          { x: 10, pop: 300, capacity: 600, drought: 100 },
+          { x: 20, pop: 500, capacity: 300 },
+        ],
+        80,
+      );
+      runHistory(world, withRules({ ...rules, famineShunYears: shun }));
+      const yearOf = (day: number) => Math.floor(day / DAYS_PER_YEAR);
+      const famineYears = eventsOf(world, 'famine')
+        .filter((e) => e.data.site === 'Site1')
+        .map((e) => yearOf(e.day));
+      const arrivals = eventsOf(world, 'migration').filter((e) => e.data.to === 'Site1');
+      expect(famineYears.length).toBeGreaterThan(0);
+      return arrivals.filter((e) => {
+        const year = yearOf(e.day);
+        return famineYears.some((f) => f <= year && year - f <= 5);
+      }).length;
+    };
+    expect(arrivalsAfterFamine(0)).toBeGreaterThan(0);
+    expect(arrivalsAfterFamine(5)).toBe(0);
   });
 });
 
