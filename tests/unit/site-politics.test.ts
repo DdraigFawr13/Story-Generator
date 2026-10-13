@@ -12,7 +12,7 @@ import {
   voiceOf,
   type Person,
 } from '../../src/engine';
-import { biggest, copy } from './helpers/site-fixture';
+import { baseB, biggest, copy } from './helpers/site-fixture';
 
 const C = DEFAULT_CONTENT;
 
@@ -28,9 +28,10 @@ function tradedWith(rows: Uint32Array, siteId: number): Set<number> {
 
 describe('politics', () => {
   it('sends caravans only along the trade routes history used, and none without them', () => {
-    const world = copy();
-    // The most populous town with trade partners: since culture values reshaped history, SITE-A's
-    // biggest town (Khazgrund) has traded with no one in the last 50 years.
+    // SITE-B: since peoples settle closer on a quarter-land map, no town of SITE-A trades at all.
+    const world = structuredClone(baseB());
+    // The most populous town with trade partners: since culture values reshaped history, the
+    // biggest town need not have traded in the last 50 years.
     const site = [...world.sites.values()]
       .filter((s) => s.ruinedYear === undefined && tradePartners(world, C, s, 250).length > 0)
       .sort((a, b) => sitePopulation(b) - sitePopulation(a) || a.id - b.id)[0]!;
