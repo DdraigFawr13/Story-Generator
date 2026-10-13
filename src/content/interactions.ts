@@ -24,11 +24,12 @@ export const INTERACTIONS: InteractionDef[] = [
     moodWeight: 2,
   },
   // Only the unfriendly or the sour-tempered insult; a grudge starts in a target already at -25.
+  // Tuned so a town of 150 sees one or two feuds a year (Morgan chose "More feuds", 2026-10-13).
   {
     id: 'insult',
     name: 'insult',
-    weight: 1.5,
-    opinion: [-10, -3],
+    weight: 2.5,
+    opinion: [-12, -3],
     needsOpinionBelow: 0,
     orBadMood: true,
     traitWeights: { 'hot-tempered': 2 },

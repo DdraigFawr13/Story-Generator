@@ -15,7 +15,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "boundaries": "node scripts/check-boundaries.mjs",
-    "test": "vitest run",
+    "test": "vitest run && vitest run --config vitest.speed.config.ts",
     "test:browser": "playwright test",
     "bios": "node scripts/biographies.mjs",
     "drama": "node scripts/drama.mjs",
