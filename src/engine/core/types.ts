@@ -62,6 +62,8 @@ export interface PersonDetail {
   placeId?: Id | null;
   /** Village life: share of the block (0-1) that passes before they set off; the map's walk waits. */
   leaveAt?: number;
+  /** Village life: the tiles walked this block, in order (absent when they stayed put). */
+  walk?: number[] | undefined;
   /** Village life: where they spend a free block, for the inspector ("at the alehouse"). */
   where?: string | undefined;
   /** The parts mood was summed from in the last block, for the inspector's "why" lines. */
@@ -820,6 +822,8 @@ export interface SiteFire {
 
 /** The live site (M3.1): its map, the people followed and what they own. */
 export interface ActiveSite {
+  /** Village life: the stall tiles on the square while a market morning runs; absent otherwise. */
+  stalls?: number[] | undefined;
   siteId: Id;
   enteredDay: number;
   map: LocalMap;

@@ -856,6 +856,7 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   };
   // Market day: one adult in each household goes to market instead of working.
   const marketMorning = block === 1 && day % market.every === market.offset && !festival;
+  active.stalls = marketMorning && cache.stalls.length > 0 ? cache.stalls : undefined;
   const shoppers = new Set<Id>();
   if (marketMorning) {
     const picked = new Map<Household, { p: Profile; score: number }>();
@@ -890,7 +891,9 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       const reached = route ? walkAlong(active, rules, life, route, life.walkPerBlock) : -1;
       if (reached >= 0) tile = reached;
       if (tile !== from) detail.pos = [tile % width, Math.floor(tile / width)];
-    }
+      // The tiles walked, so the map draws the walk along the street rather than through walls.
+      detail.walk = route && tile !== from ? route.slice(0, route.indexOf(tile) + 1) : undefined;
+    } else detail.walk = undefined;
     standAt(p, tile);
   };
   /** Children going along with a parent, settled once the grown-ups have a work tile. */
@@ -1075,6 +1078,7 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     detail.activity = away ? 'sleep' : theirs;
     const tile = away ? p.home : carer.tile;
     detail.pos = [tile % width, Math.floor(tile / width)];
+    detail.walk = away ? undefined : carer.person.detail!.walk;
     standAt(p, tile);
   }
 
@@ -1319,6 +1323,8 @@ export interface SiteSnapshot {
   weather: SiteWeather;
   /** Outdoor afternoon work has stopped for want of daylight. */
   workStopped: boolean;
+  /** Village life: the stall tiles while a market morning runs. */
+  stalls: number[] | undefined;
   mealShare: number;
   shortMealsEvent: Id | null;
   /** Day short meals began (-1 when meals are full). */
@@ -1468,6 +1474,7 @@ export function siteSnapshot(
     ),
     weather: active.weather,
     workStopped: active.weather.outdoorDark,
+    stalls: active.stalls,
     mealShare: active.mealShare,
     shortMealsEvent: active.shortMealsEvent,
     shortMealsSince: active.shortMealsSince,
@@ -1532,6 +1539,7 @@ export function applySiteSnapshot(world: WorldState, snapshot: SiteSnapshot): vo
   active.peopleVersion = snapshot.peopleVersion;
   active.stock = new Map(snapshot.stock);
   active.storesEmptyEvent = snapshot.storesEmptyEvent;
+  active.stalls = snapshot.stalls;
   for (const [id, detail] of snapshot.people) {
     const person = world.people.get(id);
     if (person) person.detail = detail;
