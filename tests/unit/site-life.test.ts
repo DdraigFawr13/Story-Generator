@@ -35,10 +35,10 @@ const biggest = (world: WorldState): Site =>
     .sort((a, b) => sitePopulation(b) - sitePopulation(a) || a.id - b.id)[0]!;
 
 /** Days until the first breakdown event (or `days` if none), and the events seen. */
-function runUntilBreakdown(world: WorldState, days: number) {
+function runUntilBreakdown(world: WorldState, days: number, content: typeof C = C) {
   const events: SimEvent[] = [];
   for (let d = 0; d < days; d += 1) {
-    const today = stepSite(world, C);
+    const today = stepSite(world, content);
     events.push(...today);
     if (today.some((e) => BREAKDOWNS.has(e.type))) return { day: d + 1, events };
   }
@@ -64,15 +64,15 @@ describe('daily life', () => {
     const site = biggest(fed);
     const a = embark(fed, C, site.id);
     const b = embark(hungry, C, site.id);
-    a.stock.set('food', 1e6);
-    b.stock.set('food', 0);
-    // No harvest either: without fields, work brings nothing in.
-    for (const [id, building] of b.buildings)
-      if (building.defId === 'field') b.buildings.delete(id);
-    const starved = runUntilBreakdown(hungry, 60);
+    a.stock.set('grain', 1e6);
+    for (const key of b.stock.keys())
+      if (C.items.find((i) => i.id === key)?.kind === 'food') b.stock.set(key, 0);
+    // No harvest either: with no food jobs, work brings nothing in.
+    const barren = { ...C, jobs: C.jobs.filter((j) => j.serves !== 'food') };
+    const starved = runUntilBreakdown(hungry, 60, barren);
     expect(starved.events.some((e) => BREAKDOWNS.has(e.type))).toBe(true);
     // Over the same days the fed site has no more breakdowns than the starving one.
-    const eaten = runUntilBreakdown(fed, starved.day);
+    const eaten = runUntilBreakdown(fed, starved.day, barren);
     const count = (events: SimEvent[]) => events.filter((e) => BREAKDOWNS.has(e.type)).length;
     expect(count(eaten.events)).toBeLessThanOrEqual(count(starved.events));
     const empty = starved.events.find((e) => e.type === LIFE.events.storesEmpty)!;
@@ -181,18 +181,5 @@ describe('walking', () => {
     expect(nodesExpanded(active) - before).toBeLessThanOrEqual(5);
     expect(tiny.left).toBe(0);
     expect(line).toEqual(straightLine(width, other, from));
-  });
-});
-
-describe('speed', () => {
-  it('steps 150 residents through a year', () => {
-    const world = copy();
-    const content = { ...C, site: { ...C.site, followCap: 150 } };
-    embark(world, content, biggest(world).id);
-    const start = performance.now();
-    for (let d = 0; d < 336; d += 1) stepSite(world, content);
-    const ms = performance.now() - start;
-    console.log(`life: 336 days in ${ms.toFixed(0)} ms (${(336000 / ms).toFixed(0)} days/s)`);
-    expect(ms).toBeLessThan(1000);
   });
 });

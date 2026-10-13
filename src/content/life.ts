@@ -229,6 +229,10 @@ export const MEMORIES: MemoryDef[] = [
   { id: 'saw-despair', mood: -4, decayDays: 7, text: 'Saw {about} sink into despair' },
   { id: 'kin-wandered', mood: -5, decayDays: 6, text: '{about} wandered off' },
   { id: 'saw-theft', mood: -5, decayDays: 10, text: 'Saw {about} steal from the stores' },
+  // M3.3: a cooked meal, a cursed heirloom and a neighbour's treasure.
+  { id: 'ate-well', mood: 3, decayDays: 2, text: 'Ate a cooked meal' },
+  { id: 'cursed-item', mood: -6, decayDays: 3, text: 'Troubled by a cursed heirloom' },
+  { id: 'envied', mood: -3, decayDays: 5, text: "Envied {about}'s treasure" },
 ];
 
 export const LIFE: LifeRules = {
@@ -245,7 +249,7 @@ export const LIFE: LifeRules = {
   restDayAfternoon: { faithful: 'worship', others: 'socialise' },
   // One meal a day, so a person eats their yearly need over the 336-day year.
   mealShare: 1 / 336,
-  // Elders do half a day's work; field work shares out the history's normal harvest (until M3.3).
+  // Elders do half a day's work.
   workOutput: { child: 0, adult: 1, elder: 0.5 },
   warmth: {
     // Frostmonth (index 10) is the coldest; Goldmonth (4) the warmest.
@@ -285,12 +289,17 @@ export const LIFE: LifeRules = {
     sawDespair: 'saw-despair',
     kinWandered: 'kin-wandered',
     sawTheft: 'saw-theft',
+    ateWell: 'ate-well',
+    cursed: 'cursed-item',
+    envied: 'envied',
   },
   // A block is six hours: 240 cost (about 120 grass tiles) crosses the map; only rough routes stop short.
   walkPerBlock: 240,
   // Enough for every resident's routes in a block with room to spare; past it routes are straight.
   pathBudget: 60000,
   pathCache: 4096,
+  // Routes may run up to half as long again as the best, which halves the tiles searched.
+  pathWeight: 1.5,
   // People keep to paths and floors where they can.
   walkCost: {
     path: 1,

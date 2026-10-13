@@ -5,14 +5,17 @@
 //
 // A block runs in passes, each over residents in id order: (0) breakdowns end or begin, from the
 // stress left at the end of the last block, so a breakdown acts in the block it starts; (1)
-// activity, destination and walking; (2) needs, meals, work, memories, mood and stress.
+// activity, destination and walking; (2) work, needs, meals, memories, mood and stress. Once a
+// day, at the first block, the steward (work.ts) hands out the day's jobs.
 
 import { DAYS_PER_YEAR, MONTHS_PER_YEAR, dateOf } from '../core/clock';
 import { createEmitter, type EmitInput } from '../core/context';
 import {
+  ACTIVITIES,
   DAY_BLOCKS,
   type Activity,
   type BreakdownKind,
+  type JobDef,
   type MemoryDef,
   type RaceDef,
   type TraitDef,
@@ -30,10 +33,18 @@ import type {
   SimEvent,
   WorldState,
 } from '../core/types';
-import { bandOfAge, type SiteContent } from './defs';
-import { findRoute, tileCost } from './path';
-
-type Band = 'child' | 'adult' | 'elder';
+import { bandOfAge, type Band, type SiteContent } from './defs';
+import { findRoute, tileCost, walkAlong } from './path';
+import { foodMeals, takeFood } from './stock';
+import {
+  residentItems,
+  runSteward,
+  runWork,
+  theftTarget,
+  transferItem,
+  workTile,
+  type CrewMember,
+} from './work';
 
 /** Per-person facts that do not change while the site runs. */
 interface Profile {
@@ -60,6 +71,16 @@ interface Profile {
   shrine: number;
   stockpile: number;
   wander: number;
+  /** This block: the job they were given today, and the tile they work it at (-1: none). */
+  job: JobDef | undefined;
+  workTile: number;
+  /** The work tile last looked up, and for which job, layout version and day (construction moves daily). */
+  tileJob: JobDef | undefined;
+  tileVersion: number;
+  tileDay: number;
+  tileAt: number;
+  /** A theft breakdown that takes an item rather than food. */
+  itemTheft: boolean;
   /** This block: where they stand after walking. */
   tile: number;
   placeId: Id | null;
@@ -71,6 +92,11 @@ interface Profile {
 
 /** Lookups derived once per watched site; never saved (they rebuild from the state). */
 interface SiteCache {
+  jobs: Map<string, JobDef>;
+  /** Per activity: what it restores of each need (`content.needs` order); NaN where it restores none. */
+  restore: Map<string, Float64Array>;
+  /** The `layoutVersion` the profiles were built for; a change means rebuild. */
+  version: number;
   profiles: Profile[];
   byId: Map<Id, Profile>;
   memoryDefs: Map<string, MemoryDef>;
@@ -83,10 +109,8 @@ interface SiteCache {
   ateIn: Int32Array;
   /** Residents outdoors on each tile this block. */
   outdoors: Int32Array;
-  /** Food one average resident eats at a meal. */
+  /** Meals one average resident eats at a meal. */
   meal: number;
-  /** Food one full work block in a field brings in (placeholder until M3.3 jobs). */
-  workYield: number;
 }
 
 const caches = new WeakMap<ActiveSite, SiteCache>();
@@ -131,20 +155,6 @@ export function siteTemperature(world: WorldState, content: SiteContent, day: nu
   const gap = Math.abs(dateOf(day).month - content.life.warmth.coldestMonth);
   const w = 1 - Math.min(gap, MONTHS_PER_YEAR - gap) / half;
   return summer + (winter - summer) * w;
-}
-
-/** Days the stores feed the followed residents at one meal a day; Infinity when nobody eats. */
-export function foodDaysLeft(world: WorldState, content: SiteContent): number {
-  const active = world.activeSite;
-  if (!active) return Infinity;
-  const races = new Map(content.races.map((r) => [r.id, r]));
-  let perDay = 0;
-  for (const id of active.residents) {
-    const person = world.people.get(id);
-    const race = person && races.get(person.raceId);
-    if (race) perDay += race.foodNeed * content.life.mealShare;
-  }
-  return perDay > 0 ? (active.stock.get('food') ?? 0) / perDay : Infinity;
 }
 
 function interiorSpot(b: Building, index: number, width: number): number {
@@ -239,6 +249,13 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
       shrine: shrine ? cellOf(shrine, id, 6) : green,
       stockpile: stockpile ? cellOf(stockpile, id, 7) : green,
       wander: wander < 0 ? green : wander,
+      job: undefined,
+      workTile: -1,
+      tileJob: undefined,
+      tileVersion: -1,
+      tileDay: -1,
+      tileAt: -1,
+      itemTheft: false,
       tile: 0,
       placeId: null,
       band: 'adult',
@@ -247,32 +264,13 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
     });
   }
   let meal = 0;
-  for (const p of profiles) meal += p.race.foodNeed * life.mealShare;
-  // Until M3.3 brings jobs, the fields bring in what history's harvest would in a normal year
-  // (harvest.ts: min(pop × workerOutput, capacity) × need / pop), for the followed share, spread
-  // over the work blocks the schedule expects in a year, weighted by age band.
-  let need = 0;
-  let pop = 0;
-  for (const b of site?.pop ?? []) {
-    pop += b.count;
-    need += b.count * (races.get(b.raceId)?.foodNeed ?? 1);
-  }
-  const harvest =
-    pop > 0 && site
-      ? ((Math.min(pop * content.history.workerOutput, site.capacity) * need) / pop) * active.share
-      : 0;
-  let blocksPerYear = 0;
-  for (const p of profiles) {
-    const band = bandOfAge(p.race, world.params.historyYears - p.person.born);
-    for (const block of DAY_BLOCKS) {
-      if (life.schedule[band][block] !== 'work') continue;
-      // Rest days turn the afternoon to worship or company.
-      const days =
-        block === 'afternoon' ? DAYS_PER_YEAR * (1 - 1 / life.restDayEvery) : DAYS_PER_YEAR;
-      blocksPerYear += days * life.workOutput[band];
-    }
-  }
+  for (const p of profiles) meal += p.race.foodNeed;
   return {
+    version: active.layoutVersion,
+    jobs: new Map(content.jobs.map((j) => [j.id, j])),
+    restore: new Map(
+      ACTIVITIES.map((a) => [a, Float64Array.from(content.needs, (n) => n.restore[a] ?? NaN)]),
+    ),
     profiles,
     byId: new Map(profiles.map((p) => [p.id, p])),
     memoryDefs: new Map(content.memories.map((m) => [m.id, m])),
@@ -283,7 +281,6 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
     ateIn: new Int32Array(Math.max(0, ...active.buildings.keys()) + 1),
     outdoors: new Int32Array(map.width * map.height),
     meal: profiles.length > 0 ? meal / profiles.length : 0,
-    workYield: blocksPerYear > 0 ? harvest / blocksPerYear : 0,
   };
 }
 
@@ -334,13 +331,70 @@ function tileOf(detail: PersonDetail, width: number): number {
   return y * width + x;
 }
 
+/** Sums a resident's mood from low needs, memories and traits, then moves their stress. */
+function settleMood(p: Profile, content: SiteContent, day: number): void {
+  const { life } = content;
+  const detail = p.person.detail!;
+  // Memories fade; the gone ones are dropped before the sum.
+  const memories = detail.memories;
+  let kept = 0;
+  for (let i = 0; i < memories.length; i += 1) {
+    const m = memories[i]!;
+    if (day - m.createdDay < m.decayDays) memories[kept++] = m;
+  }
+  memories.length = kept;
+  const parts: MoodPart[] = [];
+  let mood = 0;
+  for (const need of content.needs) {
+    const value = detail.needs[need.id];
+    if (value === undefined || value >= need.lowAt) continue;
+    const part = round1((need.moodAtZero * (need.lowAt - value)) / need.lowAt);
+    if (part !== 0) parts.push({ kind: 'need', id: need.id, value: part });
+    mood += part;
+  }
+  for (const m of detail.memories) {
+    const part = round1(memoryMood(m, day));
+    if (part === 0) continue;
+    const entry: MoodPart = { kind: 'memory', id: m.type, value: part };
+    if (m.about !== undefined) entry.about = m.about;
+    parts.push(entry);
+    mood += part;
+  }
+  for (const t of p.traits) {
+    if (t.mood === 0) continue;
+    parts.push({ kind: 'trait', id: t.id, value: t.mood });
+    mood += t.mood;
+  }
+  detail.moodParts = parts;
+  detail.mood = Math.round(clamp(mood, -MAX_MOOD, MAX_MOOD));
+  if (detail.mood < life.stressBelow) {
+    detail.stress += ((life.stressBelow - detail.mood) * life.stressRise) / BLOCKS;
+  } else if (detail.mood > 0) {
+    detail.stress -= Math.max(detail.mood * life.stressFall, life.stressFloorFall) / BLOCKS;
+  }
+  detail.stress = clamp(detail.stress, 0, MAX_STRESS);
+  // A tantrum or theft is over with the block.
+  const bd = detail.breakdown;
+  if (bd && (bd.kind === 'tantrum' || bd.kind === 'theft')) detail.breakdown = undefined;
+}
+
+/** The lookups for the site as it stands: rebuilt when buildings or the map changed. */
+function cacheFor(world: WorldState, content: SiteContent, active: ActiveSite): SiteCache {
+  let cache = caches.get(active);
+  if (!cache || cache.version !== active.layoutVersion) {
+    cache = buildCache(world, content, active);
+    caches.set(active, cache);
+  }
+  return cache;
+}
+
 /** Runs one block of the watched site. After the evening block the day advances. */
 export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   const active = world.activeSite;
   if (!active) throw new Error('No watched site.');
-  const cache = caches.get(active) ?? buildCache(world, content, active);
-  caches.set(active, cache);
-  const { life, site: rules } = content;
+  // Buildings or the map changed since the profiles were built (a home finished): rebuild them.
+  const cache = cacheFor(world, content, active);
+  const { life, site: rules, steward } = content;
   const first = world.events.length;
   const day = world.day;
   const block = active.block;
@@ -366,9 +420,13 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     const detail = p.person.detail!;
     let kind: BreakdownKind =
       p.band === 'child' ? life.childBreakdown : (p.breakdownKind ?? life.defaultBreakdown);
-    const foodMeal = p.race.foodNeed * life.mealShare;
-    // With the stores too thin to steal from, a thief just rages.
-    if (kind === 'theft' && (active.stock.get('food') ?? 0) < life.theftMeals * foodMeal) {
+    // A thief goes for a treasure someone holds before the stores; with neither within reach, rages.
+    const prize = kind === 'theft' ? theftTarget(world, content, active, p.id) : undefined;
+    if (
+      kind === 'theft' &&
+      !prize &&
+      foodMeals(active, content) < life.theftMeals * p.race.foodNeed
+    ) {
       kind = 'tantrum';
     }
     const causes = new Set<Id>();
@@ -379,7 +437,18 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     if (active.storesEmptyEvent !== null && food && (detail.needs[food.id] ?? 100) < food.lowAt) {
       causes.add(active.storesEmptyEvent);
     }
-    const event = emit(life.events[kind], p, [...causes]);
+    let event: SimEvent;
+    if (prize) {
+      event = cache.emit({
+        type: steward.events.itemStolen,
+        actors: [p.id, prize.holder],
+        place: cell,
+        causes: [...causes],
+        data: { site: cache.siteName, item: prize.item.name },
+      });
+      transferItem(content, active, prize.item, p.id, event.id);
+      p.itemTheft = true;
+    } else event = emit(life.events[kind], p, [...causes]);
     const days =
       kind === 'despair'
         ? rng.between(life.despairDays[0], life.despairDays[1])
@@ -430,6 +499,7 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     const detail = p.person.detail!;
     p.age = history - p.person.born + yearsIn;
     p.band = bandOfAge(p.race, p.age);
+    p.itemTheft = false;
     const running = detail.breakdown;
     if (
       running &&
@@ -437,12 +507,25 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       running.kind !== 'tantrum' &&
       running.kind !== 'theft'
     ) {
-      delete detail.breakdown;
+      detail.breakdown = undefined;
       // Despair just lifts; a wanderer is back, which is news.
       if (running.kind === 'wandering') emit(life.events.returned, p, [running.eventId]);
     }
     if (detail.breakdown || detail.stress < life.breakdownAt * p.breakdownMul) continue;
     startBreakdown(p);
+  }
+
+  // The steward hands out the day's jobs before anyone sets out.
+  if (block === 0) {
+    runSteward(world, content, active, profiles, cache.emit, { name: cache.siteName, cell });
+    // A building begun just now may be stood in this block. No household moves until it is
+    // finished, so the profiles stay as they are.
+    if (cache.version !== active.layoutVersion) {
+      const slots = Math.max(0, ...active.buildings.keys()) + 1;
+      cache.inside = new Int32Array(slots);
+      cache.ateIn = new Int32Array(slots);
+      cache.version = active.layoutVersion;
+    }
   }
 
   // Pass 1: activity, destination, walking.
@@ -460,12 +543,14 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   const carried: Profile[] = [];
   for (const p of profiles) {
     const detail = p.person.detail!;
+    p.job = detail.jobId === undefined ? undefined : cache.jobs.get(detail.jobId);
+    p.workTile = -1;
     // Small children go where their carer goes, once the grown-ups have moved.
     if (p.age < life.carriedUnder && carerOf(p)) {
       carried.push(p);
       continue;
     }
-    delete detail.with;
+    detail.with = undefined;
     const bd = detail.breakdown;
     let activity: Activity;
     if (bd?.kind === 'despair') activity = block === 0 ? 'sleep' : 'despair';
@@ -476,6 +561,20 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       activity = p.faithful ? life.restDayAfternoon.faithful : life.restDayAfternoon.others;
     } else activity = life.schedule[p.band][DAY_BLOCKS[block]!];
     detail.activity = activity;
+    if (activity === 'work' && p.job) {
+      const job = p.job;
+      if (
+        p.tileJob !== job ||
+        p.tileVersion !== active.layoutVersion ||
+        (job.workplace === 'construction' && p.tileDay !== day)
+      ) {
+        p.tileJob = job;
+        p.tileVersion = active.layoutVersion;
+        p.tileDay = day;
+        p.tileAt = workTile(content, active, p, job);
+      }
+      p.workTile = p.tileAt;
+    }
     const from = tileOf(detail, width);
     const to =
       activity === 'tantrum'
@@ -485,7 +584,9 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
           : activity === 'sleep' || activity === 'despair'
             ? p.home
             : activity === 'work'
-              ? p.field
+              ? p.workTile >= 0
+                ? p.workTile
+                : p.field
               : activity === 'worship'
                 ? p.shrine
                 : activity === 'wander'
@@ -496,13 +597,8 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     let tile = from;
     if (to !== from) {
       const route = findRoute(active, rules, life, from, to, budget);
-      let spent = 0;
-      for (const step of route ?? []) {
-        const cost = Math.max(1, tileCost(active, rules, life, step));
-        if (spent + cost > life.walkPerBlock) break;
-        spent += cost;
-        tile = step;
-      }
+      const reached = route ? walkAlong(active, rules, life, route, life.walkPerBlock) : -1;
+      if (reached >= 0) tile = reached;
       if (tile !== from) detail.pos = [tile % width, Math.floor(tile / width)];
     }
     standAt(p, tile);
@@ -520,13 +616,27 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     standAt(p, tile);
   }
 
-  // Pass 2: needs, meals, work, memories, mood, stress.
+  // Pass 2: work, needs, meals, memories, mood, stress.
   cache.ateIn.fill(0);
+  // Whoever stands at their workplace works (builds, hauls or makes items, and learns).
+  const crew: CrewMember[] = [];
+  for (const p of profiles) {
+    if (p.job && p.person.detail!.activity === 'work' && p.workTile >= 0 && p.tile === p.workTile) {
+      crew.push({ id: p.id, person: p.person, band: p.band, traits: p.traits, job: p.job });
+    }
+  }
+  const liked = runWork(world, content, active, crew, cache.emit, {
+    name: cache.siteName,
+    cell,
+  });
   const temperature = siteTemperature(world, content, day);
   const coldLoss =
     clamp((life.warmth.comfortC - temperature) * life.warmth.perDegree, 0, life.warmth.maxPerDay) /
     BLOCKS;
-  const food = (): number => active.stock.get('food') ?? 0;
+  const food = (): number => foodMeals(active, content);
+  // Warmth is the one need whose decay follows the day's temperature.
+  const nNeeds = content.needs.length;
+  const decays = content.needs.map((n) => (n.id === 'warmth' ? coldLoss : n.decayPerDay / BLOCKS));
   const checkStores = () => {
     if (active.storesEmptyEvent === null && food() < cache.meal) {
       active.storesEmptyEvent = cache.emit({
@@ -557,11 +667,13 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     const activity = detail.activity!;
     const atHome = p.placeId !== null && p.placeId === p.homeId;
     const needs = detail.needs;
-    const meal = p.race.foodNeed * life.mealShare;
+    const meal = p.race.foodNeed;
     let fed = false;
     if (activity === 'eat') {
       if (food() >= meal) {
-        active.stock.set('food', food() - meal);
+        const { taken, cooked } = takeFood(active, content, meal, true);
+        // A meal that was mostly cooked is remembered.
+        if (cooked * 2 >= taken) add(p, life.memoryOf.ateWell);
         fed = true;
         p.ate = true;
         detail.lastAte = day;
@@ -572,25 +684,21 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
         add(p, life.memoryOf.hungry, undefined, active.storesEmptyEvent ?? undefined);
       }
     } else if (activity === 'steal') {
-      const take = Math.min(food(), life.theftMeals * meal);
-      active.stock.set('food', food() - take);
-      fed = true;
-      checkStores();
-    } else if (activity === 'work' && p.placeId !== null) {
-      // Placeholder until M3.3 jobs: a block in a field brings in its share of the harvest.
-      if (active.buildings.get(p.placeId)?.defId === 'field') {
-        active.stock.set('food', food() + cache.workYield * life.workOutput[p.band]);
+      // A thief after a treasure leaves the stores alone and goes hungry still.
+      if (!p.itemTheft) {
+        takeFood(active, content, life.theftMeals * meal, false);
+        fed = true;
       }
+      checkStores();
     }
-    for (let j = 0; j < content.needs.length; j += 1) {
+    const restoreRow = cache.restore.get(activity)!;
+    for (let j = 0; j < nNeeds; j += 1) {
       const need = content.needs[j]!;
       let value = needs[need.id];
       if (value === undefined) continue;
-      // Warmth is the one need whose decay follows the day's temperature.
-      const decay = need.id === 'warmth' ? coldLoss : need.decayPerDay / BLOCKS;
-      value -= decay * p.rates[j]!;
-      const restore = need.restore[activity];
-      if (restore !== undefined && (need.id !== 'food' || fed)) {
+      value -= decays[j]! * p.rates[j]!;
+      const restore = restoreRow[j]!;
+      if (restore === restore && (need.id !== 'food' || fed)) {
         const gain =
           !need.needsCompany || hasCompany(p) ? restore * (atHome ? 1 : need.awayShare) : 0;
         if (gain > 0) {
@@ -599,52 +707,34 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
           (detail.lastMet ??= {})[need.id] = day;
         }
       }
+      // Work at a job they like feeds the purpose need more.
+      if (need.id === 'purpose' && liked.has(p.id)) value += steward.likedPurpose;
       needs[need.id] = clamp(value, 0, 100);
     }
     if (activity === 'sleep' && !atHome) add(p, life.memoryOf.sleptRough);
     if (activity === 'worship') add(p, life.memoryOf.worshipped);
   }
+  // Evening: a cursed heirloom troubles its holder, a treasure is envied at the table.
+  if (block === BLOCKS - 1) {
+    for (const held of residentItems(world, content, active)) {
+      const holder = cache.byId.get(held.holder);
+      if (!holder) continue;
+      if (held.def.downsides?.includes('curse')) add(holder, life.memoryOf.cursed);
+      if (!held.def.downsides?.includes('envy') || !holder.ate || holder.placeId === null) continue;
+      for (const q of profiles) {
+        if (q === holder || !q.ate || q.placeId !== holder.placeId) continue;
+        if (q.traits.some((t) => t.id === steward.envyTrait)) {
+          add(q, life.memoryOf.envied, holder.id);
+        }
+      }
+    }
+  }
   for (const p of profiles) {
-    const detail = p.person.detail!;
     if (p.ate && p.placeId !== null && cache.ateIn[p.placeId]! > 1) {
       add(p, life.memoryOf.ateTogether);
     }
     p.ate = false;
-    // Memories fade; the gone ones are dropped before the sum.
-    detail.memories = detail.memories.filter((m) => day - m.createdDay < m.decayDays);
-    const parts: MoodPart[] = [];
-    let mood = 0;
-    for (const need of content.needs) {
-      const value = detail.needs[need.id];
-      if (value === undefined || value >= need.lowAt) continue;
-      const part = round1((need.moodAtZero * (need.lowAt - value)) / need.lowAt);
-      if (part !== 0) parts.push({ kind: 'need', id: need.id, value: part });
-      mood += part;
-    }
-    for (const m of detail.memories) {
-      const part = round1(memoryMood(m, day));
-      if (part === 0) continue;
-      const entry: MoodPart = { kind: 'memory', id: m.type, value: part };
-      if (m.about !== undefined) entry.about = m.about;
-      parts.push(entry);
-      mood += part;
-    }
-    for (const t of p.traits) {
-      if (t.mood === 0) continue;
-      parts.push({ kind: 'trait', id: t.id, value: t.mood });
-      mood += t.mood;
-    }
-    detail.moodParts = parts;
-    detail.mood = Math.round(clamp(mood, -MAX_MOOD, MAX_MOOD));
-    if (detail.mood < life.stressBelow) {
-      detail.stress += ((life.stressBelow - detail.mood) * life.stressRise) / BLOCKS;
-    } else if (detail.mood > 0) {
-      detail.stress -= Math.max(detail.mood * life.stressFall, life.stressFloorFall) / BLOCKS;
-    }
-    detail.stress = clamp(detail.stress, 0, MAX_STRESS);
-    // A tantrum or theft is over with the block.
-    const bd = detail.breakdown;
-    if (bd && (bd.kind === 'tantrum' || bd.kind === 'theft')) delete detail.breakdown;
+    settleMood(p, content, day);
     if (p.placeId === null) cache.outdoors[p.tile] = 0;
   }
   // The stores count as refilled once they cover three meals for everyone.
@@ -659,6 +749,14 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   return world.events.slice(first);
 }
 
+/** The map layers that change when buildings go up: sent only when `layoutVersion` moves. */
+export interface SiteMapSnapshot {
+  terrain: Uint8Array;
+  tree: Uint8Array;
+  building: Uint16Array;
+  bridges: number[];
+}
+
 /** What the main thread needs after each tick to mirror the running site (M3.1 loose end). */
 export interface SiteSnapshot {
   day: number;
@@ -666,24 +764,52 @@ export interface SiteSnapshot {
   stock: [string, number][];
   storesEmptyEvent: Id | null;
   people: [Id, PersonDetail][];
+  /** M3.3: skills by person, the buildings and which home each household has. */
+  skills: [Id, Record<string, number>][];
+  buildings: Building[];
+  homes: [Id, Id | null][];
+  layoutVersion: number;
+  /** The steward's top concern (see `ActiveSite.stewardFocus`). */
+  stewardFocus: string | null;
+  /** World items at the site and who holds each now. */
+  items: [Id, Id | null][];
+  /** Present only when `layoutVersion` differs from the version the caller last received. */
+  map?: SiteMapSnapshot;
 }
 
-/** The snapshot holds references; posting it to the main thread clones it. */
-export function siteSnapshot(world: WorldState): SiteSnapshot {
+/**
+ * The snapshot holds references; posting it to the main thread clones it. Pass the
+ * `layoutVersion` of the last snapshot sent to leave out the map layers when they are unchanged.
+ */
+export function siteSnapshot(world: WorldState, sentVersion?: number): SiteSnapshot {
   const active = world.activeSite;
   if (!active) throw new Error('No watched site.');
   const people: [Id, PersonDetail][] = [];
+  const skills: [Id, Record<string, number>][] = [];
   for (const id of active.residents) {
-    const detail = world.people.get(id)?.detail;
-    if (detail) people.push([id, detail]);
+    const person = world.people.get(id);
+    if (!person?.detail) continue;
+    people.push([id, person.detail]);
+    skills.push([id, person.skills]);
   }
-  return {
+  const snapshot: SiteSnapshot = {
     day: world.day,
     block: active.block,
     stock: [...active.stock],
     storesEmptyEvent: active.storesEmptyEvent,
     people,
+    skills,
+    buildings: [...active.buildings.values()],
+    homes: [...active.households.values()].map((h) => [h.id, h.home]),
+    layoutVersion: active.layoutVersion,
+    stewardFocus: active.stewardFocus,
+    items: active.itemsAtEntry.map(([id]) => [id, world.items.get(id)?.holder ?? null]),
   };
+  if (sentVersion !== active.layoutVersion) {
+    const { terrain, tree, building, bridges } = active.map;
+    snapshot.map = { terrain, tree, building, bridges };
+  }
+  return snapshot;
 }
 
 /** Copies a snapshot into a world copy (the main thread's mirror). */
@@ -697,5 +823,24 @@ export function applySiteSnapshot(world: WorldState, snapshot: SiteSnapshot): vo
   for (const [id, detail] of snapshot.people) {
     const person = world.people.get(id);
     if (person) person.detail = detail;
+  }
+  for (const [id, skills] of snapshot.skills) {
+    const person = world.people.get(id);
+    if (person) person.skills = skills;
+  }
+  active.buildings = new Map(snapshot.buildings.map((b) => [b.id, b]));
+  for (const [id, home] of snapshot.homes) {
+    const household = active.households.get(id);
+    if (household) household.home = home;
+  }
+  active.layoutVersion = snapshot.layoutVersion;
+  active.stewardFocus = snapshot.stewardFocus;
+  for (const [id, holder] of snapshot.items) {
+    const item = world.items.get(id);
+    if (item) item.holder = holder;
+  }
+  if (snapshot.map) {
+    const { terrain, tree, building, bridges } = snapshot.map;
+    Object.assign(active.map, { terrain, tree, building, bridges });
   }
 }

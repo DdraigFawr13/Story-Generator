@@ -10,6 +10,8 @@ import { BIRTH_TIER_IDS, TIERS, tierOfPower } from '../people/tiers';
 /** Every event type needs this many template variants (§2B). */
 const MIN_TEMPLATES = 3;
 /** Placeholders the narrator fills for every event. */
+/** No item may add more than this to a person's power (the scale ceiling, R-24). */
+const MAX_ITEM_POWER = 20;
 const ALWAYS_KEYS = ['date', 'year', 'actor', 'actor2', 'actor3'];
 
 function templateKeys(template: string | undefined): string[] {
@@ -92,6 +94,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...notableProblems(content));
   problems.push(...siteProblems(content));
   problems.push(...lifeProblems(content));
+  problems.push(...workProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -511,9 +514,21 @@ export function siteProblems(content: ContentBundle): string[] {
     'shrine',
     'field',
     'dock',
+    'workshop',
+    'wall',
   ]);
+  const buildingIds = new Set<string>();
+  const itemIds = new Set((content.items ?? []).map((i) => i.id));
   for (const b of rules.buildings) {
+    if (buildingIds.has(b.id)) problems.push(`Site building ${b.id}: duplicate id.`);
+    buildingIds.add(b.id);
     if (b.w < 1 || b.h < 1) problems.push(`Site building ${b.id}: bad size.`);
+    for (const item of Object.keys(b.cost ?? {})) {
+      if (!itemIds.has(item))
+        problems.push(`Site building ${b.id}: cost names unknown item "${item}".`);
+    }
+    if (b.buildable && !(b.work && b.work > 0))
+      problems.push(`Site building ${b.id}: buildable needs work.`);
   }
   const eventIds = new Set(content.eventTypes.map((e) => e.id));
   if (!eventIds.has('outpost_founded'))
@@ -576,6 +591,78 @@ export function lifeProblems(content: ContentBundle): string[] {
   for (const [key, activity] of Object.entries(life.restDayAfternoon)) {
     if (!valid(activity))
       problems.push(`Life restDayAfternoon.${key}: unknown activity "${activity}".`);
+  }
+  return problems;
+}
+
+/** Items, jobs and the steward: unique ids, known abilities, items, goods, buildings and events. */
+export function workProblems(content: ContentBundle): string[] {
+  const { items, jobs, steward } = content;
+  if (!items || !jobs || !steward) return ['Content has no work tables.'];
+  const problems: string[] = [];
+  const itemIds = new Set<string>();
+  const abilityIds = new Set(content.abilities.map((a) => a.id));
+  const covered = new Set<string>();
+  for (const item of items) {
+    if (itemIds.has(item.id)) problems.push(`Item ${item.id}: duplicate id.`);
+    itemIds.add(item.id);
+    if (!(GOODS as readonly string[]).includes(item.good))
+      problems.push(`Item ${item.id}: unknown good "${item.good}".`);
+    if (!(item.per > 0)) problems.push(`Item ${item.id}: per must be positive.`);
+    for (const form of item.forms ?? []) covered.add(form);
+    for (const effect of item.effects ?? []) {
+      if (effect.kind === 'power' && effect.bonus > MAX_ITEM_POWER)
+        problems.push(`Item ${item.id}: power bonus ${effect.bonus} is over ${MAX_ITEM_POWER}.`);
+      if (effect.kind === 'ability' && !abilityIds.has(effect.abilityId))
+        problems.push(`Item ${item.id}: unknown ability "${effect.abilityId}".`);
+    }
+  }
+  const forms = [
+    ...content.notables.artifactForms,
+    ...Object.values(content.notables.bookForms).flat(),
+  ];
+  for (const form of forms) {
+    if (!covered.has(form)) problems.push(`No item entry covers the form "${form}".`);
+  }
+  const jobIds = new Set<string>();
+  for (const job of jobs) {
+    if (jobIds.has(job.id)) problems.push(`Job ${job.id}: duplicate id.`);
+    jobIds.add(job.id);
+    if (job.skill !== undefined && !abilityIds.has(job.skill))
+      problems.push(`Job ${job.id}: unknown skill "${job.skill}".`);
+    for (const id of [...Object.keys(job.inputs ?? {}), ...Object.keys(job.outputs ?? {})]) {
+      if (!itemIds.has(id)) problems.push(`Job ${job.id}: unknown item "${id}".`);
+    }
+  }
+  for (const id of Object.keys(steward.materialTargets)) {
+    if (!itemIds.has(id)) problems.push(`Steward materialTargets: unknown item "${id}".`);
+  }
+  const buildingIds = new Set(content.site.buildings.map((b) => b.id));
+  for (const id of [steward.homeBuilding, steward.workshopBuilding]) {
+    if (!buildingIds.has(id)) problems.push(`Steward: unknown building "${id}".`);
+  }
+  for (const [role, id] of Object.entries(steward.roles)) {
+    if (!jobIds.has(id)) problems.push(`Steward roles.${role}: unknown job "${id}".`);
+  }
+  for (const [good, id] of Object.entries(steward.startItems)) {
+    const item = items.find((i) => i.id === id);
+    if (!item || item.good !== good)
+      problems.push(`Steward startItems.${good}: "${id}" is not an item of that good.`);
+  }
+  for (const id of [...Object.keys(steward.repairCost)]) {
+    if (!itemIds.has(id)) problems.push(`Steward repairCost: unknown item "${id}".`);
+  }
+  const traitIds = new Set(content.traits.map((t) => t.id));
+  for (const job of jobs) {
+    for (const trait of job.likedBy ?? []) {
+      if (!traitIds.has(trait))
+        problems.push(`Job ${job.id}: likedBy names unknown trait "${trait}".`);
+    }
+  }
+  if (!traitIds.has(steward.envyTrait)) problems.push(`Steward: unknown envyTrait.`);
+  const eventIds = new Set(content.eventTypes.map((e) => e.id));
+  for (const [key, id] of Object.entries(steward.events)) {
+    if (!eventIds.has(id)) problems.push(`Steward events.${key}: unknown event type "${id}".`);
   }
   return problems;
 }

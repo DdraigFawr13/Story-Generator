@@ -18,6 +18,9 @@ import { cultureGivenName } from '../people/names';
 import { ageBands, bandOfAge, type SiteContent } from './defs';
 import { layoutSite } from './layout';
 import { buildLocalMap } from './localmap';
+import { goodAmount } from './stock';
+import { seedSkills } from './work';
+import { hash2 } from '../worldgen/noise';
 
 /** Chance a generated adult has a spouse here (the rest are single or widowed). */
 const MARRIED_CHANCE = 0.8;
@@ -29,8 +32,8 @@ const NAME_TRIES = 12;
 const MOTHER_MIN_AFTER_MATURITY = 2;
 /** Chance a resident gets a second trait. */
 const SECOND_TRAIT_CHANCE = 0.5;
-/** Condition (0-100) of the buildings at the start. */
-const START_CONDITION = 100;
+/** Buildings start between this condition and 100, by a hash of their id (some need repair soon). */
+const MIN_START_CONDITION = 55;
 
 interface Resident {
   person: Person;
@@ -346,6 +349,11 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
   });
   const buildings = new Map<Id, Building>();
   for (const b of layout.buildings) buildings.set(b.id, b);
+  for (const b of layout.buildings) {
+    if (b.defId === 'field') continue;
+    b.condition =
+      MIN_START_CONDITION + (hash2(map.cellX, map.cellY, b.id) % (101 - MIN_START_CONDITION));
+  }
   const hall = layout.buildings.find((b) => b.defId === 'hall');
   const homes = layout.buildings.filter((b) => b.defId === 'home');
   let nextHome = 0;
@@ -353,7 +361,6 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
     const home = h === hallHousehold && hall ? hall : homes[nextHome++];
     if (!home) continue;
     home.owner = h.head;
-    home.condition = START_CONDITION;
     h.home = home.id;
   }
 
@@ -419,13 +426,28 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
     }
   }
 
-  // Stock: each good scaled by the followed share.
+  // Stock: each good becomes its starting item, scaled by the followed share, in whole items.
+  const { items, steward } = content;
   const stock = new Map<string, number>();
-  const stockAtEntry: Record<string, number> = {};
   for (const good of GOODS) {
-    const count = Math.round(site.goods[good] * share);
-    stock.set(good, count);
-    stockAtEntry[good] = count;
+    const def = items.find((i) => i.id === steward.startItems[good])!;
+    stock.set(def.id, Math.round((site.goods[good] * share) / def.per));
+  }
+  // Everyone grown starts with a tool, made from the site's ore.
+  const toolDef = items.find((i) => i.kind === 'tool');
+  const oreDef = items.find((i) => i.id === steward.startItems.ore);
+  const tools = [...residents.values()].filter(isAdult).length;
+  if (toolDef && oreDef) {
+    stock.set(toolDef.id, tools);
+    stock.set(
+      oreDef.id,
+      Math.max(0, (stock.get(oreDef.id) ?? 0) - Math.round((tools * toolDef.per) / oreDef.per)),
+    );
+  }
+  const itemsAtEntry: [Id, Id | null][] = [];
+  for (const item of world.items.values()) {
+    if (item.holder !== null && residents.has(item.holder))
+      itemsAtEntry.push([item.id, item.holder]);
   }
   const active: ActiveSite = {
     siteId,
@@ -438,11 +460,16 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
     stock,
     share,
     goodsAtEntry: { ...site.goods },
-    stockAtEntry,
+    stockAtEntry: {},
     origin: layout.origin,
     block: 0,
     storesEmptyEvent: null,
+    layoutVersion: 0,
+    itemsAtEntry,
+    stewardFocus: null,
   };
+  for (const good of GOODS) active.stockAtEntry[good] = goodAmount(active, content, good);
   world.activeSite = active;
+  seedSkills(world, content, active);
   return active;
 }

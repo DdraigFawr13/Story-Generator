@@ -4,7 +4,7 @@
 import type { SiteRules } from '../core/content-types';
 import type { Building, LocalMap } from '../core/types';
 import { hash2 } from '../worldgen/noise';
-import { buildingDef, siteCodes } from './defs';
+import { buildingDef, siteCodes, type SiteCodes } from './defs';
 
 export interface LayoutInput {
   /** Whole site population, followed or counted: sets the number of homes and fields. */
@@ -32,6 +32,131 @@ const FIELD_MIN_RING = 14;
 /** Rings searched before giving up on a building. */
 const MAX_RING = 60;
 
+/** True when a w x h footprint at (x, y), padded by `pad`, is clear building land. */
+function isFree(
+  map: LocalMap,
+  code: SiteCodes,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  pad: number,
+) {
+  const size = map.width;
+  const { terrain, building, mineral, water } = map;
+  for (let yy = y - pad; yy < y + h + pad; yy += 1) {
+    for (let xx = x - pad; xx < x + w + pad; xx += 1) {
+      if (xx < 1 || yy < 1 || xx >= size - 1 || yy >= size - 1) return false;
+      const k = yy * size + xx;
+      const inside = yy >= y && yy < y + h && xx >= x && xx < x + w;
+      // A path may run along the padding but not under the building.
+      if (terrain[k] === code.path && !inside && water[k] === 0) continue;
+      if (building[k] || water[k] !== 0 || mineral[k]) return false;
+      if (terrain[k] !== code.grass && terrain[k] !== code.scrub) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * The top-left corner for a building, searched in rings around `origin` from `minRing` outward
+ * (positions within a ring in a fixed hashed order); null when the map has no room.
+ */
+export function findSpot(
+  map: LocalMap,
+  rules: SiteRules,
+  defId: string,
+  origin: readonly [number, number],
+  minRing: number,
+  pad: number,
+): [number, number] | null {
+  const code = siteCodes(rules);
+  const seed = hash2(map.cellX, map.cellY, map.width);
+  const [ox, oy] = origin;
+  const { w, h } = buildingDef(rules, defId);
+  for (let r = minRing; r < MAX_RING; r += 1) {
+    const ring: [number, number][] = [];
+    for (let dy = -r; dy <= r; dy += 1) {
+      for (let dx = -r; dx <= r; dx += 1) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) === r) {
+          ring.push([ox + dx - (w >> 1), oy + dy - (h >> 1)]);
+        }
+      }
+    }
+    ring.sort((a, b) => hash2(seed + 71 + r, a[0], a[1]) - hash2(seed + 71 + r, b[0], b[1]));
+    for (const [x, y] of ring) if (isFree(map, code, x, y, w, h, pad)) return [x, y];
+  }
+  return null;
+}
+
+/** Writes a building into the map (terrain, building ids, trees cleared) and returns it. */
+export function stampBuilding(
+  map: LocalMap,
+  rules: SiteRules,
+  id: number,
+  defId: string,
+  x: number,
+  y: number,
+  followed = true,
+): Building {
+  const code = siteCodes(rules);
+  const { w, h } = buildingDef(rules, defId);
+  const size = map.width;
+  const cells: number[] = [];
+  for (let yy = y; yy < y + h; yy += 1) {
+    for (let xx = x; xx < x + w; xx += 1) {
+      const k = yy * size + xx;
+      cells.push(k);
+      map.building[k] = id;
+      map.tree[k] = 0;
+      const edge = yy === y || yy === y + h - 1 || xx === x || xx === x + w - 1;
+      if (defId === 'field') map.terrain[k] = code.field;
+      else if (defId === 'home' || defId === 'hall') map.terrain[k] = edge ? code.wall : code.floor;
+      else if (defId === 'wall') map.terrain[k] = code.wall;
+      else map.terrain[k] = code.floor;
+    }
+  }
+  return { id, defId, cells, owner: null, condition: 100, x, y, w, h, followed };
+}
+
+/**
+ * Carves a path from (x0, y0) toward (x1, y1), one step at a time, bridging rivers; with
+ * `stopAtPath` it ends where it meets another path.
+ */
+export function carvePath(
+  map: LocalMap,
+  rules: SiteRules,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  stopAtPath: boolean,
+) {
+  const code = siteCodes(rules);
+  const size = map.width;
+  const { terrain, tree, building, water } = map;
+  const seed = hash2(map.cellX, map.cellY, size);
+  let x = x0;
+  let y = y0;
+  let guard = 0;
+  while ((x !== x1 || y !== y1) && guard++ < 400) {
+    if (x !== x1 && (y === y1 || hash2(seed + 81, x, y) % 2)) x += Math.sign(x1 - x);
+    else y += Math.sign(y1 - y);
+    if (x < 0 || y < 0 || x >= size || y >= size) return;
+    const k = y * size + x;
+    if (building[k]) continue;
+    if (water[k] === code.sea || water[k] === code.lake) continue;
+    if (stopAtPath && terrain[k] === code.path && guard > 2) return;
+    if (water[k] === code.river) {
+      terrain[k] = code.path;
+      map.bridges.push(k);
+      continue;
+    }
+    terrain[k] = code.path;
+    tree[k] = 0;
+  }
+}
+
 export function layoutSite(
   map: LocalMap,
   rules: SiteRules,
@@ -40,7 +165,7 @@ export function layoutSite(
   const code = siteCodes(rules);
   const size = map.width;
   const total = size * size;
-  const { terrain, tree, building, mineral, water } = map;
+  const { terrain, tree, building, water } = map;
   const seed = hash2(map.cellX, map.cellY, size);
   const buildings: Building[] = [];
   const isLand = (k: number) =>
@@ -49,21 +174,6 @@ export function layoutSite(
       terrain[k] === code.scrub ||
       terrain[k] === code.marsh ||
       terrain[k] === code.shore);
-  const free = (x: number, y: number, w: number, h: number, pad: number) => {
-    for (let yy = y - pad; yy < y + h + pad; yy += 1) {
-      for (let xx = x - pad; xx < x + w + pad; xx += 1) {
-        if (xx < 1 || yy < 1 || xx >= size - 1 || yy >= size - 1) return false;
-        const k = yy * size + xx;
-        const inside = yy >= y && yy < y + h && xx >= x && xx < x + w;
-        // A path may run along the padding but not under the building.
-        if (terrain[k] === code.path && !inside && water[k] === 0) continue;
-        if (building[k] || water[k] !== 0 || mineral[k]) return false;
-        if (terrain[k] !== code.grass && terrain[k] !== code.scrub) return false;
-      }
-    }
-    return true;
-  };
-
   // Origin: the free land tile near the map centre, about 10 steps from water and at least 6.
   const waterDist = new Int16Array(total).fill(999);
   const queue: number[] = [];
@@ -116,33 +226,8 @@ export function layoutSite(
   const oy = (best - ox) / size;
 
   let nextId = 1;
-  const stamp = (defId: string, x: number, y: number, w: number, h: number, followed = true) => {
-    const cells: number[] = [];
-    const id = nextId++;
-    for (let yy = y; yy < y + h; yy += 1) {
-      for (let xx = x; xx < x + w; xx += 1) {
-        const k = yy * size + xx;
-        cells.push(k);
-        building[k] = id;
-        tree[k] = 0;
-        const edge = yy === y || yy === y + h - 1 || xx === x || xx === x + w - 1;
-        if (defId === 'field') terrain[k] = code.field;
-        else if (defId === 'home' || defId === 'hall') terrain[k] = edge ? code.wall : code.floor;
-        else terrain[k] = code.floor;
-      }
-    }
-    const built: Building = {
-      id,
-      defId,
-      cells,
-      owner: null,
-      condition: 100,
-      x,
-      y,
-      w,
-      h,
-      followed,
-    };
+  const stamp = (defId: string, x: number, y: number, followed = true) => {
+    const built = stampBuilding(map, rules, nextId++, defId, x, y, followed);
     buildings.push(built);
     return built;
   };
@@ -159,27 +244,9 @@ export function layoutSite(
       tree[k] = 0;
     }
   }
-  const placeNear = (defId: string, minRing: number, pad: number): [number, number] | null => {
-    const { w, h } = buildingDef(rules, defId);
-    for (let r = minRing; r < MAX_RING; r += 1) {
-      const ring: [number, number][] = [];
-      for (let dy = -r; dy <= r; dy += 1) {
-        for (let dx = -r; dx <= r; dx += 1) {
-          if (Math.max(Math.abs(dx), Math.abs(dy)) === r) {
-            ring.push([ox + dx - (w >> 1), oy + dy - (h >> 1)]);
-          }
-        }
-      }
-      ring.sort((a, b) => hash2(seed + 71 + r, a[0], a[1]) - hash2(seed + 71 + r, b[0], b[1]));
-      for (const [x, y] of ring) if (free(x, y, w, h, pad)) return [x, y];
-    }
-    return null;
-  };
   const place = (defId: string, minRing: number, pad = 1, followed = true) => {
-    const at = placeNear(defId, minRing, pad);
-    if (!at) return null;
-    const { w, h } = buildingDef(rules, defId);
-    return stamp(defId, at[0], at[1], w, h, followed);
+    const at = findSpot(map, rules, defId, [ox, oy], minRing, pad);
+    return at ? stamp(defId, at[0], at[1], followed) : null;
   };
 
   // The central green, with paths.
@@ -200,27 +267,8 @@ export function layoutSite(
     if (!place('home', HOME_MIN_RING, 1, h < input.followedHouseholds)) break;
   }
   // Paths run from each building's door toward the green and stop where they meet another path.
-  const carve = (x0: number, y0: number, x1: number, y1: number, stopAtPath: boolean) => {
-    let x = x0;
-    let y = y0;
-    let guard = 0;
-    while ((x !== x1 || y !== y1) && guard++ < 400) {
-      if (x !== x1 && (y === y1 || hash2(seed + 81, x, y) % 2)) x += Math.sign(x1 - x);
-      else y += Math.sign(y1 - y);
-      if (x < 0 || y < 0 || x >= size || y >= size) return;
-      const k = y * size + x;
-      if (building[k]) continue;
-      if (water[k] === code.sea || water[k] === code.lake) continue;
-      if (stopAtPath && terrain[k] === code.path && guard > 2) return;
-      if (water[k] === code.river) {
-        terrain[k] = code.path;
-        map.bridges.push(k);
-        continue;
-      }
-      terrain[k] = code.path;
-      tree[k] = 0;
-    }
-  };
+  const carve = (x0: number, y0: number, x1: number, y1: number, stopAtPath: boolean) =>
+    carvePath(map, rules, x0, y0, x1, y1, stopAtPath);
   for (const b of buildings) {
     if (b.defId === 'home' || b.defId === 'hall') carve(b.x + (b.w >> 1), b.y + b.h, ox, oy, true);
   }
@@ -248,8 +296,7 @@ export function layoutSite(
     if (bestShore >= 0) {
       const x = bestShore % size;
       const y = (bestShore - x) / size;
-      const { w, h } = buildingDef(rules, 'dock');
-      stamp('dock', x, y, w, h);
+      stamp('dock', x, y);
       carve(x, y, ox, oy, true);
     }
   }

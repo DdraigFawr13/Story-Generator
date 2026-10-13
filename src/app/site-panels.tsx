@@ -6,12 +6,20 @@ import { Fragment, useState, type ReactNode } from 'react';
 import {
   ATTRIBUTE_KEYS,
   DAY_BLOCKS,
+  buildingDef,
   biography,
   dateOf,
   eventTitle,
   eventYear,
   fillTemplate,
   foodDaysLeft,
+  foodMeals,
+  heldItems,
+  effectivePower,
+  itemCount,
+  openConstruction,
+  repairsDue,
+  skillCap,
   householdLabel,
   importanceStars,
   linkSegments,
@@ -27,6 +35,9 @@ import {
   type BreakdownKind,
   type Building,
   type Civ,
+  type HeldItem,
+  type ItemDef,
+  type JobDef,
   type ContentBundle,
   type CultureDef,
   type EventTypeDef,
@@ -42,6 +53,7 @@ import {
 } from '../engine';
 import { plainClick, refName, type PageRef } from './legends-ctx';
 import {
+  buildPercent,
   buildScene,
   buildingLabel,
   relation,
@@ -176,6 +188,9 @@ export function selectionName(m: SiteModel, sel: Selection): string {
   if (sel.kind === 'building') {
     const b = m.active.buildings.get(sel.id);
     if (!b) return 'Building';
+    if (b.progress !== undefined) {
+      return `${buildingLabel(m.content.site, b.defId, false)} (being built)`;
+    }
     if (b.defId === 'home') return homeLabel(m, b);
     return buildingLabel(m.content.site, b.defId, m.scene.jarl);
   }
@@ -224,7 +239,7 @@ export function tipText(m: SiteModel, k: number): string {
   const b = m.scene.look.map.building[k]
     ? m.active.buildings.get(m.scene.look.map.building[k]!)
     : undefined;
-  if (b?.defId === 'home') {
+  if (b?.defId === 'home' && b.progress === undefined) {
     const h = homeHousehold(m, b);
     return h ? `Home: ${m.labels.get(h.id) ?? ''}` : 'Home of a counted household';
   }
@@ -573,6 +588,55 @@ const BREAKDOWN_TEXT: Record<BreakdownKind, string> = {
 };
 const signed = (n: number) => `${n < 0 ? '−' : '+'}${Math.abs(Math.round(n))}`;
 
+/** Where a block was spent, as a phrase: "in a field", "at home", "outdoors". */
+function placeText(m: SiteModel, p: Person, homeId: Id | null): string {
+  const detail = p.detail;
+  const building = detail?.placeId == null ? undefined : m.active.buildings.get(detail.placeId);
+  if (!building) return 'outdoors';
+  if (building.defId === 'home')
+    return building.id === homeId ? 'at home' : 'at a neighbour’s home';
+  if (building.defId === 'field') return 'in a field';
+  if (building.defId === 'hall') return `in the ${m.ruleWord === 'jarl' ? "jarl's " : ''}hall`;
+  return `at the ${building.defId}`;
+}
+
+/** The job a person was given today, if any. */
+function jobOf(m: SiteModel, p: Person): JobDef | undefined {
+  const id = p.detail?.jobId;
+  return id === undefined ? undefined : m.content.jobs.find((j) => j.id === id);
+}
+
+// Presentation: what a job reads as while it is being done. Jobs not listed here read as their
+// name with the place ("Cooking in the hall"). Add a line when content adds a job.
+const JOB_DOING: Record<string, string> = {
+  forage: 'Foraging in the wild',
+  fish: 'Fishing',
+  hunt: 'Hunting in the wild',
+  fell: 'Felling trees',
+  quarry: 'Quarrying stone',
+  mine: 'Mining ore',
+  heal: 'Gathering herbs',
+  'craft-tools': 'Making tools',
+  'craft-wares': 'Crafting wares',
+};
+
+/** "the workshop": the building being raised, else the village (repairs). */
+function workSiteName(m: SiteModel): string {
+  const open = openConstruction(m.active);
+  return open
+    ? `the ${buildingLabel(m.content.site, open.defId, false).toLowerCase()}`
+    : 'the village';
+}
+
+/** "Building the workshop", "Hauling to the workshop": the construction (or repair) in hand. */
+function siteWorkText(m: SiteModel, job: JobDef): string {
+  const open = openConstruction(m.active);
+  const name = (defId: string) => buildingLabel(m.content.site, defId, false).toLowerCase();
+  if (job.action === 'build')
+    return open ? `Building the ${name(open.defId)}` : 'Repairing buildings';
+  return open ? `Hauling to the ${name(open.defId)}` : 'Hauling';
+}
+
 /** "Working in a field", "Sleeping at home": the activity and the place of the last block. */
 function doingText(m: SiteModel, p: Person, homeId: Id | null): string {
   const detail = p.detail;
@@ -580,14 +644,160 @@ function doingText(m: SiteModel, p: Person, homeId: Id | null): string {
   if (!detail?.activity) return 'Not yet known';
   const verb = ACTIVITY_VERB[detail.activity];
   if (detail.activity === 'wander') return verb;
-  const building = detail.placeId == null ? undefined : m.active.buildings.get(detail.placeId);
-  if (!building) return `${verb} outdoors`;
-  if (building.defId === 'home')
-    return `${verb} ${building.id === homeId ? 'at home' : 'at a neighbour’s home'}`;
-  if (building.defId === 'field') return `${verb} in a field`;
-  if (building.defId === 'hall')
-    return `${verb} in the ${m.ruleWord === 'jarl' ? "jarl's " : ''}hall`;
-  return `${verb} at the ${building.defId}`;
+  const job = detail.activity === 'work' ? jobOf(m, p) : undefined;
+  if (job) {
+    if (job.action) return siteWorkText(m, job);
+    const listed = JOB_DOING[job.id];
+    if (listed) return listed;
+    return `${job.name} ${placeText(m, p, homeId)}`;
+  }
+  const place = placeText(m, p, homeId);
+  return `${verb} ${place}`;
+}
+
+/** Where a job is done, for the Work fact: "field 3", "the woods", "the workshop". */
+const WORKPLACE_TEXT: Record<string, string> = {
+  field: 'the fields',
+  trees: 'the woods',
+  water: 'the water',
+  stone: 'the quarry',
+  ore: 'the mine',
+  wild: 'the wild',
+  workshop: 'the workshop',
+  kitchen: 'the kitchen',
+  construction: 'the building site',
+  herbs: 'the herb ground',
+};
+
+/** The Work fact and its why line (the steward's data: focus, liked work). */
+function workInfo(m: SiteModel, p: Person, band: string): { text: string; why: string | null } {
+  const job = jobOf(m, p);
+  if (band === 'child') return { text: 'No work (child)', why: null };
+  if (!job) {
+    const kind = p.detail?.breakdown?.kind;
+    const reason = kind === 'despair' || kind === 'wandering' ? 'not themselves' : 'no work set';
+    return {
+      text: band === 'elder' ? `No work (${reason}; light work only)` : `No work (${reason})`,
+      why: null,
+    };
+  }
+  const here =
+    p.detail?.activity === 'work' && p.detail.placeId != null
+      ? m.active.buildings.get(p.detail.placeId)
+      : undefined;
+  const place =
+    here?.defId === 'field'
+      ? `field ${here.id}`
+      : job.action
+        ? workSiteName(m)
+        : (WORKPLACE_TEXT[job.workplace] ?? job.workplace);
+  const text = `${cap(job.worker)} · ${place}${band === 'elder' ? ' · light work only' : ''}`;
+  let why: string | null = null;
+  if (job.serves === 'food' && m.active.stewardFocus === 'food') {
+    why =
+      job.workplace === 'field'
+        ? 'Sent to the fields: food is short.'
+        : 'Put to food work: food is short.';
+  } else {
+    const liked = p.traits.flatMap((id) =>
+      job.likedBy?.includes(id) ? (m.content.traits.find((t) => t.id === id) ?? []) : [],
+    );
+    if (liked.length > 0)
+      why = `Likes this work (${liked.map((t) => t.name.toLowerCase()).join(', ')}).`;
+  }
+  return { text, why };
+}
+
+/** "+2 charisma", "a fine weapon: worth 2 blows in a fight": what a carried item does. */
+function effectWords(m: SiteModel, p: Person, held: HeldItem): string[] {
+  const out: string[] = [];
+  for (const effect of held.def.effects ?? []) {
+    if (effect.kind === 'attribute') out.push(`${signed(effect.bonus)} ${effect.attribute}`);
+    else if (effect.kind === 'combat') {
+      out.push(
+        `a fine weapon: worth ${effect.value} ${effect.value === 1 ? 'blow' : 'blows'} in a fight`,
+      );
+    } else if (effect.kind === 'power') {
+      const reached = effectPower(p, held);
+      const tier = tierOfPower(reached);
+      out.push(
+        `magic power ${signed(effect.bonus)}${reached - p.magic.power < effect.bonus ? `, held to ${tier}` : ''}`,
+      );
+    } else {
+      const ability = m.content.abilities.find((x) => x.id === effect.abilityId);
+      out.push(`lets the holder use ${ability?.name ?? effect.abilityId}`);
+    }
+  }
+  return out;
+}
+const effectPower = (p: Person, held: HeldItem) => effectivePower(p, [held]);
+
+const DOWNSIDE_TEXT: Record<NonNullable<ItemDef['downsides']>[number], string> = {
+  envy: 'draws envy',
+  theftDraw: 'draws thieves',
+  curse: 'cursed: it troubles the holder',
+};
+
+/** Skills above 0, best first, each a bar to 20 with the person's ceiling marked. */
+function SkillsSection({ m, p }: { m: SiteModel; p: Person }) {
+  const { abilities, steward } = m.content;
+  const rows = Object.entries(p.skills)
+    .filter(([, value]) => value > 0)
+    .sort((x, y) => y[1] - x[1] || (x[0] < y[0] ? -1 : 1));
+  if (rows.length === 0) return null;
+  return (
+    <>
+      <div className="sect">Skills</div>
+      <div className="attrs" data-testid="skills">
+        {rows.map(([id, value]) => {
+          const ability = abilities.find((a) => a.id === id);
+          const cap20 = ability ? skillCap(p, ability) : 20;
+          let level = '';
+          for (const [at, word] of steward.skillLevels) if (value >= at) level = word;
+          return (
+            <Fragment key={id}>
+              <span>
+                {cap(ability?.name ?? id)}
+                {level && <span className="empty"> · {level}</span>}
+              </span>
+              <span className="b" title={`Can reach about ${Math.round(cap20)} of 20`}>
+                <i style={{ width: `${Math.min(100, value * 5)}%` }} />
+                <u style={{ left: `${Math.min(100, cap20 * 5)}%` }} />
+              </span>
+              <span className="v">{value.toFixed(1)}</span>
+            </Fragment>
+          );
+        })}
+      </div>
+      <p className="quiet">Bars run to 20; the tick marks the most this person can reach.</p>
+    </>
+  );
+}
+
+/** World items the person holds: name, what they do, what they cost. */
+function CarriesSection({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) {
+  const held = heldItems(m.world, m.content, p.id);
+  if (held.length === 0) return null;
+  return (
+    <>
+      <div className="sect">Carries</div>
+      <ul className="quiet" data-testid="carries" style={{ margin: 0, paddingLeft: 18 }}>
+        {held.map((h) => {
+          const effects = effectWords(m, p, h);
+          const downsides = (h.def.downsides ?? []).map((d) => DOWNSIDE_TEXT[d]);
+          return (
+            <li key={h.item.id}>
+              <LegendsLink a={a} to={{ kind: 'item', id: h.item.id }}>
+                {h.item.name}
+              </LegendsLink>
+              {effects.length > 0 && ` · ${effects.join(', ')}`}
+              {downsides.length > 0 && ` · ${downsides.join(', ')}`}
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
 }
 
 /** Needs, mood, stress and traits (M3.2): what the engine stored, with its "why" parts. */
@@ -720,6 +930,10 @@ function PersonPage({ m, a, sel, ui, id }: PanelProps & { id: Id }) {
   const she = p.sex === 'f';
   const kindWord = mark.band === 'child' ? 'child' : mark.band === 'elder' ? 'elder' : 'adult';
   const tier = tierOfPower(p.magic.power);
+  const carried = heldItems(m.world, m.content, id);
+  const powerNow = effectivePower(p, carried);
+  const powerItems = carried.filter((c) => c.def.effects?.some((e) => e.kind === 'power'));
+  const work = workInfo(m, p, mark.band);
   const hallHome = home?.defId === 'hall';
   const summary =
     bio && bio.summary.length > 0
@@ -803,16 +1017,29 @@ function PersonPage({ m, a, sel, ui, id }: PanelProps & { id: Id }) {
           </Fact>
         )}
         <Fact term="Magic">
-          {p.magic.power > 0 ? (
+          {p.magic.power > 0 || powerNow > 0 ? (
             <>
-              {TIER_TEXT[tier]} <span className="empty">(power {p.magic.power})</span>
+              {TIER_TEXT[tier]}{' '}
+              <span className="empty">
+                (power {p.magic.power}
+                {powerNow !== p.magic.power
+                  ? `, ${powerNow} with the ${powerItems.map((c) => c.def.name).join(' and the ')}`
+                  : ''}
+                )
+              </span>
             </>
           ) : (
             <span className="empty">none</span>
           )}
         </Fact>
+        <Fact term="Work">
+          {work.text}
+          {work.why && <span className="empty"> · {work.why}</span>}
+        </Fact>
         <Fact term="Doing">{doingText(m, p, h?.home ?? null)}</Fact>
       </Facts>
+      <SkillsSection m={m} p={p} />
+      <CarriesSection m={m} a={a} p={p} />
       <LifePage m={m} p={p} />
       <div className="actions">
         <button type="button" onClick={() => a.showOnMap({ kind: 'person', id })}>
@@ -955,32 +1182,134 @@ function HouseholdPage({ m, a, sel, h }: Omit<PanelProps, 'ui'> & { h: Household
 }
 
 const BUILDING_BLURB: Record<string, string> = {
-  well: 'Fresh water for the whole village. Wells are the first thing the steward repairs (M3.3).',
+  well: 'Fresh water for the whole village. Like every building it wears, and the steward has builders repair it.',
   stockpile: "Holds the followed share of the village's goods. See the Site tab for counts.",
   shrine: 'The shrine of the faith. Festivals and funerals happen here from M3.7.',
   dock: 'Boats tie up here on the coast. Fishing and caravans by sea arrive with M3.3 and M3.10.',
   hall: 'Where the ruler lives and the village gathers.',
+  workshop:
+    'Toolmakers and craftsmen turn logs and ore into tools and wares here. Tools make farming and heavy work faster.',
+  field: 'Sown land. Farmers work it; it never wears out.',
+  wall: 'A wall segment. The steward does not order one yet.',
 };
 
+/** Residents whose last work block was at this building, with the job they were given. */
+function workersAt(m: SiteModel, b: Building, test: (job: JobDef) => boolean): Id[] {
+  return m.active.residents.filter((id) => {
+    const detail = m.world.people.get(id)?.detail;
+    if (detail?.activity !== 'work' || detail.placeId !== b.id) return false;
+    const job =
+      detail.jobId === undefined ? undefined : m.content.jobs.find((j) => j.id === detail.jobId);
+    return job !== undefined && test(job);
+  });
+}
+
+function PeopleLinks({
+  m,
+  a,
+  sel,
+  ids,
+}: {
+  m: SiteModel;
+  a: PanelActions;
+  sel: Selection | null;
+  ids: Id[];
+}) {
+  return (
+    <>
+      {ids.map((id, k) => (
+        <Fragment key={id}>
+          {k > 0 && ', '}
+          <PersonLink m={m} a={a} sel={sel} id={id} />
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+/** Hauled-and-waiting materials against what the building takes in all, in words. */
+function materialsText(m: SiteModel, b: Building): string[] {
+  const def = buildingDef(m.content.site, b.defId);
+  return Object.entries(def.cost ?? {}).map(([item, need]) => {
+    const name = m.content.items.find((i) => i.id === item)?.name ?? item;
+    return `${Math.round(b.delivered?.[item] ?? 0)} of ${need} ${name} at the site`;
+  });
+}
+
 function BuildingPage({ m, a, sel, ui, b }: PanelProps & { b: Building }) {
-  if (b.defId === 'home' || b.defId === 'hall') {
+  const unfinished = b.progress !== undefined;
+  if (!unfinished && (b.defId === 'home' || b.defId === 'hall')) {
     const h = homeHousehold(m, b);
     if (h) return <HouseholdPage m={m} a={a} sel={sel} h={h} />;
     if (!b.followed || b.defId === 'home') return <CountedHomePage m={m} />;
   }
   void ui;
+  const steward = m.content.steward;
+  const name = buildingLabel(m.content.site, b.defId, m.scene.jarl);
+  const builders = unfinished ? workersAt(m, b, (j) => j.action === 'build') : [];
+  const haulers = unfinished ? workersAt(m, b, (j) => j.action === 'haul') : [];
+  const farmers = b.defId === 'field' ? workersAt(m, b, (j) => j.workplace === 'field') : [];
+  const owner = b.owner;
+  const worn = !unfinished && b.defId !== 'field' && b.condition < steward.repairBelow;
+  const blurb = unfinished
+    ? `A ${name.toLowerCase()} is being raised. Haulers carry logs and stone from the stockpile; builders put them in place.${
+        b.defId === steward.homeBuilding ? ' A household moves in when it is done.' : ''
+      }`
+    : (BUILDING_BLURB[b.defId] ?? '');
   return (
     <div className="page">
       <div>
-        <div className="kind">Building</div>
-        <h3>{buildingLabel(m.content.site, b.defId, m.scene.jarl)}</h3>
+        <div className="kind">Building{unfinished ? ' · being built' : ''}</div>
+        <h3>{name}</h3>
       </div>
-      <p className="summary">{BUILDING_BLURB[b.defId] ?? ''}</p>
+      <p className="summary">{blurb}</p>
       <Facts>
         <Fact term="Size">
           {b.w}×{b.h} tiles
         </Fact>
-        <Fact term="Condition">{b.condition} of 100</Fact>
+        {unfinished ? (
+          <>
+            <Fact term="Progress">{buildPercent(m.content.site, b)}% built</Fact>
+            {materialsText(m, b).length > 0 && (
+              <Fact term="Materials">{materialsText(m, b).join('; ')}</Fact>
+            )}
+            {owner !== null && (
+              <Fact term="For">
+                <PersonLink m={m} a={a} sel={sel} id={owner} />
+              </Fact>
+            )}
+            <Fact term="Builders">
+              {builders.length > 0 ? (
+                <PeopleLinks m={m} a={a} sel={sel} ids={builders} />
+              ) : (
+                <span className="empty">none at work just now</span>
+              )}
+            </Fact>
+            <Fact term="Haulers">
+              {haulers.length > 0 ? (
+                <PeopleLinks m={m} a={a} sel={sel} ids={haulers} />
+              ) : (
+                <span className="empty">none at work just now</span>
+              )}
+            </Fact>
+          </>
+        ) : (
+          b.defId !== 'field' && (
+            <Fact term="Condition">
+              {Math.round(b.condition)} of 100
+              {worn && <span className="empty"> · needs repair (below {steward.repairBelow})</span>}
+            </Fact>
+          )
+        )}
+        {b.defId === 'field' && (
+          <Fact term="Farmers">
+            {farmers.length > 0 ? (
+              <PeopleLinks m={m} a={a} sel={sel} ids={farmers} />
+            ) : (
+              <span className="empty">nobody in the field just now</span>
+            )}
+          </Fact>
+        )}
       </Facts>
     </div>
   );
@@ -1108,13 +1437,15 @@ export function InspectPane(props: PanelProps) {
 
 // ---- Site ----
 
-const GOOD_CARDS: [good: string, name: string, unit: string][] = [
-  ['food', 'Food', 'grain, fish, stores'],
-  ['timber', 'Timber', 'logs'],
-  ['ore', 'Ore', 'iron ore'],
-  ['salt', 'Salt', 'none made here'],
-  ['luxury', 'Luxuries', 'none made here'],
+// The stockpile's cards: a title and which stocked items it gathers. Tools sit with goods.
+const STOCK_CARDS: [name: string, test: (item: ItemDef) => boolean][] = [
+  ['Food', (i) => i.good === 'food'],
+  ['Timber', (i) => i.good === 'timber'],
+  ['Ore and stone', (i) => i.good === 'ore' && i.kind !== 'tool'],
+  ['Salt', (i) => i.good === 'salt'],
+  ['Goods', (i) => i.good === 'luxury' || i.kind === 'tool'],
 ];
+const count = (n: number) => Math.round(n).toLocaleString('en-US');
 
 export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
   const { site, active, scene, world, content } = m;
@@ -1132,22 +1463,51 @@ export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
     else if (tier === 'none') mix.none += 1;
     else mix.strong += 1;
   }
-  const cards = GOOD_CARDS.map(([good, name, unit]) => ({
-    good,
-    name,
-    unit,
-    count: Math.round(active.stock.get(good) ?? 0),
-  }));
-  const have = cards.filter((c) => c.count > 0);
-  const none = cards.filter((c) => c.count <= 0).map((c) => c.name.toLowerCase());
+  const cards = STOCK_CARDS.map(([name, test]) => {
+    const items = content.items
+      .filter((i) => i.kind !== 'artifact' && i.kind !== 'book' && test(i))
+      .map((i) => ({ item: i, n: itemCount(active, i.id) }));
+    return {
+      name,
+      items: items.filter((x) => x.n >= 0.5 && x.item.kind !== 'tool'),
+      hasTools: items.some((x) => x.n >= 0.5 && x.item.kind === 'tool'),
+      total: items.reduce((t, x) => t + (x.item.kind === 'tool' ? 0 : x.n), 0),
+    };
+  });
+  const have = cards.filter((c) => c.items.length > 0 || c.hasTools);
+  const none = cards
+    .filter((c) => c.items.length === 0 && !c.hasTools)
+    .map((c) => c.name.toLowerCase());
   const cells = world.cells;
   const biome = cells ? content.biomes[cells.biome[site.cell]!]?.name : undefined;
-  const homes = [...active.buildings.values()].filter((b) => b.defId === 'home');
-  const fields = [...active.buildings.values()].filter((b) => b.defId === 'field').length;
-  const other = [...active.buildings.values()].filter(
-    (b) => !['home', 'field', 'hall'].includes(b.defId),
-  );
   const foodDays = Math.round(foodDaysLeft(world, content));
+  const built = [...active.buildings.values()].filter((b) => b.progress === undefined);
+  const raising = [...active.buildings.values()].filter((b) => b.progress !== undefined);
+  const homes = built.filter((b) => b.defId === 'home');
+  const fields = built.filter((b) => b.defId === 'field').length;
+  const other = built.filter((b) => !['home', 'field', 'hall'].includes(b.defId));
+  const toolItem = content.items.find((i) => i.kind === 'tool');
+  const tools = toolItem ? Math.floor(itemCount(active, toolItem.id)) : 0;
+  const perWorker = content.steward.toolsPerWorker;
+  // Workers per job, from what the steward gave each person today.
+  const perJob = new Map<string, number>();
+  let unemployed = 0;
+  for (const id of active.residents) {
+    const person = world.people.get(id);
+    const jobId = person?.detail?.jobId;
+    if (jobId !== undefined) perJob.set(jobId, (perJob.get(jobId) ?? 0) + 1);
+    else if (scene.marks.get(id)?.band !== 'child') unemployed += 1;
+  }
+  const open = openConstruction(active);
+  const repairs = repairsDue(active, content.steward);
+  const concern =
+    active.stewardFocus === 'food'
+      ? `Food first: ${foodDays} days left`
+      : open
+        ? `Raising a ${buildingLabel(content.site, open.defId, false).toLowerCase()}`
+        : repairs > 0
+          ? `Repairs: ${repairs} ${repairs === 1 ? 'building' : 'buildings'} below ${content.steward.repairBelow}`
+          : 'Nothing pressing';
   const today = Math.round(siteTemperature(world, content, world.day));
   const rulerName = m.ruler ? m.scene.marks.get(m.ruler.id)?.name : undefined;
   return (
@@ -1236,14 +1596,25 @@ export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
       </div>
       <div className="stock">
         {have.map((c) => (
-          <div key={c.good}>
-            <b>{c.count}</b>
+          <div key={c.name} data-testid={`stock-${c.name.toLowerCase().replace(/ /g, '-')}`}>
+            <b>
+              {count(c.name === 'Food' ? foodMeals(active, content) : c.total)}
+              {c.name === 'Food' ? ' meals' : ''}
+            </b>
             <span>
-              {c.name} · {c.unit}
+              {c.name}
+              {c.items.length > 0
+                ? ` · ${c.items.map((x) => `${count(x.n)} ${x.item.cooked ? 'cooked' : x.item.name}`).join(', ')}`
+                : ''}
             </span>
-            {c.good === 'food' && (
+            {c.name === 'Food' && (
               <span>
                 ≈ {foodDays} days for {followed} people
+              </span>
+            )}
+            {c.hasTools && (
+              <span>
+                {count(tools)} tools, enough for {count(Math.floor(tools / perWorker))} workers
               </span>
             )}
           </div>
@@ -1254,12 +1625,36 @@ export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
         From the village&apos;s goods when you began watching, split by the share of people
         followed. When you leave, the stock folds back into the world&apos;s goods.
       </p>
+      <div className="sect">Work</div>
+      <p className="quiet" data-testid="steward-concern">
+        {concern}
+      </p>
+      <Facts>
+        {content.jobs
+          .filter((j) => (perJob.get(j.id) ?? 0) > 0)
+          .map((j) => (
+            <Fact key={j.id} term={j.name}>
+              {perJob.get(j.id)} {perJob.get(j.id) === 1 ? 'person' : 'people'}
+            </Fact>
+          ))}
+        {unemployed > 0 && <Fact term="No work set">{unemployed} grown people</Fact>}
+      </Facts>
       <div className="sect">Buildings</div>
       <Facts>
+        {raising.map((b) => {
+          const mats = materialsText(m, b);
+          return (
+            <Fact key={b.id} term="Being built">
+              <SelectLink a={a} to={{ kind: 'building', id: b.id }}>
+                {buildingLabel(content.site, b.defId, false).toLowerCase()}
+              </SelectLink>{' '}
+              · {buildPercent(content.site, b)}%{mats.length > 0 ? ` · ${mats.join('; ')}` : ''}
+            </Fact>
+          );
+        })}
         <Fact term="Homes">
           {homes.filter((b) => b.followed).length} followed, {scene.counted.length} counted
-          {active.buildings.size > 0 &&
-          [...active.buildings.values()].some((b) => b.defId === 'hall')
+          {built.length > 0 && built.some((b) => b.defId === 'hall')
             ? `, plus the ${m.ruleWord}'s hall`
             : ''}
         </Fact>
@@ -1290,6 +1685,7 @@ export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
 
 const FILTERS: [key: string, label: string, test: (mark: PersonMark, m: SiteModel) => boolean][] = [
   ['notable', 'notables', (mark) => mark.role === 'notable' || mark.role === 'jarl'],
+  ['working', 'at work', (mark, m) => m.world.people.get(mark.id)?.detail?.activity === 'work'],
   ['child', 'children', (mark) => mark.band === 'child'],
   ['elder', 'elders', (mark) => mark.band === 'elder'],
   [
@@ -1317,6 +1713,11 @@ export function PeoplePane({ m, a, sel, ui }: PanelProps) {
     const detail = m.world.people.get(id)?.detail;
     if (detail?.with !== undefined) return ` · With ${m.names.get(detail.with) ?? 'a carer'}`;
     const activity = detail?.activity;
+    if (activity === 'work') {
+      const job =
+        detail?.jobId === undefined ? undefined : m.content.jobs.find((j) => j.id === detail.jobId);
+      if (job) return ` · ${job.name.toLowerCase()}`;
+    }
     return activity ? ` · ${ACTIVITY_SHORT[activity]}` : '';
   };
   const matches = active.residents.filter(match);

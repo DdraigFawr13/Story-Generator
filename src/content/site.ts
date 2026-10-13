@@ -2,6 +2,7 @@
 // outposts are founded. The engine in engine/site/ reads only this table.
 
 import type { SiteRules } from '../engine';
+import { BUILDINGS } from './buildings';
 
 export const SITE: SiteRules = {
   // 96 tiles a side keeps the whole map on one phone screen at 6 px a tile.
@@ -50,16 +51,8 @@ export const SITE: SiteRules = {
     { id: 'ore', name: 'ore', glyph: '*' },
     { id: 'clay', name: 'clay', glyph: '%' },
   ],
-  // Footprints in tiles; the glyph shows at the building's centre.
-  buildings: [
-    { id: 'hall', name: 'hall', glyph: 'H', w: 9, h: 6 },
-    { id: 'home', name: 'home', glyph: 'h', w: 4, h: 3 },
-    { id: 'well', name: 'well', glyph: 'O', w: 2, h: 2 },
-    { id: 'stockpile', name: 'stockpile', glyph: '=', w: 5, h: 4 },
-    { id: 'shrine', name: 'shrine', glyph: '+', w: 4, h: 4 },
-    { id: 'field', name: 'field', glyph: '"', w: 7, h: 5 },
-    { id: 'dock', name: 'dock', glyph: '≡', w: 2, h: 2 },
-  ],
+  // Footprints and building costs: content/buildings.ts.
+  buildings: BUILDINGS,
   bridgeGlyph: '‖',
   outpost: {
     // Land below this fertility (0-100) cannot feed a hamlet.
@@ -76,7 +69,7 @@ export const SITE: SiteRules = {
   // Event types that pause play; later milestones fill the empty categories.
   autoPause: {
     deaths: [],
-    breakdowns: ['site_tantrum', 'site_despair', 'site_wandered', 'site_theft'],
+    breakdowns: ['site_tantrum', 'site_despair', 'site_wandered', 'site_theft', 'site_item_stolen'],
     fires: [],
     raids: [],
     arrivals: ['outpost_founded'],

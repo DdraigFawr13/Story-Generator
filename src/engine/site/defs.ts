@@ -1,6 +1,12 @@
 // Small lookups shared by the site modules: layer codes by content id.
 
-import type { ContentBundle, RaceDef, SiteGlyphDef, SiteRules } from '../core/content-types';
+import type {
+  BuildingDef,
+  ContentBundle,
+  RaceDef,
+  SiteGlyphDef,
+  SiteRules,
+} from '../core/content-types';
 
 /** What the site modules read from content (all plain data, so it crosses into a worker). */
 export type SiteContent = Pick<
@@ -17,7 +23,14 @@ export type SiteContent = Pick<
   | 'traits'
   | 'memories'
   | 'life'
+  | 'abilities'
+  | 'items'
+  | 'jobs'
+  | 'steward'
 >;
+
+/** A person's age band: children play, adults work, elders work lightly. */
+export type Band = 'child' | 'adult' | 'elder';
 
 /** Share of a lifespan at which a person counts as an elder. */
 const ELDER_FROM = 0.7;
@@ -34,7 +47,7 @@ export function ageBands(race: Pick<RaceDef, 'maturityYears' | 'lifespanYears'>)
 export function bandOfAge(
   race: Pick<RaceDef, 'maturityYears' | 'lifespanYears'>,
   age: number,
-): 'child' | 'adult' | 'elder' {
+): Band {
   const bands = ageBands(race);
   return age < bands.adultFrom ? 'child' : age < bands.elderFrom ? 'adult' : 'elder';
 }
@@ -71,7 +84,7 @@ export function siteCodes(rules: SiteRules) {
 export type SiteCodes = ReturnType<typeof siteCodes>;
 
 /** The size of a building definition. */
-export function buildingDef(rules: SiteRules, id: string) {
+export function buildingDef(rules: SiteRules, id: string): BuildingDef {
   const def = rules.buildings.find((b) => b.id === id);
   if (!def) throw new Error(`Site content has no building "${id}".`);
   return def;

@@ -43,11 +43,19 @@ console.log(
 console.log(
   `Households ${active.households.size}; homes ${followedHomes} followed + ${homes.length - followedHomes} counted; ${active.promoted.length} new people`,
 );
-console.log(`Stock ${[...active.stock].map(([g, n]) => `${g} ${n}`).join(', ')}`);
+const stockLine = () =>
+  [...active.stock]
+    .filter(([, n]) => n > 0)
+    .map(([id, n]) => `${id} ${Math.round(n)}`)
+    .join(', ');
+console.log(`Stock ${stockLine()}`);
 console.log(`Embark ${embarkMs.toFixed(0)} ms; map digest ${E.localMapDigest(active.map)}`);
 
 const firstEvent = world.events.length;
-const foodStart = active.stock.get('food') ?? 0;
+const meals = () => E.foodMeals(active, C);
+const foodStart = meals();
+const buildingsStart = new Set(active.buildings.keys());
+const begunEvents = () => world.events.slice(firstEvent);
 const t1 = performance.now();
 for (let i = 0; i < days; i += 1) E.stepSite(world, C);
 const seconds = (performance.now() - t1) / 1000;
@@ -65,7 +73,37 @@ console.log(
   }`,
 );
 console.log(
-  `Food: ${foodStart.toFixed(1)} -> ${(active.stock.get('food') ?? 0).toFixed(1)} person-years; ${E.foodDaysLeft(world, C).toFixed(0)} days left`,
+  `Food: ${foodStart.toFixed(0)} -> ${meals().toFixed(0)} meals (${(meals() / Math.max(1, foodStart)).toFixed(2)}x); ${E.foodDaysLeft(world, C).toFixed(0)} days left`,
+);
+console.log(`Stock now ${stockLine()}`);
+const jobCounts = {};
+for (const id of active.residents) {
+  const job = world.people.get(id).detail.jobId;
+  if (job) jobCounts[job] = (jobCounts[job] ?? 0) + 1;
+}
+console.log(
+  `Jobs: ${
+    Object.entries(jobCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([j, n]) => `${j} ${n}`)
+      .join(', ') || 'none'
+  }`,
+);
+const topSkills = active.residents.flatMap((id) => {
+  const skills = Object.values(world.people.get(id).skills);
+  return skills.length ? [Math.max(...skills)] : [];
+});
+console.log(
+  `Skills: ${topSkills.length} skilled residents, mean top skill ${(topSkills.reduce((a, b) => a + b, 0) / Math.max(1, topSkills.length)).toFixed(1)}`,
+);
+const raised = [...active.buildings.values()].filter((b) => !buildingsStart.has(b.id));
+console.log(
+  `Buildings: ${begunEvents().filter((e) => e.type === 'site_build_begun').length} begun, ${begunEvents().filter((e) => e.type === 'site_built').length} built${raised.length ? ` (${raised.map((b) => `${b.defId}${b.progress === undefined ? '' : ` ${Math.round(((b.progress ?? 0) / (C.site.buildings.find((d) => d.id === b.defId)?.work ?? 1)) * 100)}%`}`).join(', ')})` : ''}; mean condition ${(
+    [...active.buildings.values()]
+      .filter((b) => b.defId !== 'field')
+      .reduce((a, b) => a + b.condition, 0) /
+    Math.max(1, [...active.buildings.values()].filter((b) => b.defId !== 'field').length)
+  ).toFixed(0)}`,
 );
 const details = active.residents.map((id) => world.people.get(id).detail);
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
@@ -103,6 +141,8 @@ const BUILD = {
   shrine: [220, 220, 240],
   field: [200, 176, 80],
   dock: [100, 70, 40],
+  workshop: [90, 90, 110],
+  wall: [60, 60, 60],
 };
 const map = active.map;
 const rgba = new Uint8ClampedArray(map.width * map.height * 4);

@@ -1,0 +1,161 @@
+// Building at the live site (M3.3): the steward starts a building, builders and haulers raise it
+// (see work.ts), and finishing it moves a household in. Buildings are stamped into the map when
+// begun so people can see them go up; `progress` marks one as unfinished.
+
+import type { EmitInput } from '../core/context';
+import type { StewardRules } from '../core/content-types';
+import type { ActiveSite, Building, Id, SimEvent } from '../core/types';
+import { buildingDef, type SiteContent } from './defs';
+import { carvePath, findSpot, stampBuilding } from './layout';
+import { invalidatePaths } from './path';
+
+type Emit = (input: EmitInput) => SimEvent;
+
+/** Where events about the site are placed and named. */
+export interface SiteLabel {
+  name: string;
+  cell: number;
+}
+
+/** The unfinished building with the lowest id, if any: one is raised at a time. */
+export function openConstruction(active: ActiveSite): Building | undefined {
+  let found: Building | undefined;
+  for (const b of active.buildings.values()) {
+    if (b.progress !== undefined && (!found || b.id < found.id)) found = b;
+  }
+  return found;
+}
+
+/** The finished building in the worst repair below `repairBelow` (fields never wear), if any. */
+export function repairTarget(active: ActiveSite, steward: StewardRules): Building | undefined {
+  let worst: Building | undefined;
+  for (const b of active.buildings.values()) {
+    if (b.progress !== undefined || b.defId === 'field' || b.condition >= steward.repairBelow) {
+      continue;
+    }
+    if (
+      !worst ||
+      b.condition < worst.condition ||
+      (b.condition === worst.condition && b.id < worst.id)
+    ) {
+      worst = b;
+    }
+  }
+  return worst;
+}
+
+/** How many finished buildings (not fields) stand below `repairBelow`. */
+export function repairsDue(active: ActiveSite, steward: StewardRules): number {
+  let n = 0;
+  for (const b of active.buildings.values()) {
+    if (b.progress === undefined && b.defId !== 'field' && b.condition < steward.repairBelow)
+      n += 1;
+  }
+  return n;
+}
+
+/** Finished buildings (not fields) lose 1 condition every `conditionLossDays` days. */
+export function wearBuildings(active: ActiveSite, steward: StewardRules): void {
+  for (const b of active.buildings.values()) {
+    if (b.progress !== undefined || b.defId === 'field') continue;
+    b.condition = Math.max(0, b.condition - 1 / steward.conditionLossDays);
+  }
+}
+
+/**
+ * Stamps a new unfinished building near the origin and announces it. Returns null when the map
+ * has no room. `owner` is the household head a new home is for.
+ */
+/** Per site: building def → the layout version at which it last found no room (derived, unsaved). */
+const noRoom = new WeakMap<ActiveSite, Map<string, number>>();
+
+export function beginBuilding(
+  content: SiteContent,
+  active: ActiveSite,
+  defId: string,
+  owner: Id | null,
+  emit: Emit,
+  label: SiteLabel,
+): Building | null {
+  const { site: rules, steward } = content;
+  // A full map stays full until something is built or pulled down, so don't search it daily.
+  const failed = noRoom.get(active) ?? new Map<string, number>();
+  noRoom.set(active, failed);
+  if (failed.get(defId) === active.layoutVersion) return null;
+  const at = findSpot(active.map, rules, defId, active.origin, steward.buildRing, steward.buildPad);
+  if (!at) {
+    failed.set(defId, active.layoutVersion);
+    return null;
+  }
+  let id = 1;
+  for (const key of active.buildings.keys()) id = Math.max(id, key + 1);
+  const b = stampBuilding(active.map, rules, id, defId, at[0], at[1]);
+  b.owner = owner;
+  b.condition = 0;
+  b.progress = 0;
+  b.delivered = {};
+  const event = emit({
+    type: steward.events.buildBegun,
+    actors: owner === null ? [] : [owner],
+    place: label.cell,
+    data: { site: label.name, building: buildingDef(rules, defId).name },
+  });
+  b.begunEvent = event.id;
+  active.buildings.set(id, b);
+  active.layoutVersion += 1;
+  invalidatePaths(active, b.cells);
+  return b;
+}
+
+/** Marks a building done: full condition, a path to its door, and its household moved in. */
+export function finishBuilding(
+  content: SiteContent,
+  active: ActiveSite,
+  b: Building,
+  emit: Emit,
+  label: SiteLabel,
+): void {
+  const { site: rules, steward } = content;
+  delete b.progress;
+  delete b.delivered;
+  b.condition = 100;
+  emit({
+    type: steward.events.built,
+    actors: b.owner === null ? [] : [b.owner],
+    place: label.cell,
+    causes: b.begunEvent === undefined ? [] : [b.begunEvent],
+    data: { site: label.name, building: buildingDef(rules, b.defId).name },
+  });
+  if (b.defId === steward.homeBuilding && b.owner !== null) {
+    for (const household of active.households.values()) {
+      if (household.head !== b.owner) continue;
+      const old = household.home === null ? undefined : active.buildings.get(household.home);
+      if (old) old.owner = null;
+      household.home = b.id;
+    }
+  }
+  // A path from the door to the nearest path tile.
+  const map = active.map;
+  const code = rules.terrains.findIndex((t) => t.id === 'path');
+  const dx = b.x + (b.w >> 1);
+  const dy = b.y + b.h;
+  let best = -1;
+  let bestD = Infinity;
+  for (let k = 0; k < map.terrain.length; k += 1) {
+    if (map.terrain[k] !== code || map.water[k] !== 0) continue;
+    const x = k % map.width;
+    const y = (k - x) / map.width;
+    const d = Math.abs(x - dx) + Math.abs(y - dy);
+    if (d < bestD) {
+      bestD = d;
+      best = k;
+    }
+  }
+  if (best >= 0) {
+    const bx = best % map.width;
+    carvePath(map, rules, dx, dy, bx, (best - bx) / map.width, false);
+  }
+  active.layoutVersion += 1;
+  // The new path only makes walking cheaper, so cached routes stay good.
+  invalidatePaths(active, []);
+}

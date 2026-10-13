@@ -179,6 +179,8 @@ export function tileLook(ctx: LookCtx, k: number): TileLook {
   const band = ctx.bands[k]!;
   const b = map.building[k] ? ctx.buildings.get(map.building[k]!) : undefined;
   if (ctx.bridges.has(k)) return look('t-path', rules.bridgeGlyph, 't-door');
+  // Being raised: bare ground here; the renderer draws the faded plan on top.
+  if (b?.progress !== undefined) return look('t-grass', '', 't-grass-ink', band);
   if (b?.defId === 'field') return look('t-field', (x + y) % 2 ? '"' : '', 't-field-ink', band);
   if (b && (b.defId === 'home' || b.defId === 'hall')) {
     const counted = !b.followed;
@@ -234,6 +236,8 @@ export function tileName(ctx: LookCtx, k: number, riverName: string, seaName: st
   const { map, rules, code } = ctx;
   const b = map.building[k] ? ctx.buildings.get(map.building[k]!) : undefined;
   if (b) {
+    if (b.progress !== undefined)
+      return `${buildingLabel(rules, b.defId, false)} (being built, ${buildPercent(rules, b)}%)`;
     if (b.defId === 'home') return b.followed ? 'Home' : 'Home of a counted household';
     return buildingLabel(rules, b.defId, false);
   }
@@ -248,6 +252,12 @@ export function tileName(ctx: LookCtx, k: number, riverName: string, seaName: st
 }
 
 const cap = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/** How far an unfinished building is, 0-100, from its progress and the builder-blocks it takes. */
+export function buildPercent(rules: SiteRules, b: Pick<Building, 'defId' | 'progress'>): number {
+  const work = rules.buildings.find((def) => def.id === b.defId)?.work ?? 1;
+  return Math.max(0, Math.min(100, Math.round(((b.progress ?? 0) / work) * 100)));
+}
 
 /** A building's name for labels and pages; the hall is "Jarl's hall" where the ruler is a jarl. */
 export function buildingLabel(rules: SiteRules, defId: string, jarl: boolean): string {
@@ -426,6 +436,16 @@ export function buildScene(
     jarl,
     quarter: quarterOf(buildings),
   };
+}
+
+/** Rebuilds what depends on the buildings and map layers, in place (after a snapshot with a new layout). */
+export function refreshLayout(scene: Scene, world: WorldState, rules: SiteRules): void {
+  const active = world.activeSite;
+  if (!active) return;
+  scene.look = makeLookCtx(active.map, rules, active.buildings);
+  scene.buildings = [...active.buildings.values()];
+  scene.counted = scene.buildings.filter((b) => b.defId === 'home' && !b.followed);
+  scene.quarter = quarterOf(scene.buildings);
 }
 
 /** Moves every mark to where its person now is (after a snapshot) and rebuilds `at`, in place. */
@@ -684,6 +704,13 @@ export class SiteRenderer {
     );
   }
 
+  /** Drops the cached terrain after the buildings or map changed, and redraws. */
+  refreshLayout(): void {
+    this.terrainKey = '';
+    this.rebuildBase();
+    this.draw();
+  }
+
   /** Redraws after people moved: the pixel-a-tile base (and so the overview) shows them as marks. */
   refreshPeople(): void {
     this.rebuildBase();
@@ -778,6 +805,20 @@ export class SiteRenderer {
         t.globalAlpha = 1;
       }
     }
+    // Buildings being raised: the plan drawn faded, dashed round, with its glyph.
+    for (const b of scene.buildings) {
+      if (b.progress === undefined) continue;
+      t.fillStyle = C['t-floor'];
+      t.globalAlpha = 0.35;
+      t.fillRect(b.x * s, b.y * s, b.w * s, b.h * s);
+      t.globalAlpha = 1;
+      t.save();
+      t.strokeStyle = C['t-feature'];
+      t.lineWidth = Math.max(1, s * 0.09);
+      t.setLineDash([Math.max(2, s * 0.25), Math.max(2, s * 0.2)]);
+      t.strokeRect(b.x * s, b.y * s, b.w * s, b.h * s);
+      t.restore();
+    }
     // Counted homes: hatching inside and a dotted outline around the whole home.
     for (const b of scene.counted) {
       t.save();
@@ -818,6 +859,15 @@ export class SiteRenderer {
           Math.floor(k / scene.size) * s + s / 2 + 1,
         );
       }
+      t.globalAlpha = 0.55;
+      for (const b of scene.buildings) {
+        if (b.progress === undefined) continue;
+        const glyph = scene.rules.buildings.find((def) => def.id === b.defId)?.glyph;
+        if (!glyph) continue;
+        t.fillStyle = C['t-feature'];
+        t.fillText(glyph, (b.x + (b.w >> 1)) * s + s / 2, (b.y + (b.h >> 1)) * s + s / 2 + 1);
+      }
+      t.globalAlpha = 1;
       t.font = `600 ${Math.max(11, Math.round(s * 0.55))}px system-ui, sans-serif`;
       for (const b of scene.buildings) {
         if (b.defId === 'home' || b.defId === 'field') continue;
