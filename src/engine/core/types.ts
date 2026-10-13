@@ -530,6 +530,8 @@ export interface Crop {
   expected: number;
   /** The field was sown this year (it is the harvest's share). */
   sownThisYear: boolean;
+  /** A frost has bitten the young grain this year (shown on the map; changes no rule). */
+  frostBitten?: boolean;
 }
 
 export interface Building {
@@ -554,6 +556,8 @@ export interface Building {
   crop?: Crop;
   /** M3.4: burnt down; a home is raised again by the build job, then this clears. */
   burnt?: boolean;
+  /** The day it burnt, for the inspector. */
+  burntDay?: number;
 }
 
 /** Sky of the day at the watched site (M3.4). */
@@ -614,6 +618,8 @@ export interface SiteHarvest {
   poorEvent: Id | null;
   /** Share of a normal year (0 until summed up). */
   share: number;
+  /** Grain held back to sow the followed fields that stand empty; meals and cooks leave it alone. */
+  seedKept: number;
 }
 
 /** Firewood and last winter's burn (M3.4). */

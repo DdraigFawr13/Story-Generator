@@ -32,6 +32,8 @@ export const ENVIRONMENT: EnvironmentRules = {
     frostEventGap: 7,
     // Snow from Firstfrost on is the winter's first.
     winterFrom: 8,
+    // Lying snow banks at most a fortnight's melt, so a thaw clears it in about five days.
+    snowMeltCap: 14,
   },
   crop: {
     // Sow in Seedmonth and Bloommonth once the day reaches 6 degrees.
@@ -132,9 +134,9 @@ export const ENVIRONMENT: EnvironmentRules = {
     expectedWinterPerHome: 27,
     // Leaffall to Lastsnow.
     winterMonths: [6, 11],
-    // Reserve = last winter's burn + 300 for building; the steward fells 300 more.
+    // Reserve and the steward's log target = last winter's burn + 300 for building (review 9).
     buildingLogs: 300,
-    headroom: 300,
+    headroom: 0,
   },
   fire: {
     // A lit hearth on a day under 5 degrees: about one fire every one to two years at 150 people.
@@ -179,7 +181,7 @@ export const ENVIRONMENT: EnvironmentRules = {
     berryMonths: [2, 7],
     winterMonths: [8, 11],
     fishWinter: 0.6,
-    // A tree gives 40 logs; felled ground grows back in 8 to 15 years.
+    // A tree gives 70 logs; felled ground grows back in 8 to 15 years.
     woodPerTree: 70,
     regrowYears: [8, 15],
     // Trees within 40 tiles of the stockpile are the woods in reach; under 70% of that at embark they are thin.

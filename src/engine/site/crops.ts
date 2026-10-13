@@ -147,6 +147,7 @@ export function newHarvest(year: number, poorEvent: Id | null = null) {
     causes: [] as Id[],
     poorEvent,
     share: 0,
+    seedKept: 0,
   };
 }
 
@@ -232,8 +233,22 @@ export function farmBlock(
 }
 
 function reportSown(content: SiteContent, active: ActiveSite, emit: Emit, label: SiteLabel): void {
-  active.harvest.sownReported = true;
-  if (active.harvest.sown <= 0) return;
+  const h = active.harvest;
+  h.sownReported = true;
+  if (h.sown <= 0) {
+    // Nothing sown (no seed, or no hands): the year's harvest is lost now, and says so.
+    if (h.sowFields.length === 0) return;
+    h.done = true;
+    h.share = 0;
+    if (active.storesEmptyEvent !== null) h.causes.push(active.storesEmptyEvent);
+    h.poorEvent = emit({
+      type: content.environment.events.harvestPoor,
+      place: label.cell,
+      causes: [...new Set(h.causes)],
+      data: { site: label.name, percent: 0 },
+    }).id;
+    return;
+  }
   emit({
     type: content.environment.events.fieldsSown,
     place: label.cell,
@@ -294,9 +309,18 @@ export function dailyCrops(
       crop.left = 0;
       crop.sowProgress = 0;
       crop.sownThisYear = false;
+      crop.frostBitten = false;
     }
     active.harvest = newHarvest(siteYear(world, active), active.harvest.poorEvent);
   }
+  // Seed for every field with no crop in it is kept back, so a poor year still leaves next year's sowing.
+  let seedKept = 0;
+  for (const b of fields) {
+    const stage = b.crop!.stage;
+    if (stage !== 'sown' && stage !== 'growing' && stage !== 'ripe')
+      seedKept += fieldYield(content, b.crop!.soil) * rules.seedShare;
+  }
+  active.harvest.seedKept = seedKept;
   if (!active.harvest.planned && within(month, rules.sowMonths)) planSowing(world, content, active);
   // The sowing window closing is also the end of the sowing news.
   if (month === rules.sowMonths[1] + 1 && date.dayOfMonth === 1 && !active.harvest.sownReported) {
@@ -326,6 +350,7 @@ export function dailyCrops(
       crop.growth += (tf * water) / rules.growthDays;
       if (w.lowC <= rules.frostC + crop.frostBias) {
         crop.health -= rules.frostHealth;
+        crop.frostBitten = true;
         frostHits += 1;
       }
       if (storm && rng.chance(rules.stormChance)) crop.health -= rules.stormHealth;

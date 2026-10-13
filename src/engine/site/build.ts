@@ -162,6 +162,7 @@ export function finishBuilding(
   // A burnt building raised again: its household moves back from wherever it was taken in.
   const rebuilt = b.burnt === true;
   delete b.burnt;
+  delete b.burntDay;
   b.condition = 100;
   emit({
     type: steward.events.built,

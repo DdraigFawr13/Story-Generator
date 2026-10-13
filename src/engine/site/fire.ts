@@ -98,7 +98,7 @@ function nearWater(content: SiteContent, active: ActiveSite, tile: number): bool
   const x = tile % map.width;
   const y = (tile - x) / map.width;
   for (const b of active.buildings.values()) {
-    if (b.defId !== 'well') continue;
+    if (b.defId !== 'well' || b.progress !== undefined || b.burnt) continue;
     if (Math.max(Math.abs(b.x - x), Math.abs(b.y - y)) <= reach) return true;
   }
   for (let yy = Math.max(0, y - reach); yy <= Math.min(map.height - 1, y + reach); yy += 1) {
@@ -225,6 +225,7 @@ function endFire(
     const share = hits / b.cells.length;
     if (share >= rules.burntShare) {
       b.burnt = true;
+      b.burntDay = world.day;
       b.condition = 0;
       buildings += 1;
       if (b.defId === 'home') burntHomes.push(b);
@@ -295,11 +296,35 @@ function takeIn(
   emit: Emit,
   label: SiteLabel,
 ): void {
-  const household = householdOf(active, burnt);
-  if (!household) return;
-  const host = lodgingFor(world, active, burnt, household);
-  if (!host) return;
-  household.lodgingHome = host.id;
+  // The owners, and anyone already lodging there after an earlier fire, find a new roof.
+  const homeless = [...active.households.values()]
+    .sort((a, b) => a.id - b.id)
+    .filter(
+      (h) =>
+        h.members.length > 0 &&
+        (h.lodgingHome === burnt.id || (h.home === burnt.id && h.lodgingHome === undefined)),
+    );
+  for (const household of homeless) {
+    const host = lodgingFor(world, active, burnt, household);
+    if (!host) {
+      delete household.lodgingHome;
+      continue;
+    }
+    household.lodgingHome = host.id;
+    lodged(world, content, active, household, host, cause, emit, label);
+  }
+}
+
+function lodged(
+  world: WorldState,
+  content: SiteContent,
+  active: ActiveSite,
+  household: Household,
+  host: Building,
+  cause: SimEvent,
+  emit: Emit,
+  label: SiteLabel,
+): void {
   const hostHold = householdOf(active, host);
   emit({
     type: content.environment.events.takenIn,

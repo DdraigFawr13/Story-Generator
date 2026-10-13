@@ -47,6 +47,22 @@
   --t-ore: #7d4207;
   --t-field: #c19b62;
   --t-field-ink: #142200;
+  --t-snow: rgba(244, 248, 251, 0.62);
+  --t-crop-grow: #b0a854;
+  --t-crop-grow-ink: #1e5014;
+  --t-crop-ripe: #e8c454;
+  --t-crop-ripe-ink: #784f00;
+  --t-crop-cut: #d6bc82;
+  --t-crop-ruin: #b09e84;
+  --t-crop-ruin-ink: #5a3c1e;
+  --t-crop-frost: #c4d6e2;
+  --t-crop-frost-ink: #2f5f8f;
+  --t-fire: #c83c14;
+  --t-fire-alt: #aa2d0f;
+  --t-fire-ink: #ffe066;
+  --t-burnt: #3a322e;
+  --t-burnt-ink: #beb6ac;
+  --t-animal: #703a0a;
   --t-path: #d6c9ab;
   --t-path-ink: #6f5f3c;
   --t-floor: #f6eed8;
@@ -113,6 +129,22 @@
     --t-ore: #e8a85c;
     --t-field: #563f22;
     --t-field-ink: #d4e8a0;
+    --t-snow: rgba(190, 200, 215, 0.28);
+    --t-crop-grow: #3c5020;
+    --t-crop-grow-ink: #aad66e;
+    --t-crop-ripe: #82641e;
+    --t-crop-ripe-ink: #fadc78;
+    --t-crop-cut: #604e34;
+    --t-crop-ruin: #423a32;
+    --t-crop-ruin-ink: #bea078;
+    --t-crop-frost: #3c4c5e;
+    --t-crop-frost-ink: #9cc8f0;
+    --t-fire: #c83c14;
+    --t-fire-alt: #aa2d0f;
+    --t-fire-ink: #ffe066;
+    --t-burnt: #1e1a19;
+    --t-burnt-ink: #96928c;
+    --t-animal: #ecc48c;
     --t-path: #3b3225;
     --t-path-ink: #aa9b78;
     --t-floor: #524d3b;
@@ -1224,4 +1256,38 @@
   background: var(--ink);
   opacity: 0.6;
   text-decoration: none;
+}
+
+/* M3.4: weather chip, warning words and the fire line in the banner. */
+.sv-root .season.wx {
+  color: var(--muted);
+}
+.sv-root .season.wx.warn {
+  color: var(--warn);
+}
+.sv-root .warnw {
+  color: var(--warn);
+}
+.sv-root .banner .spread {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+@media (max-width: 479px) {
+  /* The date, season chip and weather chip share a row; Key and the speed buttons keep theirs. */
+  .sv-root .main > .time .date {
+    font-size: 15px;
+    gap: 4px 5px;
+  }
+  .sv-root .main > .time .date > span:first-child {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .sv-root .main > .time .rate {
+    min-width: 0;
+  }
+  .sv-root .main > .time .season {
+    padding: 1px 6px;
+    font-size: 10.5px;
+  }
 }

@@ -36,6 +36,7 @@ import type {
   SiteHarvest,
   SiteWeather,
   SiteWild,
+  SiteWoods,
   WorldState,
   Animal,
 } from '../core/types';
@@ -929,7 +930,14 @@ export interface SiteSnapshot {
   spoiled: { month: number; year: number; total: number };
   wild: SiteWild;
   animals: Animal[];
-  woods: { atEmbark: number; now: number; thinEvent: Id | null };
+  woods: {
+    atEmbark: number;
+    now: number;
+    thinEvent: Id | null;
+    /** Felled tiles with the day each grows back, and the wood left on trees being felled by tile. */
+    felled: SiteWoods['felled'];
+    wood: [number, number][];
+  };
   fire: SiteFire | null;
   burnt: { tile: number; day: number }[];
   harvest: SiteHarvest;
@@ -1026,6 +1034,8 @@ export function siteSnapshot(world: WorldState, sentVersion?: number): SiteSnaps
       atEmbark: active.woods.atEmbark,
       now: active.woods.now,
       thinEvent: active.woods.thinEvent,
+      felled: active.woods.felled,
+      wood: [...active.woods.wood],
     },
     fire: active.fire,
     burnt: active.burnt,
@@ -1078,6 +1088,8 @@ export function applySiteSnapshot(world: WorldState, snapshot: SiteSnapshot): vo
   active.woods.atEmbark = snapshot.woods.atEmbark;
   active.woods.now = snapshot.woods.now;
   active.woods.thinEvent = snapshot.woods.thinEvent;
+  active.woods.felled = snapshot.woods.felled;
+  active.woods.wood = new Map(snapshot.woods.wood);
   active.fire = snapshot.fire;
   active.burnt = snapshot.burnt;
   active.harvest = snapshot.harvest;

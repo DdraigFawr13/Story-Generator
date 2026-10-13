@@ -217,10 +217,11 @@ export function rollWeather(
     w.spellEvent = null;
   } else w.dryDays += 1;
   if (sky === 'rain' || sky === 'storm') w.rainDaysThisYear += 1;
-  // Snow lies while it stays cold and melts a few days' worth when it warms.
-  if (sky === 'snow') w.snowCover += 1;
+  // Snow lies while it stays cold and melts a few days' worth when it warms, up to a cap.
+  const cap = rules.snowMeltCap;
+  if (sky === 'snow') w.snowCover = Math.min(cap, w.snowCover + 1);
   else if (w.snowCover > 0)
-    w.snowCover = w.tempC <= 2 ? w.snowCover + 1 : Math.max(0, w.snowCover - 3);
+    w.snowCover = w.tempC <= 2 ? Math.min(cap, w.snowCover + 1) : Math.max(0, w.snowCover - 3);
   if (month >= rules.winterFrom) {
     w.winterColdest = Math.min(w.winterColdest, w.lowC);
     if (w.snowCover > 0) w.winterSnowDays += 1;

@@ -627,6 +627,8 @@ export interface EnvironmentRules {
     frostEventGap: number;
     /** The day a snowfall counts as the winter's first, from this month. */
     winterFrom: number;
+    /** Days of lying snow counted at most (the melt budget; 3 melt a day above 2 °C). */
+    snowMeltCap: number;
   };
   crop: {
     /** Sowing months (inclusive) and the day temperature (°C) it needs. */

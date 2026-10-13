@@ -207,6 +207,9 @@ test('a site can be watched: embark, play, inspect a person and return to the ma
   // Back returns to the site.
   await page.getByRole('tab', { name: /^Site/ }).click();
   await expect(page.locator('.sv-root .pane .sect', { hasText: /^Work$/ })).toBeVisible();
+  // M3.4: the weather chip sits in the time bar and the Site tab has its Season section.
+  await expect(page.getByTestId('site-weather')).toContainText('°C');
+  await expect(page.getByTestId('season')).toBeVisible();
   await page.getByRole('button', { name: 'Open in Legends' }).click();
   await expect(page.getByRole('region', { name: 'Legends' })).toBeVisible();
   await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });

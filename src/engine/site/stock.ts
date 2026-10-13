@@ -60,23 +60,32 @@ export function goodAmount(
   return total;
 }
 
-/** Meals in store: every food item counts once. */
+/** The grain item holds the seed corn (M3.4). */
+const SEED_ITEM = 'grain';
+
+/** Food items of a kind that may be eaten or cooked: grain less the seed kept back for sowing. */
+function eatable(active: ActiveSite, id: string): number {
+  const n = itemCount(active, id);
+  return id === SEED_ITEM ? Math.max(0, n - active.harvest.seedKept) : n;
+}
+
+/** Meals in store: every food item counts once; seed corn is not food. */
 export function foodMeals(active: ActiveSite, content: Pick<SiteContent, 'items'>): number {
   let meals = 0;
-  for (const item of foodItems(content)) meals += itemCount(active, item.id);
+  for (const item of foodItems(content)) meals += eatable(active, item.id);
   return meals;
 }
 
-/** Raw (uncooked) food items in store. */
+/** Raw (uncooked) food items in store, less the seed corn. */
 export function rawFood(active: ActiveSite, content: Pick<SiteContent, 'items'>): number {
   let n = 0;
-  for (const item of foodItems(content)) if (!item.cooked) n += itemCount(active, item.id);
+  for (const item of foodItems(content)) if (!item.cooked) n += eatable(active, item.id);
   return n;
 }
 
 /**
  * Takes up to `meals` food items: cooked meals first when `cookedFirst`, else raw first; raw goes
- * grain, fish, game, berries. Returns what was taken and how much of it was cooked.
+ * in `RAW_FOOD_ORDER`, leaving the seed corn. Returns what was taken and how much of it was cooked.
  */
 export function takeFood(
   active: ActiveSite,
@@ -92,7 +101,7 @@ export function takeFood(
     for (const item of order) {
       if (taken >= meals) break;
       if (!!item.cooked !== wantCooked) continue;
-      const got = takeItem(active, item.id, meals - taken);
+      const got = takeItem(active, item.id, Math.min(meals - taken, eatable(active, item.id)));
       taken += got;
       if (item.cooked) cooked += got;
     }
@@ -100,7 +109,7 @@ export function takeFood(
   return { taken, cooked };
 }
 
-/** Takes up to `count` raw food items, grain first (what a cook works from). */
+/** Takes up to `count` raw food items in `RAW_FOOD_ORDER`, leaving the seed corn (what a cook works from). */
 export function takeRawFood(
   active: ActiveSite,
   content: Pick<SiteContent, 'items'>,
@@ -109,7 +118,7 @@ export function takeRawFood(
   let taken = 0;
   for (const item of foodItems(content)) {
     if (item.cooked || taken >= count) continue;
-    taken += takeItem(active, item.id, count - taken);
+    taken += takeItem(active, item.id, Math.min(count - taken, eatable(active, item.id)));
   }
   return taken;
 }
