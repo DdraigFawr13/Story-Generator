@@ -237,6 +237,10 @@ export interface ContentBundle {
   society: SocietyRules;
   /** Threats (M3.8): wild prowlers, beasts and raiders coming to the watched site, and the answer. */
   threats: ThreatRules;
+  /** Light magic and lore (M3.9): cantrips, lessons, books lent and lost, race dependencies. */
+  lore: LoreRules;
+  /** Awakenings (M3.9): what can raise a person one magic tier, once in a life. */
+  awakenings: AwakeningDef[];
 }
 
 /** What a condition is, for its harm and the words of its chronicle lines (M3.5). */
@@ -1039,7 +1043,7 @@ export interface SiteRules {
   /** Summed world travel cost walked per day on foot. */
   travelCostPerDay: number;
   /** Event type ids that pause play, per category. */
-  autoPause: Record<'deaths' | 'breakdowns' | 'fires' | 'threats' | 'arrivals', string[]>;
+  autoPause: Record<'deaths' | 'breakdowns' | 'fires' | 'threats' | 'magic' | 'arrivals', string[]>;
 }
 
 /** Biographies (M2.6): how many chronicle lines an entity keeps and the words of its summary. */
@@ -2104,4 +2108,86 @@ export interface ThreatRules {
     raidLooted: string;
     fell: string;
   };
+}
+
+/** Light magic and lore at the watched site (M3.9). Every number is a tunable in content/lore.ts. */
+export interface LoreRules {
+  /** Ability ids of the common cantrips taught at the site (all family 'magic'). */
+  cantrips: string[];
+  /** Chance an adult who meets a cantrip's requirements already knows it when watching begins. */
+  knownAtEmbark: number;
+  /** Evenings of lessons a pupil whose learning attributes average 10 needs for one cantrip. */
+  lessons: number;
+  /** Pupils younger than this many years take no lessons. */
+  minAge: number;
+  /** A parent or the hedge-witch teaches only pupils younger than the race's maturity age times this. */
+  pupilUpTo: number;
+  /** A book can be read only by someone with at least this intellect. */
+  readMinIntellect: number;
+  /** The hedge-witch: the adult of at least this power who knows the most cantrips. */
+  hedgeWitchMinPower: number;
+  books: {
+    /** An owner who cannot use a school book may lend it every this many days. */
+    lendEveryDays: number;
+    /** The borrower gives it back when done, or after this many days. */
+    maxLoanDays: number;
+    /** Chance a day that a lent book is lost (left out in the rain, dropped in the river). */
+    lossPerDay: number;
+    /** The owner lends only to someone they think at least this well of (pairs that never met count 0). */
+    minOpinion: number;
+    /** Chance each book in a home that burns down is lost with it. */
+    burnChance: number;
+    /** Opinion the owner loses of a borrower who lost the book. */
+    lostSting: number;
+  };
+  /** What the cantrips do, by effect tag. */
+  effects: {
+    /** A hearth kept by a kindler burns this share of the logs. */
+    warmthShare: number;
+    /** Condition points one use of mending restores to a building (100 is new). */
+    mendPerUse: number;
+    /** A soothed condition counts as tended with this power (a healer with herbs is 1). */
+    soothePower: number;
+    /** With a weather-reader at the site, frost does this share of its harm to the fields. */
+    frostShare: number;
+    /** Stress one use of calming takes off the most stressed member of the household. */
+    calmStress: number;
+  };
+  /** Rest a person loses for each cantrip they cast (mild fatigue, R-29). */
+  castRest: number;
+  /** Race dependencies that act at the site (R-29). */
+  dependencies: {
+    /** Race ids that need high-aura land, the cell aura below which they fade, and the memory. */
+    aura: { races: string[]; below: number; memory: string };
+    /** Race ids that need ore work, the days without any before it tells, the jobs that count, the memory. */
+    ore: { races: string[]; days: number; jobs: string[]; memory: string };
+  };
+  events: {
+    learned: string;
+    hedgeWitch: string;
+    lent: string;
+    returned: string;
+    lost: string;
+    burned: string;
+    awakened: string;
+    frostRead: string;
+    /** A lost or burnt book was the site's last source of a cantrip (pauses play). */
+    lastSource: string;
+  };
+  memoryOf: { learned: string; taught: string; bookLost: string; awakened: string };
+}
+
+/** One way a person can wake to more magic (REBOOT_PLAN §5.3): once in a life, one tier at most. */
+export interface AwakeningDef {
+  id: string;
+  /** Long reading of a book of a magic school, or long holding of an item with a power effect. */
+  source: 'book' | 'item';
+  /** Evenings of reading or days of holding before it can happen. */
+  afterDays: number;
+  /** Chance at each later monthly check. */
+  monthlyChance: number;
+  /** Lifts only people at or below this tier, and never into Legendary. */
+  maxFromTier: 'none' | 'faint' | 'gifted' | 'strong';
+  /** Chronicle words for how it came about: `{item}` is the book or item. */
+  how: string;
 }

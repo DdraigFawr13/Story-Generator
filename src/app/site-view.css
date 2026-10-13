@@ -1151,6 +1151,16 @@
   line-height: 1.4;
 }
 @media (max-width: 860px) {
+  /* The link stays on one line; Copy takes the whole of it. */
+  .sv-root .linkline {
+    flex-wrap: nowrap;
+  }
+  .sv-root .linkline code {
+    flex: 1 1 auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .sv-root .main {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1309,4 +1319,32 @@
     padding: 1px 6px;
     font-size: 10.5px;
   }
+}
+
+/* M3.9: a pupil's lessons as a thin bar under the Learning line. */
+.sv-root .lessons {
+  display: block;
+  max-width: 240px;
+  height: 6px;
+  margin-top: 4px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+.sv-root .lessons i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.sv-root .sect button.lk {
+  font-size: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--link);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--link) 35%, transparent);
+  text-underline-offset: 2px;
 }

@@ -12,6 +12,7 @@ import { streamFor } from '../core/rng';
 import type { ActiveSite, Building, Household, Id, SimEvent, WorldState } from '../core/types';
 import type { SiteLabel } from './build';
 import { siteCodes, type SiteContent } from './defs';
+import { burnBooks } from './lore';
 import { residentNames } from './names';
 import { invalidatePaths } from './path';
 import { burnTree } from './wild';
@@ -283,7 +284,10 @@ function endFire(
   active.fire = null;
   active.layoutVersion += 1;
   invalidatePaths(active, []);
-  for (const home of burntHomes) takeIn(world, content, active, home, out, emit, label);
+  for (const home of burntHomes) {
+    burnBooks(world, content, active, home.id, fire.startedEvent, emit, label);
+    takeIn(world, content, active, home, out, emit, label);
+  }
 }
 
 /** The home a burnt-out household sleeps in: kin's, else the hall, else the nearest standing home. */

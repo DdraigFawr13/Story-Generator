@@ -135,6 +135,42 @@ console.log(
     .join(', ')}`,
 );
 
+// Light magic and lore (M3.9): the hedge-witch, cantrips known, what they did, books at the site.
+{
+  const lore = active.lore;
+  const witch = lore.hedgeWitch === null ? null : world.people.get(lore.hedgeWitch);
+  const known = {};
+  for (const id of active.residents) {
+    for (const a of world.people.get(id).knownAbilities) known[a] = (known[a] ?? 0) + 1;
+  }
+  const loreEvents = Object.values(C.lore.events).map(
+    (t) => `${t.replace('site_', '')} ${counts[t] ?? 0}`,
+  );
+  console.log(
+    `Magic: hedge-witch ${witch ? witch.name : 'none'}; known ${
+      Object.entries(known)
+        .map(([a, n]) => `${a} ${n}`)
+        .join(', ') || 'none'
+    }; stats ${JSON.stringify(lore.stats)}`,
+  );
+  console.log(`Lore events: ${loreEvents.join(', ')}`);
+  const books = [...world.items.values()].filter(
+    (i) =>
+      i.kind === 'book' &&
+      (active.residents.includes(i.holder) || lore.loans.some((l) => l.item === i.id)),
+  );
+  console.log(
+    `Books at site: ${
+      books
+        .map((i) => {
+          const loan = lore.loans.find((l) => l.item === i.id);
+          return `${i.name} held by ${world.people.get(i.holder)?.name}${loan ? `, lent to ${world.people.get(loan.borrower)?.name}` : ''}`;
+        })
+        .join('; ') || 'none'
+    }`,
+  );
+}
+
 // Health (M3.5): deaths by cause and band, wounds, cases, beds, healers, herbs, lasting harms.
 const health = active.health;
 const dead = active.dead.map((id) => world.people.get(id));

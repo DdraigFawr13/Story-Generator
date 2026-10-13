@@ -12,6 +12,8 @@ import { HISTORY } from './history';
 import { INTERACTIONS, SOCIAL, SOCIAL_EVENTS } from './interactions';
 import { SOCIETY, SOCIETY_EVENTS, SOCIETY_MEMORIES } from './society';
 import { THREATS, THREAT_EVENTS, THREAT_MEMORIES } from './threats';
+import { LORE, LORE_EVENTS, LORE_MEMORIES } from './lore';
+import { AWAKENINGS } from './awakenings';
 import { ITEMS } from './items';
 import { JOBS, STEWARD, WORK_EVENTS } from './jobs';
 import { TYPE_GROUPS } from './legends';
@@ -45,6 +47,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
     ...FAMILY_EVENTS,
     ...SOCIETY_EVENTS,
     ...THREAT_EVENTS,
+    ...LORE_EVENTS,
   ],
   typeGroups: TYPE_GROUPS,
   rules,
@@ -63,6 +66,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
     ...FAMILY_MEMORIES,
     ...SOCIETY_MEMORIES,
     ...THREAT_MEMORIES,
+    ...LORE_MEMORIES,
   ],
   life: LIFE,
   items: ITEMS,
@@ -77,6 +81,8 @@ export const DEFAULT_CONTENT: ContentBundle = {
   family: FAMILY,
   society: SOCIETY,
   threats: THREATS,
+  lore: LORE,
+  awakenings: AWAKENINGS,
 };
 
 export * from './biographies';

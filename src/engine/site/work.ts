@@ -860,6 +860,17 @@ export function runSteward(
     want('materials', j, n);
     if (j.tools && ws.workplaces.has(j.workplace)) toolUsers += n;
   }
+  // A people who need ore work (R-29) keep one hand at the mine or the quarry before they miss it.
+  const oreDep = content.lore.dependencies.ore;
+  if (
+    world.day - active.lore.lastOreWorkDay >= oreDep.days / 2 &&
+    workers.some((w) => oreDep.races.includes(w.person.raceId))
+  ) {
+    const at = content.jobs.find(
+      (j) => oreDep.jobs.includes(j.id) && ws.workplaces.has(j.workplace),
+    );
+    want('materials', at, 1);
+  }
   const toolsWanted =
     st.toolsPerWorker * (toolUsers + (mine && ws.workplaces.has(mine.workplace) ? st.miners : 0));
   const toolsShort = toolItem !== undefined && tools < toolsWanted;
@@ -1240,6 +1251,7 @@ export function runWork(
     const index = ws.info.get(job)!.index;
     const hands = ws.madeHands[index]!;
     if (hands === 0) continue;
+    if (content.lore.dependencies.ore.jobs.includes(job.id)) active.lore.lastOreWorkDay = world.day;
     const eff = ws.madeEff[index]!;
     if (job.action === 'build') buildBlock(content, active, eff, emit, label);
     else if (job.action === 'haul') haulBlock(content, active, eff);

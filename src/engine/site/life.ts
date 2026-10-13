@@ -35,6 +35,7 @@ import type {
   SiteFire,
   SiteFirewood,
   SiteHarvest,
+  SiteLore,
   SiteThreat,
   SiteThreats,
   SiteWeather,
@@ -48,6 +49,7 @@ import { runEnvironmentDay, voiceOf } from './environment';
 import { rollFireAccident, runHealthDay } from './health';
 import { fightFire, fightingSpots, settleFire, spreadFire } from './fire';
 import { runFamily } from './family';
+import { runLore, runLoreDay } from './lore';
 import { addMemoryTo, memoryMood } from './memory';
 import { findRoute, tileCost, walkAlong } from './path';
 import { envOf, runSocial, witnessedWrong } from './social';
@@ -425,6 +427,8 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     runSocietyMorning(world, content, active, voice.emit, voice.label);
     // Threats (M3.8): prowlers, signs and arrivals; a death here moves the layout like any other.
     runThreatsDay(world, content, active, voice.emit, voice.label);
+    // Magic (M3.9): mending, race dependencies and the monthly awakenings.
+    runLoreDay(world, content, active, voice.emit, voice.label);
   }
   spreadFire(world, content, active, voice.emit, voice.label, fightersAt(world, active));
   stepAnimals(world, content, active);
@@ -916,6 +920,7 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     const talkMul = festival ? content.society.festival.talkMul : 1;
     runSocial(world, content, active, profiles, cache.emit, voice.label, day, talkMul);
     runFamily(world, content, active, cache.emit, voice.label, day);
+    runLore(world, content, active, cache.emit, voice.label, day);
   }
   // The stores count as refilled once they cover three meals for everyone.
   if (active.storesEmptyEvent !== null && food() > 3 * cache.meal * profiles.length) {
@@ -952,6 +957,10 @@ export interface SiteSnapshot {
   skills: [Id, Record<string, number>][];
   /** M3.5: each resident's health (0-100). */
   health: [Id, number][];
+  /** M3.9: each resident's magic, cantrips known and awakening (their lore rides in `people`). */
+  magic: [Id, SitePersonMagic][];
+  /** M3.9: the hedge-witch, books on loan and what the cantrips did. */
+  lore: SiteLore;
   buildings: Building[];
   homes: [Id, Id | null][];
   layoutVersion: number;
@@ -995,6 +1004,13 @@ export interface SiteSnapshot {
   roster?: SiteRoster;
   /** Present only when `layoutVersion` differs from the version the caller last received. */
   map?: SiteMapSnapshot;
+}
+
+/** The fields of a person that magic changes at the site. */
+export interface SitePersonMagic {
+  magic: Person['magic'];
+  knownAbilities: string[];
+  awakening?: Person['awakening'];
 }
 
 /** The people and households the main thread may not have yet (records without their site detail). */
@@ -1061,12 +1077,16 @@ export function siteSnapshot(
   const people: [Id, PersonDetail][] = [];
   const skills: [Id, Record<string, number>][] = [];
   const health: [Id, number][] = [];
+  const magic: [Id, SitePersonMagic][] = [];
   for (const id of active.residents) {
     const person = world.people.get(id);
     if (!person?.detail) continue;
     people.push([id, person.detail]);
     skills.push([id, person.skills]);
     health.push([id, person.health]);
+    const m: SitePersonMagic = { magic: person.magic, knownAbilities: person.knownAbilities };
+    if (person.awakening) m.awakening = person.awakening;
+    magic.push([id, m]);
   }
   const snapshot: SiteSnapshot = {
     day: world.day,
@@ -1089,6 +1109,8 @@ export function siteSnapshot(
     households: [...active.households.values()].map((h) => [h.id, [...h.members], h.head]),
     skills,
     health,
+    magic,
+    lore: active.lore,
     buildings: [...active.buildings.values()],
     homes: [...active.households.values()].map((h) => [h.id, h.home]),
     layoutVersion: active.layoutVersion,
@@ -1188,6 +1210,14 @@ export function applySiteSnapshot(world: WorldState, snapshot: SiteSnapshot): vo
     const person = world.people.get(id);
     if (person) person.health = value;
   }
+  for (const [id, m] of snapshot.magic) {
+    const person = world.people.get(id);
+    if (!person) continue;
+    person.magic = m.magic;
+    person.knownAbilities = m.knownAbilities;
+    if (m.awakening) person.awakening = m.awakening;
+  }
+  active.lore = snapshot.lore;
   for (const [id, skills] of snapshot.skills) {
     const person = world.people.get(id);
     if (person) person.skills = skills;

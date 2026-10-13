@@ -17,6 +17,9 @@ import {
   foodMeals,
   heldItems,
   effectivePower,
+  bookSchool,
+  cantripSource,
+  learnableCantrips,
   itemCount,
   openConstruction,
   repairsDue,
@@ -286,6 +289,9 @@ export interface PaneUi {
   toggleWhy(key: string): void;
   limit: number;
   more(): void;
+  /** "At the site" shows only this event category (from a link such as "9 learned"), or all. */
+  liveOnly: string | null;
+  setLiveOnly(category: string | null): void;
 }
 
 function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
@@ -306,6 +312,7 @@ export function usePaneUi(): PaneUi {
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const [why, setWhy] = useState<ReadonlySet<string>>(new Set());
   const [limit, setLimit] = useState(CHRONICLE_WINDOW);
+  const [liveOnly, setLiveOnly] = useState<string | null>(null);
   return {
     q,
     setQ,
@@ -326,6 +333,8 @@ export function usePaneUi(): PaneUi {
     toggleWhy: (key) => setWhy((w) => toggled(w, key)),
     limit,
     more: () => setLimit((n) => n + CHRONICLE_WINDOW),
+    liveOnly,
+    setLiveOnly,
   };
 }
 
@@ -337,6 +346,8 @@ export interface PanelActions {
   /** Leave the site and open a Legends page. */
   openLegends(ref: PageRef): void;
   hrefOf(ref: PageRef): string;
+  /** Open the chronicle tab showing only one category of the days watched. */
+  showChronicle(category: string): void;
 }
 
 interface PanelProps {
@@ -487,10 +498,21 @@ const TITLE_TEXT: Record<string, string> = {
   crafter: 'master crafter',
 };
 
+/** "fire 2, life 1 · ": the schools a person leans to, strongest first. */
+function affinityWords(m: SiteModel, p: Person): string {
+  const rows = Object.entries(p.magic.affinities)
+    .filter(([, v]) => v > 0)
+    .sort((x, y) => y[1] - x[1] || (x[0] < y[0] ? -1 : 1));
+  if (rows.length === 0) return '';
+  const school = (id: string) =>
+    m.content.schools.find((x) => x.id === id)?.name.toLowerCase() ?? id;
+  return `${rows.map(([id, v]) => `${school(id)} ${v}`).join(', ')} · `;
+}
+
 const TIER_TEXT: Record<TierId, string> = {
   none: 'none',
-  faint: 'faint: a knack, no spells without teaching',
-  gifted: 'gifted: could learn cantrips from a teacher',
+  faint: 'faint: a spark, enough for cantrips if someone teaches them',
+  gifted: "gifted: a hedge-witch's gift; can teach any gifted pupil",
   strong: 'strong: rare, one in a few hundred',
   exceptional: 'exceptional',
   legendary: 'legendary',
@@ -850,10 +872,26 @@ function SkillsSection({ m, p }: { m: SiteModel; p: Person }) {
   );
 }
 
+/** " · teaches Kindle": what a book of a magic school can teach here (mundane books teach nothing yet). */
+function bookLine(m: SiteModel, itemId: Id, form: string): string {
+  if (m.world.items.get(itemId)?.kind !== 'book') return '';
+  const school = bookSchool(m.content, form);
+  if (school === undefined) return '';
+  const taught = m.content.lore.cantrips
+    .map((id) => m.content.abilities.find((x) => x.id === id))
+    .filter((ab) => ab?.school === school)
+    .map((ab) => ab!.name);
+  return taught.length > 0 ? ` · teaches ${joinList(taught)}` : '';
+}
+
 /** World items the person holds: name, what they do, what they cost. */
 function CarriesSection({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) {
   const held = heldItems(m.world, m.content, p.id);
-  if (held.length === 0) return null;
+  // M3.9: books lent to this person stay their owner's, so they are listed apart.
+  const loans = m.active.lore.loans;
+  const borrowed = loans.filter((l) => l.borrower === p.id);
+  if (held.length === 0 && borrowed.length === 0) return null;
+  const loanOf = (item: Id) => loans.find((l) => l.item === item);
   return (
     <>
       <div className="sect">Carries</div>
@@ -868,10 +906,181 @@ function CarriesSection({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person 
               </LegendsLink>
               {effects.length > 0 && ` · ${effects.join(', ')}`}
               {downsides.length > 0 && ` · ${downsides.join(', ')}`}
+              {bookLine(m, h.item.id, h.item.form)}
+              {loanOf(h.item.id) && (
+                <>
+                  {' · lent to '}
+                  <PersonLink m={m} a={a} sel={null} id={loanOf(h.item.id)!.borrower} />
+                </>
+              )}
+            </li>
+          );
+        })}
+        {borrowed.map((l) => {
+          const item = m.world.items.get(l.item);
+          if (!item) return null;
+          return (
+            <li key={`b${l.item}`}>
+              <LegendsLink a={a} to={{ kind: 'item', id: item.id }}>
+                {item.name}
+              </LegendsLink>
+              {bookLine(m, item.id, item.form)}
+              {' · borrowed from '}
+              <PersonLink m={m} a={a} sel={null} id={l.owner} />
             </li>
           );
         })}
       </ul>
+    </>
+  );
+}
+
+/** "from her mother Aelith", "from Gwen, the hedge-witch", "from the book of growth". */
+function sourceWords(
+  m: SiteModel,
+  p: Person,
+  from: { teacher?: Id | null; book?: Id | null },
+): string {
+  if (from.book != null) return `from ${m.world.items.get(from.book)?.name ?? 'a book'}`;
+  if (from.teacher == null) return '';
+  const name = m.names.get(from.teacher) ?? m.world.people.get(from.teacher)?.name ?? 'someone';
+  if (p.family.parents.includes(from.teacher)) {
+    const parent = m.world.people.get(from.teacher);
+    const her = p.sex === 'f' ? 'her' : 'his';
+    return `from ${her} ${parent?.sex === 'f' ? 'mother' : 'father'} ${name}`;
+  }
+  return from.teacher === m.active.lore.hedgeWitch
+    ? `from ${name} the hedge-witch`
+    : `from ${name}`;
+}
+
+/** M3.9: cantrips known and how, lessons under way, what cannot be learned here, books and awakening. */
+function LoreSection({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) {
+  const lore = p.detail?.lore;
+  const { abilities } = m.content;
+  const cantrips = new Set(m.content.lore.cantrips);
+  const known = p.knownAbilities.filter((id) => cantrips.has(id));
+  const learning = lore?.learning;
+  const learnable = learnableCantrips(m.content, p).filter(
+    (ab) => !p.knownAbilities.includes(ab.id) && ab.id !== learning?.abilityId,
+  );
+  const blocked = learnable.filter(
+    (ab) => cantripSource(m.world, m.content, m.active, p, ab.id) === null,
+  );
+  const pupils = m.active.residents.filter(
+    (id) => m.world.people.get(id)?.detail?.lore?.learning?.teacher === p.id,
+  );
+  const reading = lore?.readBook === undefined ? undefined : m.world.items.get(lore.readBook);
+  const awakening = p.awakening;
+  // A spark with no common cantrip of its school (mind, for now) has nothing to learn here.
+  const noCantrip =
+    p.magic.power > 0 && learnableCantrips(m.content, p).length === 0 && known.length === 0;
+  if (
+    !noCantrip &&
+    known.length === 0 &&
+    !learning &&
+    learnable.length === 0 &&
+    pupils.length === 0 &&
+    !awakening &&
+    !(reading && (lore?.readDays ?? 0) > 0)
+  )
+    return null;
+  const name = (id: string) => abilities.find((x) => x.id === id)?.name ?? id;
+  const witch = m.active.lore.hedgeWitch === p.id;
+  return (
+    <>
+      <div className="sect" data-testid="lore">
+        Cantrips
+        {witch && <span className="r">the hedge-witch of {m.site.name}</span>}
+      </div>
+      <Facts>
+        {known.length > 0 && (
+          <Fact term="Knows">
+            {known.map((id) => {
+              const how = lore?.learned[id];
+              const uses = lore?.castTotal[id] ?? 0;
+              return (
+                <div key={id}>
+                  {name(id)}
+                  <span className="empty">
+                    {' · '}
+                    {how ? (
+                      <EventLink a={a} id={how.eventId}>
+                        {sourceWords(m, p, how)}, {briefDate(how.day)}
+                      </EventLink>
+                    ) : (
+                      'known before you began watching'
+                    )}
+                    {uses > 0 && ` · cast ${count(uses)} ${uses === 1 ? 'time' : 'times'}`}
+                  </span>
+                </div>
+              );
+            })}
+          </Fact>
+        )}
+        {learning && (
+          <Fact term="Learning">
+            {name(learning.abilityId)}{' '}
+            <span className="empty">
+              · {sourceWords(m, p, learning)} · {Math.floor(learning.lessons)} of{' '}
+              {m.content.lore.lessons} lessons
+            </span>
+            <span className="lessons" aria-hidden="true">
+              <i
+                style={{
+                  width: `${Math.min(100, (learning.lessons / m.content.lore.lessons) * 100)}%`,
+                }}
+              />
+            </span>
+          </Fact>
+        )}
+        {blocked.length > 0 && (
+          <Fact term="No teacher">
+            <span className="warnw">{joinList(blocked.map((ab) => ab.name))}</span>
+            <span className="empty">
+              : {p.sex === 'f' ? 'she has' : 'he has'} the spark, but no parent or hedge-witch here
+              knows {blocked.length === 1 ? 'it' : 'them'} and no book teaches{' '}
+              {blocked.length === 1 ? 'it' : 'them'}
+            </span>
+          </Fact>
+        )}
+        {noCantrip && (
+          <Fact term="Cantrips">
+            <span className="empty">
+              none to learn: no common cantrip draws on{' '}
+              {affinityWords(m, p).replace(/ \d+/g, '').replace(' · ', '')}
+            </span>
+          </Fact>
+        )}
+        {pupils.length > 0 && (
+          <Fact term="Teaching">
+            {pupils.map((id, k) => (
+              <Fragment key={id}>
+                {k > 0 && ', '}
+                <PersonLink m={m} a={a} sel={null} id={id} />
+              </Fragment>
+            ))}
+          </Fact>
+        )}
+        {reading && lore && lore.readDays > 0 && learning?.book !== reading.id && (
+          <Fact term="Reading">
+            <LegendsLink a={a} to={{ kind: 'item', id: reading.id }}>
+              {reading.name}
+            </LegendsLink>
+            <span className="empty"> · {count(lore.readDays)} evenings in all</span>
+          </Fact>
+        )}
+        {awakening && (
+          <Fact term="Awakened">
+            <EventLink a={a} id={awakening.eventId}>
+              {briefDate(awakening.day)}
+              {eventOf(m, awakening.eventId)
+                ? `, ${String(eventOf(m, awakening.eventId)!.data.how)}`
+                : ''}
+            </EventLink>
+          </Fact>
+        )}
+      </Facts>
     </>
   );
 }
@@ -1212,7 +1421,7 @@ function PersonPage({ m, a, sel, ui, id }: PanelProps & { id: Id }) {
             <>
               {TIER_TEXT[tier]}{' '}
               <span className="empty">
-                (power {p.magic.power}
+                ({affinityWords(m, p)}power {p.magic.power}
                 {powerNow !== p.magic.power
                   ? `, ${powerNow} with the ${powerItems.map((c) => c.def.name).join(' and the ')}`
                   : ''}
@@ -1230,6 +1439,7 @@ function PersonPage({ m, a, sel, ui, id }: PanelProps & { id: Id }) {
         <Fact term="Doing">{doingText(m, p, h?.home ?? null)}</Fact>
       </Facts>
       <SkillsSection m={m} p={p} />
+      <LoreSection m={m} a={a} p={p} />
       <CarriesSection m={m} a={a} p={p} />
       <LifePage m={m} a={a} p={p} />
       <div className="actions">
@@ -1684,6 +1894,131 @@ const STOCK_CARDS: [name: string, test: (item: ItemDef) => boolean][] = [
   ['Goods', (i) => i.good === 'luxury' || i.kind === 'tool'],
 ];
 
+/** M3.9: the site's hedge-witch, cantrips known and lost, books and what the cantrips did. */
+/** A cantrip known by this many or fewer, with no book here, is marked as at risk of dying out. */
+const AT_RISK_KNOWERS = 2;
+/** Stress a bad day adds (life.stressRise at the mood floor, roughly): calmed stress in days. */
+const CALM_PER_BAD_DAY = 15;
+
+function LoreFacts({ m, a }: { m: SiteModel; a: PanelActions }) {
+  const { world, active, content } = m;
+  const lore = active.lore;
+  const knownBy = new Map<string, number>();
+  const wanted = new Set<string>();
+  for (const id of active.residents) {
+    const p = world.people.get(id);
+    if (!p) continue;
+    for (const ab of p.knownAbilities) knownBy.set(ab, (knownBy.get(ab) ?? 0) + 1);
+    if (p.magic.power > 0) for (const ab of learnableCantrips(content, p)) wanted.add(ab.id);
+  }
+  const name = (id: string) => content.abilities.find((x) => x.id === id)?.name ?? id;
+  // Most known first, as the table of knowers reads; ties in content order.
+  const known = content.lore.cantrips
+    .filter((id) => (knownBy.get(id) ?? 0) > 0)
+    .sort((x, y) => knownBy.get(y)! - knownBy.get(x)!);
+  const lost = content.lore.cantrips.filter((id) => wanted.has(id) && !knownBy.has(id));
+  const books = [...world.items.values()].filter(
+    (it) => it.kind === 'book' && it.holder !== null && active.residents.includes(it.holder),
+  );
+  // At risk of dying out: two knowers or fewer and no book here that teaches it.
+  const schools = new Set(books.map((it) => bookSchool(content, it.form)));
+  const atRisk = (id: string) => {
+    const ab = content.abilities.find((x) => x.id === id);
+    return knownBy.get(id)! <= AT_RISK_KNOWERS && !(ab?.school && schools.has(ab.school));
+  };
+  const st = lore.stats;
+  const done = [
+    st.logsSaved >= 1 && `${count(st.logsSaved)} logs saved by kindled hearths`,
+    st.frostsRead > 0 &&
+      `${st.frostsRead} ${st.frostsRead === 1 ? 'frost' : 'frosts'} read in time`,
+    st.soothed > 0 &&
+      `${count(st.soothed)} ${st.soothed === 1 ? 'hurt' : 'hurts'} soothed` +
+        (st.herbsSpared > 0 ? ` (about ${count(st.herbsSpared)} herbs spared)` : ''),
+    st.calmed >= 1 && `about ${count(st.calmed / CALM_PER_BAD_DAY)} bad days calmed`,
+    st.mended >= 1 &&
+      `about ${count(st.mended * content.steward.conditionLossDays)} days of wear mended`,
+  ].filter((x): x is string => Boolean(x));
+  const witch = lore.hedgeWitch;
+  return (
+    <>
+      <div className="sect" data-testid="lore-site">
+        Lore{' '}
+        <span className="r">
+          <button type="button" className="lk" onClick={() => a.showChronicle('magic')}>
+            {st.learned} learned
+          </button>{' '}
+          · {st.awakenings} {st.awakenings === 1 ? 'awakening' : 'awakenings'}
+        </span>
+      </div>
+      <Facts>
+        <Fact term="Hedge-witch">
+          {witch !== null && m.scene.marks.has(witch) ? (
+            <PersonLink m={m} a={a} sel={null} id={witch} />
+          ) : (
+            <span className="empty">none: no gifted person here knows a cantrip</span>
+          )}
+        </Fact>
+        <Fact term="Cantrips">
+          {known.length > 0
+            ? known.map((id, k) => (
+                <span key={id}>
+                  {k > 0 && ', '}
+                  {atRisk(id) ? (
+                    <span className="warnw" title="Few know it and no book here teaches it">
+                      {name(id)} {knownBy.get(id)} · no book
+                    </span>
+                  ) : (
+                    `${name(id)} ${knownBy.get(id)}`
+                  )}
+                </span>
+              ))
+            : 'none known'}
+          {lost.length > 0 && (
+            <span className="warnw">
+              {' · '}
+              {joinList(lost.map(name))}: wanted, but no one here knows{' '}
+              {lost.length === 1 ? 'it' : 'them'}
+            </span>
+          )}
+        </Fact>
+        <Fact term="Books">
+          {books.length === 0 ? (
+            <span className="empty">none here</span>
+          ) : (
+            books.map((it) => {
+              const loan = lore.loans.find((l) => l.item === it.id);
+              return (
+                <div key={it.id}>
+                  <LegendsLink a={a} to={{ kind: 'item', id: it.id }}>
+                    {cap(it.name)}
+                  </LegendsLink>
+                  <span className="empty">
+                    {bookLine(m, it.id, it.form)}
+                    {' · '}
+                  </span>
+                  <PersonLink m={m} a={a} sel={null} id={it.holder!} />
+                  {loan && (
+                    <>
+                      <span className="empty">{', lent to '}</span>
+                      <PersonLink m={m} a={a} sel={null} id={loan.borrower} />
+                    </>
+                  )}
+                </div>
+              );
+            })
+          )}
+          {st.lost > 0 && (
+            <div className="warnw">
+              {st.lost} {st.lost === 1 ? 'book' : 'books'} lost since you began watching
+            </div>
+          )}
+        </Fact>
+        {done.length > 0 && <Fact term="Cantrips did">{done.join(' · ')}</Fact>}
+      </Facts>
+    </>
+  );
+}
+
 export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
   const { site, active, scene, world, content } = m;
   const followed = active.residents.length;
@@ -1818,6 +2153,9 @@ export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
         <Fact term="Magic">
           {mix.faint} faint, {mix.gifted} gifted, {mix.strong} strong · {mix.none} with none
         </Fact>
+      </Facts>
+      <LoreFacts m={m} a={a} />
+      <Facts>
         {m.civ && (
           <Fact term="Held by">
             <LegendsLink a={a} to={{ kind: 'civ', id: m.civ.id }}>
@@ -2229,25 +2567,46 @@ export function ChroniclePane({
       <div className="sect">
         At the site <span className="r">newest first</span>
       </div>
+      {ui.liveOnly !== null && (
+        <div className="chips" role="group" aria-label="Shown at the site">
+          <button
+            type="button"
+            className="chip tg"
+            aria-pressed={true}
+            title="Show every event again"
+            onClick={() => ui.setLiveOnly(null)}
+          >
+            {ui.liveOnly} only ×
+          </button>
+        </div>
+      )}
       <ul className="chron">
-        {[...live].reverse().map((line, k) =>
-          line.eventId !== undefined ? (
-            <EventItem
-              key={`${line.eventId}:${k}`}
-              m={m}
-              a={a}
-              ui={ui}
-              id={line.eventId}
-              path={`l${line.eventId}`}
-              label={shortDay(line.day)}
-            />
-          ) : (
-            <li key={`n${k}`} className="ev now">
-              <span className="y">{shortDay(line.day)}</span>
-              <span className="txt">{line.text}</span>
-            </li>
-          ),
-        )}
+        {[...live]
+          .filter(
+            (line) =>
+              ui.liveOnly === null ||
+              (line.eventId !== undefined &&
+                m.typeDefs.get(m.index.event(line.eventId)?.type ?? '')?.category === ui.liveOnly),
+          )
+          .reverse()
+          .map((line, k) =>
+            line.eventId !== undefined ? (
+              <EventItem
+                key={`${line.eventId}:${k}`}
+                m={m}
+                a={a}
+                ui={ui}
+                id={line.eventId}
+                path={`l${line.eventId}`}
+                label={shortDay(line.day)}
+              />
+            ) : (
+              <li key={`n${k}`} className="ev now">
+                <span className="y">{shortDay(line.day)}</span>
+                <span className="txt">{line.text}</span>
+              </li>
+            ),
+          )}
       </ul>
       <div className="sect">
         Before you arrived <span className="r">from the legends</span>
