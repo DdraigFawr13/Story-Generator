@@ -5,11 +5,13 @@ import type { SettlementRules } from '../engine';
 import { FREE_CITIES } from './realms';
 
 export const SETTLEMENT: SettlementRules = {
-  // About one civ per 3,500 land cells: 6 on a default 256x256 map, 3 on 128x128; jitter adds or drops up to 2.
-  civs: { min: 3, max: 8, landCellsPerCiv: 3500, jitter: 2 },
+  // About one civ per 1,800 land cells: 9 on a default 256x256 map (a quarter land), 3 on 128x128;
+  // jitter adds or drops up to 2. Denser than the first 3,500 so neighbours meet and fight (playtest 2026-10-13).
+  civs: { min: 3, max: 10, landCellsPerCiv: 1800, jitter: 2 },
   secondSiteChance: 0.5,
   secondSiteRange: [4, 10],
-  capitalSpacing: 32,
+  // Was 32; 22 brings neighbouring capitals from about 62 to 43 cells apart.
+  capitalSpacing: 22,
   minCapitalSpacing: 6,
   siteSpacing: 3,
   reach: 3,
