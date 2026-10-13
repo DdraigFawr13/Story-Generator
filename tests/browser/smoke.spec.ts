@@ -55,11 +55,22 @@ test('the world map generates, inspects, saves, reloads and advances', async ({ 
   await legends.getByRole('button', { name: /^Civs/ }).click();
   await legends.locator('.lg-list li a').first().click();
   const civHeading = await legends.getByRole('heading', { level: 3 }).textContent();
-  await legends
-    .getByRole('button', { name: /^why\?/ })
-    .first()
-    .click();
-  await legends.locator('.lg-tree .y a').first().click();
+  // Follow the first "why?" whose first cause has causes of its own, so "Expand all" below has
+  // something to unfold (which line that is depends on the seed's history).
+  const expandAll = legends.getByRole('button', { name: 'Expand all' });
+  for (let n = 0; ; n += 1) {
+    await legends
+      .getByRole('button', { name: /^why\?/ })
+      .nth(n)
+      .click();
+    await legends.locator('.lg-tree .y a').first().click();
+    await expect(page).toHaveURL(/open=event:\d+/);
+    // The event page has rendered once its "Why it happened" line is up.
+    await expect(legends.getByText(/^Why it happened/)).toBeVisible();
+    if ((await expandAll.count()) > 0 || n >= 9) break;
+    await page.goBack();
+    await expect(legends.getByRole('heading', { level: 3 })).toHaveText(civHeading!);
+  }
   // An event page is headed by its title, with the year as the eyebrow.
   const heading = legends.getByRole('heading', { level: 3 });
   await expect(heading).not.toHaveText(/^Year \d+/);

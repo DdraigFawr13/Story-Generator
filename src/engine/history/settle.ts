@@ -26,6 +26,7 @@ import type {
 import { culturePlaceName } from '../people/names';
 import { D8_DX, D8_DY, CellHeap } from '../worldgen/grid';
 import { landmasses } from '../worldgen/regions';
+import { foundFreeCities } from './city-states';
 
 /** What the settle stage reads from content. */
 export type SettleContent = Pick<
@@ -622,6 +623,8 @@ export function settleWorld(world: WorldState, content: SettleContent): void {
       }
     }
   }
+
+  sites.push(...foundFreeCities(world, content, search, emit));
 
   // 5. Territory.
   cells.territory = computeTerritory(cells, sites, rules.territoryReach, rules);

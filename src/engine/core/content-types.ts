@@ -1544,6 +1544,8 @@ export interface SettlementRules {
   /** Wildness at or above which history founds no site, and borders spread at `deepWildClaim` times the cost. */
   deepWild: number;
   deepWildClaim: number;
+  /** Free cities at the start (playtest add-on). */
+  freeCities: FreeCityRules;
 }
 
 /** Tunable numbers for the yearly history stage (M2.3); see engine/history/. Rates are per year. */
@@ -1746,6 +1748,104 @@ export interface HistoryRules {
   wearyShare: number;
   /** Years after peace before either side can declare again. */
   peaceYears: number;
+  /** Colleges of magic (playtest add-on): founding, training, notice and spells. */
+  colleges: CollegeRules;
+  /** Free cities (playtest add-on): at the start, by breaking away, and their pacts. */
+  cityStates: CityStateRules;
+}
+
+/** A spell a college master or legend can work on a site's trouble (colleges.ts). */
+export interface SpellDef {
+  id: string;
+  /** The trouble it answers: a dry or cold spell over the site, a sickness there, or this year's famine. */
+  target: 'dry' | 'cold' | 'disease' | 'famine';
+  /** Primary schools that can work it. */
+  schools: string[];
+  /** What the caster did, after their name; `{site}` and `{disease}` are filled in. */
+  deed: string;
+}
+
+export interface CollegeRules {
+  /** A college opens only in a site of this many people or more. */
+  minPop: number;
+  /** Each decade, per civ without a college and with a Strong+ mage: chance times culture learning / 10. */
+  foundChance: number;
+  /** At most this many colleges stand at once in a world. */
+  maxOpen: number;
+  /** A civ with a college notices this many times the usual share of mage births among its commons. */
+  noticeFactor: number;
+  /** Yearly chance a Strong+ mage of a college's people gains one power (never past legendary - 1). */
+  trainChance: number;
+  /** A college's people are this many times as likely to see a mage grow into a legend. */
+  legendFactor: number;
+  /** Yearly chance a Strong+ mage of a people without a college sets out to study at one in reach. */
+  travelChance: number;
+  /** Cells a student will travel to a college. */
+  travelRange: number;
+  /** Years a student stays before going home. */
+  studyYears: number;
+  /** College names; `{site}` and `{school}` (capitalised) are filled in. */
+  names: string[];
+  /** Least power to work a spell (Exceptional). */
+  spellPower: number;
+  /** Yearly chance an able caster with a trouble in reach works a spell. */
+  spellChance: number;
+  /** Cells a caster travels to work a spell (about the hunt range). */
+  spellRange: number;
+  /** Years a caster rests between spells. */
+  spellRest: number;
+  /** Fame per spell. */
+  spellFame: number;
+  /** Food a bounty spell adds, in years of the site's need. */
+  bountyYears: number;
+  /** Years a warded site and its neighbours stay safe from the sickness. */
+  wardYears: number;
+  spells: SpellDef[];
+}
+
+/** Free cities at the start (settle): small realms of one town, set apart from the capitals. */
+export interface FreeCityRules {
+  /** One per `landCellsPerCity` land cells, clamped to min..max. */
+  start: { min: number; max: number; landCellsPerCity: number };
+  /** Least distance from a capital, and from any other site. */
+  capitalSpacing: number;
+  siteSpacing: number;
+  /** Starting people. */
+  pop: [number, number];
+  /** Names, at the start and for towns that break away; `{n}` is the city's name. */
+  names: string[];
+}
+
+export interface CityStateRules {
+  /** Breaking away, checked each decade for sites of civs with at least `minSites` live sites. */
+  secede: {
+    minSites: number;
+    minPop: number;
+    /** Least distance from the capital. */
+    minDistance: number;
+    /** Chance per decade before the culture's freedom (/ 10) and the troubles below. */
+    chance: number;
+    /** Multipliers: a famine at the site in the last decade, the civ at war, a disputed succession in the decade. */
+    famine: number;
+    war: number;
+    dispute: number;
+    /** No more break away while this many free cities live. */
+    maxFree: number;
+    /** Grievance the old realm holds against the city that left. */
+    grievance: number;
+    /** Years before the old realm can march on the city. */
+    graceYears: number;
+  };
+  /** Pacts of defence a free city swears with a neighbour, each decade. */
+  pact: {
+    chance: number;
+    /** Neither side may hold more grievance than this against the other. */
+    maxGrievance: number;
+    /** Share of the ally's strength that comes to a defender's battles. */
+    aidShare: number;
+    /** Grievance the attacker gains against the ally who came. */
+    grievance: number;
+  };
 }
 
 /** One kind of evening interaction between two residents (M3.6). Numbers are tunables in content/interactions.ts. */

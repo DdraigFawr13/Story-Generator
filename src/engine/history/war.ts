@@ -14,6 +14,7 @@ import {
   warCaptain,
 } from './notables';
 import { civLosesSite, evacuate } from './abandon';
+import { allyAid, pactStrength } from './city-states';
 import { bandCount, removePeople, removeProportional, stochasticRound, totalPop } from './pop';
 import { cellDistance } from './settle';
 import {
@@ -81,13 +82,19 @@ function reachable(run: HistoryRun, a: Civ, b: Civ): Site[] {
 }
 
 /** Grievance times opportunity of `a` against `b`; 0 with no contact. */
-function warScore(run: HistoryRun, a: Civ, b: Civ, strengths: Map<Id, number>): number {
+function warScore(
+  run: HistoryRun,
+  a: Civ,
+  b: Civ,
+  strengths: Map<Id, number>,
+  backed: Map<Id, number>,
+): number {
   const { rules } = run;
   const grievance = a.grievances.get(b.id) ?? 0;
   if (grievance < 1 || grievanceEventsOf(run, a.id, b.id).length === 0) return 0;
   const touched = reachable(run, a, b);
   if (touched.length === 0) return 0;
-  const strengthB = strengths.get(b.id) ?? 0;
+  const strengthB = backed.get(b.id) ?? 0;
   const ratio =
     strengthB > 0
       ? Math.min(rules.maxStrengthRatio, (strengths.get(a.id) ?? 0) / strengthB)
@@ -109,6 +116,14 @@ function declareWars(run: HistoryRun): void {
   const civs = [...run.world.civs.values()].filter((c) => c.fell === undefined);
   const strengths = new Map<Id, number>();
   for (const civ of civs) strengths.set(civ.id, civStrength(run, civ));
+  // A civ's allies count when others weigh a war against it.
+  const backed = new Map<Id, number>();
+  for (const civ of civs) {
+    backed.set(
+      civ.id,
+      strengths.get(civ.id)! + pactStrength(run, civ, (c) => strengths.get(c.id) ?? 0),
+    );
+  }
   for (const a of civs) {
     if (inWar(run, a)) continue;
     let target: Civ | undefined;
@@ -116,7 +131,7 @@ function declareWars(run: HistoryRun): void {
     for (const b of civs) {
       if (b.id === a.id || atWar(run, a.id, b.id)) continue;
       if (run.year < (run.truce.get(pairKey(a.id, b.id)) ?? 0)) continue;
-      const score = warScore(run, a, b, strengths);
+      const score = warScore(run, a, b, strengths, backed);
       if (score >= best) {
         best = score;
         target = b;
@@ -268,7 +283,8 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ): void
   const target = pickTarget(run, attacker, defender);
   if (!target) return;
   const attackStrength = civStrength(run, attacker);
-  const defendStrength = civStrength(run, defender);
+  const defendStrength =
+    civStrength(run, defender) + allyAid(run, war, attacker, defender, (c) => civStrength(run, c));
   const luck = () =>
     1 - rules.battleLuck + (2 * rules.battleLuck * rng.war.between(0, 1000)) / 1000;
   const army = attackStrength * rules.campaignShare;

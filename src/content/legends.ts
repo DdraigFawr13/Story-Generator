@@ -18,6 +18,7 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'oath_sworn',
       'champion_fought',
       'vengeance_raid',
+      'ally_aided',
     ],
   },
   {
@@ -30,6 +31,14 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'civ_founded',
       'civ_fell',
       'legend_risen',
+      'city_freed',
+      'pact_sworn',
+      'pact_broken',
+      'college_founded',
+      'college_closed',
+      'spell_cast',
+      'mage_went_to_study',
+      'mage_came_home',
     ],
   },
   {
