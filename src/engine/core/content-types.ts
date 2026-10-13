@@ -1593,8 +1593,6 @@ export interface CultureValueRules {
   honourMemory: number;
   /** Envy grievance is multiplied by the envious culture's wealth / this. */
   envyWealth: number;
-  /** Each decade two civs trade, each forgives this x its wealth / 10 of its grievance. */
-  tradeGoodwill: number;
   /** Alliance marriage chance is multiplied by kin / this. */
   kinNeutral: number;
   /** Dispute chance is multiplied by 1 + (freedom - order) x this. */
