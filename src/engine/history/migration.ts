@@ -191,6 +191,9 @@ export function runMigration(run: HistoryRun): void {
     for (const id of links.get(site.id) ?? []) {
       const other = world.sites.get(id);
       if (!other || other.ruinedYear !== undefined || other.civId !== site.civId) continue;
+      // Word of hunger travels: nobody moves to a place that starved lately.
+      const starved = logOf(run, other.id).famine?.year;
+      if (starved !== undefined && run.year - starved <= rules.famineShunYears) continue;
       const free = other.capacity - totalPop(other);
       if (free > room) {
         room = free;

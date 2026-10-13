@@ -125,6 +125,40 @@ describe('notables', () => {
     }
   });
 
+  it('name a razing death after the kind of place burned', () => {
+    const world = base();
+    const sites = [...world.sites.values()];
+    const burnings = world.events.filter(
+      (e) => e.type === 'notable_died' && String(e.data.cause).includes('burning'),
+    );
+    expect(burnings.length).toBeGreaterThan(0);
+    for (const e of burnings) {
+      const site = sites.find((s) => s.name === e.data.site)!;
+      expect(e.data.cause).toContain(`the burning of the ${site.kind}`);
+    }
+  });
+
+  it('say who lost when a disputed succession is settled', () => {
+    const quarrelsome: ContentBundle = {
+      ...DEFAULT_CONTENT,
+      notables: { ...DEFAULT_CONTENT.notables, disputeChance: 1, disputeMargin: 100 },
+    };
+    const world = generate('NOT-A', YEARS, quarrelsome);
+    const byId = new Map(world.events.map((e) => [e.id, e]));
+    const settled = world.events.filter((e) => e.type === 'ruler_succeeded');
+    let disputed = 0;
+    for (const e of settled) {
+      const dispute = e.causes
+        .map((id) => byId.get(id))
+        .find((c) => c?.type === 'succession_disputed');
+      if (!dispute) continue;
+      disputed += 1;
+      const loser = dispute.data.a === e.data.ruler ? dispute.data.b : dispute.data.a;
+      expect(e.data.rule).toContain(String(loser));
+    }
+    expect(disputed).toBeGreaterThan(0);
+  });
+
   it('gives the same world digest for the same seed', () => {
     expect(worldDigest(generate('NOT-DET', 80))).toBe(worldDigest(generate('NOT-DET', 80)));
   });

@@ -49,7 +49,7 @@ export const NOTABLES: NotableRules = {
     battle: 'in battle',
     beast: 'to a beast',
     raid: 'in a raid',
-    razing: 'in the burning of the town',
+    razing: 'in the burning of the {kind}',
     murder: 'by murder',
   },
   successionPhrases: {
@@ -61,6 +61,10 @@ export const NOTABLES: NotableRules = {
     'eldest-child': 'by the custom of the eldest child',
   },
   noHeirPhrase: 'when no heir of the line was left',
+  disputePhrases: {
+    held: '{rule}, after winning the quarrel with {rival}',
+    seized: 'having pushed aside {rival}, the heir by custom',
+  },
   // Per-year death chances at the reference lifespan; elders rise to certain death at 1.15 x lifespan.
   adultDeath: 0.004,
   childDeath: 0.015,

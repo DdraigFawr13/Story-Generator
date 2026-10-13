@@ -105,7 +105,8 @@ describe('biographies', () => {
       .sort((a, b) => b.fame - a.fame || a.id - b.id)[0]!;
     const bio = biography(world, DEFAULT_CONTENT, narrator, index, { kind: 'person', id: dead.id });
     const text = bio.summary.join(' ');
-    expect(text).toContain(`born in Year ${dead.born}`);
+    // Either personBorn variant names the year.
+    expect(text).toMatch(new RegExp(`born in Year ${dead.born}|Year ${dead.born} saw the birth`));
     expect(text).toMatch(new RegExp(`died in Year ${dead.died}`));
     expect(bio.lines.length).toBeLessThanOrEqual(maxLines);
     for (let i = 0; i < bio.lines.length; i += 1) {
