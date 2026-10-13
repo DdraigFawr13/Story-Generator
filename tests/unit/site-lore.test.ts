@@ -114,7 +114,7 @@ describe('lore', () => {
     expect(lost.child.detail!.lore!.learning).toBeUndefined();
   });
 
-  it('mends the mender\'s own worn home, one use a day', () => {
+  it("mends the mender's own worn home, one use a day", () => {
     const t = fresh();
     t.child.knownAbilities = ['mend'];
     t.child.magic = { power: 1, affinities: { earth: 1 } };
