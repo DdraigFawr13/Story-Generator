@@ -77,6 +77,18 @@ export const HISTORY: HistoryRules = {
   slayBase: 0.5,
   slayAdultsPerDanger: 2,
   slayTierFactor: { beast: 1, great: 0.6, legendary: 0.15 },
+  // A second beast near the same town is "the Second", never the dead one come back.
+  beastNameOrdinals: [
+    'the Second',
+    'the Third',
+    'the Fourth',
+    'the Fifth',
+    'the Sixth',
+    'the Seventh',
+    'the Eighth',
+    'the Ninth',
+    'the Tenth',
+  ],
   tradeGoodsRange: 8,
   tradeKeepYears: 1,
   goodValue: { food: 0.01, ore: 1, timber: 0.5, salt: 2, luxury: 8 },

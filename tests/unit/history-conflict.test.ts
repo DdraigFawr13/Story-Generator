@@ -230,7 +230,7 @@ describe('beasts', () => {
   };
 
   /** Lair at x=14 on row 4: Site1 (x=10) is in range, Site2 (x=60) is not. */
-  function den(rules: HistoryRules, years: number): WorldState {
+  function den(rules: HistoryRules, years: number, def: CreatureDef = DEN): WorldState {
     const world = strip(
       [
         { x: 10, pop: 200 },
@@ -248,7 +248,7 @@ describe('beasts', () => {
       deeds: [],
     });
     world.nextId.creature = 2;
-    runHistory(world, withRules(rules, [DEN]));
+    runHistory(world, withRules(rules, [def]));
     return world;
   }
 
@@ -264,6 +264,25 @@ describe('beasts', () => {
     expect(eventsOf(world, 'beast_slain').length).toBe(1);
     expect(world.creatures.get(1)?.died).toBeDefined();
     expect(eventsOf(world, 'beast_raid').length).toBe(1);
+  });
+
+  it("never give a new beast a dead one's name", () => {
+    // Playtest (S3, 1000 years): a second giant near Mariuk took the slain one's name, so its raids
+    // read as the dead giant's on the Legends page.
+    const world = strip([{ x: 10, pop: 200 }], 1);
+    world.creatures.set(1, {
+      id: 1,
+      defId: DEN.id,
+      name: 'the wolf of Site1',
+      lair: 4 * WIDTH + 14,
+      born: 0,
+      lifespan: 100,
+      died: 0,
+      deeds: [],
+    });
+    world.nextId.creature = 2;
+    runHistory(world, withRules(STILL, [{ ...DEN, spawnChance: 1, raidChance: 0 }]));
+    expect(world.creatures.get(2)?.name).toBe('the wolf of Site1 the Second');
   });
 });
 

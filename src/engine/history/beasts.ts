@@ -66,6 +66,26 @@ function findLair(run: HistoryRun, def: CreatureDef): number {
   return found;
 }
 
+/**
+ * A name no beast has had: the rolled template, else the kind's other templates in order, else the
+ * rolled one with the next free ordinal ("Cawr of Mariuk the Second"). A reader takes a beast's
+ * name as who it is, so a dead beast's name never walks again.
+ */
+function freshName(run: HistoryRun, def: CreatureDef, rolled: string, near: string): string {
+  const used = new Set<string>();
+  for (const creature of run.world.creatures.values()) used.add(creature.name);
+  const fill = (template: string) => template.replace('{near}', near);
+  for (const template of [rolled, ...def.names])
+    if (!used.has(fill(template))) return fill(template);
+  const base = fill(rolled);
+  for (const ordinal of run.rules.beastNameOrdinals) {
+    const name = `${base} ${ordinal}`;
+    if (!used.has(name)) return name;
+  }
+  for (let n = run.rules.beastNameOrdinals.length + 2; ; n += 1)
+    if (!used.has(`${base} ${n}`)) return `${base} ${n}`;
+}
+
 function spawn(run: HistoryRun, def: CreatureDef): void {
   const { world, rng } = run;
   const name = rng.beasts.pick(def.names);
@@ -73,7 +93,7 @@ function spawn(run: HistoryRun, def: CreatureDef): void {
   const lair = findLair(run, def);
   if (lair < 0) return;
   const near = nearestSite(run, lair, Infinity)?.name ?? NO_NEAR;
-  const beastName = name.replace('{near}', near);
+  const beastName = freshName(run, def, name, near);
   const id = world.nextId.creature;
   world.nextId.creature += 1;
   const event = run.emit({

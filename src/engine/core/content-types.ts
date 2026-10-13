@@ -1709,6 +1709,8 @@ export interface HistoryRules {
   slayBase: number;
   slayAdultsPerDanger: number;
   slayTierFactor: Record<CreatureTier, number>;
+  /** A beast whose name is taken (a dead one of the same name) takes the next of these after it. */
+  beastNameOrdinals: string[];
 
   // Trade (M2.4), once a decade.
   /** Resource deposits within this many cells (Chebyshev) of a site are its goods. */
