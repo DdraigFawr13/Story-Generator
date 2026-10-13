@@ -48,7 +48,6 @@ import {
   type Household,
   type Id,
   type LegendIndex,
-  type LegendRef,
   type Narrator,
   type Person,
   type Site,
@@ -182,12 +181,12 @@ export function dayText(day: number): string {
 export function monthName(day: number): string {
   return MONTH_NAMES[dateOf(day).month]!;
 }
-function shortDay(day: number): string {
+export function shortDay(day: number): string {
   const date = dateOf(day);
   return `${date.dayOfMonth} ${MONTH_NAMES[date.month]!.slice(0, 4)} ${date.year - 1}`;
 }
 
-function householdName(m: SiteModel, h: Household): string {
+export function householdName(m: SiteModel, h: Household): string {
   const label = m.labels.get(h.id) ?? 'A household';
   const hall = h.home !== null && m.active.buildings.get(h.home)?.defId === 'hall';
   return hall ? `${cap(m.ruleWord)}'s hall: ${label}` : label;
@@ -292,6 +291,38 @@ export interface PaneUi {
   /** "At the site" shows only this event category (from a link such as "9 learned"), or all. */
   liveOnly: string | null;
   setLiveOnly(category: string | null): void;
+  /** M3.11 (R-14): numbers in the inspector; off shows words. Remembered in this browser. */
+  numbers: boolean;
+  setNumbers(on: boolean): void;
+  /** M3.11: the person inspector's section. */
+  personTab: PersonTab;
+  setPersonTab(tab: PersonTab): void;
+  /** M3.11: "At the site" event categories switched off, and the importance floor. */
+  liveHidden: ReadonlySet<string>;
+  toggleLiveKind(category: string): void;
+  liveFloor: number;
+  setLiveFloor(n: number): void;
+  /** M3.11: unfolded rollup lines and other open toggles, by key. */
+  unfolded: ReadonlySet<string>;
+  toggleUnfold(key: string): void;
+}
+
+export type PersonTab = 'now' | 'ties' | 'story' | 'skills';
+
+const NUMBERS_KEY = 'sg.inspector.numbers';
+function readNumbers(): boolean {
+  try {
+    return window.localStorage.getItem(NUMBERS_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function writeNumbers(on: boolean): void {
+  try {
+    window.localStorage.setItem(NUMBERS_KEY, on ? '1' : '0');
+  } catch {
+    // Storage blocked: the choice lasts for this page only.
+  }
 }
 
 function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
@@ -301,7 +332,7 @@ function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
 }
 
 /** Items shown in a chronicle list before "Show more". */
-const CHRONICLE_WINDOW = 200;
+export const CHRONICLE_WINDOW = 200;
 
 export function usePaneUi(): PaneUi {
   const [q, setQ] = useState('');
@@ -313,6 +344,11 @@ export function usePaneUi(): PaneUi {
   const [why, setWhy] = useState<ReadonlySet<string>>(new Set());
   const [limit, setLimit] = useState(CHRONICLE_WINDOW);
   const [liveOnly, setLiveOnly] = useState<string | null>(null);
+  const [numbers, setNumbers] = useState(readNumbers);
+  const [personTab, setPersonTab] = useState<PersonTab>('now');
+  const [liveHidden, setLiveHidden] = useState<ReadonlySet<string>>(new Set());
+  const [liveFloor, setLiveFloor] = useState(0);
+  const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(new Set());
   return {
     q,
     setQ,
@@ -335,6 +371,19 @@ export function usePaneUi(): PaneUi {
     more: () => setLimit((n) => n + CHRONICLE_WINDOW),
     liveOnly,
     setLiveOnly,
+    numbers,
+    setNumbers: (on) => {
+      writeNumbers(on);
+      setNumbers(on);
+    },
+    personTab,
+    setPersonTab,
+    liveHidden,
+    toggleLiveKind: (category) => setLiveHidden((h) => toggled(h, category)),
+    liveFloor,
+    setLiveFloor,
+    unfolded,
+    toggleUnfold: (key) => setUnfolded((u) => toggled(u, key)),
   };
 }
 
@@ -350,7 +399,7 @@ export interface PanelActions {
   showChronicle(category: string): void;
 }
 
-interface PanelProps {
+export interface PanelProps {
   m: SiteModel;
   sel: Selection | null;
   a: PanelActions;
@@ -360,7 +409,7 @@ interface PanelProps {
 // ---- small pieces ----
 
 /** A link to a resident: selects them on the map. */
-function PersonLink({
+export function PersonLink({
   m,
   a,
   sel,
@@ -403,7 +452,15 @@ function PersonLink({
 }
 
 /** A link to a Legends page (leaves the site); a real anchor so copy-link works. */
-function LegendsLink({ a, to, children }: { a: PanelActions; to: PageRef; children: ReactNode }) {
+export function LegendsLink({
+  a,
+  to,
+  children,
+}: {
+  a: PanelActions;
+  to: PageRef;
+  children: ReactNode;
+}) {
   return (
     <a
       className="ln"
@@ -416,7 +473,15 @@ function LegendsLink({ a, to, children }: { a: PanelActions; to: PageRef; childr
   );
 }
 
-function SelectLink({ a, to, children }: { a: PanelActions; to: Selection; children: ReactNode }) {
+export function SelectLink({
+  a,
+  to,
+  children,
+}: {
+  a: PanelActions;
+  to: Selection;
+  children: ReactNode;
+}) {
   const go = () => a.select(to);
   return (
     <a
@@ -434,7 +499,7 @@ function SelectLink({ a, to, children }: { a: PanelActions; to: Selection; child
 }
 
 /** A link to the event a line follows from. */
-function EventLink({ a, id, children }: { a: PanelActions; id: Id; children: ReactNode }) {
+export function EventLink({ a, id, children }: { a: PanelActions; id: Id; children: ReactNode }) {
   return (
     <LegendsLink a={a} to={{ kind: 'event', id }}>
       {children}
@@ -443,12 +508,12 @@ function EventLink({ a, id, children }: { a: PanelActions; id: Id; children: Rea
 }
 
 /** The event as the pane has it (the index trails live events by half a second). */
-function eventOf(m: SiteModel, id: Id) {
+export function eventOf(m: SiteModel, id: Id) {
   return m.index.event(id) ?? m.world.events.find((e) => e.id === id);
 }
 
 /** An event's title in lower case, for "because of ...". */
-function causeTitle(m: SiteModel, id: Id): string {
+export function causeTitle(m: SiteModel, id: Id): string {
   const event = eventOf(m, id);
   if (!event) return 'earlier events';
   const title = eventTitle(event, m.typeDefs.get(event.type));
@@ -480,10 +545,10 @@ function burntText(m: SiteModel, b: Building): string | null {
   return `Burnt in ${when}; ${state}`;
 }
 
-function Facts({ children }: { children: ReactNode }) {
+export function Facts({ children }: { children: ReactNode }) {
   return <dl className="facts">{children}</dl>;
 }
-function Fact({ term, children }: { term: string; children: ReactNode }) {
+export function Fact({ term, children }: { term: string; children: ReactNode }) {
   return (
     <>
       <dt>{term}</dt>
@@ -520,7 +585,7 @@ const TIER_TEXT: Record<TierId, string> = {
 
 // ---- Chronicle lines ----
 
-function EventItem({
+export function EventItem({
   m,
   a,
   ui,
@@ -620,7 +685,7 @@ function EventItem({
   );
 }
 
-function LegendLines({
+export function LegendLines({
   m,
   a,
   ui,
@@ -2524,159 +2589,3 @@ export function PeoplePane({ m, a, sel, ui }: PanelProps) {
 // ---- Chronicle ----
 
 /** A line from the watched days: the opening note, or an event the site emitted. */
-export interface LiveLine {
-  day: number;
-  /** An event id; absent for the opening note. */
-  eventId?: Id;
-  text?: string;
-}
-
-const FLOORS: [number, string][] = [
-  [0, 'All'],
-  [3, '★'],
-  [6, '★★'],
-  [9, '★★★'],
-];
-
-export function ChroniclePane({
-  m,
-  a,
-  ui,
-  live,
-}: Omit<PanelProps, 'sel'> & { live: readonly LiveLine[] }) {
-  const ref: LegendRef = { kind: 'site', id: m.site.id };
-  const every = m.index.events(ref);
-  const bio = biography(m.world, m.content, m.narrator, m.index, ref);
-  // Days watched have their own "At the site" list, so this one stops at arrival.
-  const arrived = m.active.enteredDay;
-  const ids = (ui.mode === 'highlights' ? bio.lines.map((l) => l.eventId) : [...every]).filter(
-    (id) => {
-      const event = m.index.event(id);
-      return event !== undefined && event.day <= arrived;
-    },
-  );
-  const groups = m.content.typeGroups ?? [];
-  const groupOf = new Map<string, string>();
-  for (const g of groups) for (const type of g.types) groupOf.set(type, g.id);
-  const present = groups.filter((g) =>
-    ids.some((id) => groupOf.get(m.index.event(id)!.type) === g.id),
-  );
-  const shown = ids
-    .filter((id) => {
-      const event = m.index.event(id)!;
-      return !ui.hidden.has(groupOf.get(event.type) ?? '') && event.importance >= ui.floor;
-    })
-    .reverse();
-  return (
-    <div className="page">
-      <div className="sect">
-        At the site <span className="r">newest first</span>
-      </div>
-      {ui.liveOnly !== null && (
-        <div className="chips" role="group" aria-label="Shown at the site">
-          <button
-            type="button"
-            className="chip tg"
-            aria-pressed={true}
-            title="Show every event again"
-            onClick={() => ui.setLiveOnly(null)}
-          >
-            {ui.liveOnly} only ×
-          </button>
-        </div>
-      )}
-      <ul className="chron">
-        {[...live]
-          .filter(
-            (line) =>
-              ui.liveOnly === null ||
-              (line.eventId !== undefined &&
-                m.typeDefs.get(m.index.event(line.eventId)?.type ?? '')?.category === ui.liveOnly),
-          )
-          .reverse()
-          .map((line, k) =>
-            line.eventId !== undefined ? (
-              <EventItem
-                key={`${line.eventId}:${k}`}
-                m={m}
-                a={a}
-                ui={ui}
-                id={line.eventId}
-                path={`l${line.eventId}`}
-                label={shortDay(line.day)}
-              />
-            ) : (
-              <li key={`n${k}`} className="ev now">
-                <span className="y">{shortDay(line.day)}</span>
-                <span className="txt">{line.text}</span>
-              </li>
-            ),
-          )}
-      </ul>
-      <div className="sect">
-        Before you arrived <span className="r">from the legends</span>
-      </div>
-      <div className="toolrow">
-        <div className="seg" role="group" aria-label="Which events">
-          {(
-            [
-              ['highlights', 'Highlights'],
-              ['all', 'Every event'],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={ui.mode === value}
-              onClick={() => ui.setMode(value)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="seg" role="group" aria-label="Importance at least">
-          {FLOORS.map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={ui.floor === value}
-              title={`Importance ${label}`}
-              onClick={() => ui.setFloor(value)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="chips" role="group" aria-label="Kinds of event">
-        {present.map((g) => (
-          <button
-            key={g.id}
-            type="button"
-            className="chip tg"
-            aria-pressed={!ui.hidden.has(g.id)}
-            onClick={() => ui.toggleGroup(g.id)}
-          >
-            {g.label.toLowerCase()}
-          </button>
-        ))}
-      </div>
-      <p className="quiet">
-        {shown.length} of {ids.length} events shown, newest first. &quot;why?&quot; unfolds the
-        causes one step at a time.
-      </p>
-      {shown.length === 0 ? (
-        <ul className="chron">
-          <li className="empty">No events match.</li>
-        </ul>
-      ) : (
-        <LegendLines m={m} a={a} ui={ui} ids={shown.slice(0, ui.limit)} prefix="c" />
-      )}
-      {shown.length > ui.limit && (
-        <button type="button" onClick={ui.more}>
-          Show {CHRONICLE_WINDOW} more ({ui.limit} of {shown.length})
-        </button>
-      )}
-    </div>
-  );
-}

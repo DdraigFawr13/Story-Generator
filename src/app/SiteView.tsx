@@ -31,7 +31,6 @@ import type { SiteSpeed } from '../platform/site-worker';
 import type { PageRef } from './legends-ctx';
 import { siteLinkPoint } from './map-view';
 import {
-  ChroniclePane,
   InspectPane,
   PeoplePane,
   SitePane,
@@ -44,10 +43,10 @@ import {
   selectionName,
   tipText,
   usePaneUi,
-  type LiveLine,
   type PanelActions,
   type SiteModel,
 } from './site-panels';
+import { ChroniclePane, type LiveLine } from './site-chronicle';
 import {
   SiteRenderer,
   clampViewport,
