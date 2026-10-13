@@ -62,6 +62,7 @@ import {
   type SiteLink,
   type ViewState,
   type WorldSize,
+  type SiteTab,
 } from './map-view';
 import './world-map.css';
 import './site-view.css';
@@ -144,6 +145,7 @@ interface Watching {
     open: string | null;
     zoom: number | null;
     at: { x: number; y: number } | null;
+    tab: SiteTab | null;
   };
 }
 /** A site to watch: an existing one, or an outpost to found first. */
@@ -405,6 +407,7 @@ export function NextApp() {
           open: link?.open ?? null,
           zoom: link?.zoom ?? null,
           at: link?.at ?? null,
+          tab: link?.tab ?? null,
         },
       };
       watchingRef.current = next;
@@ -416,6 +419,7 @@ export function NextApp() {
         open: next.restore.open,
         zoom: next.restore.zoom ?? 2,
         at: next.restore.at ?? { x: 0, y: 0 },
+        tab: next.restore.tab,
       });
       if (link) window.history.replaceState({}, '', url);
       else window.history.pushState({}, '', url);

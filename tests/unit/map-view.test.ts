@@ -128,7 +128,17 @@ describe('site view URL (M3.1)', () => {
       open: 'person:776',
       zoom: 2,
       at: { x: 65, y: 47 },
+      tab: null,
     });
+  });
+
+  it('carries the pane tab (M3.11), leaving Inspect out', () => {
+    const base = { seed: 'S1', size: 256, site: 6, day: 3, open: null, zoom: 2 } as const;
+    const url = buildSiteUrl({ ...base, at: { x: 1, y: 2 }, tab: 'chron' });
+    expect(url).toBe('/?seed=S1&size=256&site=6&day=3&z=3&at=1,2&tab=chron');
+    expect(parseViewUrl(url.slice(2), IDS).site?.tab).toBe('chron');
+    expect(buildSiteUrl({ ...base, at: { x: 1, y: 2 }, tab: 'inspect' })).not.toContain('tab=');
+    expect(parseViewUrl('?seed=S1&site=6&tab=nope', IDS).site?.tab).toBeNull();
   });
 
   it('carries the last block run, and names the moment a clock shows', () => {
@@ -171,7 +181,15 @@ describe('site view URL (M3.1)', () => {
   it('ignores bad site values and links without a site', () => {
     expect(parseViewUrl('?seed=S1&site=x', IDS).site).toBeNull();
     const view = parseViewUrl('?seed=S1&site=4&day=-1&open=civ:3&z=9&at=oops', IDS).site;
-    expect(view).toEqual({ site: 4, day: 0, block: null, open: null, zoom: null, at: null });
+    expect(view).toEqual({
+      site: 4,
+      day: 0,
+      block: null,
+      open: null,
+      zoom: null,
+      at: null,
+      tab: null,
+    });
     expect(parseViewUrl('?seed=S1&site=4&day=999999', IDS).site?.day).toBe(MAX_LINK_DAY);
     // Old links are untouched.
     const old = parseViewUrl('?seed=S1&open=civ:3&z=2&at=10,20', IDS);
