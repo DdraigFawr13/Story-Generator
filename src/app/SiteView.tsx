@@ -9,8 +9,11 @@ import {
   useRef,
   useState,
   type MutableRefObject,
+  type RefObject,
 } from 'react';
 import {
+  DAY_BLOCKS,
+  applySiteSnapshot,
   buildLegendIndex,
   dateOf,
   localMapDigest,
@@ -19,6 +22,7 @@ import {
   type LegendIndex,
   type Narrator,
   type SimEvent,
+  type SiteSnapshot,
   type WorldState,
 } from '../engine';
 import type { SiteHost } from '../platform/site-host';
@@ -30,6 +34,7 @@ import {
   PeoplePane,
   SitePane,
   createSiteModel,
+  shownBlock,
   dayText,
   joinList,
   selectionAnnouncement,
@@ -44,6 +49,7 @@ import {
   SiteRenderer,
   clampViewport,
   formatSelection,
+  movePeople,
   parseSelection,
   selectionRect,
   tileAtPoint,
@@ -59,7 +65,12 @@ export interface SiteLinkParts {
   at: { x: number; y: number };
 }
 
-export type TickListener = (day: number, events: SimEvent[], rate: number) => void;
+export type TickListener = (
+  day: number,
+  events: SimEvent[],
+  rate: number,
+  snapshot?: SiteSnapshot,
+) => void;
 
 interface Props {
   world: WorldState;
@@ -124,6 +135,9 @@ interface Banner {
   causes: { word: string; text: string }[];
 }
 
+/** How long a disc takes to walk to its new tile, by speed: about one block of wall-clock time. */
+const TWEEN_MS: Partial<Record<SiteSpeed, number>> = { 1: 250, 4: 60 };
+
 export function SiteView(props: Props) {
   const { world, content, host, onLeave } = props;
   const active = world.activeSite!;
@@ -153,6 +167,8 @@ export function SiteView(props: Props) {
   ]);
 
   const [day, setDay] = useState(world.day);
+  /** Bumped by each snapshot so the panes and the time bar re-read the people. */
+  const [, setSnapshots] = useState(0);
   const [speed, setSpeedState] = useState<SiteSpeed>(0);
   const [rate, setRate] = useState(0);
   const [sel, setSel] = useState<Selection | null>(() => {
@@ -367,9 +383,21 @@ export function SiteView(props: Props) {
   latest.current = { speed, pauseOn, m, setSpeed };
 
   useEffect(() => {
-    props.ticks.current = (nextDay, events, nextRate) => {
+    props.ticks.current = (nextDay, events, nextRate, snapshot) => {
       const { pauseOn: on, m: model, speed: current } = latest.current;
       world.day = nextDay;
+      if (snapshot) {
+        // The worker owns the running world; this copy mirrors it from the snapshots.
+        applySiteSnapshot(world, snapshot);
+        base.clock.day = snapshot.day;
+        const before = new Map<Id, number>();
+        for (const mark of model.scene.marks.values()) before.set(mark.id, mark.k);
+        movePeople(model.scene, world);
+        renderer.current?.beginTween(before, TWEEN_MS[current] ?? 0);
+        renderer.current?.refreshPeople();
+        redrawOverview();
+        setSnapshots((n) => n + 1);
+      }
       setDay(nextDay);
       setRate(nextRate);
       if (events.length === 0) return;
@@ -438,9 +466,20 @@ export function SiteView(props: Props) {
     );
   }, [banner, whyOpen]);
 
+  // Under 860 px the time bar is pinned to the viewport bottom; keep room for it.
+  useEffect(() => {
+    const time = timeRef.current;
+    const main = mainRef.current;
+    if (!time || !main) return;
+    const set = () => main.style.setProperty('--timeh', `${time.offsetHeight}px`);
+    set();
+    const observer = new ResizeObserver(set);
+    observer.observe(time);
+    return () => observer.disconnect();
+  }, []);
+
   // ---- link line ----
 
-  const date = dateOf(day);
   // Until the map first paints (a hidden phone tab may never size it), the link keeps the restored view.
   const painted = renderer.current && viewKey !== '' ? renderer.current.state.view : null;
   const rounded = painted
@@ -642,7 +681,13 @@ export function SiteView(props: Props) {
   const model = m;
   const liveLine = announce && !sel ? announce : selectionAnnouncement(model, sel);
   const selectedName = sel ? selectionName(model, sel) : '';
-  const date_ = dayText(day);
+  // The date line names the block that just ran (what the inspector shows people doing); after
+  // the evening the day has already turned, so that block belongs to the day before.
+  const shown = shownBlock(m);
+  const lastBlock = shown.block;
+  const blockDay = shown.day;
+  const blockSeason = dateOf(blockDay).season;
+  const date_ = dayText(blockDay);
   const monthName = date_.split(' ')[1]!.replace(',', '');
   const rateText =
     speed === 0
@@ -656,6 +701,65 @@ export function SiteView(props: Props) {
     ['people', 'People', String(active.residents.length)],
     ['chron', 'Chronicle'],
   ];
+
+  /** The auto-pause banner; a second copy sits above the pane for the phone's pane tab (CSS shows one). */
+  const bannerView = (ref: RefObject<HTMLDivElement | null> | undefined, cls: string) =>
+    banner && (
+      <div className={`banner${cls}`} ref={ref} role="status">
+        <div className="b1">
+          <b>Paused:</b> <span>{banner.text}</span>{' '}
+          {banner.causes.length > 0 && (
+            <a
+              className="ln"
+              role="button"
+              tabIndex={0}
+              aria-expanded={whyOpen}
+              onClick={() => setWhyOpen((o) => !o)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setWhyOpen((o) => !o);
+                }
+              }}
+            >
+              why?
+            </a>
+          )}
+          <button type="button" className="primary" onClick={resume}>
+            Resume (Space)
+          </button>
+        </div>
+        {whyOpen && (
+          <div className="why">
+            {banner.causes.map((c, k) => (
+              <div key={k}>
+                {c.word} {c.text}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="chips" role="group" aria-label="Pause on">
+          <span className="lbl">Pause on:</span>
+          {PAUSE_CATEGORIES.map((c) => (
+            <button
+              key={c}
+              type="button"
+              className="chip tg"
+              aria-pressed={pauseOn.has(c)}
+              onClick={() =>
+                setPauseOn((on) => {
+                  const next = new Set(on);
+                  if (!next.delete(c)) next.add(c);
+                  return next;
+                })
+              }
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
 
   return (
     <section className="sv-site">
@@ -837,62 +941,7 @@ export function SiteView(props: Props) {
                 }
               }}
             />
-            {banner && (
-              <div className="banner" ref={bannerRef} role="status">
-                <div className="b1">
-                  <b>Paused:</b> <span>{banner.text}</span>{' '}
-                  {banner.causes.length > 0 && (
-                    <a
-                      className="ln"
-                      role="button"
-                      tabIndex={0}
-                      aria-expanded={whyOpen}
-                      onClick={() => setWhyOpen((o) => !o)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setWhyOpen((o) => !o);
-                        }
-                      }}
-                    >
-                      why?
-                    </a>
-                  )}
-                  <button type="button" className="primary" onClick={resume}>
-                    Resume (Space)
-                  </button>
-                </div>
-                {whyOpen && (
-                  <div className="why">
-                    {banner.causes.map((c, k) => (
-                      <div key={k}>
-                        {c.word} {c.text}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="chips" role="group" aria-label="Pause on">
-                  <span className="lbl">Pause on:</span>
-                  {PAUSE_CATEGORIES.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      className="chip tg"
-                      aria-pressed={pauseOn.has(c)}
-                      onClick={() =>
-                        setPauseOn((on) => {
-                          const next = new Set(on);
-                          if (!next.delete(c)) next.add(c);
-                          return next;
-                        })
-                      }
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            {bannerView(bannerRef, '')}
             <div className="where">
               <b>{paint?.zoomLabel ?? 'Zoom'}</b>
               {paint?.whole ? ' · whole site' : ''} ·{' '}
@@ -954,47 +1003,49 @@ export function SiteView(props: Props) {
               </div>
             )}
           </div>
-          <div className="time" ref={timeRef}>
-            <div className="row">
-              <div className="date" data-testid="site-date">
-                <span>{date_}</span>
-                <span className={`season ${date.season}`}>
-                  {date.season} · {monthName}
-                </span>
-              </div>
-              <span className="sp" />
-              <button
-                type="button"
-                className="small keybtn"
-                aria-expanded={keyOpen}
-                aria-controls="sv-key"
-                onClick={() => setKeyOpen((o) => !o)}
-              >
-                Key
-              </button>
-            </div>
-            <div className="row">
-              <div className="seg" role="group" aria-label="Speed">
-                {SPEEDS.map(([value, label, title]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    title={title}
-                    aria-label={value === 0 ? 'Pause' : `${value}×`}
-                    aria-pressed={speed === value}
-                    onClick={() => setSpeed(value)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <span className="rate" data-testid="site-rate">
-                {rateText}
+        </div>
+        <div className="time" ref={timeRef}>
+          <div className="row">
+            <div className="date" data-testid="site-date">
+              <span>{date_}</span>
+              <span className={`season ${blockSeason}`}>
+                {blockSeason} · {monthName} · {DAY_BLOCKS[lastBlock]}
+                {shown.restDay ? ' · rest day' : ''}
               </span>
             </div>
-            {keyOpen && <KeyPopover id="sv-key" />}
+            <span className="sp" />
+            <button
+              type="button"
+              className="small keybtn"
+              aria-expanded={keyOpen}
+              aria-controls="sv-key"
+              onClick={() => setKeyOpen((o) => !o)}
+            >
+              Key
+            </button>
           </div>
+          <div className="row">
+            <div className="seg" role="group" aria-label="Speed">
+              {SPEEDS.map(([value, label, title]) => (
+                <button
+                  key={value}
+                  type="button"
+                  title={title}
+                  aria-label={value === 0 ? 'Pause' : `${value}×`}
+                  aria-pressed={speed === value}
+                  onClick={() => setSpeed(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span className="rate" data-testid="site-rate">
+              {rateText}
+            </span>
+          </div>
+          {keyOpen && <KeyPopover id="sv-key" />}
         </div>
+        {bannerView(undefined, ' above')}
         <aside className="pane" aria-label="Site pane">
           <div className="live" aria-live="polite" aria-atomic="true">
             {liveLine}

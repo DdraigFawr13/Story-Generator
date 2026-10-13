@@ -46,11 +46,37 @@ console.log(
 console.log(`Stock ${[...active.stock].map(([g, n]) => `${g} ${n}`).join(', ')}`);
 console.log(`Embark ${embarkMs.toFixed(0)} ms; map digest ${E.localMapDigest(active.map)}`);
 
+const firstEvent = world.events.length;
+const foodStart = active.stock.get('food') ?? 0;
 const t1 = performance.now();
 for (let i = 0; i < days; i += 1) E.stepSite(world, C);
 const seconds = (performance.now() - t1) / 1000;
 console.log(
-  `No-op run: ${days} days in ${(seconds * 1000).toFixed(1)} ms = ${(days / Math.max(seconds, 1e-6)).toFixed(0)} days/s (${active.residents.length} residents)`,
+  `Daily life: ${days} days in ${(seconds * 1000).toFixed(1)} ms = ${(days / Math.max(seconds, 1e-6)).toFixed(0)} days/s (${active.residents.length} residents)`,
+);
+// Daily-life summary (M3.2): events by type, food, and how people stand at the end.
+const counts = {};
+for (const e of world.events.slice(firstEvent)) counts[e.type] = (counts[e.type] ?? 0) + 1;
+console.log(
+  `Events: ${
+    Object.entries(counts)
+      .map(([t, n]) => `${t} ${n}`)
+      .join(', ') || 'none'
+  }`,
+);
+console.log(
+  `Food: ${foodStart.toFixed(1)} -> ${(active.stock.get('food') ?? 0).toFixed(1)} person-years; ${E.foodDaysLeft(world, C).toFixed(0)} days left`,
+);
+const details = active.residents.map((id) => world.people.get(id).detail);
+const mean = (xs) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
+const needIds = C.needs.map((n) => n.id);
+console.log(
+  `Mean mood ${mean(details.map((d) => d.mood)).toFixed(1)}, stress ${mean(details.map((d) => d.stress)).toFixed(1)}; needs ${needIds
+    .map(
+      (n) =>
+        `${n} ${mean(details.filter((d) => d.needs[n] !== undefined).map((d) => d.needs[n])).toFixed(0)}`,
+    )
+    .join(', ')}`,
 );
 
 // Picture: one pixel per tile.

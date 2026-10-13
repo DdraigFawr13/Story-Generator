@@ -5,7 +5,18 @@ import type { ContentBundle, RaceDef, SiteGlyphDef, SiteRules } from '../core/co
 /** What the site modules read from content (all plain data, so it crosses into a worker). */
 export type SiteContent = Pick<
   ContentBundle,
-  'biomes' | 'resources' | 'races' | 'cultures' | 'eventTypes' | 'settlement' | 'site'
+  | 'biomes'
+  | 'resources'
+  | 'races'
+  | 'cultures'
+  | 'eventTypes'
+  | 'settlement'
+  | 'history'
+  | 'site'
+  | 'needs'
+  | 'traits'
+  | 'memories'
+  | 'life'
 >;
 
 /** Share of a lifespan at which a person counts as an elder. */

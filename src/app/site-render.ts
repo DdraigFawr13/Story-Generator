@@ -255,6 +255,30 @@ export function buildingLabel(rules: SiteRules, defId: string, jarl: boolean): s
   return defId === 'hall' && jarl ? "Jarl's hall" : cap(name);
 }
 
+/** Where to write "Fields": one spot (tile units, above the cluster's largest field) per cluster of touching fields. */
+export function fieldLabelSpots(buildings: readonly Building[]): { x: number; y: number }[] {
+  const fields = buildings.filter((b) => b.defId === 'field');
+  const group = fields.map((_, i) => i);
+  const root = (i: number): number => (group[i] === i ? i : (group[i] = root(group[i]!)));
+  const touch = (a: Building, b: Building) =>
+    a.x <= b.x + b.w &&
+    b.x <= a.x + a.w &&
+    a.y <= b.y + b.h &&
+    b.y <= a.y + a.h &&
+    // Corner-to-corner contact is not adjacency.
+    !((a.x + a.w === b.x || b.x + b.w === a.x) && (a.y + a.h === b.y || b.y + b.h === a.y));
+  for (let i = 0; i < fields.length; i += 1)
+    for (let j = i + 1; j < fields.length; j += 1)
+      if (touch(fields[i]!, fields[j]!)) group[root(j)] = root(i);
+  const best = new Map<number, Building>();
+  fields.forEach((f, i) => {
+    const r = root(i);
+    const cur = best.get(r);
+    if (!cur || f.w * f.h > cur.w * cur.h) best.set(r, f);
+  });
+  return [...best.values()].map((f) => ({ x: f.x + f.w / 2, y: f.y }));
+}
+
 /** What a culture's ruler is called in the site view: "jarl" for a jarldom, else "ruler". */
 export function rulerWord(government: string | undefined): string {
   return government === 'jarldom' ? 'jarl' : 'ruler';
@@ -402,6 +426,18 @@ export function buildScene(
     jarl,
     quarter: quarterOf(buildings),
   };
+}
+
+/** Moves every mark to where its person now is (after a snapshot) and rebuilds `at`, in place. */
+export function movePeople(scene: Scene, world: WorldState): void {
+  scene.at.clear();
+  for (const mark of scene.marks.values()) {
+    const pos = world.people.get(mark.id)?.detail?.pos;
+    if (pos) mark.k = pos[1] * scene.size + pos[0];
+    const list = scene.at.get(mark.k);
+    if (list) list.push(mark.id);
+    else scene.at.set(mark.k, [mark.id]);
+  }
 }
 
 /** Bounding box (x, y, w, h) of the followed homes and the hall: the "hall quarter". */
@@ -609,6 +645,8 @@ export class SiteRenderer {
   private terrainScale = 1;
   private themeVersion = 0;
   private frame = 0;
+  /** Discs walking from where they were to where the last snapshot put them. */
+  private tween: { from: Map<Id, number>; start: number; ms: number } | null = null;
   private readonly onPaint: (info: { zoomLabel: string; whole: boolean }) => void;
 
   constructor(
@@ -644,6 +682,40 @@ export class SiteRenderer {
       [...this.scene.marks.values()].map((m) => m.k),
       this.base,
     );
+  }
+
+  /** Redraws after people moved: the pixel-a-tile base (and so the overview) shows them as marks. */
+  refreshPeople(): void {
+    this.rebuildBase();
+    this.draw();
+  }
+
+  /**
+   * Walks each disc that moved from its tile in `from` (tile index by person) to its tile now, in a
+   * straight line over `ms`. Call after `movePeople`. Does nothing for `ms <= 0` or when the reader
+   * prefers reduced motion.
+   */
+  beginTween(from: Map<Id, number>, ms: number): void {
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (ms <= 0 || reduced) {
+      this.tween = null;
+      return;
+    }
+    const moved = new Map<Id, number>();
+    for (const [id, k] of from) if (this.scene.marks.get(id)?.k !== k) moved.set(id, k);
+    this.tween = moved.size > 0 ? { from: moved, start: performance.now(), ms } : null;
+  }
+
+  /** Tile coordinates (fractional while walking) where a person's disc is drawn. */
+  private placeOf(mark: PersonMark, progress: number): [number, number] {
+    const size = this.scene.size;
+    const x = mark.k % size;
+    const y = (mark.k - x) / size;
+    const prev = progress < 1 ? this.tween?.from.get(mark.id) : undefined;
+    if (prev === undefined) return [x, y];
+    const px = prev % size;
+    const py = (prev - px) / size;
+    return [px + (x - px) * progress, py + (y - py) * progress];
   }
 
   /** Sizes the canvas to its box; returns false while the box has no size. */
@@ -758,6 +830,15 @@ export class SiteRenderer {
         t.fillStyle = C.ink;
         t.fillText(label, sx, sy);
       }
+      for (const spot of fieldLabelSpots(scene.buildings)) {
+        const sx = spot.x * s;
+        const sy = (spot.y - 0.15) * s;
+        t.lineWidth = 3;
+        t.strokeStyle = C.panel;
+        t.strokeText('Fields', sx, sy);
+        t.fillStyle = C.ink;
+        t.fillText('Fields', sx, sy);
+      }
     }
     this.terrainKey = key;
     this.terrainScale = f;
@@ -841,21 +922,13 @@ export class SiteRenderer {
     const letters = s >= LETTERS_FROM;
     const two = s >= TWO_LETTERS_FROM;
     const selectedId = state.selected.personId;
-    for (const [k, ids] of scene.at) {
-      const x = k % size;
-      const y = (k - x) / size;
-      if (x < first.x - 1 || x > last.x + 1 || y < first.y - 1 || y > last.y + 1) continue;
+    const tween = whole ? null : this.tween;
+    const progress = tween ? Math.min(1, (performance.now() - tween.start) / tween.ms) : 1;
+    const walking = tween && progress < 1 ? tween.from : null;
+    const disc = (mark: PersonMark, ids: Id[], x: number, y: number) => {
       const [sx, sy] = tileToScreen(x, y, view, s, vw, vh);
       const cx = sx + s / 2;
       const cy = sy + s / 2;
-      if (whole) {
-        const m = Math.max(2, Math.round(s * 0.7));
-        ctx.fillStyle = C['t-mark'];
-        ctx.fillRect(Math.round(cx - m / 2), Math.round(cy - m / 2), m, m);
-        continue;
-      }
-      const shown = selectedId !== null && ids.includes(selectedId) ? selectedId : ids[0]!;
-      const mark = scene.marks.get(shown)!;
       const rad = Math.max(2, s * 0.44);
       ctx.beginPath();
       ctx.arc(cx, cy, rad, 0, Math.PI * 2);
@@ -891,7 +964,34 @@ export class SiteRenderer {
           ctx.fillText('✦', sx + s * 0.1, sy + s * 0.1);
         }
       }
+    };
+    for (const [k, all] of scene.at) {
+      const x = k % size;
+      const y = (k - x) / size;
+      if (x < first.x - 1 || x > last.x + 1 || y < first.y - 1 || y > last.y + 1) continue;
+      if (whole) {
+        const [sx, sy] = tileToScreen(x, y, view, s, vw, vh);
+        const m = Math.max(2, Math.round(s * 0.7));
+        ctx.fillStyle = C['t-mark'];
+        ctx.fillRect(Math.round(sx + s / 2 - m / 2), Math.round(sy + s / 2 - m / 2), m, m);
+        continue;
+      }
+      // Walkers are drawn on their way below, not stacked on the tile they are heading for.
+      const ids = walking ? all.filter((id) => !walking.has(id)) : all;
+      if (ids.length === 0) continue;
+      const shown = selectedId !== null && ids.includes(selectedId) ? selectedId : ids[0]!;
+      disc(scene.marks.get(shown)!, ids, x, y);
     }
+    if (walking) {
+      for (const id of walking.keys()) {
+        const mark = scene.marks.get(id);
+        if (!mark) continue;
+        const [x, y] = this.placeOf(mark, progress);
+        if (x < first.x - 2 || x > last.x + 2 || y < first.y - 2 || y > last.y + 2) continue;
+        disc(mark, [id], x, y);
+      }
+      this.draw();
+    } else this.tween = null;
     // Names for the selected and the hovered person.
     if (!whole) {
       const named = new Set<Id>();
@@ -900,7 +1000,8 @@ export class SiteRenderer {
       for (const id of named) {
         const mark = scene.marks.get(id);
         if (!mark) continue;
-        const [sx, sy] = tileToScreen(mark.k % size, Math.floor(mark.k / size), view, s, vw, vh);
+        const [tx, ty] = this.placeOf(mark, progress);
+        const [sx, sy] = tileToScreen(tx, ty, view, s, vw, vh);
         this.label(
           ctx,
           mark.name,

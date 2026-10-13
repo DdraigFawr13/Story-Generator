@@ -19,3 +19,4 @@ package-lock.json
 .claude/skills/efficient-github-actions/
 .github/workflows/prune-merged-branches.yml
 # ai-master:end
+.claude/worktrees/

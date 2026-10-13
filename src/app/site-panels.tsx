@@ -3,22 +3,28 @@
 // Legends helpers (biography, linkSegments, importanceStars, eventTitle).
 
 import { Fragment, useState, type ReactNode } from 'react';
-import { FOOD_PER_PERSON_DAY } from '../content';
 import {
   ATTRIBUTE_KEYS,
+  DAY_BLOCKS,
   biography,
   dateOf,
   eventTitle,
   eventYear,
+  fillTemplate,
+  foodDaysLeft,
   householdLabel,
   importanceStars,
   linkSegments,
   MONTH_NAMES,
   residentNames,
+  siteTemperature,
   sitePopulation,
   tierOfPower,
   yearText,
+  type Activity,
+  type NeedDef,
   type ActiveSite,
+  type BreakdownKind,
   type Building,
   type Civ,
   type ContentBundle,
@@ -68,6 +74,8 @@ export interface SiteModel {
   /** Day watching began. */
   startDay: number;
   typeDefs: ReadonlyMap<string, EventTypeDef>;
+  /** Day of the last applied people snapshot (the UI's clock can run ahead of it); the view updates it. */
+  clock: { day: number };
 }
 
 export function createSiteModel(
@@ -103,7 +111,28 @@ export function createSiteModel(
     ruleWord,
     startDay: active.enteredDay,
     typeDefs: new Map(content.eventTypes.map((d) => [d.id, d])),
+    clock: { day: world.day },
   };
+}
+
+/** The block whose state is on screen and its day: the one just run, not the next. */
+export function shownBlock(m: SiteModel): { day: number; block: number; restDay: boolean } {
+  const { active, clock, content } = m;
+  const blocks = DAY_BLOCKS.length;
+  // Before anything has run (right after embarking) show the entry day itself, at night.
+  const fresh = clock.day === active.enteredDay && active.block === 0;
+  const block = fresh ? 0 : (active.block + blocks - 1) % blocks;
+  const day = fresh || active.block !== 0 ? clock.day : clock.day - 1;
+  const every = content.life.restDayEvery;
+  return { day, block, restDay: day % every === every - 1 };
+}
+
+/** "Idle: no work for 3 days": the why of a low need, counted from the shown snapshot's day. */
+function needWhy(need: NeedDef, since: number | undefined, now: number): string {
+  const head = `${need.lowWord}: ${need.missing}`;
+  if (since === undefined) return head;
+  const days = Math.max(0, now - since);
+  return days === 0 ? `${head} today` : `${head} for ${days} ${days === 1 ? 'day' : 'days'}`;
 }
 
 const cap = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
@@ -510,6 +539,169 @@ function LegendLines({
 
 // ---- Inspect ----
 
+// Presentation words for the engine's activities; the activity itself is the engine's result.
+const ACTIVITY_VERB: Record<Activity, string> = {
+  sleep: 'Sleeping',
+  work: 'Working',
+  play: 'Playing',
+  eat: 'Eating',
+  socialise: 'Socialising',
+  worship: 'Worshipping',
+  tantrum: 'In a tantrum',
+  despair: 'In despair',
+  wander: 'Wandered off',
+  steal: 'Stealing',
+};
+/** One word for the People list. */
+const ACTIVITY_SHORT: Record<Activity, string> = {
+  sleep: 'asleep',
+  work: 'working',
+  play: 'playing',
+  eat: 'eating',
+  socialise: 'chatting',
+  worship: 'worshipping',
+  tantrum: 'raging',
+  despair: 'in despair',
+  wander: 'wandering',
+  steal: 'stealing',
+};
+const BREAKDOWN_TEXT: Record<BreakdownKind, string> = {
+  tantrum: 'A tantrum',
+  despair: 'In despair',
+  wandering: 'Wandering off',
+  theft: 'Stealing',
+};
+const signed = (n: number) => `${n < 0 ? '−' : '+'}${Math.abs(Math.round(n))}`;
+
+/** "Working in a field", "Sleeping at home": the activity and the place of the last block. */
+function doingText(m: SiteModel, p: Person, homeId: Id | null): string {
+  const detail = p.detail;
+  if (detail?.with !== undefined) return `With ${m.names.get(detail.with) ?? 'a carer'}`;
+  if (!detail?.activity) return 'Not yet known';
+  const verb = ACTIVITY_VERB[detail.activity];
+  if (detail.activity === 'wander') return verb;
+  const building = detail.placeId == null ? undefined : m.active.buildings.get(detail.placeId);
+  if (!building) return `${verb} outdoors`;
+  if (building.defId === 'home')
+    return `${verb} ${building.id === homeId ? 'at home' : 'at a neighbour’s home'}`;
+  if (building.defId === 'field') return `${verb} in a field`;
+  if (building.defId === 'hall')
+    return `${verb} in the ${m.ruleWord === 'jarl' ? "jarl's " : ''}hall`;
+  return `${verb} at the ${building.defId}`;
+}
+
+/** Needs, mood, stress and traits (M3.2): what the engine stored, with its "why" parts. */
+function LifePage({ m, p }: { m: SiteModel; p: Person }) {
+  const detail = p.detail;
+  if (!detail) return null;
+  const { content, world } = m;
+  const now = m.clock.day;
+  const traits = p.traits.flatMap((id) => content.traits.find((t) => t.id === id) ?? []);
+  const needs = content.needs.filter((n) => detail.needs[n.id] !== undefined);
+  // The display of a content value: the stress at which this person's breakdown comes.
+  const threshold = Math.round(
+    traits.reduce((x, t) => x * t.breakdownAt, content.life.breakdownAt),
+  );
+  const nameOf = (id: Id | undefined) =>
+    (id === undefined ? undefined : (m.names.get(id) ?? world.people.get(id)?.name)) ?? 'someone';
+  const parts = [...(detail.moodParts ?? [])]
+    .sort((x, y) => Math.abs(y.value) - Math.abs(x.value))
+    .flatMap((part) => {
+      if (Math.round(part.value) === 0) return [];
+      let text: string | undefined;
+      if (part.kind === 'need') {
+        const need = content.needs.find((n) => n.id === part.id);
+        text = need && needWhy(need, detail.lastMet?.[need.id], now);
+      } else if (part.kind === 'trait') {
+        const trait = content.traits.find((t) => t.id === part.id);
+        text = trait && cap(trait.name);
+      } else {
+        const memory = content.memories.find((d) => d.id === part.id);
+        text = memory && fillTemplate(memory.text, { about: nameOf(part.about) });
+      }
+      return [
+        {
+          key: `${part.kind}:${part.id}:${part.about ?? ''}`,
+          text: text ?? part.id,
+          value: part.value,
+        },
+      ];
+    });
+  const foodNeed = content.needs.find((n) => n.id === 'food');
+  const lastMeal = detail.lastMet?.food ?? detail.lastAte;
+  const ago = lastMeal === undefined ? undefined : now - lastMeal;
+  const foodWhy =
+    ago === undefined || !foodNeed
+      ? null
+      : ago >= 2
+        ? needWhy(foodNeed, lastMeal, now)
+        : ago === 1
+          ? 'Ate yesterday'
+          : 'Ate today';
+  const breakdown = detail.breakdown;
+  return (
+    <>
+      <div className="sect">Needs</div>
+      <div className="attrs" data-testid="needs">
+        {needs.map((n) => {
+          const value = Math.round(detail.needs[n.id]!);
+          return (
+            <Fragment key={n.id}>
+              <span>
+                {n.name}
+                {value < n.lowAt && <span className="empty"> · {n.lowWord.toLowerCase()}</span>}
+              </span>
+              <span className="b">
+                <i style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
+              </span>
+              <span className="v">{value}</span>
+            </Fragment>
+          );
+        })}
+      </div>
+      {foodWhy && <p className="quiet">{foodWhy}</p>}
+      <div className="sect">
+        Mood <span className="r">{signed(detail.mood)}</span>
+      </div>
+      {parts.length > 0 ? (
+        <ul className="quiet" style={{ margin: 0, paddingLeft: 18 }}>
+          {parts.map((part) => (
+            <li key={part.key}>
+              {part.text} {signed(part.value)}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="quiet">Nothing weighs on the mood.</p>
+      )}
+      <div className="sect">
+        Stress{' '}
+        <span className="r">
+          {Math.round(detail.stress)} of {threshold}
+        </span>
+      </div>
+      {breakdown && (
+        <p className="quiet">
+          {BREAKDOWN_TEXT[breakdown.kind]} until {dayText(breakdown.untilDay)}.
+        </p>
+      )}
+      {traits.length > 0 && (
+        <>
+          <div className="sect">Traits</div>
+          <p className="quiet">
+            {traits.map((t, k) => (
+              <Fragment key={t.id}>
+                {k > 0 && ', '}
+                <span title={t.description}>{t.name}</span>
+              </Fragment>
+            ))}
+          </p>
+        </>
+      )}
+    </>
+  );
+}
+
 function PersonPage({ m, a, sel, ui, id }: PanelProps & { id: Id }) {
   const p = m.world.people.get(id);
   const mark = m.scene.marks.get(id);
@@ -619,10 +811,9 @@ function PersonPage({ m, a, sel, ui, id }: PanelProps & { id: Id }) {
             <span className="empty">none</span>
           )}
         </Fact>
-        <Fact term="Doing">
-          At home <span className="empty">(daily life arrives in M3.2)</span>
-        </Fact>
+        <Fact term="Doing">{doingText(m, p, h?.home ?? null)}</Fact>
       </Facts>
+      <LifePage m={m} p={p} />
       <div className="actions">
         <button type="button" onClick={() => a.showOnMap({ kind: 'person', id })}>
           Show on map
@@ -956,9 +1147,8 @@ export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
   const other = [...active.buildings.values()].filter(
     (b) => !['home', 'field', 'hall'].includes(b.defId),
   );
-  const foodDays = Math.round(
-    (active.stock.get('food') ?? 0) / Math.max(1, followed * FOOD_PER_PERSON_DAY),
-  );
+  const foodDays = Math.round(foodDaysLeft(world, content));
+  const today = Math.round(siteTemperature(world, content, world.day));
   const rulerName = m.ruler ? m.scene.marks.get(m.ruler.id)?.name : undefined;
   return (
     <div className="page">
@@ -1034,6 +1224,9 @@ export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
             {cells.rainfall[site.cell]} mm of rain
           </Fact>
         )}
+        <Fact term="Today">
+          {today} °C · {cap(DAY_BLOCKS[shownBlock(m).block] ?? 'morning')}
+        </Fact>
       </Facts>
       <div className="sect">
         Stockpile{' '}
@@ -1120,6 +1313,12 @@ export function PeoplePane({ m, a, sel, ui }: PanelProps) {
     return FILTERS.every(([key, , test]) => !ui.filters.has(key) || test(mark, m));
   };
   const followed = active.residents.length;
+  const activityOf = (id: Id) => {
+    const detail = m.world.people.get(id)?.detail;
+    if (detail?.with !== undefined) return ` · With ${m.names.get(detail.with) ?? 'a carer'}`;
+    const activity = detail?.activity;
+    return activity ? ` · ${ACTIVITY_SHORT[activity]}` : '';
+  };
   const matches = active.residents.filter(match);
   const link = (id: Id) => (
     <PersonLink
@@ -1128,7 +1327,13 @@ export function PeoplePane({ m, a, sel, ui }: PanelProps) {
       a={a}
       sel={sel}
       id={id}
-      extra={<small> {scene.marks.get(id)?.age}</small>}
+      extra={
+        <small>
+          {' '}
+          {scene.marks.get(id)?.age}
+          {activityOf(id)}
+        </small>
+      }
     />
   );
   let list: ReactNode;

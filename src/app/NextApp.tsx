@@ -10,6 +10,7 @@ import {
   DEFAULT_SYSTEMS,
   RngStream,
   advance,
+  applySiteSnapshot,
   biography,
   buildLegendIndex,
   createWorld,
@@ -318,7 +319,7 @@ export function NextApp() {
 
   const hostOf = (): SiteHost => {
     siteHost.current ??= createSiteHost({
-      onTick: (day, events, rate) => ticks.current?.(day, events, rate),
+      onTick: (day, events, rate, snapshot) => ticks.current?.(day, events, rate, snapshot),
       onError: (message) => {
         setError(message);
         setSiteFailures((n) => n + 1);
@@ -360,6 +361,7 @@ export function NextApp() {
       if (link && link.day > 0) {
         const ran = await host.run(link.day);
         embarked.day = ran.day;
+        applySiteSnapshot(embarked, ran.snapshot);
         events = ran.events;
         for (const e of events) embarked.events.push(e);
       }
@@ -447,7 +449,14 @@ export function NextApp() {
 
   /** "Open in Legends" from the site: back to the world, with that page open. */
   const leaveToLegends = async (ref: PageRef) => {
-    if (await leave(false)) go({ open: ref });
+    // Leaving always writes one new world entry after the site's: the nav change `leave` makes
+    // pushes it, and `go` then edits that entry. Without this, a ref already open before embarking
+    // moves nothing, `go` pushes nothing, and the world URL replaces the site entry.
+    pushNext.current = true;
+    if (await leave(false)) {
+      go({ open: ref }, 'replace');
+      setTab('legends');
+    } else pushNext.current = false;
   };
 
   // The site link changes every game day, so the address bar is rewritten at most once a

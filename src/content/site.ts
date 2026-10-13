@@ -76,12 +76,9 @@ export const SITE: SiteRules = {
   // Event types that pause play; later milestones fill the empty categories.
   autoPause: {
     deaths: [],
-    breakdowns: [],
+    breakdowns: ['site_tantrum', 'site_despair', 'site_wandered', 'site_theft'],
     fires: [],
     raids: [],
     arrivals: ['outpost_founded'],
   },
 };
-
-/** Food one person eats in a day, until M3.3 gives each person real needs. Only the Site panel's "days of food left" reads it. */
-export const FOOD_PER_PERSON_DAY = 0.036;

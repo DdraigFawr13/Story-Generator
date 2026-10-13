@@ -183,6 +183,16 @@ test('a site can be watched: embark, play, inspect a person and return to the ma
   await expect(page.getByRole('tab', { name: 'Inspect' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.sv-root .pane h3')).toHaveText(name!);
 
+  // "Open in Legends" for the site this view was entered from still adds a history entry, so
+  // Back returns to the site.
+  await page.getByRole('tab', { name: /^Site/ }).click();
+  await page.getByRole('button', { name: 'Open in Legends' }).click();
+  await expect(page.getByRole('region', { name: 'Legends' })).toBeVisible();
+  await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
+  await page.goBack();
+  await expect(canvas).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
+  await expect(page).toHaveURL(new RegExp(`site=${smokeMap.site}&day=`));
+
   // The breadcrumb returns to the world map.
   await page.getByRole('button', { name: 'World map' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('world map');

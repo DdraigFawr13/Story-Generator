@@ -4,6 +4,7 @@ import type { Building, LocalMap } from '../../src/engine';
 import {
   clampViewport,
   elevationBands,
+  fieldLabelSpots,
   formatSelection,
   initials,
   makeLookCtx,
@@ -195,5 +196,32 @@ describe('small helpers', () => {
     expect(relation(head, person(20, 'f', []), parentsOf)).toBe('grandmother');
     expect(relation(head, person(5, 'm', [10]), parentsOf)).toBe('brother');
     expect(relation(head, person(6, 'f', []), parentsOf)).toBe('relative');
+  });
+
+  it('labels each cluster of touching fields once', () => {
+    const field = (id: number, x: number, y: number, w: number, h: number) =>
+      ({
+        id,
+        defId: 'field',
+        x,
+        y,
+        w,
+        h,
+        cells: [],
+        owner: null,
+        condition: 1,
+        followed: true,
+      }) as Building;
+    const spots = fieldLabelSpots([
+      field(1, 0, 0, 4, 4),
+      field(2, 4, 1, 2, 2), // shares an edge with 1
+      field(3, 10, 10, 3, 3), // alone
+      field(4, 6, 3, 2, 2), // only touches 2 at a corner
+    ]);
+    expect(spots).toEqual([
+      { x: 2, y: 0 },
+      { x: 11.5, y: 10 },
+      { x: 7, y: 3 },
+    ]);
   });
 });

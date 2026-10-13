@@ -46,7 +46,7 @@
   --t-rock-ink: #4c4a44;
   --t-ore: #7d4207;
   --t-field: #c19b62;
-  --t-field-ink: #334d0f;
+  --t-field-ink: #142200;
   --t-path: #d6c9ab;
   --t-path-ink: #6f5f3c;
   --t-floor: #f6eed8;
@@ -112,7 +112,7 @@
     --t-rock-ink: #bdbaaf;
     --t-ore: #e8a85c;
     --t-field: #563f22;
-    --t-field-ink: #b4cf72;
+    --t-field-ink: #d4e8a0;
     --t-path: #3b3225;
     --t-path-ink: #aa9b78;
     --t-floor: #524d3b;
@@ -292,8 +292,22 @@
   --mapw: 640px;
   display: grid;
   grid-template-columns: var(--mapw) minmax(0, 1fr);
-  gap: 14px;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px 14px;
   align-items: start;
+}
+.sv-root .main > .mapcol {
+  grid-column: 1;
+}
+.sv-root .main > .time {
+  grid-column: 1;
+}
+.sv-root .main > .pane {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.sv-root .banner.above {
+  display: none;
 }
 .sv-root .mapcol {
   display: grid;
@@ -1110,6 +1124,42 @@
   .sv-root .main[data-tab='map'] .pane,
   .sv-root .main[data-tab='pane'] .mapcol {
     display: none;
+  }
+  .sv-root .main > .mapcol,
+  .sv-root .main > .time,
+  .sv-root .main > .pane {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .sv-root .main {
+    padding-bottom: var(--timeh, 90px);
+  }
+  /* The clock stays in view on both tabs. */
+  .sv-root .main > .time {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 15;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 0;
+    padding-bottom: calc(7px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -2px 10px rgb(0 0 0 / 14%);
+  }
+  .sv-root .main[data-tab='pane'] .banner.above {
+    display: grid;
+    position: static;
+    border: 1px solid var(--line);
+    border-bottom: 2px solid var(--warn);
+    border-radius: 8px;
+  }
+  .sv-root .main > .time .date {
+    flex-wrap: wrap;
+    white-space: normal;
+    flex: 1;
+  }
+  .sv-root .toast {
+    bottom: calc(var(--timeh, 90px) + 12px);
   }
   .sv-root .pane {
     position: static;

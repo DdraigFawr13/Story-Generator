@@ -8,6 +8,7 @@ import { cultures } from './cultures';
 import { diseases } from './diseases';
 import { HISTORY } from './history';
 import { TYPE_GROUPS } from './legends';
+import { LIFE, LIFE_EVENTS, MEMORIES, NEEDS, TRAITS } from './life';
 import { NAMES } from './names';
 import { NOTABLES } from './notables';
 import { races } from './races';
@@ -26,7 +27,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   schools,
   abilities,
   weather,
-  eventTypes,
+  eventTypes: [...eventTypes, ...LIFE_EVENTS],
   typeGroups: TYPE_GROUPS,
   rules,
   settlement: SETTLEMENT,
@@ -36,6 +37,10 @@ export const DEFAULT_CONTENT: ContentBundle = {
   notables: NOTABLES,
   biographies: BIOGRAPHIES,
   site: SITE,
+  needs: NEEDS,
+  traits: TRAITS,
+  memories: MEMORIES,
+  life: LIFE,
 };
 
 export * from './biographies';
@@ -45,6 +50,7 @@ export * from './cultures';
 export * from './diseases';
 export * from './history';
 export * from './legends';
+export * from './life';
 export * from './map-layers';
 export * from './names';
 export * from './notables';
