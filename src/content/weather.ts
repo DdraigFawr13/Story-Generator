@@ -57,6 +57,8 @@ export const ENVIRONMENT: EnvironmentRules = {
     tendersPerField: 1,
     // Seed is 8% of a field's expected grain.
     seedShare: 0.08,
+    // Once anyone starves, the seed corn is food: a town no longer dies beside next year's sowing.
+    seedOpenCondition: 'starving',
     // Four farmers sow a field in about 3 days (6.4 work a day), and cut it in about 2.
     sowWork: 18,
     cutWork: 11,
@@ -218,6 +220,7 @@ export const ENVIRONMENT: EnvironmentRules = {
     hardWinter: 'site_hard_winter',
     storm: 'site_storm',
     fieldsSown: 'site_fields_sown',
+    seedOpened: 'site_seed_opened',
     harvest: 'site_harvest',
     harvestPoor: 'site_harvest_poor',
     spoiled: 'site_spoiled',
@@ -333,6 +336,19 @@ export const WEATHER_EVENTS: EventTypeDef[] = [
       'The farmers of {site} finished sowing {fields} of grain.',
       'Sowing was done at {site}: {fields} of grain in the ground.',
       'At {site}, {fields} were sown for the year.',
+    ],
+  },
+  {
+    id: 'site_seed_opened',
+    baseImportance: 4,
+    title: '{site} opened the seed corn',
+    causeWord: 'because of',
+    category: 'life',
+    links: { site: 'site' },
+    templates: [
+      'With people starving, the steward of {site} opened the seed corn.',
+      'At {site}, the grain kept back for sowing went into the pot: people were starving.',
+      'Hunger won at {site}: the seed corn was eaten.',
     ],
   },
   {

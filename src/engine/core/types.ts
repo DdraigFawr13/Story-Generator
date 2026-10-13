@@ -76,6 +76,15 @@ export interface PersonDetail {
   guardian?: Id | undefined;
   /** M3.6: day a spouse died; they may court again after the culture's mourning time. */
   widowedDay?: number | undefined;
+  /** M3.7: standing 0-100 (role, wealth, fame, family), less shame; recomputed monthly. */
+  status?: number;
+  /** M3.7: shame from punishments, fading month by month. */
+  shame?: number;
+  /** M3.7: a fine or labour being worked off: the job is forced until `untilDay`. */
+  sentence?:
+    { kind: 'fine' | 'labour'; untilDay: number; eventId: Id; victim: Id | null } | undefined;
+  /** M3.7: day of the last offence judged, for repeat offences. */
+  lastOffence?: number;
   /** M3.5: wounds, illnesses and the like, newest last. */
   conditions: Condition[];
   /** Stays home: too ill or hurt to work (health below `abedBelow`, or a symptomatic disease). */
@@ -222,6 +231,8 @@ export const DEATH_CAUSES = [
   'wound',
   'illness',
   'childbirth',
+  // M3.7: put to death by the site's law.
+  'execution',
 ] as const;
 export type DeathCause = (typeof DEATH_CAUSES)[number];
 
@@ -702,6 +713,8 @@ export interface SiteHarvest {
   share: number;
   /** Grain held back to sow the followed fields that stand empty; meals and cooks leave it alone. */
   seedKept: number;
+  /** M3.7: the event of the seed corn being opened while people starve; null while it is kept. */
+  seedOpened?: Id | null;
 }
 
 /** Firewood and last winter's burn (M3.4). */
@@ -831,6 +844,37 @@ export interface ActiveSite {
   popDelta: Record<string, number>;
   /** M3.6: interactions run so far (for the tuner). */
   interactions: number;
+  /** M3.7: crimes waiting to be judged, funerals to hold, and running counts. */
+  society: SiteSociety;
+}
+
+/** A crime that came to light and waits for the morning's judgement (M3.7). */
+export interface CrimeCase {
+  crime: 'theft' | 'brawl' | 'murder';
+  offender: Id;
+  /** The wronged person, or null for a theft from the stores. */
+  victim: Id | null;
+  /** The crime's event. */
+  eventId: Id;
+  day: number;
+}
+
+/** M3.7: society's running state at the watched site. */
+export interface SiteSociety {
+  cases: CrimeCase[];
+  funerals: { dead: Id; day: number; deathEvent: Id }[];
+  /** Standing at which a resident counts as high: the content floor or the top tenth, whichever is higher. */
+  highAt?: number;
+  /** Exiles sent away: person → the site they went to. */
+  exiles: [Id, Id][];
+  /** For the tuner and the close's site stats: counts by crime, punishment and rite. */
+  stats: {
+    crimes: Record<string, number>;
+    unsolved: number;
+    punishments: Record<string, number>;
+    festivals: number;
+    funerals: number;
+  };
 }
 
 /** A climate epoch still running when history ended, for the watched site's weather (M3.4). */

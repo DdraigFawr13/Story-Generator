@@ -49,6 +49,7 @@ import { runFamily } from './family';
 import { addMemoryTo, memoryMood } from './memory';
 import { findRoute, tileCost, walkAlong } from './path';
 import { envOf, runSocial, witnessedWrong } from './social';
+import { festivalToday, reportCrime, runSocietyMorning, serveSentences } from './society';
 import { foodMeals, takeFood } from './stock';
 import { stepAnimals } from './wild';
 import {
@@ -416,7 +417,10 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   const today = block === 0 ? runEnvironmentDay(world, content, active) : null;
   // Health follows the environment: tending, illness, hunger and cold, and the dead (a death moves
   // the layout version, which rebuilds the profiles just below).
-  if (block === 0) runHealthDay(world, content, active, voice.emit, voice.label);
+  if (block === 0) {
+    runHealthDay(world, content, active, voice.emit, voice.label);
+    runSocietyMorning(world, content, active, voice.emit, voice.label);
+  }
   spreadFire(world, content, active, voice.emit, voice.label, fightersAt(world, active));
   stepAnimals(world, content, active);
   // Buildings or the map changed since the profiles were built (a home finished): rebuild them.
@@ -428,6 +432,7 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   const profiles = cache.profiles;
   const rng = streamFor(world, 'site.life');
   const restDay = day % life.restDayEvery === life.restDayEvery - 1;
+  const festival = festivalToday(world, content, active);
   const yearsIn = Math.floor((day - active.enteredDay) / DAYS_PER_YEAR);
   const history = world.params.historyYears;
   const emit = (type: string, p: Profile, causes: Id[]) =>
@@ -504,6 +509,7 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     add(p, life.memoryOf.vented, undefined, event.id);
     // Witnesses by distance; a wanderer is missed by the household instead.
     const [px, py] = detail.pos!;
+    let seen = 0;
     for (const q of profiles) {
       if (q === p) continue;
       const other = q.person.detail!;
@@ -515,6 +521,7 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       }
       const [qx, qy] = other.pos!;
       if (Math.max(Math.abs(qx - px), Math.abs(qy - py)) > life.witnessRange) continue;
+      seen += 1;
       const type =
         kind === 'tantrum'
           ? life.memoryOf.sawTantrum
@@ -523,6 +530,11 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
             : life.memoryOf.sawTheft;
       add(q, type, p.id, event.id);
       witnessedWrong(socialEnv, q.person, p.person, type, event.id);
+    }
+    // A theft is a crime: judged tomorrow if anyone saw it (or it comes to light), else unsolved.
+    if (kind === 'theft') {
+      const victim = prize ? world.people.get(prize.holder) : undefined;
+      reportCrime(socialEnv, 'theft', p.person, victim ?? null, event.id, seen > 0);
     }
   };
 
@@ -563,6 +575,7 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   // The steward hands out the day's jobs before anyone sets out.
   if (block === 0) {
     runSteward(world, content, active, profiles, cache.emit, { name: cache.siteName, cell });
+    serveSentences(world, content, profiles);
     // A building begun just now may be stood in this block. No household moves until it is
     // finished, so the profiles stay as they are.
     if (cache.version !== active.layoutVersion) {
@@ -631,6 +644,8 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     // Outdoor work stops at dusk: with under nine hours of daylight the afternoon is idle.
     if (dark && activity === 'work' && p.job && !indoor.has(p.job.workplace))
       activity = 'socialise';
+    // A holy day stops work: the people gather instead.
+    if (festival && activity === 'work') activity = 'socialise';
     detail.activity = activity;
     if (activity === 'work' && p.job) {
       const job = p.job;
@@ -864,7 +879,8 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   }
   // Evening: the day's interactions and family business (births due, matches, households).
   if (block === BLOCKS - 1) {
-    runSocial(world, content, active, profiles, cache.emit, voice.label, day);
+    const talkMul = festival ? content.society.festival.talkMul : 1;
+    runSocial(world, content, active, profiles, cache.emit, voice.label, day, talkMul);
     runFamily(world, content, active, cache.emit, voice.label, day);
   }
   // The stores count as refilled once they cover three meals for everyone.

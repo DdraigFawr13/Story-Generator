@@ -148,6 +148,7 @@ export function newHarvest(year: number, poorEvent: Id | null = null) {
     poorEvent,
     share: 0,
     seedKept: 0,
+    seedOpened: null as Id | null,
   };
 }
 
@@ -320,7 +321,19 @@ export function dailyCrops(
     if (stage !== 'sown' && stage !== 'growing' && stage !== 'ripe')
       seedKept += fieldYield(content, b.crop!.soil) * rules.seedShare;
   }
-  active.harvest.seedKept = seedKept;
+  // Once anyone starves the seed is food too (M3.7), said once until the hunger passes.
+  const starving = active.residents.some((id) =>
+    world.people.get(id)?.detail?.conditions.some((c) => c.defId === rules.seedOpenCondition),
+  );
+  if (starving && seedKept > 0 && (active.harvest.seedOpened ?? null) === null) {
+    active.harvest.seedOpened = emit({
+      type: content.environment.events.seedOpened,
+      place: label.cell,
+      causes: active.storesEmptyEvent === null ? [] : [active.storesEmptyEvent],
+      data: { site: label.name },
+    }).id;
+  } else if (!starving) active.harvest.seedOpened = null;
+  active.harvest.seedKept = starving ? 0 : seedKept;
   if (!active.harvest.planned && within(month, rules.sowMonths)) planSowing(world, content, active);
   // The sowing window closing is also the end of the sowing news.
   if (month === rules.sowMonths[1] + 1 && date.dayOfMonth === 1 && !active.harvest.sownReported) {

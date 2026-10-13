@@ -21,7 +21,12 @@ export function leaveSite(world: WorldState, content: SiteContent): void {
   const site = world.sites.get(active.siteId);
   const gone = new Set(active.promoted);
   // Dead notables are tidied like living ones: they keep their records, including how they died.
-  for (const id of [...active.residents, ...active.dead]) {
+  // So are exiles (M3.7), who carry on at the site they were sent to.
+  for (const id of [
+    ...active.residents,
+    ...active.dead,
+    ...active.society.exiles.map(([exile]) => exile),
+  ]) {
     if (gone.has(id)) continue;
     const notable = world.people.get(id);
     if (!notable) continue;

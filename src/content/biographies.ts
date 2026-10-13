@@ -31,6 +31,7 @@ export const BIOGRAPHIES: BiographyRules = {
     wound: 'of a wound',
     illness: 'of a long illness',
     childbirth: 'in childbirth',
+    execution: 'by the executioner',
   },
   sentences: {
     // Person

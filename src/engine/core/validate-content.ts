@@ -3,7 +3,13 @@
 // balance (R-29) and no self-taught magic (R-28). Returns readable problems.
 
 import type { ContentBundle, RaceDef } from './content-types';
-import { ACTIVITIES, CULTURE_VALUES, DAY_BLOCKS, MAX_CREATURE_DANGER } from './content-types';
+import {
+  ACTIVITIES,
+  CULTURE_VALUES,
+  DAY_BLOCKS,
+  MAX_CREATURE_DANGER,
+  PUNISHMENTS,
+} from './content-types';
 import { ATTRIBUTE_KEYS, GOODS, REGION_KINDS } from './types';
 import { BIRTH_TIER_IDS, TIERS, tierOfPower } from '../people/tiers';
 
@@ -98,6 +104,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...environmentProblems(content));
   problems.push(...healthProblems(content));
   problems.push(...familyProblems(content));
+  problems.push(...societyProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -803,6 +810,68 @@ export function familyProblems(content: ContentBundle): string[] {
     if (!family.gifts[gift]) problems.push(`Family gifts: no phrase for "${gift}".`);
   }
   if (!(family.maxSpouses >= 1)) problems.push('Family maxSpouses must be at least 1.');
+  return problems;
+}
+
+/** Society rules (M3.7): laws, holy days and rites name real cultures, religions, items, jobs, traits and ids. */
+export function societyProblems(content: ContentBundle): string[] {
+  const rules = content.society;
+  if (!rules) return ['Content has no society tables.'];
+  const problems: string[] = [];
+  const known = (where: string, what: string, ok: boolean, id: string) => {
+    if (!ok) problems.push(`${where}: unknown ${what} "${id}".`);
+  };
+  const cultures = new Set(content.cultures.map((c) => c.id));
+  const religions = new Set(content.cultures.map((c) => c.religion.id));
+  const items = new Set(content.items.map((i) => i.id));
+  const memories = new Set(content.memories.map((m) => m.id));
+  const events = new Set(content.eventTypes.map((e) => e.id));
+  const traits = new Set(content.traits.map((t) => t.id));
+  const conditions = new Set(content.conditions.map((c) => c.id));
+  for (const law of rules.laws) {
+    const where = `Law of ${law.cultureId}`;
+    known(where, 'culture', cultures.has(law.cultureId), law.cultureId);
+    for (const [crime, punishment] of Object.entries(law.punish)) {
+      known(
+        where,
+        'punishment',
+        (PUNISHMENTS as readonly string[]).includes(punishment),
+        `${crime}: ${punishment}`,
+      );
+    }
+    known(where, 'maximum', (PUNISHMENTS as readonly string[]).includes(law.max), law.max);
+  }
+  for (const id of cultures) {
+    if (!rules.laws.some((l) => l.cultureId === id)) problems.push(`Society: no law for "${id}".`);
+  }
+  for (const f of rules.festivals) {
+    const where = `Festival ${f.id}`;
+    known(where, 'religion', religions.has(f.religionId), f.religionId);
+    if (!(Number.isInteger(f.month) && f.month >= 0 && f.month <= 11))
+      problems.push(`${where}: month must be 0-11.`);
+    if (!(Number.isInteger(f.day) && f.day >= 1 && f.day <= 28))
+      problems.push(`${where}: day must be 1-28.`);
+  }
+  for (const f of rules.funerals) {
+    known(`Funeral rite`, 'religion', religions.has(f.religionId), f.religionId);
+    for (const id of Object.keys(f.cost ?? {}))
+      known(`Funeral rite ${f.religionId}`, 'item', items.has(id), id);
+  }
+  for (const id of Object.values(rules.memoryOf))
+    known('Society memoryOf', 'memory', memories.has(id), id);
+  for (const id of Object.values(rules.events))
+    known('Society events', 'event type', events.has(id), id);
+  known(
+    'Society justice',
+    'job',
+    content.jobs.some((j) => j.id === rules.justice.labourJob),
+    rules.justice.labourJob,
+  );
+  known('Society crime', 'trait', traits.has(rules.crime.murderTrait), rules.crime.murderTrait);
+  for (const id of Object.keys(rules.crime.pilferTraits))
+    known('Society pilferTraits', 'trait', traits.has(id), id);
+  for (const id of rules.crime.brawlWounds)
+    known('Society brawlWounds', 'condition', conditions.has(id), id);
   return problems;
 }
 

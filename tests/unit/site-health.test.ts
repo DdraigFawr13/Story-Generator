@@ -165,7 +165,9 @@ describe('health', () => {
     for (let d = 0; d < 30; d += 1) stepSite(world, C);
     for (const id of killed) {
       expect(active.residents).not.toContain(id);
-      expect(world.events.slice(firstAfter).some((e) => e.actors.includes(id))).toBe(false);
+      // Only their funeral (M3.7) may name them.
+      const named = world.events.slice(firstAfter).filter((e) => e.actors.includes(id));
+      expect(named.filter((e) => e.type !== C.society.events.funeral)).toEqual([]);
     }
     expect(killed.map((id) => detailOf(world, id).pos)).toEqual(where);
     leaveSite(world, C);
