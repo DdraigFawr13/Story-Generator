@@ -1778,6 +1778,12 @@ export interface CollegeRules {
   trainChance: number;
   /** A college's people are this many times as likely to see a mage grow into a legend. */
   legendFactor: number;
+  /** Yearly chance a Strong+ mage of a people without a college sets out to study at one in reach. */
+  travelChance: number;
+  /** Cells a student will travel to a college. */
+  travelRange: number;
+  /** Years a student stays before going home. */
+  studyYears: number;
   /** College names; `{site}` and `{school}` (capitalised) are filled in. */
   names: string[];
   /** Least power to work a spell (Exceptional). */

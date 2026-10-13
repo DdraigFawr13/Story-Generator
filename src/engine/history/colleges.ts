@@ -12,7 +12,7 @@ import { primarySchool } from './items';
 import { addDeed, civOfPerson, isAdult, isElder, livingList, siteOf } from './people';
 import { totalPop } from './pop';
 import { cellDistance } from './settle';
-import { cultureOf, isLive, liveSites, logOf, type College, type HistoryRun } from './state';
+import { atWar, cultureOf, isLive, liveSites, logOf, type College, type HistoryRun } from './state';
 
 const STRONG = TIERS.strong.minPower;
 const LEGENDARY = TIERS.legendary.minPower;
@@ -129,13 +129,102 @@ function foundColleges(run: HistoryRun): void {
   }
 }
 
+/** The open college nearest a site within `travelRange`, of a people not at war with `civId`. */
+function collegeInReach(run: HistoryRun, from: Site, civId: Id): College | undefined {
+  let best: College | undefined;
+  let nearest = Infinity;
+  for (const college of openColleges(run)) {
+    if (college.civId === civId || atWar(run, college.civId, civId)) continue;
+    const site = run.world.sites.get(college.siteId)!;
+    const distance = cellDistance(run.cells.width, from.cell, site.cell);
+    if (distance <= run.rules.colleges.travelRange && distance < nearest) {
+      nearest = distance;
+      best = college;
+    }
+  }
+  return best;
+}
+
+/**
+ * Gifted mages of peoples without a college travel to one in reach and study there for
+ * `studyYears`; they go home early if their people go to war with the college's. A student who
+ * came back stronger is named, and may work spells for their own people from then on.
+ */
+function travelAbroad(run: HistoryRun): void {
+  const rules = run.rules.colleges;
+  for (const [id, student] of [...run.students]) {
+    const person = run.world.people.get(id)!;
+    const college = run.colleges.find((c) => c.siteId === student.siteId && c.closed === undefined);
+    const atWarNow = college !== undefined && atWar(run, college.civId, person.civId ?? null);
+    if (person.died === undefined && college && !atWarNow && run.year < student.until) continue;
+    run.students.delete(id);
+    // Each mage goes abroad once in their life.
+    run.studied.add(id);
+    if (person.died !== undefined) continue;
+    const civ = civOfPerson(run, person);
+    const home = run.world.sites.get(student.home);
+    const back = home && isLive(home) && home.civId === person.civId ? home : undefined;
+    const seat = civ ? run.world.sites.get(civ.capital) : undefined;
+    person.siteId = (back ?? seat)?.id ?? person.siteId ?? null;
+    if (person.magic.power <= student.power) continue;
+    const event = run.emit({
+      type: 'mage_came_home',
+      actors: [id],
+      place: siteOf(run, person)?.cell ?? null,
+      causes: [student.event],
+      data: {
+        name: person.name,
+        college: college?.name ?? 'the college',
+        site: siteOf(run, person)?.name ?? 'the wilds',
+        civ: civ?.name ?? '',
+        school: primarySchool(person) ?? 'wild',
+      },
+    });
+    addDeed(person, event.id);
+  }
+  if (openColleges(run).length === 0) return;
+  for (const person of livingList(run)) {
+    if (person.magic.power < STRONG || person.magic.power >= LEGENDARY) continue;
+    if (run.students.has(person.id) || run.studied.has(person.id)) continue;
+    if (collegeOf(run, person.civId) || person.title === 'ruler') continue;
+    if (!isAdult(run, person) || isElder(run, person)) continue;
+    const home = siteOf(run, person);
+    if (!home || !isLive(home) || person.civId === null || person.civId === undefined) continue;
+    const college = collegeInReach(run, home, person.civId);
+    if (!college || !run.rng.magic.chance(rules.travelChance)) continue;
+    const site = run.world.sites.get(college.siteId)!;
+    const event = run.emit({
+      type: 'mage_went_to_study',
+      actors: [person.id],
+      place: site.cell,
+      causes: [college.event],
+      data: {
+        name: person.name,
+        college: college.name,
+        from: home.name,
+        civ: civOfPerson(run, person)?.name ?? '',
+      },
+    });
+    addDeed(person, event.id);
+    run.students.set(person.id, {
+      siteId: site.id,
+      home: home.id,
+      until: run.year + rules.studyYears,
+      power: person.magic.power,
+      event: event.id,
+    });
+    person.siteId = site.id;
+  }
+}
+
 /** Strong+ mages of a college's people may gain one power a year, up to the edge of legend. */
 function train(run: HistoryRun): void {
   const rules = run.rules.colleges;
   const top = LEGENDARY - 1;
   for (const person of livingList(run)) {
     if (person.magic.power < STRONG || person.magic.power >= top) continue;
-    if (!collegeOf(run, person.civId) || !isAdult(run, person)) continue;
+    if (!(collegeOf(run, person.civId) || run.students.has(person.id)) || !isAdult(run, person))
+      continue;
     if (!run.rng.magic.chance(rules.trainChance)) continue;
     person.magic.power += 1;
     const school = primarySchool(person);
@@ -231,7 +320,8 @@ function castSpells(run: HistoryRun): void {
   for (const caster of livingList(run)) {
     const power = caster.magic.power;
     if (power < rules.spellPower) continue;
-    if (power < LEGENDARY && !collegeOf(run, caster.civId)) continue;
+    if (power < LEGENDARY && !collegeOf(run, caster.civId) && !run.studied.has(caster.id)) continue;
+    if (run.students.has(caster.id)) continue;
     if (!isAdult(run, caster) || isElder(run, caster)) continue;
     const last = run.notables.lastDeed.get(caster.id);
     if (last !== undefined && run.year - last < rules.spellRest) continue;
@@ -268,6 +358,7 @@ function castSpells(run: HistoryRun): void {
 export function runColleges(run: HistoryRun): void {
   followSites(run);
   if (run.year % DECADE === 0) foundColleges(run);
+  travelAbroad(run);
   train(run);
   castSpells(run);
 }

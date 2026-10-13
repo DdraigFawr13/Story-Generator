@@ -745,6 +745,33 @@ export const eventTypes: EventTypeDef[] = [
     ],
   },
   {
+    id: 'mage_went_to_study',
+    baseImportance: 3,
+    title: '{name} went to {college}',
+    category: 'magic',
+    precision: 'year',
+    links: { civ: 'civ' },
+    templates: [
+      'In {date} {name} of {from} left the {civ} to study at {college}.',
+      '{date}: {name}, a gifted mage of the {civ}, went from {from} to learn at {college}.',
+      '{name} of {from} set out for {college} in {date}, to learn what the {civ} could not teach.',
+    ],
+  },
+  {
+    id: 'mage_came_home',
+    baseImportance: 5,
+    title: '{name} came home from {college}',
+    category: 'magic',
+    precision: 'year',
+    links: { site: 'site', civ: 'civ' },
+    dataKeys: ['civ'],
+    templates: [
+      'In {date} {name} came home to {site} from {college}, a far stronger mage of {school} than when they left.',
+      '{date}: {name} returned to the {civ} from {college}, and brought the learning of {school} with them.',
+      'After years at {college}, {name} came back to {site} in {date}, a master of {school} to the {civ}.',
+    ],
+  },
+  {
     id: 'city_freed',
     baseImportance: 7,
     title: '{site} broke free',

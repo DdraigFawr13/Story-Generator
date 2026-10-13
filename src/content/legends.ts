@@ -37,6 +37,8 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'college_founded',
       'college_closed',
       'spell_cast',
+      'mage_went_to_study',
+      'mage_came_home',
     ],
   },
   {

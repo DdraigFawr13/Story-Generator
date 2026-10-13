@@ -112,6 +112,18 @@ export interface College {
   closed?: number;
 }
 
+/** A mage of another people studying at a college (colleges.ts). */
+export interface Student {
+  siteId: Id;
+  /** Where they came from and go back to. */
+  home: Id;
+  until: number;
+  /** Power when they arrived. */
+  power: number;
+  /** The mage_went_to_study event. */
+  event: Id;
+}
+
 /** A pact of defence between two civs (city-states.ts). */
 export interface Pact {
   a: Id;
@@ -198,6 +210,10 @@ export interface HistoryRun {
   notables: NotableState;
   /** Colleges of magic, open and closed, in founding order. */
   colleges: College[];
+  /** Mages studying abroad, by person id. */
+  students: Map<Id, Student>;
+  /** Mages who went to study at a college of another people (once each); they may work spells at home. */
+  studied: Set<Id>;
   /** Pacts of defence, live ones only. */
   pacts: Pact[];
 }
@@ -347,6 +363,8 @@ export function createRun(
       mageOdds: new Map(),
     },
     colleges: [],
+    students: new Map(),
+    studied: new Set(),
     pacts: [],
   };
   for (const site of world.sites.values()) {

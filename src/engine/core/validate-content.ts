@@ -386,6 +386,8 @@ const HISTORY_EVENT_IDS = [
   'pact_sworn',
   'pact_broken',
   'ally_aided',
+  'mage_went_to_study',
+  'mage_came_home',
 ];
 
 /** Settlement rules: present, capitalKind keys are culture ids, a civ name template per government used. */

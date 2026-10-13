@@ -14,6 +14,10 @@ export const COLLEGES: CollegeRules = {
   // A strong mage of the college's people gains a step about every 25 years.
   trainChance: 0.04,
   legendFactor: 1.5,
+  // Gifted mages of other peoples come to study for about a decade, then go home with what they learned.
+  travelChance: 0.08,
+  travelRange: 80,
+  studyYears: 10,
   names: ['the College of {site}', 'the {school} Hall of {site}', 'the Lyceum at {site}'],
   // Exceptional (R-24): enough power to turn the weather of a valley or a sickness in a town.
   spellPower: 13,
