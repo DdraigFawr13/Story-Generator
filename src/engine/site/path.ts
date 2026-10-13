@@ -6,6 +6,7 @@
 
 import type { ActiveSite, Building, LocalMap } from '../core/types';
 import type { LifeRules, SiteRules } from '../core/content-types';
+import { doorOf } from './defs';
 
 /** Cost of a blocked tile in the grid. */
 const BLOCKED = 0;
@@ -46,11 +47,6 @@ export function invalidatePaths(active: ActiveSite, changed?: readonly number[])
   else caches.delete(active);
 }
 
-/** The door tile of a home or hall: the middle of its bottom edge (layout.ts carves paths from it). */
-export function doorOf(b: Pick<Building, 'x' | 'y' | 'w' | 'h'>): [number, number] {
-  return [b.x + (b.w >> 1), b.y + b.h - 1];
-}
-
 function buildCost(
   map: LocalMap,
   buildings: Iterable<Building>,
@@ -66,11 +62,8 @@ function buildCost(
     cost[k] = Math.min(MAX_COST, base + (map.tree[k] ? life.treeCost : 0));
   }
   const floor = life.walkCost['floor'] ?? 1;
-  for (const b of buildings) {
-    if (b.defId !== 'home' && b.defId !== 'hall') continue;
-    const [dx, dy] = doorOf(b);
-    cost[dy * map.width + dx] = floor;
-  }
+  const walled = new Set(rules.buildings.filter((d) => d.walled).map((d) => d.id));
+  for (const b of buildings) if (walled.has(b.defId)) cost[doorOf(b, map.width)] = floor;
   return cost;
 }
 

@@ -5,6 +5,7 @@
 import {
   DAYS_PER_YEAR,
   bandOfAge,
+  doorOf,
   siteCodes,
   sitePopulation,
   type ActiveSite,
@@ -115,8 +116,8 @@ export interface LookCtx {
 /** Alpha of the shade drawn over each elevation band: 0 darkens (valleys), 2 and 3 lighten (hills). */
 export const SHADE_ALPHA = [0.07, 0, 0.06, 0.12];
 
-export function doorTile(b: Pick<Building, 'x' | 'y' | 'w' | 'h'>, size: number): number {
-  return (b.y + b.h - 1) * size + b.x + (b.w >> 1);
+export function doorTile(b: Pick<Building, 'x' | 'y' | 'w' | 'h' | 'door'>, size: number): number {
+  return doorOf(b, size);
 }
 
 export function elevationBands(map: LocalMap): Uint8Array {
@@ -143,9 +144,8 @@ export function makeLookCtx(
   buildings: ReadonlyMap<number, Building>,
 ): LookCtx {
   const doors = new Set<number>();
-  for (const b of buildings.values()) {
-    if (b.defId === 'home' || b.defId === 'hall') doors.add(doorTile(b, map.width));
-  }
+  const walled = new Set(rules.buildings.filter((d) => d.walled).map((d) => d.id));
+  for (const b of buildings.values()) if (walled.has(b.defId)) doors.add(doorTile(b, map.width));
   return {
     map,
     rules,
@@ -183,7 +183,8 @@ export function tileLook(ctx: LookCtx, k: number): TileLook {
   // Being raised: bare ground here; the renderer draws the faded plan on top.
   if (b?.progress !== undefined) return look('t-grass', '', 't-grass-ink', band);
   if (b?.defId === 'field') return look('t-field', (x + y) % 2 ? '"' : '', 't-field-ink', band);
-  if (b && (b.defId === 'home' || b.defId === 'hall')) {
+  const def = b ? rules.buildings.find((d) => d.id === b.defId) : undefined;
+  if (b && def?.walled) {
     const counted = !b.followed;
     if (ctx.doors.has(k)) {
       return look(counted ? 't-counted' : 't-floor', '∩', counted ? 't-counted-ink' : 't-door');
@@ -193,13 +194,21 @@ export function tileLook(ctx: LookCtx, k: number): TileLook {
         ? look('t-cwall', '#', 't-cwall-ink', -1, 't-counted')
         : look('t-wall', '#', 't-wall-ink');
     }
+    // A trade's building shows its letter in the middle of the room.
+    if (
+      b.defId !== 'home' &&
+      b.defId !== 'hall' &&
+      b.x + (b.w >> 1) === x &&
+      b.y + (b.h >> 1) === y
+    )
+      return look('t-floor', def.glyph, 't-feature');
     return counted
       ? look('t-counted', '', 't-counted-ink')
       : look('t-floor', (x + y) % 3 === 0 ? '·' : '', 't-floor-ink');
   }
   if (b) {
     const centre = b.x + (b.w >> 1) === x && b.y + (b.h >> 1) === y;
-    const glyph = rules.buildings.find((def) => def.id === b.defId)?.glyph ?? '';
+    const glyph = def?.glyph ?? '';
     return look('t-floor', centre || b.defId === 'stockpile' ? glyph : '·', 't-feature');
   }
   const water = map.water[k]!;

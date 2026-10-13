@@ -575,6 +575,12 @@ export interface BuildingDef extends SiteGlyphDef {
   cost?: Record<string, number>;
   /** The steward may order it. */
   buildable?: boolean;
+  /** Village life: drawn with walls and a door, like a home. */
+  walled?: boolean;
+  /** Village life: the workplaces (job `workplace` ids) it houses, preferred over the fallbacks. */
+  houses?: Workplace[];
+  /** Village life: laid out at embark when the site's whole population reaches this. */
+  minPop?: number;
 }
 
 export type ItemEffect =
@@ -617,6 +623,7 @@ export type Workplace =
   | 'ore'
   | 'wild'
   | 'workshop'
+  | 'forge'
   | 'kitchen'
   | 'construction'
   | 'herbs';

@@ -233,6 +233,9 @@ const BUILD = {
   dock: [100, 70, 40],
   workshop: [90, 90, 110],
   wall: [60, 60, 60],
+  alehouse: [170, 110, 30],
+  smithy: [80, 80, 80],
+  bakehouse: [200, 140, 90],
 };
 const map = active.map;
 const rgba = new Uint8ClampedArray(map.width * map.height * 4);
@@ -250,7 +253,7 @@ for (let i = 0; i < map.width * map.height; i += 1) {
         ? [105, 80, 65]
         : map.terrain[i] === T.wall
           ? [70, 50, 40]
-          : BUILD[b.defId];
+          : (BUILD[b.defId] ?? [255, 0, 255]);
   }
   rgba.set([...c, 255], i * 4);
 }
