@@ -27,6 +27,31 @@ export function itemsHeldBy(run: HistoryRun, person: Person): Item[] {
   return out;
 }
 
+const NUMERALS = ['II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+
+/**
+ * The first candidate no other item carries, so legends never show two items under one name.
+ * Candidates are the picked pattern first, then the other patterns in content order; when all
+ * are taken, the picked one gets a numeral. Draws no randomness.
+ */
+function uniqueName(run: HistoryRun, candidates: string[]): string {
+  const taken = new Set<string>();
+  for (const item of run.world.items.values()) taken.add(item.name);
+  const free = candidates.find((name) => !taken.has(name));
+  if (free) return free;
+  const first = candidates[0]!;
+  for (const numeral of NUMERALS)
+    if (!taken.has(`${first} ${numeral}`)) return `${first} ${numeral}`;
+  return `${first} ${run.world.nextId.item}`;
+}
+
+/** Fills each pattern, the picked one first. */
+function fill(patterns: readonly string[], picked: string, values: Record<string, string>) {
+  return [picked, ...patterns.filter((p) => p !== picked)].map((pattern) =>
+    Object.entries(values).reduce((text, [key, value]) => text.replace(`{${key}}`, value), pattern),
+  );
+}
+
 function newItem(
   run: HistoryRun,
   spec: Pick<Item, 'kind' | 'name' | 'form' | 'makerId' | 'holder'>,
@@ -67,10 +92,14 @@ function makeArtifacts(run: HistoryRun): void {
       createAdult(run, civ, site, 'crafter', rules.fame.crafter);
     const ruler = civ.capital === site.id ? livingPerson(run, civ.rulerId) : undefined;
     const holder = ruler ?? maker;
-    const name = pattern
-      .replace('{epithet}', cap(epithet))
-      .replace('{form}', cap(form))
-      .replace('{maker}', maker.name);
+    const name = uniqueName(
+      run,
+      fill(rules.artifactNames, pattern, {
+        epithet: cap(epithet),
+        form: cap(form),
+        maker: maker.name,
+      }),
+    );
     const item = newItem(run, {
       kind: 'artifact',
       name,
@@ -102,10 +131,10 @@ function writeBook(run: HistoryRun, writer: Person, form: string, site: Site, sc
   const rules = run.content.notables;
   const pattern = run.rng.notables.pick(rules.bookNames);
   // Lower case, so "the sailing-lore of Torfa" reads well inside a sentence.
-  const name = pattern
-    .replace('{form}', form)
-    .replace('{writer}', writer.name)
-    .replace('{site}', site.name);
+  const name = uniqueName(
+    run,
+    fill(rules.bookNames, pattern, { form, writer: writer.name, site: site.name }),
+  );
   const item = newItem(run, { kind: 'book', name, form, makerId: writer.id, holder: writer.id });
   const event = run.emit({
     type: 'book_written',

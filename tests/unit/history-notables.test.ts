@@ -127,6 +127,24 @@ describe('notables', () => {
     }
   });
 
+  it('give every item its own name, even when names come from few patterns', () => {
+    const forms = Object.fromEntries(
+      Object.keys(DEFAULT_CONTENT.notables.bookForms).map((school) => [school, ['ledger']]),
+    );
+    const notables = {
+      ...DEFAULT_CONTENT.notables,
+      bookChance: 0.5,
+      artifactChance: 1,
+      artifactForms: ['sword'],
+      artifactEpithets: ['Grey'],
+      bookForms: forms,
+    };
+    const world = generate('NOT-A', 100, { ...DEFAULT_CONTENT, notables });
+    const names = [...world.items.values()].map((item) => item.name);
+    expect(names.length).toBeGreaterThan(10);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
   it('name a razing death after the kind of place burned', () => {
     const world = generate(RAZED_SEED);
     const sites = [...world.sites.values()];
