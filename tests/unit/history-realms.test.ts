@@ -18,7 +18,7 @@ const BUSY = {
 
 let shared: WorldState | undefined;
 const world = () =>
-  (shared ??= generateWorld('CS-2', { width: 64, height: 64, historyYears: 250 }, BUSY));
+  (shared ??= generateWorld('CS-4', { width: 64, height: 64, historyYears: 250 }, BUSY));
 const ofType = (type: string) => world().events.filter((e) => e.type === type);
 const byId = (id: number) => world().events.find((e) => e.id === id);
 const yearOf = (e: SimEvent) => Math.floor(e.day / DAYS_PER_YEAR);
@@ -26,7 +26,7 @@ const civNamed = (name: unknown) => [...world().civs.values()].find((c) => c.nam
 
 describe('free cities', () => {
   it('start as one-town realms away from every capital', () => {
-    const settled = generateWorld('CS-2', { width: 64, height: 64, historyYears: 0 }, BUSY);
+    const settled = generateWorld('CS-4', { width: 64, height: 64, historyYears: 0 }, BUSY);
     const start = [...settled.civs.values()].filter((c) => c.free);
     expect(start.length).toBeGreaterThan(0);
     const width = settled.cells!.width;

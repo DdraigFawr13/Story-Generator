@@ -1011,23 +1011,16 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
         table = p.age < routines.smallChildUnder ? 'childSmall' : 'childOlder';
       else if (p.band === 'elder' && block === 2) table = 'elder';
       // Not everyone starts work at once: the bakers before dawn, a tradesman's free morning, or keeping house.
-      if (
-        block === 0 &&
-        activity === 'sleep' &&
-        p.job &&
+      // Not on a rest or holy day, when there is no afternoon to sleep through.
+      const earlyShift =
+        !restDay &&
+        !festival &&
+        !!p.job &&
         routines.shifts.earlyJobs.includes(p.job.id) &&
-        hash3(p.id, 73, day) % routines.shifts.earlyEvery === 0
-      )
-        activity = 'work';
-      // ... and sleep through that afternoon instead.
-      if (
-        block === 2 &&
-        activity === 'work' &&
-        p.job &&
-        routines.shifts.earlyJobs.includes(p.job.id) &&
-        hash3(p.id, 73, day) % routines.shifts.earlyEvery === 0
-      )
-        activity = 'sleep';
+        hash3(p.id, 73, day) % routines.shifts.earlyEvery === 0;
+      if (block === 0 && activity === 'sleep' && earlyShift) activity = 'work';
+      // ... and sleep through that afternoon instead, elders too (their afternoon is not work).
+      if (block === 2 && earlyShift) activity = 'sleep';
       if (block === 1 && activity === 'work') {
         if (keepers.has(p)) {
           activity = 'errand';
