@@ -12,6 +12,8 @@ export const LORE: LoreRules = {
   lessons: 40,
   // Lessons start at seven, as an apprenticeship would.
   minAge: 7,
+  // Apprentices: up to about 24 for humans (maturity 16); older people learn only from books.
+  pupilUpTo: 1.5,
   readMinIntellect: 9,
   // The village hedge-witch is Gifted (§5.4A): a Faint person teaches only their own children.
   hedgeWitchMinPower: 3,
@@ -26,7 +28,8 @@ export const LORE: LoreRules = {
   },
   effects: {
     warmthShare: 0.5,
-    mendPerUse: 0.5,
+    // Half a day's wear (a building loses 1/30 of a point a day): a mender's home wears at half speed.
+    mendPerUse: 0.0167,
     // Half a herb-healer: at most doubles natural recovery (§5.4A).
     soothePower: 0.5,
     frostShare: 0.4,

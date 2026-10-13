@@ -191,10 +191,14 @@ function sourceOf(
 ): { teacher: Id | null; book: Id | null } | null {
   const teaches = (id: Id) =>
     teacherValid(ctx, id, ability.id) && !ctx.world.people.get(id)!.detail!.abed;
-  const parent = p.family.parents.find(teaches);
+  // Teachers take apprentices, not grown folk: past that age only a book can teach.
+  const race = ctx.content.races.find((r) => r.id === p.raceId);
+  const young = !race || ageOf(ctx.world, ctx.active, p) < race.maturityYears * ctx.rules.pupilUpTo;
+  const parent = young ? p.family.parents.find(teaches) : undefined;
   if (parent !== undefined) return { teacher: parent, book: null };
   const witch = ctx.active.lore.hedgeWitch;
-  if (witch !== null && witch !== p.id && teaches(witch)) return { teacher: witch, book: null };
+  if (young && witch !== null && witch !== p.id && teaches(witch))
+    return { teacher: witch, book: null };
   if (ability.learnFrom.includes('book') && ability.school && canRead(ctx, p)) {
     const book = booksOf(ctx, p.id).find((b) => b.school === ability.school);
     if (book) return { teacher: null, book: book.item.id };
@@ -422,26 +426,36 @@ export function soothePass(
   }
 }
 
-/** Menders restore the most worn finished building, one use at a time, until the uses are spent. */
+/** Each mender makes good part of a day's wear on their own home (one use a day), else on the most worn. */
 function mendPass(world: WorldState, content: SiteContent, active: ActiveSite): void {
-  if (!hasCasters(world, content, active, 'mending')) return;
   const per = content.lore.effects.mendPerUse;
-  for (;;) {
-    let worn: Building | undefined;
-    for (const b of active.buildings.values()) {
-      if (b.progress !== undefined || b.defId === 'field' || b.burnt || b.condition >= 100)
-        continue;
-      if (
-        !worn ||
-        b.condition < worn.condition ||
-        (b.condition === worn.condition && b.id < worn.id)
-      )
-        worn = b;
+  const standing = (b: Building | undefined): b is Building =>
+    b !== undefined &&
+    b.progress === undefined &&
+    b.defId !== 'field' &&
+    !b.burnt &&
+    b.condition < 100;
+  for (const id of castersOf(world, content, active, 'mending')) {
+    const p = world.people.get(id);
+    if (!p) continue;
+    const home = active.households.get(p.family.householdId ?? -1)?.home;
+    let target = home == null ? undefined : active.buildings.get(home);
+    if (!standing(target)) {
+      target = undefined;
+      for (const b of active.buildings.values()) {
+        if (!standing(b)) continue;
+        if (
+          !target ||
+          b.condition < target.condition ||
+          (b.condition === target.condition && b.id < target.id)
+        )
+          target = b;
+      }
     }
-    if (!worn || !castCantrip(world, content, active, 'mending')) return;
-    const to = Math.min(100, worn.condition + per);
-    active.lore.stats.mended += to - worn.condition;
-    worn.condition = to;
+    if (!target || !tryCast(world, content, p, 'mending')) continue;
+    const to = Math.min(100, target.condition + per);
+    active.lore.stats.mended += to - target.condition;
+    target.condition = to;
   }
 }
 

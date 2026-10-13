@@ -2120,6 +2120,8 @@ export interface LoreRules {
   lessons: number;
   /** Pupils younger than this many years take no lessons. */
   minAge: number;
+  /** A parent or the hedge-witch teaches only pupils younger than the race's maturity age times this. */
+  pupilUpTo: number;
   /** A book can be read only by someone with at least this intellect. */
   readMinIntellect: number;
   /** The hedge-witch: the adult of at least this power who knows the most cantrips. */
