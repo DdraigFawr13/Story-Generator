@@ -5,9 +5,10 @@ import type { SettlementRules } from '../engine';
 import { FREE_CITIES } from './realms';
 
 export const SETTLEMENT: SettlementRules = {
-  // About one civ per 1,800 land cells: 9 on a default 256x256 map (a quarter land), 3 on 128x128;
+  // About one civ per 1,800 land cells: 12 on a default 256x256 map (35% land), 3 on 128x128;
   // jitter adds or drops up to 2. Denser than the first 3,500 so neighbours meet and fight (playtest 2026-10-13).
-  civs: { min: 3, max: 10, landCellsPerCiv: 1800, jitter: 2 },
+  // The cap rose from 10 to 13 with the larger landmasses so realms stay as close as before.
+  civs: { min: 3, max: 13, landCellsPerCiv: 1800, jitter: 2 },
   // A map draws its peoples from the roster: humans are common, giants rare. A culture's weight
   // also scales with its home-ground share of the land, full at 15%; under 2% it stays away.
   peoples: {

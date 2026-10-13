@@ -5,6 +5,8 @@ import type { NotableRules } from '../engine';
 export const NOTABLES: NotableRules = {
   // Keeps the yearly passes cheap; most people stay counts in Site.pop.
   notableCap: 3000,
+  // A dynasty never outgrows its town: named folk stay under half of a site's people.
+  siteShare: 0.5,
   dynastyNames: {
     gwerin: 'House {name}',
     skarn: 'the {name}ings',

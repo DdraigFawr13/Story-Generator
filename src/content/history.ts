@@ -144,7 +144,8 @@ export const HISTORY: HistoryRules = {
   crossingPenalty: 0.5,
   warThreshold: 0.8,
   campaignShare: 0.5,
-  defence: { fortress: 1.5, heights: 1.25, pass: 1.4, ford: 1.2, capital: 1.2 },
+  // freeCity: a free city lives or dies by its walls, so it keeps them high (halved without timber).
+  defence: { fortress: 1.5, heights: 1.25, pass: 1.4, ford: 1.2, capital: 1.2, freeCity: 1.5 },
   battleLuck: 0.25,
   loserLoss: 0.3,
   winnerLoss: 0.1,

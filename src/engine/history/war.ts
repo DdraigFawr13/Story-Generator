@@ -166,7 +166,7 @@ function declareWars(run: HistoryRun): void {
   }
 }
 
-/** Defence multiplier of a site: its features, fortress kind and capital. */
+/** Defence multiplier of a site: its features, fortress kind, capital and a free city's walls. */
 function siteDefence(run: HistoryRun, site: Site, defender: Civ): number {
   const table = run.rules.defence;
   let bonus = 1;
@@ -178,6 +178,7 @@ function siteDefence(run: HistoryRun, site: Site, defender: Civ): number {
   }
   if (site.kind === 'fortress') bonus *= worn(table.fortress ?? 1);
   if (defender.capital === site.id) bonus *= table.capital ?? 1;
+  if (defender.free) bonus *= worn(table.freeCity ?? 1);
   return bonus;
 }
 
