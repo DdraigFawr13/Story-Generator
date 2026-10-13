@@ -7,6 +7,7 @@ import {
   leaveSite,
   runSocietyMorning,
   serveSentences,
+  stepSite,
   voiceOf,
   type Id,
   type Person,
@@ -129,5 +130,18 @@ describe('society', () => {
         memories.some((m) => m.type === C.society.memoryOf.mourned && m.about === dead.id),
       ).toBe(true);
     }
+  });
+
+  it('starving people open the seed corn, and the chronicle says so', () => {
+    const world = copy();
+    const active = embark(world, C, biggest(world).id);
+    stepSite(world, C);
+    expect(active.harvest.seedKept).toBeGreaterThan(0);
+    const p = world.people.get(active.residents[0]!)!;
+    p.detail!.conditions.push({ defId: 'starving', severity: 10, sinceDay: world.day });
+    stepSite(world, C);
+    expect(active.harvest.seedKept).toBe(0);
+    const opened = world.events.filter((e) => e.type === C.environment.events.seedOpened);
+    expect(opened).toHaveLength(1);
   });
 });

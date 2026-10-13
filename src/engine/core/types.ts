@@ -713,6 +713,8 @@ export interface SiteHarvest {
   share: number;
   /** Grain held back to sow the followed fields that stand empty; meals and cooks leave it alone. */
   seedKept: number;
+  /** M3.7: the event of the seed corn being opened while people starve; null while it is kept. */
+  seedOpened?: Id | null;
 }
 
 /** Firewood and last winter's burn (M3.4). */

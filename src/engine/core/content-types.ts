@@ -812,6 +812,8 @@ export interface EnvironmentRules {
     tendersPerField: number;
     /** Grain used as seed, as a share of the field's expected yield. */
     seedShare: number;
+    /** M3.7: while a resident has this condition, the steward keeps no seed back and it is eaten. */
+    seedOpenCondition: string;
     /** Work (effectiveness-blocks) to sow a field and to cut it. */
     sowWork: number;
     cutWork: number;
@@ -969,6 +971,7 @@ export interface EnvironmentRules {
     hardWinter: string;
     storm: string;
     fieldsSown: string;
+    seedOpened: string;
     harvest: string;
     harvestPoor: string;
     spoiled: string;
