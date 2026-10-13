@@ -3,9 +3,9 @@ import { DEFAULT_CONTENT } from '../../src/content';
 import { buildLegendIndex, generateWorld, playByPlay, type WorldState } from '../../src/engine';
 
 let shared: WorldState | undefined;
-/** One 64x64, 250-year world, as the biography tests use. */
+/** One 64x64, 250-year world with epic battles and beast fights (S2: 7 battles, 32 fights). */
 const base = () =>
-  (shared ??= generateWorld('S3', { width: 64, height: 64, historyYears: 250 }, DEFAULT_CONTENT));
+  (shared ??= generateWorld('S2', { width: 64, height: 64, historyYears: 250 }, DEFAULT_CONTENT));
 
 const FIGHTS = ['battle', 'beast_slain', 'beast_fought', 'beast_hunt_failed'];
 

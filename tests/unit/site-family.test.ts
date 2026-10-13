@@ -31,8 +31,11 @@ const biggest = (world: WorldState): Site =>
   [...world.sites.values()]
     .filter((s) => s.ruinedYear === undefined && sitePopulation(s) > 0)
     .sort((a, b) => sitePopulation(b) - sitePopulation(a) || a.id - b.id)[0]!;
-function fresh(content = C) {
-  const world = structuredClone(base());
+// Roaming beasts (2026-10-13) took SITE-I's wedding in the year; SITE-A has weddings and births.
+let weddings: WorldState | undefined;
+const marrying = () => (weddings ??= generateWorld('SITE-A', { width: 64, height: 64 }, C));
+function fresh(content = C, from = base) {
+  const world = structuredClone(from());
   const active = embark(world, content, biggest(world).id);
   const { emit, label } = voiceOf(world, content, active);
   return { world, active, emit, label };
@@ -122,7 +125,7 @@ describe('family', () => {
   it('keeps family links symmetric after a year of marriages and births', () => {
     // Seventy followed people are enough for weddings and births, and keep the run short.
     const small = { ...C, site: { ...C.site, followCap: 70 } };
-    const { world, active } = fresh(small);
+    const { world, active } = fresh(small, marrying);
     const first = world.events.length;
     for (let d = 0; d < 336; d += 1) stepSite(world, small);
     const types = new Set(world.events.slice(first).map((e) => e.type));

@@ -16,10 +16,11 @@ const BUSY = {
   },
 };
 
-// Compact continents (2026-10-13) moved CS-16's sworn-ally aid (ally_aided); CS-18 has it.
+// Compact continents (2026-10-13) moved CS-16's sworn-ally aid (ally_aided) to CS-18; roaming beasts
+// (2026-10-13) moved it again; CS-20 has it.
 let shared: WorldState | undefined;
 const world = () =>
-  (shared ??= generateWorld('CS-18', { width: 64, height: 64, historyYears: 250 }, BUSY));
+  (shared ??= generateWorld('CS-20', { width: 64, height: 64, historyYears: 250 }, BUSY));
 const ofType = (type: string) => world().events.filter((e) => e.type === type);
 const byId = (id: number) => world().events.find((e) => e.id === id);
 const yearOf = (e: SimEvent) => Math.floor(e.day / DAYS_PER_YEAR);
