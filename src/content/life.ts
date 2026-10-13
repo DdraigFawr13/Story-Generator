@@ -328,9 +328,22 @@ export const LIFE: LifeRules = {
       max: 0.75,
     },
     shifts: {
-      // Craftsmen and builders keep their own hours: one morning in two is their own.
-      lateJobs: ['craft-tools', 'craft-wares', 'build', 'haul'],
+      // Craftsmen, builders and most field trades keep their own hours: one morning in two is their own.
+      lateJobs: [
+        'craft-tools',
+        'craft-wares',
+        'build',
+        'haul',
+        'fell',
+        'quarry',
+        'mine',
+        'forage',
+        'farm',
+      ],
       lateEvery: 2,
+      // The bakers light the ovens before dawn one day in two, and sleep that afternoon.
+      earlyJobs: ['cook'],
+      earlyEvery: 2,
       // A mother (else the household adult who carries the little ones) keeps house one morning in two.
       childUnder: 7,
       houseEvery: 2,

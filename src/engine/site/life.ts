@@ -1018,7 +1018,24 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       if (p.band === 'child' && (block === 1 || block === 2))
         table = p.age < routines.smallChildUnder ? 'childSmall' : 'childOlder';
       else if (p.band === 'elder' && block === 2) table = 'elder';
-      // Not everyone starts work at once: a tradesman's free morning, or keeping house.
+      // Not everyone starts work at once: the bakers before dawn, a tradesman's free morning, or keeping house.
+      if (
+        block === 0 &&
+        activity === 'sleep' &&
+        p.job &&
+        routines.shifts.earlyJobs.includes(p.job.id) &&
+        hash3(p.id, 73, day) % routines.shifts.earlyEvery === 0
+      )
+        activity = 'work';
+      // ... and sleep through that afternoon instead.
+      if (
+        block === 2 &&
+        activity === 'work' &&
+        p.job &&
+        routines.shifts.earlyJobs.includes(p.job.id) &&
+        hash3(p.id, 73, day) % routines.shifts.earlyEvery === 0
+      )
+        activity = 'sleep';
       if (block === 1 && activity === 'work') {
         if (keepers.has(p)) {
           activity = 'errand';
@@ -1026,7 +1043,9 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
         } else if (
           p.job &&
           routines.shifts.lateJobs.includes(p.job.id) &&
-          hash3(p.id, 70, day) % routines.shifts.lateEvery === 0
+          hash3(p.id, 70, day) % routines.shifts.lateEvery === 0 &&
+          // On short winter days outdoor trades cannot spare the morning: the afternoon is dark.
+          (!active.weather.outdoorDark || indoor.has(p.job.workplace))
         )
           table = 'late';
       }

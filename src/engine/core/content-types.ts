@@ -540,6 +540,9 @@ export interface RoutineRules {
     /** These trades start one day in `lateEvery` after a free morning (drawn from the `late` table). */
     lateJobs: string[];
     lateEvery: number;
+    /** These trades go to work before dawn (the night block) one day in `earlyEvery`. */
+    earlyJobs: string[];
+    earlyEvery: number;
     /** In a household with a child under `childUnder`, the child's carer keeps house one morning in `houseEvery`. */
     childUnder: number;
     houseEvery: number;
