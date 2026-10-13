@@ -159,5 +159,7 @@ describe('a normal year at a site', () => {
     expect(a.share).toBe(1);
     expect(a.ratio).toBeGreaterThan(0.6);
     expect(run()).toEqual(a);
-  });
+    // Two site-years of work: about 5 s alone, more beside the rest of the suite. The speed guard
+    // is tests/speed/site-speed.test.ts's year of 150 residents, not this limit.
+  }, 20_000);
 });

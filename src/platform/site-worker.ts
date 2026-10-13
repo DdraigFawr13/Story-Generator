@@ -56,6 +56,8 @@ let rate = 0;
 let lastSnapshot = 0;
 /** `layoutVersion` of the last snapshot sent; the map layers ride along only when it moves. */
 let sentVersion = -1;
+/** `peopleVersion` of the last snapshot sent; the new people ride along only when it moves. */
+let sentPeople = -1;
 /** Days run since the window began, in blocks. */
 let windowBlocks = 0;
 
@@ -66,8 +68,9 @@ function stop(): void {
 
 /** A snapshot that leaves out the map layers the main thread already has. */
 function snapshotNow(current: WorldState): SiteSnapshot {
-  const snapshot = siteSnapshot(current, sentVersion);
+  const snapshot = siteSnapshot(current, sentVersion, sentPeople);
   sentVersion = snapshot.layoutVersion;
+  sentPeople = snapshot.peopleVersion;
   return snapshot;
 }
 
@@ -133,6 +136,7 @@ self.addEventListener('message', (event: MessageEvent<SiteRequest>) => {
       embark(world, content, siteId);
       // The copy sent back carries the map as it stands now.
       sentVersion = world.activeSite?.layoutVersion ?? -1;
+      sentPeople = world.activeSite?.peopleVersion ?? -1;
       scope.postMessage({ type: 'embarked', world });
     } else if (request.type === 'speed') {
       speed = request.daysPerSecond;

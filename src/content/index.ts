@@ -7,7 +7,9 @@ import { creatures } from './creatures';
 import { cultures } from './cultures';
 import { diseases } from './diseases';
 import { AILMENTS, CONDITIONS, HEALTH, HEALTH_EVENTS, HEALTH_MEMORIES } from './health';
+import { FAMILY, FAMILY_EVENTS, FAMILY_MEMORIES } from './family';
 import { HISTORY } from './history';
+import { INTERACTIONS, SOCIAL, SOCIAL_EVENTS } from './interactions';
 import { ITEMS } from './items';
 import { JOBS, STEWARD, WORK_EVENTS } from './jobs';
 import { TYPE_GROUPS } from './legends';
@@ -31,7 +33,15 @@ export const DEFAULT_CONTENT: ContentBundle = {
   schools,
   abilities,
   weather,
-  eventTypes: [...eventTypes, ...LIFE_EVENTS, ...WORK_EVENTS, ...WEATHER_EVENTS, ...HEALTH_EVENTS],
+  eventTypes: [
+    ...eventTypes,
+    ...LIFE_EVENTS,
+    ...WORK_EVENTS,
+    ...WEATHER_EVENTS,
+    ...HEALTH_EVENTS,
+    ...SOCIAL_EVENTS,
+    ...FAMILY_EVENTS,
+  ],
   typeGroups: TYPE_GROUPS,
   rules,
   settlement: SETTLEMENT,
@@ -43,7 +53,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   site: SITE,
   needs: NEEDS,
   traits: TRAITS,
-  memories: [...MEMORIES, ...HEALTH_MEMORIES],
+  memories: [...MEMORIES, ...HEALTH_MEMORIES, ...FAMILY_MEMORIES],
   life: LIFE,
   items: ITEMS,
   jobs: JOBS,
@@ -52,6 +62,9 @@ export const DEFAULT_CONTENT: ContentBundle = {
   health: HEALTH,
   conditions: CONDITIONS,
   ailments: AILMENTS,
+  interactions: INTERACTIONS,
+  social: SOCIAL,
+  family: FAMILY,
 };
 
 export * from './biographies';
@@ -61,7 +74,9 @@ export * from './creatures';
 export * from './cultures';
 export * from './diseases';
 export * from './health';
+export * from './family';
 export * from './history';
+export * from './interactions';
 export * from './items';
 export * from './jobs';
 export * from './legends';

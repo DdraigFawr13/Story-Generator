@@ -18,7 +18,6 @@ import type {
   AttributeKey,
   Condition,
   DeathCause,
-  Household,
   Id,
   Person,
   PersonDetail,
@@ -28,6 +27,7 @@ import type {
 } from '../core/types';
 import type { SiteLabel } from './build';
 import { ageBands, bandOfAge, type Band, type SiteContent } from './defs';
+import { afterDeath, successorOf } from './family';
 import { addMemoryTo } from './memory';
 import { takeItem } from './stock';
 import { refreshWork, transferItem } from './work';
@@ -349,8 +349,10 @@ export function killPerson(
   const stats = healthOf(active).stats.deaths;
   stats[cause] = (stats[cause] ?? 0) + 1;
 
-  // The household: a new head, or the household and its home's owner go.
+  // The household: a new head by the culture's inheritance rule (family.ts), or the household and
+  // its home's owner go.
   const household = active.households.get(person.family.householdId ?? -1);
+  const wasHead = household?.head === person.id;
   let heir: Id | null = null;
   const mourners = new Set<Id>();
   if (household) {
@@ -361,7 +363,7 @@ export function killPerson(
       const home = household.home === null ? undefined : active.buildings.get(household.home);
       if (home && home.owner === person.id) home.owner = null;
     } else {
-      heir = newHead(world, household);
+      heir = successorOf(world, content, active, household, person);
       if (household.head === person.id) household.head = heir;
       const home = household.home === null ? undefined : active.buildings.get(household.home);
       if (home && home.owner === person.id) home.owner = household.head;
@@ -401,21 +403,12 @@ export function killPerson(
       event.id,
     );
   }
+  // Family (M3.6): graded grief, widowhood, the new head's line, orphans taken in.
+  afterDeath(world, content, active, person.id, event.id, wasHead);
   return event;
 }
 
-/** The oldest remaining member of a household (ties by id). */
-function newHead(world: WorldState, h: Household): Id {
-  let best = h.members[0]!;
-  for (const id of h.members) {
-    const a = world.people.get(id)!;
-    const b = world.people.get(best)!;
-    if (a.born < b.born || (a.born === b.born && id < best)) best = id;
-  }
-  return best;
-}
-
-// ---- Childbirth (births arrive in M3.6) ----
+// ---- Childbirth (labour starts in family.ts) ----
 
 /** True when a birth kills the mother. */
 export function rollChildbirth(content: SiteContent, tended: boolean, rng: RngStream): boolean {

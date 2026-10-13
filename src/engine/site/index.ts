@@ -17,3 +17,5 @@ export * from './fire';
 export * from './wild';
 export * from './environment';
 export * from './health';
+export * from './family';
+export * from './social';

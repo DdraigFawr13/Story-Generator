@@ -42,7 +42,7 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256Ã
 | `src/engine/history/` | settlement, then yearly harvest, demography, famine, plague, migration, expansion |
 | `src/engine/history/` (cont.) | then beasts, trade, raids, war, notables, items, importance, snapshots; `playback.ts` records display borders per year |
 | `src/engine/people/` | attributes, aptitude, magic tiers, combat scale (R-24) |
-| `src/engine/site/` | the watched site: `localmap`, `layout`, `promote`/`demote`, `tick` (day loop), `life` (needs, mood, breakdowns), `path` (A*), `work` (steward and jobs), `stock`, `build`, `outpost` |
+| `src/engine/site/` | the watched site: `localmap`, `layout`, `promote`/`demote`, `tick` (day loop), `life` (needs, mood, breakdowns), `health`, `social` (opinions, grudges), `family` (marriage, births, inheritance), `path` (A*), `work` (steward and jobs), `stock`, `build`, `outpost` |
 | `src/engine/systems/` | shared daily systems (`weather`) |
 | `src/engine/narrative/` | biographies, legend pages, chronicle text rendering |
 | `src/content/` | one file per content type: races, cultures, biomes, resources, names, history rules, settlement, diseases, notables, legends, biographies, map layers and why-lines, playback effects; site content in `site`, `life`, `jobs`, `items`, `buildings`, `abilities`, `creatures` |

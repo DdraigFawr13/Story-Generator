@@ -13,7 +13,6 @@ import {
   residentNames,
   serializeWorld,
   sitePopulation,
-  stepSite,
   validateContent,
   type ActiveSite,
   type Id,
@@ -223,7 +222,7 @@ describe('outposts', () => {
   });
 });
 
-describe('saves and speed', () => {
+describe('saves', () => {
   it('round-trips a world with an active site', () => {
     const world = copy();
     embark(world, C, smallest(world).id);
@@ -231,22 +230,6 @@ describe('saves and speed', () => {
     expect(back.activeSite).toEqual(world.activeSite);
     expect(back.activeSite!.map.terrain).toBeInstanceOf(Uint8Array);
     expect(back.activeSite!.households).toBeInstanceOf(Map);
-  });
-
-  it('runs a year of site life for 150 residents within the speed guard', () => {
-    const world = copy();
-    const site = biggest(world);
-    const content = { ...C, site: { ...C.site, followCap: 150 } };
-    const active = embark(world, content, site.id);
-    const start = performance.now();
-    for (let day = 0; day < 336; day += 1) stepSite(world, content);
-    const ms = performance.now() - start;
-    console.log(
-      `site tick: ${active.residents.length} residents, 336 days in ${ms.toFixed(1)} ms (${(336000 / Math.max(ms, 0.01)).toFixed(0)} days/s)`,
-    );
-    // The Phase 3 budget is 10 days/s; 2.5 s a year (over 130 days/s) leaves room for slow CI
-    // runners and later systems (decided 2026-10-13: one guard, replacing two at 1 s).
-    expect(ms).toBeLessThan(2500);
   });
 });
 

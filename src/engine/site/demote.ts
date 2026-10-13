@@ -2,9 +2,18 @@
 // notables return to their world-tier records, items held by the vanished go back to where they
 // were (or are lost at the site), and goods carry the stock's net change.
 
-import { GOODS, type WorldState } from '../core/types';
+import { GOODS, type Site, type WorldState } from '../core/types';
 import { bandOfAge, type SiteContent } from './defs';
 import { goodAmount } from './stock';
+
+/** Changes a band of the site's counts by `delta` followed people, scaled up by the followed share. */
+export function addPopDelta(site: Site, key: string, delta: number, share: number): void {
+  const [raceId, cultureId, band] = key.split('|');
+  const pop =
+    site.pop.find((b) => b.raceId === raceId && b.cultureId === cultureId && b.band === band) ??
+    site.pop.find((b) => b.raceId === raceId && b.band === band && b.count > 0);
+  if (pop) pop.count = Math.max(0, pop.count + Math.round(delta / share));
+}
 
 export function leaveSite(world: WorldState, content: SiteContent): void {
   const active = world.activeSite;
@@ -36,7 +45,8 @@ export function leaveSite(world: WorldState, content: SiteContent): void {
   }
   for (const id of active.promoted) world.people.delete(id);
   if (site) {
-    // Each death among the followed stands for 1 / share people of their band (M3.5).
+    // Each death among the followed stands for 1 / share people of their band (M3.5); each birth
+    // (M3.6, newborns are children) for 1 / share more.
     const deaths = new Map<string, number>();
     for (const id of active.dead) {
       const p = world.people.get(id);
@@ -44,15 +54,10 @@ export function leaveSite(world: WorldState, content: SiteContent): void {
       if (!p || !race || p.died === undefined) continue;
       const band = bandOfAge(race, p.died - p.born);
       const key = `${p.raceId}|${p.cultureId}|${band}`;
-      deaths.set(key, (deaths.get(key) ?? 0) + 1);
+      deaths.set(key, (deaths.get(key) ?? 0) - 1);
     }
-    for (const [key, n] of deaths) {
-      const [raceId, cultureId, band] = key.split('|');
-      const pop =
-        site.pop.find((b) => b.raceId === raceId && b.cultureId === cultureId && b.band === band) ??
-        site.pop.find((b) => b.raceId === raceId && b.band === band && b.count > 0);
-      if (pop) pop.count = Math.max(0, pop.count - Math.round(n / active.share));
-    }
+    for (const [key, n] of deaths) addPopDelta(site, key, n, active.share);
+    for (const [key, n] of Object.entries(active.popDelta)) addPopDelta(site, key, n, active.share);
     for (const good of GOODS) {
       const change = goodAmount(active, content, good) - (active.stockAtEntry[good] ?? 0);
       site.goods[good] = Math.max(0, active.goodsAtEntry[good] + change);

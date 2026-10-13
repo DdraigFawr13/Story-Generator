@@ -45,8 +45,10 @@ import { bandOfAge, type Band, type SiteContent } from './defs';
 import { runEnvironmentDay, voiceOf } from './environment';
 import { rollFireAccident, runHealthDay } from './health';
 import { fightFire, fightingSpots, settleFire, spreadFire } from './fire';
+import { runFamily } from './family';
 import { addMemoryTo, memoryMood } from './memory';
 import { findRoute, tileCost, walkAlong } from './path';
+import { envOf, runSocial, witnessedWrong } from './social';
 import { foodMeals, takeFood } from './stock';
 import { stepAnimals } from './wild';
 import {
@@ -112,6 +114,8 @@ interface SiteCache {
   restore: Map<string, Float64Array>;
   /** The `layoutVersion` the profiles were built for; a change means rebuild. */
   version: number;
+  /** The `peopleVersion` the profiles were built for: a birth, marriage or move means rebuild. */
+  people: number;
   profiles: Profile[];
   byId: Map<Id, Profile>;
   memoryDefs: Map<string, MemoryDef>;
@@ -290,6 +294,7 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
   for (const p of profiles) meal += p.race.foodNeed;
   return {
     version: active.layoutVersion,
+    people: active.peopleVersion,
     jobs: new Map(content.jobs.map((j) => [j.id, j])),
     restore: new Map(
       ACTIVITIES.map((a) => [a, Float64Array.from(content.needs, (n) => n.restore[a] ?? NaN)]),
@@ -387,7 +392,7 @@ function fightersAt(world: WorldState, active: ActiveSite): number[] {
 /** The lookups for the site as it stands: rebuilt when buildings or the map changed. */
 function cacheFor(world: WorldState, content: SiteContent, active: ActiveSite): SiteCache {
   let cache = caches.get(active);
-  if (!cache || cache.version !== active.layoutVersion) {
+  if (!cache || cache.version !== active.layoutVersion || cache.people !== active.peopleVersion) {
     cache = buildCache(world, content, active);
     caches.set(active, cache);
   } else if (cache.profiles.length !== active.residents.length) {
@@ -435,6 +440,7 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     });
   const add = (p: Profile, type: string, about?: Id, eventId?: Id) =>
     addMemory(cache, life.memoryCap, p.person.detail!, type, day, about, eventId);
+  const socialEnv = { ...envOf(world, content, active), emit: cache.emit, label: voice.label, day };
 
   // A fire that began today: everyone near it remembers it.
   if (today?.fire) {
@@ -516,6 +522,7 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
             ? life.memoryOf.sawDespair
             : life.memoryOf.sawTheft;
       add(q, type, p.id, event.id);
+      witnessedWrong(socialEnv, q.person, p.person, type, event.id);
     }
   };
 
@@ -855,6 +862,11 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     settleMood(p, content, day);
     if (p.placeId === null) cache.outdoors[p.tile] = 0;
   }
+  // Evening: the day's interactions and family business (births due, matches, households).
+  if (block === BLOCKS - 1) {
+    runSocial(world, content, active, profiles, cache.emit, voice.label, day);
+    runFamily(world, content, active, cache.emit, voice.label, day);
+  }
   // The stores count as refilled once they cover three meals for everyone.
   if (active.storesEmptyEvent !== null && food() > 3 * cache.meal * profiles.length) {
     active.storesEmptyEvent = null;
@@ -924,8 +936,18 @@ export interface SiteSnapshot {
   firewood: SiteFirewood;
   /** Fields in each state this year and the expected share of a normal year, so far. */
   harvestSoFar: HarvestSoFar;
+  /** M3.6: bumped when people are born, move household or die. */
+  peopleVersion: number;
+  /** Present only when `peopleVersion` differs from the version the caller last received. */
+  roster?: SiteRoster;
   /** Present only when `layoutVersion` differs from the version the caller last received. */
   map?: SiteMapSnapshot;
+}
+
+/** The people and households the main thread may not have yet (records without their site detail). */
+export interface SiteRoster {
+  people: Person[];
+  households: Household[];
 }
 
 /** How the harvest stands (counts of followed fields, and the share of a normal year it is heading for). */
@@ -976,7 +998,11 @@ export function harvestSoFar(active: ActiveSite): HarvestSoFar {
  * The snapshot holds references; posting it to the main thread clones it. Pass the
  * `layoutVersion` of the last snapshot sent to leave out the map layers when they are unchanged.
  */
-export function siteSnapshot(world: WorldState, sentVersion?: number): SiteSnapshot {
+export function siteSnapshot(
+  world: WorldState,
+  sentVersion?: number,
+  sentPeople?: number,
+): SiteSnapshot {
   const active = world.activeSite;
   if (!active) throw new Error('No watched site.');
   const people: [Id, PersonDetail][] = [];
@@ -1038,7 +1064,22 @@ export function siteSnapshot(world: WorldState, sentVersion?: number): SiteSnaps
     harvest: active.harvest,
     firewood: active.firewood,
     harvestSoFar: harvestSoFar(active),
+    peopleVersion: active.peopleVersion,
   };
+  snapshot.peopleVersion = active.peopleVersion;
+  if (sentPeople !== active.peopleVersion) {
+    const records: Person[] = [];
+    for (const id of active.residents) {
+      const person = world.people.get(id);
+      if (!person) continue;
+      const { detail: _detail, ...record } = person;
+      records.push(record);
+    }
+    snapshot.roster = {
+      people: records,
+      households: structuredClone([...active.households.values()]),
+    };
+  }
   if (sentVersion !== active.layoutVersion) {
     const { terrain, tree, building, bridges } = active.map;
     snapshot.map = { terrain, tree, building, bridges };
@@ -1052,6 +1093,18 @@ export function applySiteSnapshot(world: WorldState, snapshot: SiteSnapshot): vo
   if (!active) throw new Error('No watched site.');
   world.day = snapshot.day;
   active.block = snapshot.block;
+  // Born or moved: add the new people and households, and take the families as they now stand.
+  if (snapshot.roster) {
+    for (const record of snapshot.roster.people) {
+      const person = world.people.get(record.id);
+      if (!person) world.people.set(record.id, { ...record });
+      else person.family = record.family;
+    }
+    for (const household of snapshot.roster.households) {
+      if (!active.households.has(household.id)) active.households.set(household.id, household);
+    }
+  }
+  active.peopleVersion = snapshot.peopleVersion;
   active.stock = new Map(snapshot.stock);
   active.storesEmptyEvent = snapshot.storesEmptyEvent;
   for (const [id, detail] of snapshot.people) {
