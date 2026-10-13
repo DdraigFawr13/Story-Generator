@@ -1,6 +1,9 @@
 // Terrain (Phase 1, M1.1): seeded tectonic plates give continents and the
 // mountain chains along their collisions; fractal noise adds coastline and
 // relief detail; sea level is set so the land fraction hits its target.
+// Continents are domed shields over their plates, so land comes out broad and
+// rounded, each split by the range where its two plates meet, with calm
+// stretches of plain between the hills (playtest add-on, 2026-10-13).
 // Interesting beats realistic (REBOOT_PLAN §9A): visible ranges, varied coasts.
 
 import type { RngStream } from '../core/rng';
@@ -21,6 +24,22 @@ const OCEANIC_PER_CONTINENT = 1;
 const OCEANIC_EXTRA = 4;
 /** Uplift blur radius as a fraction of the boundary reach (reach / 7 is 3 cells on a 256 map). */
 const UPLIFT_BLUR_DIVISOR = 7;
+/** Continental-shield blur radius as a fraction of the map width. */
+const SHIELD_BLUR = 0.05;
+/** Width of the band (share of the map) where shields thin toward the edge. */
+const SHIELD_EDGE = 0.16;
+/** Height a fully continental cell gains over open ocean. */
+const SHIELD_RISE = 0.6;
+/** Dome reach over each continental plate, as a share of the gap between continents. */
+const DOME_REACH = 1.4;
+/** Amplitude of the broad shape noise and of the coastline detail noise. */
+const CONTINENT_NOISE = 0.25;
+const DETAIL_NOISE = 0.12;
+/** Calm field: above this value hills fade, down to this share of their relief. */
+const CALM_AT = 0.15;
+const CALM_FLOOR = 0.25;
+/** Closing speed of a continent's two plates (tenths of a cell per step). */
+const PAIR_COLLIDE = 6;
 
 function placePlates(params: WorldParams, rng: RngStream): Plate[] {
   const { width, height, continents } = params;
@@ -55,6 +74,14 @@ function placePlates(params: WorldParams, rng: RngStream): Plate[] {
         rng,
       ),
     );
+    // The pair drifts together, so every continent carries an inland range
+    // that splits it into two lands joined by passes.
+    const a = plates[plates.length - 2]!;
+    const b = plates[plates.length - 1]!;
+    a.vx = Math.round((dx / length) * PAIR_COLLIDE);
+    a.vy = Math.round((dy / length) * PAIR_COLLIDE);
+    b.vx = -a.vx;
+    b.vy = -a.vy;
   }
   const oceanic = continents * OCEANIC_PER_CONTINENT + OCEANIC_EXTRA;
   for (let i = 0; i < oceanic; i += 1) {
@@ -263,6 +290,24 @@ export function generateTerrain(params: WorldParams, rng: RngStream): TerrainRes
   const owner = assignPlates(params, plates, seeds[0]!);
   const uplift = boundaryUplift(params, plates, owner, seeds[1]!);
 
+  // Continental plates blurred into a smooth 0–1 mask: land follows the plates
+  // as broad, rounded shields instead of the thin crests of a noise field.
+  const shield = new Float64Array(size);
+  const domeReach = (Math.min(width, height) / (params.continents + 1)) * DOME_REACH;
+  for (let i = 0; i < size; i += 1) {
+    const plate = plates[owner[i]!]!;
+    if (!plate.continental) continue;
+    // A dome over each continental plate: highest at its centre, so the sea
+    // line cuts a rounded core rather than whatever the noise lifts.
+    const dx = (i % width) - plate.cx;
+    const dy = Math.floor(i / width) - plate.cy;
+    const t = Math.sqrt(dx * dx + dy * dy) / domeReach;
+    shield[i] = t >= 1 ? 0.15 : 1 - 0.85 * t * t;
+  }
+  const shieldRadius = Math.max(2, Math.round(width * SHIELD_BLUR));
+  const mask = boxBlur(width, height, boxBlur(width, height, shield, shieldRadius), shieldRadius);
+  const shieldEdge = Math.max(2, width * SHIELD_EDGE);
+  const calmScale = { scale: Math.max(8, width / 5), octaves: 2, persistence: 0.5 };
   const continents = { scale: Math.max(8, width / 4), octaves: 5, persistence: 0.55 };
   const hills = { scale: Math.max(4, width / 10), octaves: 3, persistence: 0.5 };
   const detail = { scale: Math.max(4, width / 20), octaves: 4, persistence: 0.5 };
@@ -271,15 +316,20 @@ export function generateTerrain(params: WorldParams, rng: RngStream): TerrainRes
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const i = y * width + x;
-      const plate = plates[owner[i]!]!;
-      const base = plate.continental ? 0.18 : -0.3;
+      // Shields thin out toward the map edge, so coasts round off before it.
+      const fromEdge = Math.min(1, Math.min(x, y, width - 1 - x, height - 1 - y) / shieldEdge);
+      const base = -0.3 + mask[i]! * SHIELD_RISE * fromEdge * (2 - fromEdge);
+      // Calm stretches: where this low-frequency field is high, hills and
+      // relief fade to plains and rolling downs.
+      const calmNoise = fractalNoise(seeds[3]! + 29, x, y, calmScale);
+      const rough = calmNoise > CALM_AT ? Math.max(CALM_FLOOR, 1 - (calmNoise - CALM_AT) * 4) : 1;
       // Ridged noise: interior hills and highlands away from plate edges.
       const ridge = 1 - Math.abs(fractalNoise(seeds[1]! + 11, x, y, hills));
       let h =
         base +
-        fractalNoise(seeds[2]!, x, y, continents) * 0.6 +
-        fractalNoise(seeds[3]!, x, y, detail) * 0.15 +
-        ridge * ridge * 0.22 +
+        fractalNoise(seeds[2]!, x, y, continents) * CONTINENT_NOISE +
+        fractalNoise(seeds[3]!, x, y, detail) * DETAIL_NOISE +
+        ridge * ridge * 0.22 * rough +
         uplift[i]!;
       // Sink the map edge so the world is bounded by ocean.
       const edge = Math.min(x, y, width - 1 - x, height - 1 - y);
