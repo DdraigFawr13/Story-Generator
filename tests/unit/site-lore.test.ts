@@ -42,6 +42,8 @@ function fresh(content: ContentBundle = SMALL) {
   const parent = adults[0]!;
   const child = adults[1]!;
   child.family.parents = [];
+  // Ten years old: young enough for a teacher (apprentices only), old enough for lessons.
+  child.born = world.params.historyYears - 10;
   child.attributes = { ...child.attributes, willpower: 14, intellect: 15 };
   child.magic = { power: 1, affinities: { fire: 2 } };
   return { world, active, content, parent, child };
@@ -112,17 +114,19 @@ describe('lore', () => {
     expect(lost.child.detail!.lore!.learning).toBeUndefined();
   });
 
-  it('mends a worn building with a cast, up to its uses a day', () => {
+  it('mends the mender\'s own worn home, one use a day', () => {
     const t = fresh();
     t.child.knownAbilities = ['mend'];
     t.child.magic = { power: 1, affinities: { earth: 1 } };
-    const home = [...t.active.buildings.values()].find((b) => b.defId === 'home' && !b.burnt)!;
+    const homeId = t.active.households.get(t.child.family.householdId!)!.home!;
+    const home = t.active.buildings.get(homeId)!;
     home.condition = 50;
     run(t.world, t.content, 1);
     const lore = t.child.detail!.lore!;
-    expect(lore.castTotal.mend).toBe(3);
-    expect(t.active.lore.stats.mended).toBeCloseTo(3 * C.lore.effects.mendPerUse);
-    expect(home.condition).toBeGreaterThan(50);
+    expect(lore.castTotal.mend).toBe(1);
+    expect(t.active.lore.stats.mended).toBeCloseTo(C.lore.effects.mendPerUse);
+    // The day's wear and the mending: half a day's wear made good.
+    expect(home.condition).toBeGreaterThan(50 - 1 / C.steward.conditionLossDays);
   });
 
   it('wakes a person once, one tier at most', () => {
