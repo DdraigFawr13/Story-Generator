@@ -82,7 +82,8 @@ export const creatures: CreatureDef[] = [
   },
   {
     id: 'giant',
-    name: 'giant',
+    // Not the Giant people: a lone wild one of the high cold.
+    name: 'mountain giant',
     tier: 'great',
     biomes: ['alpine', 'tundra', 'taiga'],
     minWildness: 60,
