@@ -715,7 +715,15 @@ export function RecapCard({
           <div className="cw">Remembered for</div>
           <ul className="chron">
             {causes.map((c) => (
-              <EventItem key={c} m={m} a={a} ui={ui} id={c} path={`${path}>${c}`} />
+              <EventItem
+                key={c}
+                m={m}
+                a={a}
+                ui={ui}
+                id={c}
+                path={`${path}>${c}`}
+                label={shortDay(m.index.event(c)!.day)}
+              />
             ))}
           </ul>
         </>
@@ -1625,10 +1633,9 @@ function KnownPeople({
                   {word}
                   {ui.numbers ? ` · opinion ${signed(rel.opinion)}` : ''}
                 </span>
-                <span className="empty">
-                  {' · '}
+                <div className="empty reason">
                   <TieReason m={m} a={a} p={p} other={other} rel={rel} />
-                </span>
+                </div>
               </li>
             );
           })}
@@ -1919,7 +1926,7 @@ function PersonPage({ m, a, sel, ui, id }: PanelProps & { id: Id }) {
         </>
       )}
       {ui.personTab === 'ties' && (
-        <div data-testid="ties">
+        <div className="stack" data-testid="ties">
           <FamilyBlock m={m} a={a} sel={sel} p={p}>
             {h && (
               <Fact term="Household">
@@ -2006,9 +2013,9 @@ function HouseholdPage({ m, a, sel, ui, h }: PanelProps & { h: Household }) {
       const rel = holder?.detail?.relationships.get(to);
       if (!holder || !rel || from === to) return [];
       const word = rel.labels.includes('enemy')
-        ? 'enemy of'
+        ? 'is an enemy of'
         : rel.labels.includes('rival')
-          ? 'rival of'
+          ? 'is a rival of'
           : rel.grudge
             ? 'holds a grudge against'
             : null;
@@ -2098,12 +2105,11 @@ function HouseholdPage({ m, a, sel, ui, h }: PanelProps & { h: Household }) {
           <ul className="list">
             {tensions.map((t) => (
               <li key={`${t.from}:${t.to}`} className="ppl" style={{ padding: '3px 0' }}>
-                <PersonLink m={m} a={a} sel={sel} id={t.from} /> — {t.word} —{' '}
+                <PersonLink m={m} a={a} sel={sel} id={t.from} /> {t.word}{' '}
                 <PersonLink m={m} a={a} sel={sel} id={t.to} />
-                <span className="empty">
-                  {' · '}
+                <div className="empty reason">
                   <TieReason m={m} a={a} p={t.holder} other={t.to} rel={t.rel} />
-                </span>
+                </div>
               </li>
             ))}
           </ul>

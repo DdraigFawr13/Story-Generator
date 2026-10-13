@@ -1440,3 +1440,12 @@
   padding: 6px 12px 14px;
   min-height: 0;
 }
+/* M3.11: a section's blocks keep the page's spacing; a tie's reason sits on its own line. */
+.sv-root .stack {
+  display: grid;
+  gap: 12px;
+}
+.sv-root .ppl .reason {
+  flex-basis: 100%;
+  font-size: 12px;
+}
