@@ -1240,7 +1240,7 @@ export function SiteView(props: Props) {
           </div>
           <div className="body">
             {tab === 'inspect' && <InspectPane m={model} sel={sel} a={actions} ui={ui} />}
-            {tab === 'site' && <SitePane m={model} a={actions} />}
+            {tab === 'site' && <SitePane m={model} a={actions} ui={ui} />}
             {tab === 'people' && <PeoplePane m={model} sel={sel} a={actions} ui={ui} />}
             {tab === 'chron' && <ChroniclePane m={model} a={actions} ui={ui} live={live} />}
           </div>

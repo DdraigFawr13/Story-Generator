@@ -1076,6 +1076,46 @@
 .sv-root .causes .ev {
   grid-template-columns: 62px minmax(0, 1fr);
 }
+.sv-root .chron .month {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+}
+.sv-root .chron .month:first-child {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
+}
+.sv-root .ev.rollup .txt {
+  color: var(--muted);
+  font-size: 13px;
+}
+.sv-root .recap {
+  padding: 4px 0 4px 10px;
+  border-left: 3px solid var(--accent);
+  font-family: var(--display);
+  font-size: 15px;
+  line-height: 1.45;
+}
+.sv-root .recap.year {
+  border-left-width: 6px;
+}
+.sv-root .recap p {
+  margin: 2px 0 4px;
+}
+.sv-root .recap .cw {
+  font-family: var(--body);
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+}
+.sv-root .recap .chron {
+  font-family: var(--body);
+  font-size: 14px;
+  margin-top: 4px;
+}
 .sv-root .attrs {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) 24px;
