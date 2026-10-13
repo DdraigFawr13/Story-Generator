@@ -235,6 +235,8 @@ export interface ContentBundle {
   family: FamilyRules;
   /** Society (M3.7): standing, crime and each culture's law, holy days and funerals. */
   society: SocietyRules;
+  /** Threats (M3.8): wild prowlers, beasts and raiders coming to the watched site, and the answer. */
+  threats: ThreatRules;
 }
 
 /** What a condition is, for its harm and the words of its chronicle lines (M3.5). */
@@ -402,6 +404,10 @@ export const ACTIVITIES = [
   'wander',
   'steal',
   'fight',
+  // M3.8: set by a threat at the site (engine/site/threats.ts), never by the schedule.
+  'defend',
+  'shelter',
+  'flee',
 ] as const;
 export type Activity = (typeof ACTIVITIES)[number];
 
@@ -1944,5 +1950,139 @@ export interface SocietyRules {
     executed: string;
     festival: string;
     funeral: string;
+  };
+}
+
+/** A wild animal that takes a lone worker far from the village (M3.8). */
+export interface ProwlerDef {
+  id: string;
+  name: string;
+  glyph: string;
+  /** Soldier equivalents. */
+  danger: number;
+  /** Biome ids of the site's cell where it roams. */
+  biomes: string[];
+  /** Items of game a worker who kills it brings home. */
+  meat: number;
+}
+
+/** Wild prowlers, beasts, raiders and the answer to them at the watched site (M3.8). */
+export interface ThreatRules {
+  prowlers: {
+    /** Attacks a year at wildness 100 for the site's cell. */
+    perYear: number;
+    /** A prowler takes only a worker at least this many tiles from the origin. */
+    from: number;
+    /** Share of won fights where the animal is killed rather than driven off. */
+    killShare: number;
+    /** Workplaces of the jobs done out in the wild, where a prowler finds someone alone. */
+    workplaces: string[];
+    kinds: ProwlerDef[];
+  };
+  beasts: {
+    /** Days of warning for a great or legendary beast (a beast-tier one comes unannounced). */
+    warnDays: [number, number];
+    /** Signs by creature def id; `{dir}` is the compass word toward the lair, `{site}` the site. */
+    signs: Record<string, string[]>;
+    /** Glyph on the map by creature def id. */
+    glyphs: Record<string, string>;
+    /** Days before the same beast may attack again. */
+    cooldownDays: number;
+    /** Multiplies the world-tier yearly raid chance, since a watched year is played in full. */
+    chanceMul: number;
+    /** Creature def ids whose arrival sets a building alight. */
+    fireBreath: string[];
+  };
+  raids: {
+    /** The raiders' civ holds at least this much grievance against the site's civ. */
+    minGrievance: number;
+    /** The raiders' home is that civ's nearest live site within this many cells. */
+    reach: number;
+    /** Chance a year at war value 10 and full grievance. */
+    perYear: number;
+    cooldownDays: number;
+    /** Share of the home's adults that ride (times the followed share), clamped to `band`. */
+    bandShare: number;
+    band: [number, number];
+    /** Chance of a one-day warning. */
+    warnChance: number;
+    warning: string;
+    /** The raiders turn back once this share of them is down. */
+    retreatAt: number;
+    /** Share of the stores carried off by a band that reaches them whole. */
+    lootShare: number;
+    /** Soldier equivalents per raider. */
+    perHead: number;
+    glyph: string;
+  };
+  combat: {
+    /** Blows landed per soldier equivalent per block. */
+    hitPerSoldier: number;
+    /** Wound tiers (condition ids) by weight. */
+    woundShares: Record<string, number>;
+    /** Share of blows on defenders that kill outright. */
+    slainShare: Record<CreatureTier | 'raid', number>;
+    /** Most defenders hurt in one block (R-24). */
+    roundCap: Record<CreatureTier | 'raid', number>;
+    /** Strength is times `base + (1 - base) * rest / 100`. */
+    fatigueBase: number;
+    /** Strength is times this when standing wall segments face the attack. */
+    wallBonus: number;
+    /** Soldier equivalents added per point of a held weapon's combat value. */
+    weaponMul: number;
+    /** Share of able adults who stand to arms, at least `militiaMin`; against great and legendary beasts, all. */
+    militiaShare: number;
+    militiaMin: number;
+    /** Walking cost the attackers cover in a block (people cover `LifeRules.walkPerBlock`). */
+    advance: number;
+    /** Defenders this many tiles (Chebyshev) from the attackers are in the fight. */
+    engageRange: number;
+    /** Rest lost per block spent defending. */
+    defendRest: number;
+    /** Blocks of fighting before either side withdraws. */
+    maxRounds: number;
+    /** A beast whose vigour falls below this goes back to its lair. */
+    leavesAt: number;
+  };
+  flight: {
+    /** The able adults' strength under this share of a beast's danger sends everyone fleeing. */
+    fleeBelow: number;
+    /** Days after the attackers leave before the people come home. */
+    returnAfterDays: number;
+    /** Blocks a beast with no one in reach stays to take the stores. */
+    ravageBlocks: number;
+    /** People within this many tiles of a ravaging beast can be hurt. */
+    strike: number;
+  };
+  walls: {
+    /** Wall tiles planned after an assault. */
+    segments: number;
+    /** Tiles outside the outermost home on the side the attack came from. */
+    ringPad: number;
+    /** Homes farther than this (tiles from the origin) are outliers the arc does not chase. */
+    maxRing: number;
+    /** Building def raised. */
+    building: string;
+  };
+  /** How a death in the fight reads: "died of {word}, after {span}". `{name}` is the attackers. */
+  death: { word: string; span: string };
+  /** Compass words, clockwise from north in eighths. */
+  compass: string[];
+  memoryOf: { foughtOff: string; fearRaid: string };
+  events: {
+    prowler: string;
+    prowlerDriven: string;
+    prowlerKilled: string;
+    sign: string;
+    flight: string;
+    flightReturned: string;
+    beastArrived: string;
+    raidArrived: string;
+    beastSlain: string;
+    beastDrivenOff: string;
+    beastRavaged: string;
+    raidersRepelled: string;
+    raidLooted: string;
+    fell: string;
   };
 }

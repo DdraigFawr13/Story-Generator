@@ -21,7 +21,7 @@ export type SiteSpeed = 0 | 1 | 4 | 16;
 export type SiteRequest =
   | { type: 'embark'; world: WorldState; content: SiteContent; siteId: Id }
   | { type: 'found'; world: WorldState; content: SiteContent; cell: number; name: string | null }
-  | { type: 'speed'; daysPerSecond: SiteSpeed }
+  | { type: 'speed'; daysPerSecond: SiteSpeed; stopOn?: readonly string[] }
   /** Runs this many days at once (restoring a link), paused. */
   | { type: 'run'; days: number }
   | { type: 'leave' };
@@ -40,6 +40,8 @@ const SLICE_MS = 60;
 const BLOCKS_PER_DAY = 4;
 /** A snapshot (every followed person's detail) is attached to ticks at most this often. */
 const SNAPSHOT_MS = 100;
+/** Event types that stop the clock on the block that emits them (set with each speed change). */
+let stopOn: ReadonlySet<string> = new Set();
 /** Length of the window over which the measured rate is averaged. */
 const RATE_WINDOW_MS = 1000;
 
@@ -87,7 +89,13 @@ function slice(): void {
   owed -= blocks;
   const events: SimEvent[] = [];
   try {
-    for (let i = 0; i < blocks; i += 1) for (const e of stepBlock(world, content)) events.push(e);
+    for (let i = 0; i < blocks && speed !== 0; i += 1) {
+      for (const e of stepBlock(world, content)) {
+        events.push(e);
+        // An auto-pause event stops the clock on its own block, so the map shows that moment.
+        if (stopOn.has(e.type)) speed = 0;
+      }
+    }
   } catch (problem) {
     scope.postMessage({ type: 'error', message: (problem as Error).message });
     return;
@@ -99,7 +107,8 @@ function slice(): void {
     windowBlocks = 0;
   }
   if (blocks > 0) {
-    const snapshot = now - lastSnapshot >= SNAPSHOT_MS ? snapshotNow(world) : undefined;
+    const snapshot =
+      speed === 0 || now - lastSnapshot >= SNAPSHOT_MS ? snapshotNow(world) : undefined;
     if (snapshot) lastSnapshot = now;
     scope.postMessage(
       snapshot
@@ -107,7 +116,7 @@ function slice(): void {
         : { type: 'tick', day: world.day, events, rate },
     );
   }
-  timer = setTimeout(slice, SLICE_MS);
+  if (speed !== 0) timer = setTimeout(slice, SLICE_MS);
 }
 
 function restart(): void {
@@ -140,6 +149,7 @@ self.addEventListener('message', (event: MessageEvent<SiteRequest>) => {
       scope.postMessage({ type: 'embarked', world });
     } else if (request.type === 'speed') {
       speed = request.daysPerSecond;
+      stopOn = new Set(request.stopOn ?? []);
       restart();
       // Pausing sends the state as it stands, so the main thread's copy ends exact.
       if (speed === 0 && world) {

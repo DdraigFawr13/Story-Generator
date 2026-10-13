@@ -11,6 +11,7 @@ import { FAMILY, FAMILY_EVENTS, FAMILY_MEMORIES } from './family';
 import { HISTORY } from './history';
 import { INTERACTIONS, SOCIAL, SOCIAL_EVENTS } from './interactions';
 import { SOCIETY, SOCIETY_EVENTS, SOCIETY_MEMORIES } from './society';
+import { THREATS, THREAT_EVENTS, THREAT_MEMORIES } from './threats';
 import { ITEMS } from './items';
 import { JOBS, STEWARD, WORK_EVENTS } from './jobs';
 import { TYPE_GROUPS } from './legends';
@@ -43,6 +44,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
     ...SOCIAL_EVENTS,
     ...FAMILY_EVENTS,
     ...SOCIETY_EVENTS,
+    ...THREAT_EVENTS,
   ],
   typeGroups: TYPE_GROUPS,
   rules,
@@ -55,7 +57,13 @@ export const DEFAULT_CONTENT: ContentBundle = {
   site: SITE,
   needs: NEEDS,
   traits: TRAITS,
-  memories: [...MEMORIES, ...HEALTH_MEMORIES, ...FAMILY_MEMORIES, ...SOCIETY_MEMORIES],
+  memories: [
+    ...MEMORIES,
+    ...HEALTH_MEMORIES,
+    ...FAMILY_MEMORIES,
+    ...SOCIETY_MEMORIES,
+    ...THREAT_MEMORIES,
+  ],
   life: LIFE,
   items: ITEMS,
   jobs: JOBS,
@@ -68,6 +76,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   social: SOCIAL,
   family: FAMILY,
   society: SOCIETY,
+  threats: THREATS,
 };
 
 export * from './biographies';
@@ -81,6 +90,7 @@ export * from './family';
 export * from './history';
 export * from './interactions';
 export * from './society';
+export * from './threats';
 export * from './items';
 export * from './jobs';
 export * from './legends';

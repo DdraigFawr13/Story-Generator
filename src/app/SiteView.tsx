@@ -59,7 +59,7 @@ import {
   tileAtPoint,
   type Selection,
 } from './site-render';
-import { NARROW_PX, fireLine, shortDate, weatherChip } from './site-season';
+import { NARROW_PX, fireLine, shortDate, threatLine, weatherChip } from './site-season';
 import './site-view.css';
 
 /** The part of a link the site view writes back. */
@@ -108,6 +108,8 @@ const SPEEDS: [SiteSpeed, string, string][] = [
   [4, '4×', '4 days a second (3)'],
   [16, '16×', '16 days a second (4)'],
 ];
+/** Tiles the view may lean from the attackers toward the town when a threat pauses play. */
+const THREAT_LEAD = 12;
 const PAUSE_CATEGORIES = ['deaths', 'breakdowns', 'fires', 'raids', 'arrivals'] as const;
 type PauseCategory = (typeof PAUSE_CATEGORIES)[number];
 /** Zoom step a selection centres to, and the step "Show on map" raises to. */
@@ -153,6 +155,8 @@ interface Banner {
   text: string;
   /** The event started a fire: the banner follows the fight. */
   fire: boolean;
+  /** M3.8: the event was a threat's: the banner follows the danger. */
+  threat: boolean;
   causes: { word: string; text: string }[];
 }
 
@@ -398,7 +402,12 @@ export function SiteView(props: Props) {
       resumeSpeed.current = next;
       setBanner(null);
     }
-    host.setSpeed(next);
+    // The worker stops on the very block of an auto-pause event, so the map shows that moment.
+    const on = latest.current.pauseOn;
+    host.setSpeed(
+      next,
+      PAUSE_CATEGORIES.filter((c) => on.has(c)).flatMap((c) => content.site.autoPause[c]),
+    );
   };
   const resume = () => setSpeed(resumeSpeed.current || 1);
   const latest = useRef({ speed, pauseOn, m, setSpeed });
@@ -458,6 +467,7 @@ export function SiteView(props: Props) {
           eventId: event.id,
           text: props.narrator.renderEvent(event),
           fire: category === 'fires',
+          threat: category === 'raids',
           causes,
         });
         setWhyOpen(false);
@@ -476,6 +486,30 @@ export function SiteView(props: Props) {
               r.clamp();
               r.draw();
             }
+          }
+        } else if (category === 'raids') {
+          // M3.8: a threat with no one to select: look at the attackers, or where the fled gathered.
+          // On the attackers, nudged toward what they make for so the town shows beside them.
+          const mark = model.scene.live.threat;
+          const target = world.activeSite?.threat?.target ?? -1;
+          const width = world.activeSite?.map.width ?? 1;
+          const head = mark?.at[0];
+          const toward = (from: number, to: number) =>
+            from + Math.max(-THREAT_LEAD, Math.min(THREAT_LEAD, (to - from) / 2));
+          const spot =
+            head && target >= 0
+              ? {
+                  x: toward(head.x, target % width),
+                  y: toward(head.y, Math.floor(target / width)),
+                }
+              : (head ?? mark?.camp);
+          const r = renderer.current;
+          if (spot && r) {
+            r.state.view.cx = spot.x + 0.5;
+            r.state.view.cy = spot.y + 0.5;
+            if (r.state.view.z < SELECT_ZOOM) r.state.view.z = SELECT_ZOOM;
+            r.clamp();
+            r.draw();
           }
         }
         break;
@@ -742,6 +776,8 @@ export function SiteView(props: Props) {
 
   // A fire banner says who is fighting it and with what water, read from the live state.
   const fire = banner?.fire ? fireLine({ world, active, content }) : null;
+  // A threat banner says who stands to arms and how the fight goes (M3.8).
+  const danger = banner?.threat ? threatLine({ world, active, content }) : null;
 
   // On a phone the Key sits beside the speed buttons, so the date and both chips share one row.
   const keyButton = (
@@ -784,6 +820,7 @@ export function SiteView(props: Props) {
           </button>
         </div>
         {fire && <div className="spread">{fire}</div>}
+        {danger && <div className="spread">{danger}</div>}
         {whyOpen && (
           <div className="why">
             {banner.causes.map((c, k) => (
@@ -1161,6 +1198,7 @@ const KEY_TILES: [string, string, string, string][] = [
   ['t-snow', '', 't-grass-ink', 'snow on open ground'],
   ['t-fire', '▲', 't-fire-ink', 'fire'],
   ['t-burnt', '#', 't-burnt-ink', 'burnt ground'],
+  ['t-threat', 'x', 't-threat-ink', 'raiders or a beast (red disc)'],
   ['t-path', '·', 't-path-ink', 'path'],
 ];
 const KEY_BUILDINGS: [string, string, string, string, string?][] = [

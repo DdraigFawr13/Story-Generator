@@ -38,6 +38,7 @@ import { bandOfAge, buildingDef, siteCodes, type Band, type SiteContent } from '
 import { rollAccident } from './health';
 import { findSpot } from './layout';
 import { pathCosts, tileCost } from './path';
+import { beginWall } from './threats';
 import {
   addItem,
   foodDaysLeft,
@@ -754,6 +755,9 @@ export function runSteward(
       beginBuilding(content, active, st.workshopBuilding, null, emit, label);
     } else if (crowded && affordable(st.homeBuilding)) {
       beginBuilding(content, active, st.homeBuilding, crowded.head, emit, label);
+    } else {
+      // The walls planned after an attack, one at a time, once the stone is in the stores (M3.8).
+      beginWall(content, active, emit, label);
     }
   }
   const construction = openConstruction(active);

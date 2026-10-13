@@ -4,7 +4,7 @@
 // per-version compatibility layers (R-02, R-03).
 
 import type { RngState } from './rng';
-import type { Activity, BreakdownKind } from './content-types';
+import type { Activity, BreakdownKind, CreatureTier } from './content-types';
 
 export type Id = number;
 
@@ -846,6 +846,84 @@ export interface ActiveSite {
   interactions: number;
   /** M3.7: crimes waiting to be judged, funerals to hold, and running counts. */
   society: SiteSociety;
+  /** M3.8: the threat coming to or at the site (one at a time), and the running record of threats. */
+  threat: SiteThreat | null;
+  threats: SiteThreats;
+}
+
+/** M3.8: a threat coming to or at the watched site. One at a time. */
+export interface SiteThreat {
+  kind: 'beast' | 'raid';
+  /** 'warned': signs seen, not here yet; 'coming': on the map walking in; 'fighting'; 'leaving'. */
+  stage: 'warned' | 'coming' | 'fighting' | 'leaving';
+  /** Display name: the creature's name, or "raiders from {site}". */
+  name: string;
+  glyph: string;
+  creatureId?: Id;
+  /** Creature def id. */
+  defId?: string;
+  tier?: CreatureTier;
+  /** The raiders' civ and home site. */
+  civId?: Id;
+  fromSiteId?: Id;
+  /** Raiders still in the band (1 for a beast), and how many came. */
+  count: number;
+  came: number;
+  /** A beast's remaining vigour, 0-1 (1 = unhurt). */
+  vigour: number;
+  /** Where the attackers stand now (tile index; -1 once off the map), the map-edge tile they enter by, and what they make for. */
+  tile: number;
+  edge: number;
+  target: number;
+  /** Day they arrive on the map (for 'warned'). */
+  arriveDay: number;
+  /** Blocks spent fighting so far. */
+  rounds: number;
+  /** Set on arrival: the attackers stand at the edge for one block while the militia gathers. */
+  held?: boolean;
+  /** Blocks spent ravaging the stores. */
+  ravaged: number;
+  /** The steward ordered flight: everyone walks to `camp` (the map edge toward `refugeId`). */
+  fled: boolean;
+  refugeId?: Id;
+  camp?: number;
+  /** Day the attackers left the map. */
+  leftDay?: number;
+  /** Event ids: first warning sign, arrival, flight order, for cause links. */
+  signEvent?: Id;
+  arriveEvent?: Id;
+  fleeEvent?: Id;
+  /** Running tallies for the out-line and the banner. */
+  wounded: number;
+  killed: number;
+  attackersDown: number;
+  loot: number;
+  /** Residents defending (ids), chosen when the attackers appear. */
+  militia: Id[];
+  /** Residents at the site when the attackers appeared (the cap on deaths in one assault). */
+  residentsAtArrival: number;
+}
+
+export interface SiteThreats {
+  /** Creature id → day of its last attack here; civ id → day of the last raid (cooldowns). */
+  lastBeast: [Id, number][];
+  lastRaid: [Id, number][];
+  /** Wall segments the steward still wants (tile indices), raised one at a time. */
+  wallPlan: number[];
+  /** Day the site fell, if it did (everyone dead or gone). */
+  fellDay?: number;
+  stats: {
+    prowlers: number;
+    beasts: number;
+    raids: number;
+    flights: number;
+    slain: number;
+    repelled: number;
+    deaths: number;
+    wounds: number;
+    looted: number;
+    walls: number;
+  };
 }
 
 /** A crime that came to light and waits for the morning's judgement (M3.7). */

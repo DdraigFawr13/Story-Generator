@@ -312,3 +312,44 @@ export function fieldFacts(b: Building): FieldFacts | null {
     water: crop.nearWater ? 'near water' : 'far from water',
   };
 }
+
+/** "badly hurt" and the like: how a beast's vigour (0-1) reads on the banner. */
+function vigourWord(vigour: number): string {
+  return vigour >= 0.95 ? 'unhurt' : vigour >= 0.7 ? 'wounded' : 'badly hurt';
+}
+
+/** The banner's and the site pane's line under a threat (M3.8): who stands, who is hurt, read from the live state. */
+export function threatLine(ctx: Ctx): string | null {
+  const { world, active } = ctx;
+  const threat = active.threat;
+  if (!threat) return null;
+  let defending = 0;
+  let sheltering = 0;
+  let fleeing = 0;
+  for (const id of active.residents) {
+    const activity = world.people.get(id)?.detail?.activity;
+    if (activity === 'defend') defending += 1;
+    else if (activity === 'shelter') sheltering += 1;
+    else if (activity === 'flee') fleeing += 1;
+  }
+  const hurt =
+    threat.wounded + threat.killed > 0
+      ? `${count(threat.wounded)} hurt and ${count(threat.killed)} killed so far`
+      : 'no one hurt yet';
+  if (threat.fled) {
+    const refuge = threat.refugeId === undefined ? null : world.sites.get(threat.refugeId);
+    const stayed = active.residents.length - fleeing;
+    const where = refuge ? `toward ${refuge.name}` : 'away from the town';
+    return `${count(fleeing)} fled ${where}${stayed > 0 ? `; ${count(stayed)} could not leave` : ''}.`;
+  }
+  if (threat.stage === 'warned') {
+    return 'Not here yet. Work goes on while the steward keeps watch.';
+  }
+  const foe =
+    threat.kind === 'raid'
+      ? `${count(threat.count)} of ${count(threat.came)} raiders still standing`
+      : `the beast is ${vigourWord(threat.vigour)}`;
+  const guard = defending > 0 ? `${count(defending)} standing to arms` : 'no one standing to arms';
+  const homes = sheltering > 0 ? ` · ${count(sheltering)} sheltering at home` : '';
+  return `${guard}${homes} · ${foe} · ${hurt}.`;
+}
