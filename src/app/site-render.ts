@@ -623,7 +623,8 @@ export function movePeople(scene: Scene, world: WorldState): void {
     const pos = detail?.pos;
     if (pos) mark.k = pos[1] * scene.size + pos[0];
     mark.leaveAt = detail?.leaveAt ?? 0;
-    mark.walk = detail?.walk;
+    // The walked part of the shared route.
+    mark.walk = detail?.walk?.slice(0, detail.walkTo ?? detail.walk.length);
     const list = scene.at.get(mark.k);
     if (list) list.push(mark.id);
     else scene.at.set(mark.k, [mark.id]);

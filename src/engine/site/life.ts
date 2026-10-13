@@ -55,7 +55,7 @@ import { fightFire, fightingSpots, settleFire, spreadFire } from './fire';
 import { runFamily } from './family';
 import { runLore, runLoreDay } from './lore';
 import { addMemoryTo, memoryMood } from './memory';
-import { findRoute, tileCost, walkAlong } from './path';
+import { findRoute, tileCost, walkSteps } from './path';
 import { envOf, runSocial, witnessedWrong } from './social';
 import { festivalToday, reportCrime, runSocietyMorning, serveSentences } from './society';
 import { foodMeals, takeFood } from './stock';
@@ -910,11 +910,12 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
         budget,
         stroll ? routines.strollWeight : life.pathWeight,
       );
-      const reached = route ? walkAlong(active, rules, life, route, life.walkPerBlock) : -1;
-      if (reached >= 0) tile = reached;
+      const steps = route ? walkSteps(active, rules, life, route, life.walkPerBlock) : 0;
+      if (steps > 0) tile = route![steps - 1]!;
       if (tile !== from) detail.pos = [tile % width, Math.floor(tile / width)];
       // The tiles walked, so the map draws the walk along the street rather than through walls.
-      detail.walk = route && tile !== from ? route.slice(0, route.indexOf(tile) + 1) : undefined;
+      detail.walk = tile !== from ? route! : undefined;
+      detail.walkTo = steps;
     } else detail.walk = undefined;
     standAt(p, tile);
   };
@@ -1113,6 +1114,7 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     const tile = away ? p.home : carer.tile;
     detail.pos = [tile % width, Math.floor(tile / width)];
     detail.walk = away ? undefined : carer.person.detail!.walk;
+    detail.walkTo = carer.person.detail!.walkTo;
     standAt(p, tile);
   }
 

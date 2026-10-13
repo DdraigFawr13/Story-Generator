@@ -62,8 +62,9 @@ export interface PersonDetail {
   placeId?: Id | null;
   /** Village life: share of the block (0-1) that passes before they set off; the map's walk waits. */
   leaveAt?: number;
-  /** Village life: the tiles walked this block, in order (absent when they stayed put). */
-  walk?: number[] | undefined;
+  /** Village life: the route walked this block (shared, read only), of which the first `walkTo` tiles were walked; absent when they stayed put. */
+  walk?: readonly number[] | undefined;
+  walkTo?: number | undefined;
   /** Village life: where they spend a free block, for the inspector ("at the alehouse"). */
   where?: string | undefined;
   /** The parts mood was summed from in the last block, for the inspector's "why" lines. */

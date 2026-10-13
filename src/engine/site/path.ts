@@ -25,8 +25,8 @@ interface PathCache {
   seen: Int32Array;
   closed: Int32Array;
   search: number;
-  /** Binary min-heap of (priority, tile) pairs, flat. */
-  heap: number[];
+  /** Open set of the running search. */
+  heap: Heap;
   /** Nodes expanded since the site started (for tests and tuning). */
   expanded: number;
   /** Tiles changed since the grid was built; null when it is current. */
@@ -80,7 +80,7 @@ function cacheOf(active: ActiveSite, rules: SiteRules, life: LifeRules): PathCac
       seen: new Int32Array(n),
       closed: new Int32Array(n),
       search: 0,
-      heap: [],
+      heap: { prio: new Float64Array(1024), tile: new Int32Array(1024), size: 0 },
       expanded: 0,
       changed: null,
     };
@@ -110,6 +110,18 @@ export function walkAlong(
   route: number[],
   limit: number,
 ): number {
+  const steps = walkSteps(active, rules, life, route, limit);
+  return steps === 0 ? -1 : route[steps - 1]!;
+}
+
+/** How many tiles of `route` are reachable within `limit` walking cost (see `walkAlong`). */
+export function walkSteps(
+  active: ActiveSite,
+  rules: SiteRules,
+  life: LifeRules,
+  route: number[],
+  limit: number,
+): number {
   const c = cacheOf(active, rules, life);
   let sums = c.sums.get(route);
   if (!sums) {
@@ -129,7 +141,7 @@ export function walkAlong(
     if (sums[mid]! > limit) hi = mid;
     else lo = mid + 1;
   }
-  return lo === 0 ? -1 : route[lo - 1]!;
+  return lo;
 }
 
 /** The whole cost grid (0 blocks); read it, do not write it. */
@@ -173,40 +185,57 @@ export function straightLine(width: number, from: number, to: number): number[] 
   return line;
 }
 
-function push(heap: number[], priority: number, tile: number) {
-  let i = heap.length / 2;
-  heap.push(priority, tile);
+/** Binary min-heap of (priority, tile) pairs in typed arrays (grown by doubling, never shrunk). */
+interface Heap {
+  prio: Float64Array;
+  tile: Int32Array;
+  size: number;
+}
+
+function push(heap: Heap, priority: number, tile: number) {
+  if (heap.size === heap.prio.length) {
+    const prio = new Float64Array(heap.size * 2);
+    const tiles = new Int32Array(heap.size * 2);
+    prio.set(heap.prio);
+    tiles.set(heap.tile);
+    heap.prio = prio;
+    heap.tile = tiles;
+  }
+  const { prio, tile: tiles } = heap;
+  let i = heap.size;
+  heap.size += 1;
   while (i > 0) {
     const parent = (i - 1) >> 1;
-    if (heap[parent * 2]! <= priority) break;
-    heap[i * 2] = heap[parent * 2]!;
-    heap[i * 2 + 1] = heap[parent * 2 + 1]!;
+    if (prio[parent]! <= priority) break;
+    prio[i] = prio[parent]!;
+    tiles[i] = tiles[parent]!;
     i = parent;
   }
-  heap[i * 2] = priority;
-  heap[i * 2 + 1] = tile;
+  prio[i] = priority;
+  tiles[i] = tile;
 }
 
 /** Removes the lowest priority entry and returns its tile. */
-function pop(heap: number[]): number {
-  const top = heap[1]!;
-  const priority = heap[heap.length - 2]!;
-  const tile = heap[heap.length - 1]!;
-  heap.length -= 2;
-  const n = heap.length / 2;
+function pop(heap: Heap): number {
+  const { prio, tile: tiles } = heap;
+  const top = tiles[0]!;
+  heap.size -= 1;
+  const n = heap.size;
   if (n > 0) {
+    const priority = prio[n]!;
+    const tile = tiles[n]!;
     let i = 0;
     for (;;) {
       let child = i * 2 + 1;
       if (child >= n) break;
-      if (child + 1 < n && heap[(child + 1) * 2]! < heap[child * 2]!) child += 1;
-      if (heap[child * 2]! >= priority) break;
-      heap[i * 2] = heap[child * 2]!;
-      heap[i * 2 + 1] = heap[child * 2 + 1]!;
+      if (child + 1 < n && prio[child + 1]! < prio[child]!) child += 1;
+      if (prio[child]! >= priority) break;
+      prio[i] = prio[child]!;
+      tiles[i] = tiles[child]!;
       i = child;
     }
-    heap[i * 2] = priority;
-    heap[i * 2 + 1] = tile;
+    prio[i] = priority;
+    tiles[i] = tile;
   }
   return top;
 }
@@ -242,13 +271,13 @@ export function findRoute(
     const x = k % width;
     return weight * (Math.abs(x - tx) + Math.abs((k - x) / width - ty));
   };
-  heap.length = 0;
+  heap.size = 0;
   g[from] = 0;
   seen[from] = search;
   c.from[from] = -1;
   push(heap, h(from), from);
   let found = false;
-  while (heap.length > 0) {
+  while (heap.size > 0) {
     const k = pop(heap);
     if (closed[k] === search) continue;
     if (k === to) {
