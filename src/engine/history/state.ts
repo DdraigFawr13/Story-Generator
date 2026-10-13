@@ -92,6 +92,8 @@ export interface War {
   /** The commanders, chosen at the declaration and replaced if they die (notables). */
   attackerCaptain?: Id | undefined;
   defenderCaptain?: Id | undefined;
+  /** Champions already named in this war: later battles add fame without another line. */
+  champions?: Id[];
 }
 
 /** Per-run notable bookkeeping (notables.ts); the people themselves live in `world.people`. */
@@ -102,6 +104,10 @@ export interface NotableState {
   bySite: Map<Id, Id[]>;
   /** The current raider of each civ. */
   raiders: Map<Id, Id>;
+  /** Avengers who have led their one vengeance raid. */
+  avenged: Set<Id>;
+  /** Year of each figure's latest deed (rising, slaying, battle, founding, raid, hunt). */
+  lastDeed: Map<Id, number>;
   /** Cache of the odds a birth is strong or better, by `${raceId}:${highAura}`. */
   mageOdds: Map<string, number>;
 }
@@ -300,6 +306,8 @@ export function createRun(
       living: new Set(),
       bySite: new Map(),
       raiders: new Map(),
+      avenged: new Set(),
+      lastDeed: new Map(),
       mageOdds: new Map(),
     },
   };

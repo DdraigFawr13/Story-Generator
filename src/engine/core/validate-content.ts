@@ -296,6 +296,24 @@ export function notableProblems(content: ContentBundle): string[] {
       problems.push(`Notables ${key} ${rules[key]} is outside 0-1.`);
     }
   }
+  const deeds = rules.deeds;
+  const within = (name: string, value: number, min: number, max: number) => {
+    if (!(value >= min && value <= max)) {
+      problems.push(`Notables deeds.${name} ${value} is outside ${min}-${max}.`);
+    }
+  };
+  within('vengeanceChance', deeds.vengeanceChance, 0, 1);
+  within('legendFounds', deeds.legendFounds, 0, 1);
+  within('championPower', deeds.championPower, 0, 20);
+  for (const key of [
+    'slayerRange',
+    'vengeanceRange',
+    'huntRange',
+    'huntIdleYears',
+    'foundingFame',
+  ] as const) {
+    within(key, deeds[key], 0, Infinity);
+  }
   return problems;
 }
 
@@ -337,6 +355,10 @@ const HISTORY_EVENT_IDS = [
   'dynasty_founded',
   'oath_sworn',
   'legend_risen',
+  'champion_fought',
+  'vengeance_raid',
+  'legend_founded',
+  'beast_hunt_failed',
   'artifact_made',
   'book_written',
   'item_inherited',

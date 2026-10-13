@@ -24,8 +24,8 @@ export const NOTABLES: NotableRules = {
     heroPerDanger: 0.5,
     heroMax: 60,
     victory: 8,
-    // Legends are the best known people alive.
-    legend: 80,
+    // Rising to legend is a start; victories, slayings and foundings add the rest.
+    legend: 50,
     mage: { strong: 15, exceptional: 30 },
   },
   // A ruler (fame 30) adds 2 importance to the events around them; a legend adds the cap.
@@ -120,5 +120,38 @@ export const NOTABLES: NotableRules = {
     life: ['book of growth', 'treatise on life', 'healing-lore'],
     mind: ['book of thought', 'treatise on mind', 'memory-lore'],
     mundane: ['chronicle', 'herbal', 'law-book', 'psalter', 'ledger'],
+  },
+  deeds: {
+    // About two days' ride: a figure in a nearby town of the same people rides to answer a beast.
+    slayerRange: 24,
+    // Exceptional and Legendary (R-24, 30+ soldiers): enough to turn a battle, so the chronicle names them.
+    championPower: 13,
+    // Most oaths are kept within a decade or two, if the enemy lives near enough to reach.
+    vengeanceChance: 0.1,
+    vengeanceRange: 40,
+    // A legend left idle goes looking for a fight (R-24: a legend can face a great beast).
+    huntIdleYears: 10,
+    huntRange: 40,
+    huntPhrases: {
+      survived: 'and came home with nothing but scars',
+      died: 'and never came home',
+    },
+    legendFounds: 0.5,
+    foundingFame: 12,
+    championPhrases: {
+      first: 'stood as champion of the {civ} in their war with the {enemy}',
+      replaced: 'took up the fight for the {civ} against the {enemy}',
+      again: 'went out once more before the host of the {civ}',
+      won: 'and the {enemy} broke before them',
+      lost: 'but the {enemy} carried the day',
+      // After a won or lost battle.
+      fellWon: 'but {name} fell there',
+      fellLost: 'and {name} fell there',
+    },
+    vengeancePhrases: {
+      slain: 'and {enemy} was slain',
+      escaped: 'but {enemy} escaped',
+    },
+    vengeanceKin: ' with {names}',
   },
 };

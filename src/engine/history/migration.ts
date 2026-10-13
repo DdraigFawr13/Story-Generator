@@ -15,7 +15,7 @@ import {
   siteCapacity,
   sizeKind,
 } from './settle';
-import { createFounder } from './notables';
+import { createFounder, foundingLegend, legendFounded } from './notables';
 import { addDeed } from './people';
 import { causesOf, civName, isLive, liveSites, logOf, type HistoryRun } from './state';
 
@@ -162,7 +162,8 @@ function settleParty(
   cause: Id | undefined,
 ): Site {
   const site = foundSite(run, source, cell, party);
-  const founder = createFounder(run, site);
+  const legend = foundingLegend(run, source);
+  const founder = legend ? undefined : createFounder(run, site);
   const event = run.emit({
     type: 'site_founded',
     place: site.cell,
@@ -170,8 +171,9 @@ function settleParty(
     causes: causesOf(cause),
     data: { site: site.name, civ: civName(run, site), kind: site.kind },
   });
-  if (founder) addDeed(founder, event.id);
   logOf(run, site.id).origin = event.id;
+  if (legend) legendFounded(run, legend, source, site, event.id);
+  else if (founder) addDeed(founder, event.id);
   return site;
 }
 
@@ -224,7 +226,8 @@ export function runMigration(run: HistoryRun): void {
       data: { from: site.name, to: founded.name, count, civ: civName(run, site) },
     });
     log.migration = { year: run.year, event: migration.id };
-    const founder = createFounder(run, founded);
+    const legend = foundingLegend(run, site);
+    const founder = legend ? undefined : createFounder(run, founded);
     const event = run.emit({
       type: 'site_founded',
       place: founded.cell,
@@ -232,8 +235,9 @@ export function runMigration(run: HistoryRun): void {
       causes: [migration.id],
       data: { site: founded.name, civ: civName(run, founded), kind: founded.kind },
     });
-    if (founder) addDeed(founder, event.id);
     logOf(run, founded.id).origin = event.id;
+    if (legend) legendFounded(run, legend, site, founded, event.id);
+    else if (founder) addDeed(founder, event.id);
   }
 }
 

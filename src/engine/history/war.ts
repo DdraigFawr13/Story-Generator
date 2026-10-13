@@ -5,7 +5,14 @@
 import type { Civ, Id, Person, Site } from '../core/types';
 import { timberShort } from './goods';
 import { cultureOf } from './state';
-import { battleOutcome, mageStrength, siteLost, startCaptains, warCaptain } from './notables';
+import {
+  battleChampions,
+  battleOutcome,
+  mageStrength,
+  siteLost,
+  startCaptains,
+  warCaptain,
+} from './notables';
 import { civLosesSite, evacuate } from './abandon';
 import { bandCount, removePeople, removeProportional, stochasticRound, totalPop } from './pop';
 import { cellDistance } from './settle';
@@ -307,7 +314,16 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ): void
     },
   });
   war.lastEvent = battle.id;
-  const lead = battleOutcome(run, attackerLead, defenderLead, attackerWins, battle.id);
+  const lead = battleOutcome(run, attackerLead, defenderLead, attackerWins, battle.id, target);
+  battleChampions(run, {
+    attacker,
+    defender,
+    attackerWins,
+    site: target,
+    battle: battle.id,
+    war,
+    leads: [attackerLead, defenderLead],
+  });
   if (!attackerWins) return;
   const differ = run.races.get(attacker.raceId) !== run.races.get(defender.raceId);
   const razeChance = Math.min(1, rules.razeChance * (differ ? 2 : 1));

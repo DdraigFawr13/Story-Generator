@@ -31,6 +31,7 @@ import {
   wed,
 } from './people';
 import { stochasticRound } from './pop';
+import { cellDistance } from './settle';
 import {
   addGrievance,
   atWar,
@@ -257,6 +258,8 @@ export interface DeathOptions {
   killer?: Person | undefined;
   /** Events that led to the death; the person's latest deed when empty. */
   causes?: Id[];
+  /** Where they died, when not at home (a battlefield). */
+  at?: Site | undefined;
 }
 
 /** A notable dies: the event, vengeance, their items and, for a ruler, the succession. */
@@ -269,21 +272,19 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
   if (killer) person.killerId = killer.id;
   run.notables.living.delete(person.id);
   const civ = civOfPerson(run, person);
-  const phrase = rules.deathPhrases[options.cause].replace(
-    '{kind}',
-    siteOf(run, person)?.kind ?? 'town',
-  );
+  const where = options.at ?? siteOf(run, person);
+  const phrase = rules.deathPhrases[options.cause].replace('{kind}', where?.kind ?? 'town');
   const event = run.emit({
     type: 'notable_died',
     actors: killer ? [person.id, killer.id] : [person.id],
-    place: placeOf(run, person),
+    place: where?.cell ?? placeOf(run, person),
     causes: options.causes && options.causes.length > 0 ? options.causes : person.deeds.slice(-1),
     data: {
       name: person.name,
       age,
       role: rules.roleNames[person.title ?? 'kin'],
       cause: killer ? `${phrase}, slain by ${killer.name}` : phrase,
-      site: siteOf(run, person)?.name ?? 'the wilds',
+      site: where?.name ?? 'the wilds',
       civ: civName(civ),
     },
   });
@@ -341,6 +342,112 @@ export function createFounder(run: HistoryRun, site: Site): Person | undefined {
   const civ = site.civId === null ? undefined : run.world.civs.get(site.civId);
   if (!civ) return undefined;
   return createAdult(run, civ, site, 'founder', run.content.notables.fame.founder);
+}
+
+/**
+ * A non-ruler legend of the mother site who will lead the settlers of a new site, with
+ * `legendFounds`; they replace the made-up founder.
+ */
+export function foundingLegend(run: HistoryRun, source: Site): Person | undefined {
+  const civ = source.civId === null ? undefined : run.world.civs.get(source.civId);
+  if (!civ) return undefined;
+  const legend = livingAt(run, source.id).find(
+    (p) =>
+      p.civId === civ.id &&
+      p.id !== civ.rulerId &&
+      p.magic.power >= LEGEND_POWER[0] &&
+      isAdult(run, p) &&
+      !isElder(run, p),
+  );
+  if (!legend || !run.rng.notables.chance(run.content.notables.deeds.legendFounds))
+    return undefined;
+  return legend;
+}
+
+/** The legend moves to the site they founded, gains fame, and `legend_founded` names them. */
+export function legendFounded(
+  run: HistoryRun,
+  legend: Person,
+  source: Site,
+  site: Site,
+  founding: Id,
+): void {
+  legend.siteId = site.id;
+  legend.fame = Math.min(FAME_MAX, legend.fame + run.content.notables.deeds.foundingFame);
+  markDeed(run, legend);
+  const event = run.emit({
+    type: 'legend_founded',
+    actors: [legend.id],
+    place: site.cell,
+    causes: [founding],
+    data: {
+      name: legend.name,
+      site: site.name,
+      from: source.name,
+      civ: civName(civOfPerson(run, legend)),
+      kind: site.kind,
+    },
+  });
+  addDeed(legend, event.id);
+}
+
+/** Notes the year of a figure's deed; an idle legend goes hunting (`huntIdleYears`). */
+export function markDeed(run: HistoryRun, person: Person): void {
+  run.notables.lastDeed.set(person.id, run.year);
+}
+
+/** Living adult legends, not elders, whose last deed is `huntIdleYears` old or more. */
+export function idleLegends(run: HistoryRun): Person[] {
+  const idle = run.content.notables.deeds.huntIdleYears;
+  if (idle <= 0) return [];
+  return livingList(run).filter(
+    (p) =>
+      p.magic.power >= LEGEND_POWER[0] &&
+      isAdult(run, p) &&
+      !isElder(run, p) &&
+      run.year - (run.notables.lastDeed.get(p.id) ?? run.year) >= idle,
+  );
+}
+
+/** A figure's soldier equivalent (R-24 tier midpoint, scaled as for civ strength). */
+export function deedSoldiers(run: HistoryRun, person: Person): number {
+  const [low, high] = TIERS[tierOfPower(person.magic.power)].soldiers;
+  return ((low + high) / 2) * run.content.notables.mageStrength;
+}
+
+/**
+ * The figure who answers a beast raid on a site: the strongest hero, captain or Strong+ mage of
+ * its civ living within `slayerRange` cells (soldier equivalent, then fame, then lowest id).
+ */
+export function slayerFor(run: HistoryRun, site: Site): Person | undefined {
+  if (site.civId === null) return undefined;
+  const range = run.content.notables.deeds.slayerRange;
+  let best: Person | undefined;
+  let bestScore = -1;
+  for (const person of livingList(run)) {
+    if (person.civId !== site.civId || person.siteId == null) continue;
+    const able =
+      person.title === 'hero' || person.title === 'captain' || person.magic.power >= MAGE_POWER;
+    if (!able || !isAdult(run, person) || isElder(run, person)) continue;
+    const home = run.world.sites.get(person.siteId);
+    if (!home || !isLive(home) || cellDistance(run.cells.width, home.cell, site.cell) > range)
+      continue;
+    const score = deedSoldiers(run, person) * 1000 + person.fame;
+    if (score > bestScore) {
+      best = person;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
+/** An existing figure slew a beast: fame as a new hero would have had, on top of their own. */
+export function creditSlaying(run: HistoryRun, person: Person, danger: number, event: Id): void {
+  const fame = run.content.notables.fame;
+  const gain = Math.min(fame.heroMax, fame.hero + fame.heroPerDanger * danger);
+  person.fame = Math.min(FAME_MAX, person.fame + gain);
+  addDeed(person, event);
+  markDeed(run, person);
 }
 
 /** The hero who slays a beast, at the raided site; the name was rolled by the caller. */
@@ -417,6 +524,7 @@ export function battleOutcome(
   defender: Person | undefined,
   attackerWins: boolean,
   battle: Id,
+  field?: Site,
 ): Person | undefined {
   const rules = run.content.notables;
   const rng = run.rng.notables;
@@ -429,14 +537,102 @@ export function battleOutcome(
   const loserDies = rng.chance(rules.captainDeath);
   const winnerDies = rng.chance(rules.captainDeathWin);
   if (loser && loserDies) {
-    killNotable(run, loser, { cause: 'battle', killer: winner, causes: [battle] });
+    killNotable(run, loser, { cause: 'battle', killer: winner, causes: [battle], at: field });
   }
   if (winner && winnerDies) {
     // A captain who fell in the same battle is not the killer: the dead do nothing more.
     const killer = loser && loser.died === undefined ? loser : undefined;
-    killNotable(run, winner, { cause: 'battle', killer, causes: [battle] });
+    killNotable(run, winner, { cause: 'battle', killer, causes: [battle], at: field });
   }
   return livingPerson(run, winner?.id) ?? undefined;
+}
+
+/** The civ's strongest living figure of champion power (power, then fame, then lowest id). */
+function championOf(run: HistoryRun, civ: Civ): Person | undefined {
+  const min = run.content.notables.deeds.championPower;
+  let best: Person | undefined;
+  for (const person of livingList(run)) {
+    if (person.civId !== civ.id || person.magic.power < min || !isAdult(run, person)) continue;
+    if (
+      !best ||
+      person.magic.power > best.magic.power ||
+      (person.magic.power === best.magic.power && person.fame > best.fame)
+    )
+      best = person;
+  }
+  return best;
+}
+
+/**
+ * Each side's champion fights in the battle: fame on victory, and the captains' odds of falling.
+ * `champion_fought` names them in their first battle of the war and in the one they fall in. A
+ * champion who led the side was already judged by `battleOutcome`; they get no second roll.
+ */
+export function battleChampions(
+  run: HistoryRun,
+  options: {
+    attacker: Civ;
+    defender: Civ;
+    attackerWins: boolean;
+    site: Site;
+    battle: Id;
+    war: War;
+    leads: readonly (Person | undefined)[];
+  },
+): void {
+  const { attacker, defender, attackerWins, site, battle, war, leads } = options;
+  const rules = run.content.notables;
+  const rng = run.rng.notables;
+  const champions = [championOf(run, attacker), championOf(run, defender)] as const;
+  const sides = [
+    { civ: attacker, enemy: defender, won: attackerWins },
+    { civ: defender, enemy: attacker, won: !attackerWins },
+  ];
+  sides.forEach((side, index) => {
+    const champion = champions[index];
+    if (!champion || champion.died !== undefined) return;
+    const other = champions[1 - index];
+    const led = leads.some((p) => p?.id === champion.id);
+    markDeed(run, champion);
+    const dies = !led && rng.chance(side.won ? rules.captainDeathWin : rules.captainDeath);
+    if (side.won && !led) champion.fame = Math.min(FAME_MAX, champion.fame + rules.fame.victory);
+    const named = (war.champions ??= []).includes(champion.id);
+    if (named && !dies) return;
+    // A champion of a side that already had one steps up in their place.
+    const replacing = war.champions.some(
+      (id) => id !== champion.id && run.world.people.get(id)?.civId === side.civ.id,
+    );
+    if (!named) war.champions.push(champion.id);
+    const phrases = rules.deeds.championPhrases;
+    const stand = named ? phrases.again : replacing ? phrases.replaced : phrases.first;
+    const result = side.won ? phrases.won : phrases.lost;
+    const fill = (text: string) =>
+      text
+        .replace('{civ}', side.civ.name)
+        .replace('{enemy}', side.enemy.name)
+        .replace('{name}', champion.name);
+    const event = run.emit({
+      type: 'champion_fought',
+      actors: [champion.id],
+      place: site.cell,
+      causes: [battle],
+      data: {
+        name: champion.name,
+        civ: side.civ.name,
+        enemy: side.enemy.name,
+        site: site.name,
+        stand: fill(stand),
+        outcome: fill(
+          dies ? `${result}, ${side.won ? phrases.fellWon : phrases.fellLost}` : result,
+        ),
+      },
+    });
+    addDeed(champion, event.id);
+    if (dies) {
+      const killer = other && other.died === undefined ? other : undefined;
+      killNotable(run, champion, { cause: 'battle', killer, causes: [event.id], at: site });
+    }
+  });
 }
 
 /** A declared war's captains: created or chosen before the event, so it can name them. */
@@ -913,6 +1109,7 @@ function runLegends(run: HistoryRun): void {
       person.magic.power - 1,
     );
     person.fame = Math.max(person.fame, rules.fame.legend);
+    markDeed(run, person);
     alive += 1;
     const event = run.emit({
       type: 'legend_risen',

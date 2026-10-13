@@ -1,10 +1,11 @@
 // Grievance (M2.4): famine raids, border clashes and insults between civs. Grievance is what
 // war is made of; each wrong is remembered as an event so a war can name its causes.
 
-import type { Civ, Id, Site } from '../core/types';
+import type { Civ, Id, Person, Site } from '../core/types';
 import { raidSteal } from './items';
-import { makeRivals, addDeed } from './people';
-import { raidDeaths, raiderFor, rulerOf } from './notables';
+import { addDeed, isAdult, isElder, livingList, livingPerson, makeRivals } from './people';
+import { killNotable, markDeed, raidDeaths, raiderFor, rulerOf } from './notables';
+import { cellDistance } from './settle';
 import { removePeople, siteNeed, stochasticRound, totalPop } from './pop';
 import {
   addGrievance,
@@ -112,10 +113,106 @@ function runFamineRaids(run: HistoryRun): void {
   }
 }
 
-/** Yearly: grievances fade, then famine raids. */
+/** The avenger's oath against `enemy`: its event id and the name of the dead it was sworn for. */
+function oathOf(run: HistoryRun, avenger: Person, enemy: Person): { id?: Id; dead: string } {
+  for (let i = avenger.deeds.length - 1; i >= 0; i -= 1) {
+    const event = run.world.events.find((e) => e.id === avenger.deeds[i]);
+    if (event?.type === 'oath_sworn' && event.actors[1] === enemy.id)
+      return { id: event.id, dead: String(event.data.dead) };
+  }
+  return { dead: 'the fallen' };
+}
+
+/**
+ * Sworn avengers keep their oath: once in their life, with `vengeanceChance` a year, an adult
+ * avenger leads a raid on the home of a living enemy of another people within `vengeanceRange`.
+ */
+function runVengeance(run: HistoryRun): void {
+  const { rules } = run;
+  const deeds = run.content.notables.deeds;
+  const rng = run.rng.notables;
+  for (const avenger of livingList(run)) {
+    if (!avenger.enemies?.length || run.notables.avenged.has(avenger.id)) continue;
+    if (avenger.died !== undefined || !isAdult(run, avenger) || isElder(run, avenger)) continue;
+    const civ = liveCiv(run, avenger.civId ?? null);
+    const home = avenger.siteId == null ? undefined : run.world.sites.get(avenger.siteId);
+    if (!civ || !home || !isLive(home)) continue;
+    let enemy: Person | undefined;
+    let target: Site | undefined;
+    for (const id of avenger.enemies) {
+      const person = livingPerson(run, id);
+      const site = person?.siteId == null ? undefined : run.world.sites.get(person.siteId);
+      if (!person || !site || !isLive(site) || site.civId === civ.id) continue;
+      if (!liveCiv(run, site.civId)) continue;
+      if (cellDistance(run.cells.width, home.cell, site.cell) > deeds.vengeanceRange) continue;
+      enemy = person;
+      target = site;
+      break;
+    }
+    if (!enemy || !target || !rng.chance(deeds.vengeanceChance)) continue;
+    const victim = liveCiv(run, target.civId)!;
+    // Kin of the same people sworn on the same enemy ride together: one raid keeps all their oaths.
+    const riders: Person[] = [];
+    for (const kin of livingList(run)) {
+      if (kin.civId !== civ.id || !kin.enemies?.includes(enemy.id)) continue;
+      run.notables.avenged.add(kin.id);
+      if (kin.id !== avenger.id && isAdult(run, kin)) riders.push(kin);
+    }
+    const names = riders.map((p) => p.name);
+    const kin =
+      names.length === 0
+        ? ''
+        : deeds.vengeanceKin.replace(
+            '{names}',
+            names.length === 1
+              ? names[0]!
+              : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`,
+          );
+    const [lo, hi] = rules.civRaidDeaths;
+    const share = rng.between(Math.round(lo * 1000), Math.round(hi * 1000)) / 1000;
+    const dead = removePeople(target, stochasticRound(rng, totalPop(target) * share), [
+      'adult',
+      'child',
+      'elder',
+    ]);
+    const slain = rng.chance(run.content.notables.raidKill);
+    const phrase = slain ? deeds.vengeancePhrases.slain : deeds.vengeancePhrases.escaped;
+    const oath = oathOf(run, avenger, enemy);
+    const event = run.emit({
+      type: 'vengeance_raid',
+      place: target.cell,
+      actors: [avenger.id, enemy.id, ...riders.map((p) => p.id)],
+      causes: causesOf(oath.id),
+      data: {
+        name: avenger.name,
+        enemy: enemy.name,
+        avenged: oath.dead,
+        site: home.name,
+        target: target.name,
+        civ: civ.name,
+        victim: victim.name,
+        dead,
+        kin,
+        outcome: phrase.replace('{enemy}', enemy.name),
+      },
+    });
+    addDeed(avenger, event.id);
+    addDeed(enemy, event.id);
+    for (const rider of [avenger, ...riders]) markDeed(run, rider);
+    for (const rider of riders) addDeed(rider, event.id);
+    addGrievance(run, victim.id, civ.id, rules.grievance.raid, event.id);
+    if (slain) {
+      avenger.fame = Math.min(100, avenger.fame + run.content.notables.fame.victory);
+      killNotable(run, enemy, { cause: 'raid', killer: avenger, causes: [event.id] });
+    }
+  }
+}
+
+/** Yearly: grievances fade, then famine raids, then vengeance. */
 export function runCivRaids(run: HistoryRun): void {
   decayGrievances(run);
   runFamineRaids(run);
+  runVengeance(run);
 }
 
 /** Total wealth of a civ's live sites. */
