@@ -17,8 +17,6 @@ interface PathCache {
   /** Cost to enter each tile; 0 blocks. */
   cost: Uint8Array;
   routes: Map<number, number[] | null>;
-  /** Running walking cost along a route, kept so a walk is found by binary search. */
-  sums: WeakMap<number[], Int32Array>;
   /** Scratch per search; `seen` and `closed` mark tiles by search number so nothing is cleared. */
   g: Float64Array;
   from: Int32Array;
@@ -74,7 +72,6 @@ function cacheOf(active: ActiveSite, rules: SiteRules, life: LifeRules): PathCac
     cache = {
       cost: buildCost(active.map, active.buildings.values(), rules, life),
       routes: new Map(),
-      sums: new WeakMap(),
       g: new Float64Array(n),
       from: new Int32Array(n),
       seen: new Int32Array(n),
@@ -90,7 +87,6 @@ function cacheOf(active: ActiveSite, rules: SiteRules, life: LifeRules): PathCac
     const changed = new Set(cache.changed);
     cache.cost = buildCost(active.map, active.buildings.values(), rules, life);
     cache.changed = null;
-    cache.sums = new WeakMap();
     for (const [key, route] of cache.routes) {
       if (route === null || route.some((k) => changed.has(k))) cache.routes.delete(key);
     }
@@ -122,26 +118,14 @@ export function walkSteps(
   route: number[],
   limit: number,
 ): number {
-  const c = cacheOf(active, rules, life);
-  let sums = c.sums.get(route);
-  if (!sums) {
-    sums = new Int32Array(route.length);
-    let total = 0;
-    for (let i = 0; i < route.length; i += 1) {
-      total += Math.max(1, c.cost[route[i]!]!);
-      sums[i] = total;
-    }
-    c.sums.set(route, sums);
+  const cost = cacheOf(active, rules, life).cost;
+  // A block's walk is short against the route cache, so a scan beats keeping running sums.
+  let total = 0;
+  for (let i = 0; i < route.length; i += 1) {
+    total += Math.max(1, cost[route[i]!]!);
+    if (total > limit) return i;
   }
-  let lo = 0;
-  let hi = route.length;
-  // The first index whose running cost passes the limit.
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (sums[mid]! > limit) hi = mid;
-    else lo = mid + 1;
-  }
-  return lo;
+  return route.length;
 }
 
 /** The whole cost grid (0 blocks); read it, do not write it. */

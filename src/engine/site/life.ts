@@ -106,6 +106,8 @@ interface Profile {
   /** Their favourite place for free blocks, drawn for the age band it was drawn at. */
   favourite: RoutinePlace | undefined;
   favouriteBand: Band | undefined;
+  /** Their weights for each routine table, by age band and whether a parent's trade takes them along. */
+  weights: Map<string, (Float64Array | undefined)[]>;
   /** This block: the job they were given today, and the tile they work it at (-1: none). */
   job: JobDef | undefined;
   workTile: number;
@@ -125,24 +127,38 @@ interface Profile {
   ate: boolean;
 }
 
-/** Each place's weight for this person: the table's, times their traits' multipliers; 0 if closed. */
+/** Each age band's slot in a profile's cached routine weights. */
+const BAND_SLOT: Record<Band, number> = { child: 0, adult: 1, elder: 2 };
+
+/** Scratch for `placeWeights`, one weight per place (the engine runs one block at a time). */
+const WEIGHTS = new Float64Array(ROUTINE_PLACES.length);
+
+/**
+ * Each place's weight for this person: the table's, times their traits' multipliers; 0 if closed.
+ * Written into a shared scratch array, read before the next call.
+ */
 function placeWeights(
   p: Profile,
   table: RoutineWeights,
   traitMul: Record<string, RoutineWeights>,
   open: (p: Profile, place: RoutinePlace) => boolean,
-): number[] {
-  return ROUTINE_PLACES.map((place) => {
+): Float64Array {
+  for (let i = 0; i < ROUTINE_PLACES.length; i += 1) {
+    const place = ROUTINE_PLACES[i]!;
     let w = table[place] ?? 0;
-    if (w <= 0 || !open(p, place)) return 0;
-    for (const t of p.traits) w *= traitMul[t.id]?.[place] ?? 1;
-    return w;
-  });
+    if (w > 0 && open(p, place)) {
+      for (const t of p.traits) w *= traitMul[t.id]?.[place] ?? 1;
+    } else w = 0;
+    WEIGHTS[i] = w;
+  }
+  return WEIGHTS;
 }
 
 /** The place a draw `u` in [0, 1) lands on, by weight; undefined when every weight is 0. */
-function drawPlace(weights: number[], u: number): RoutinePlace | undefined {
-  let left = u * weights.reduce((a, b) => a + b, 0);
+function drawPlace(weights: Float64Array, u: number): RoutinePlace | undefined {
+  let total = 0;
+  for (let i = 0; i < weights.length; i += 1) total += weights[i]!;
+  let left = u * total;
   let last: RoutinePlace | undefined;
   for (let i = 0; i < weights.length; i += 1) {
     if (weights[i]! <= 0) continue;
@@ -186,6 +202,8 @@ interface SiteCache {
   /** Village life: walkable tiles on the square's edge where stalls stand, and a ring inside for shoppers. */
   stalls: number[];
   shops: number[];
+  /** Each place's `where` phrase with no name in it (undefined for none). */
+  where: Record<RoutinePlace | 'market' | 'house', string | undefined>;
 }
 
 const caches = new WeakMap<ActiveSite, SiteCache>();
@@ -377,6 +395,7 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
       alehouse: alehouse ? interiorSpot(alehouse, mix(id, 30), width) : -1,
       well: wellSides.length > 0 ? wellSides[mix(id, 31) % wellSides.length]! : -1,
       favourite: undefined,
+      weights: new Map(),
       favouriteBand: undefined,
       job: undefined,
       workTile: -1,
@@ -413,6 +432,12 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
     meal: profiles.length > 0 ? meal / profiles.length : 0,
     stalls: edgeTiles(life.routines.market.stallRing),
     shops: edgeTiles(life.routines.market.shopRing),
+    where: Object.fromEntries(
+      Object.entries(life.routines.where).map(([k, v]) => [
+        k,
+        v.replace('{name}', '') || undefined,
+      ]),
+    ) as SiteCache['where'],
   };
 }
 
@@ -429,8 +454,8 @@ function addMemory(
 }
 
 function tileOf(detail: PersonDetail, width: number): number {
-  const [x, y] = detail.pos!;
-  return y * width + x;
+  const pos = detail.pos!;
+  return pos[1] * width + pos[0];
 }
 
 /** Sums a resident's mood from low needs, memories and traits, then moves their stress. */
@@ -650,7 +675,15 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   };
 
   /** A small child's carer: their mother in the household, else their father, else its head. */
+  // Asked several times a block per small child, so kept for the block.
+  const carerMemo = new Map<Profile, Profile | undefined>();
   const carerOf = (p: Profile): Profile | undefined => {
+    if (carerMemo.has(p)) return carerMemo.get(p);
+    const carer = findCarer(p);
+    carerMemo.set(p, carer);
+    return carer;
+  };
+  const findCarer = (p: Profile): Profile | undefined => {
     const members = p.household?.members ?? [];
     const grown = (id: Id) => {
       const q = cache.byId.get(id);
@@ -772,9 +805,18 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     return p.favourite;
   };
   const placeFor = (p: Profile, key: string): RoutinePlace => {
-    const weights = placeWeights(p, routines.tables[key]!, routines.traitMul, open);
-    const fav = favouriteOf(p);
-    if (fav !== undefined) weights[ROUTINE_PLACES.indexOf(fav)]! *= routines.favouriteMul;
+    // Weights only change with the age band (and the favourite drawn for it) and going along.
+    const slot = BAND_SLOT[p.band] * 2 + (p.band === 'child' && alongParent(p) ? 1 : 0);
+    let byTable = p.weights.get(key);
+    if (!byTable) p.weights.set(key, (byTable = []));
+    let weights = byTable[slot];
+    if (!weights) {
+      // The favourite first: drawing it reuses the scratch weights.
+      const fav = favouriteOf(p);
+      weights = placeWeights(p, routines.tables[key]!, routines.traitMul, open).slice();
+      if (fav !== undefined) weights[ROUTINE_PLACES.indexOf(fav)]! *= routines.favouriteMul;
+      byTable[slot] = weights;
+    }
     return drawPlace(weights, roll(p.id, 51, day, block)) ?? 'home';
   };
   /** The living resident they visit: the friend they think best of, else kin in another home. */
@@ -816,7 +858,9 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     return p.step;
   };
   const phrase = (place: RoutinePlace | 'market' | 'house', name?: string): string | undefined =>
-    routines.where[place].replace('{name}', name ?? '') || undefined;
+    name === undefined
+      ? cache.where[place]
+      : routines.where[place].replace('{name}', name) || undefined;
   const stopAt = (p: Profile, place: RoutinePlace): Stop => {
     const kid = p.band === 'child';
     const idle: Activity = kid ? 'play' : 'socialise';
@@ -916,21 +960,26 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       // The tiles walked, so the map draws the walk along the street rather than through walls.
       detail.walk = tile !== from ? route! : undefined;
       detail.walkTo = steps;
-    } else detail.walk = undefined;
+    } else {
+      // Both fields are always set, in this order, so every resident keeps one object shape.
+      detail.walk = undefined;
+      detail.walkTo = 0;
+    }
     standAt(p, tile);
   };
   /** Children going along with a parent, settled once the grown-ups have a work tile. */
   const along: Profile[] = [];
   /** Who looks after a small child, so that they are not drawn away for the evening. */
   let carers: Set<Profile> | undefined;
-  for (const p of profiles) {
+  /** Pass 1 for one person: what they do this block and where they walk to. */
+  const plan = (p: Profile) => {
     const detail = p.person.detail!;
     p.job = detail.jobId === undefined ? undefined : cache.jobs.get(detail.jobId);
     p.workTile = -1;
     // Small children go where their carer goes, once the grown-ups have moved.
     if (p.age < life.carriedUnder && carerOf(p)) {
       carried.push(p);
-      continue;
+      return;
     }
     detail.with = undefined;
     detail.leaveAt = leaveAt(p);
@@ -1080,9 +1129,10 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
                               ? p.stockpile
                               : p.green;
     // A child going along waits for the grown-ups' work tiles (below).
-    if (along.at(-1) === p) continue;
+    if (along.at(-1) === p) return;
     move(p, to, stop !== undefined);
-  }
+  };
+  for (const p of profiles) plan(p);
   // Children who went along with a parent: to the parent's work tile, else playing near home.
   for (const p of along) {
     const detail = p.person.detail!;
