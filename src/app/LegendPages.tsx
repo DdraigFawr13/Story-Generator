@@ -208,7 +208,7 @@ function EventLine({
             aria-expanded={fightOpen}
             onClick={() => setFightOpen(!fightOpen)}
           >
-            the fight ▸
+            the fight {fightOpen ? '▾' : '▸'}
           </button>
         )}
         {fightOpen && <Beats beats={beats} />}

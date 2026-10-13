@@ -198,7 +198,13 @@ function beastFight(
   // A lone legend hunts; a raided town's fight is led by the figure who rode out.
   const hunt = event.type === 'beast_hunt_failed' || event.data.hunt === 1;
   const oddsBeat =
-    odds < rules.longOdds ? 'oddsLong' : odds > rules.favouredOdds ? 'oddsFavoured' : 'oddsEven';
+    odds < 1
+      ? 'oddsNone'
+      : odds < rules.longOdds
+        ? 'oddsLong'
+        : odds > rules.favouredOdds
+          ? 'oddsFavoured'
+          : 'oddsEven';
   return [
     say(hunt ? 'approachHunt' : 'approachTown', vars),
     say(oddsBeat, vars),

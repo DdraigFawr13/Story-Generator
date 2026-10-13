@@ -60,6 +60,10 @@ export const PLAY_BY_PLAY: PlayByPlayRules = {
       '{beastKindMid} came against {site}, and about {fighters} of the {civ} stood to fight it.',
       'The people of {site} faced {beastKindMid} with about {fighters} fighters.',
     ],
+    oddsNone: [
+      'There was almost no chance, not even one in 100.',
+      'Few would have given them one chance in 100.',
+    ],
     oddsLong: [
       'The odds were long: about {odds} in 100.',
       'It was a poor chance, about {odds} in 100.',
