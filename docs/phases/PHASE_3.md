@@ -4,7 +4,7 @@
 
 ## Status
 
-Approved 2026-10-12 with all four recommended fork answers and no zoom-in spike. **M3.1 built** (2026-10-12): the site-view mock-up was reviewed and approved (revision 2, [artifact](https://claude.ai/artifact/5TUrhLivRW5Rrr7KXx3wuQ)); the local map spans the site cell plus half of each neighbour (48 tiles per cell) so an adjacent river or coast shows, and the no-op tick runs far above budget (millions of days per second for 150 residents in Node). Left for M3.2, when ticks start changing people: the main thread's copy of the site only refreshes on embark and leave, and browser Back after "Open in Legends" can skip the site entry. Starts when Phase 2 closes. Written after the plan review of 2026-10-12, whose answers this spec assumes: Phase 2 delivers a goods vector per site (M2.4), importance scores and yearly rollups (pulled forward into M2.4–M2.5), diseases as content, save compression, and deletes the legacy app at its close, so `/` already shows the new app. No zoom-in spike runs before M2.5; M3.1 is the first zoom-in and carries the performance check the spike would have done.
+Approved 2026-10-12 with all four recommended fork answers and no zoom-in spike. **M3.1 built** (2026-10-12): the site-view mock-up was reviewed and approved (revision 2, [artifact](https://claude.ai/artifact/5TUrhLivRW5Rrr7KXx3wuQ)); the local map spans the site cell plus half of each neighbour (48 tiles per cell) so an adjacent river or coast shows, and the no-op tick runs far above budget (millions of days per second for 150 residents in Node). Left for M3.2, when ticks start changing people: the main thread's copy of the site only refreshes on embark and leave, and browser Back after "Open in Legends" can skip the site entry. Amended 2026-10-12 after the magic, dragons, dungeons and items review ([proposal](https://claude.ai/code/artifact/6ed1c2b5-be5b-4223-9bb0-d1a281a54da8)): item effects in M3.3, great beasts reaching the site in M3.8 and item awakenings in M3.9; the new systems (perilous places, expeditions, dragons as individuals) go to Phases 4 and 5. Starts when Phase 2 closes. Written after the plan review of 2026-10-12, whose answers this spec assumes: Phase 2 delivers a goods vector per site (M2.4), importance scores and yearly rollups (pulled forward into M2.4–M2.5), diseases as content, save compression, and deletes the legacy app at its close, so `/` already shows the new app. No zoom-in spike runs before M2.5; M3.1 is the first zoom-in and carries the performance check the spike would have done.
 
 ## Milestones
 
@@ -25,7 +25,7 @@ Vertical slices (REBOOT_PLAN §9A): every milestone leaves the site watchable an
 
 **M3.3 Work, skills and steward AI** (~1,400 lines)
 - `content/jobs.ts` (farm, forage, fish, hunt, fell, quarry, mine, cook, build, craft, heal, haul) gated by attributes and skills (R-25); learning by doing and from a teacher; skill toward potential (R-27).
-- `content/items.ts`: each item maps to one world good (food, ore, timber, salt, luxury), so demotion sums back into the goods vector. `content/buildings.ts`: homes, fields, stockpile, workshop, well, wall.
+- `content/items.ts`: each item maps to one world good (food, ore, timber, salt, luxury), so demotion sums back into the goods vector. An entry may carry `effects` (attribute bonus, granted ability, combat value, or a power bonus) and `downsides` (envy, theft draw, curse; R-29). An item lifts its holder at most one magic tier and never past Legendary (decided 2026-10-12). A promoted notable brings their world items to the site. `content/buildings.ts`: homes, fields, stockpile, workshop, well, wall.
 - Steward AI ranks food days left, shelter, threat, repairs and shortages, then assigns people by suitability, traits and mood. Profile again at the end of this milestone.
 - Tests: no one works a job they can't do; stock never goes negative; a food shortage moves people to food jobs.
 
@@ -47,12 +47,13 @@ Vertical slices (REBOOT_PLAN §9A): every milestone leaves the site watchable an
 - Tests: a hungry thief is punished by the culture's rule; an exile leaves and appears in the world's site list.
 
 **M3.8 Threats** (~1,200 lines)
-- Wildlife and beasts from real lairs within reach (M2.4), raiders from real civs with a grievance against this site's civ. Site combat uses attributes, skill, equipment, numbers and fatigue, tested against the tier-equivalence table (R-24). Militia, walls, looting, wounds and deaths feed health and grief.
+- Wildlife and beasts from real lairs within reach (M2.4), raiders from real civs with a grievance against this site's civ. Great and legendary beasts (the dragon included) can come too: the chronicle gives warning signs (livestock taken, smoke seen) a few days before, and the steward AI can order a flight to the nearest site. The site may fall (R-20). Site combat uses attributes, skill, equipment, numbers and fatigue, tested against the tier-equivalence table (R-24). Militia, walls, looting, wounds and deaths feed health and grief.
 - Tests: no raid without a real grievance or lair in its causes; one combat round never exceeds the R-24 caps.
 
 **M3.9 Light magic and lore** (~700 lines)
-- Common cantrips (mending, warmth, small healing, weather-reading) taught by parents or a hedge-witch (R-28); gifted residents visible in the inspector; books as Phase 2 items that can be read, lent and lost. Race dependencies act at the site: Tylwyth fare worse on low-aura land, Dvergar need ore work (the review's balance-by-mechanism, item 3).
-- Tests: no one casts without a teacher or book; a lost book ends a cantrip's teaching.
+- Common cantrips (mending, warmth, small healing, weather-reading) taught by parents or a hedge-witch (R-28); gifted residents visible in the inspector; books as Phase 2 items that can be read, lent and lost.
+- Awakenings (REBOOT_PLAN §5.3) as content in `content/awakenings.ts`: a book or an effect item can teach an ability or raise a person one magic tier, once, within the tier caps, as a chronicled event with a cause (decided 2026-10-12: a person with no power can rise to Faint this way; no spontaneous talent, R-26). Race dependencies act at the site: Tylwyth fare worse on low-aura land, Dvergar need ore work (the review's balance-by-mechanism, item 3).
+- Tests: no one casts without a teacher or book; a lost book ends a cantrip's teaching; an awakening happens at most once per person and never crosses more than one tier.
 
 **M3.10 Thin politics and trade** (~600 lines)
 - A leader and succession by culture rule; a seasonal caravan from a real route neighbour that swaps surplus goods for shortages (goods vector); news of the caravan's home in the chronicle.
@@ -125,4 +126,4 @@ Not used: Supabase and Stripe (R-16); OpenArt (R-17); Canva, Google Drive, Mobbi
 
 ## Out of scope
 
-The world moving during play and world↔site links (Phase 4); switching the watched site (Phase 4 or 6); magic schools (Phase 5); deep politics and trade (Phases 4 and 6); steward and follow modes (Phase 8); z-levels and final art (Phase 9+).
+The world moving during play and world↔site links (Phase 4); perilous places, hoards and expeditions (M4.7); switching the watched site (Phase 4 or 6); magic schools, enchanting and dragons as individuals (Phase 5); deep politics and trade (Phases 4 and 6); steward and follow modes (Phase 8); z-levels and final art (Phase 9+).
