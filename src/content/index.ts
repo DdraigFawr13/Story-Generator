@@ -7,6 +7,8 @@ import { creatures } from './creatures';
 import { cultures } from './cultures';
 import { diseases } from './diseases';
 import { HISTORY } from './history';
+import { ITEMS } from './items';
+import { JOBS, STEWARD, WORK_EVENTS } from './jobs';
 import { TYPE_GROUPS } from './legends';
 import { LIFE, LIFE_EVENTS, MEMORIES, NEEDS, TRAITS } from './life';
 import { NAMES } from './names';
@@ -27,7 +29,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   schools,
   abilities,
   weather,
-  eventTypes: [...eventTypes, ...LIFE_EVENTS],
+  eventTypes: [...eventTypes, ...LIFE_EVENTS, ...WORK_EVENTS],
   typeGroups: TYPE_GROUPS,
   rules,
   settlement: SETTLEMENT,
@@ -41,14 +43,20 @@ export const DEFAULT_CONTENT: ContentBundle = {
   traits: TRAITS,
   memories: MEMORIES,
   life: LIFE,
+  items: ITEMS,
+  jobs: JOBS,
+  steward: STEWARD,
 };
 
 export * from './biographies';
 export * from './biomes';
+export * from './buildings';
 export * from './creatures';
 export * from './cultures';
 export * from './diseases';
 export * from './history';
+export * from './items';
+export * from './jobs';
 export * from './legends';
 export * from './life';
 export * from './map-layers';

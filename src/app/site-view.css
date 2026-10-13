@@ -1210,3 +1210,18 @@
 .sv-root .mapbox canvas {
   touch-action: none;
 }
+
+/* A skill's ceiling: a tick on its bar (the bar clips nothing else, so the tick sits inside it). */
+.sv-root .attrs .b {
+  position: relative;
+}
+.sv-root .attrs .b u {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -2px;
+  background: var(--ink);
+  opacity: 0.6;
+  text-decoration: none;
+}

@@ -148,14 +148,19 @@ describe('leaving', () => {
     expect([...world.people.keys()]).toEqual([...before.people.keys()]);
     // Notables keep the traits they gained at the site; everything else is as it was.
     for (const [id, person] of before.people) {
-      const { traits, ...rest } = world.people.get(id)!;
-      const { traits: oldTraits, ...oldRest } = person;
+      const { traits, skills, ...rest } = world.people.get(id)!;
+      const { traits: oldTraits, skills: oldSkills, ...oldRest } = person;
       expect(rest).toEqual(oldRest);
       if (notables.includes(id)) {
+        // Notables keep the skills they were given too.
+        for (const [k, v] of Object.entries(oldSkills)) expect(skills[k]).toBe(v);
         expect(oldTraits).toEqual([]);
         expect(traits.length).toBeGreaterThanOrEqual(1);
         expect(traits.length).toBeLessThanOrEqual(2);
-      } else expect(traits).toEqual(oldTraits);
+      } else {
+        expect(traits).toEqual(oldTraits);
+        expect(skills).toEqual(oldSkills);
+      }
     }
   });
 
@@ -164,10 +169,11 @@ describe('leaving', () => {
     const site = smallest(world);
     const goods = { ...site.goods };
     const active = embark(world, C, site.id);
-    active.stock.set('food', active.stock.get('food')! + 7);
+    active.stock.set('grain', active.stock.get('grain')! + 336);
     leaveSite(world, C);
     for (const good of GOODS) {
-      expect(site.goods[good]).toBe(good === 'food' ? goods.food + 7 : goods[good]);
+      if (good === 'food') expect(site.goods.food).toBeCloseTo(goods.food + 1, 9);
+      else expect(site.goods[good]).toBe(goods[good]);
     }
   });
 });
@@ -232,7 +238,7 @@ describe('saves and speed', () => {
     expect(back.activeSite!.households).toBeInstanceOf(Map);
   });
 
-  it('runs a year of daily life for 150 residents in well under a second', () => {
+  it('runs a year of site life for 150 residents within the speed guard', () => {
     const world = copy();
     const site = biggest(world);
     const content = { ...C, site: { ...C.site, followCap: 150 } };
@@ -243,7 +249,9 @@ describe('saves and speed', () => {
     console.log(
       `site tick: ${active.residents.length} residents, 336 days in ${ms.toFixed(1)} ms (${(336000 / Math.max(ms, 0.01)).toFixed(0)} days/s)`,
     );
-    expect(ms).toBeLessThan(1000);
+    // The Phase 3 budget is 10 days/s; 2.5 s a year (over 130 days/s) leaves room for slow CI
+    // runners and later systems (decided 2026-10-13: one guard, replacing two at 1 s).
+    expect(ms).toBeLessThan(2500);
   });
 });
 

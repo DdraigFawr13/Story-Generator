@@ -7,7 +7,9 @@ import {
   fieldLabelSpots,
   formatSelection,
   initials,
+  buildPercent,
   makeLookCtx,
+  tileName,
   parseSelection,
   quarterOf,
   relation,
@@ -146,6 +148,19 @@ describe('tile looks', () => {
     expect(tileLook(ctx, at(7, 7)).bg).toBe('t-counted');
     expect(tileLook(ctx, at(8, 8)).glyph).toBe('∩');
     expect(tileLook(ctx, at(2, 8)).bg).toBe('t-field');
+  });
+
+  it('shows a building being raised as bare ground and names its progress', () => {
+    const home = ctx.buildings.get(1)!;
+    home.progress = 12;
+    const work = RULES.buildings.find((d) => d.id === 'home')!.work!;
+    expect(tileLook(ctx, at(6, 1)).bg).toBe('t-grass');
+    expect(buildPercent(RULES, home)).toBe(Math.round((12 / work) * 100));
+    expect(tileName(ctx, at(6, 1), 'the river', 'the sea')).toBe(
+      `Home (being built, ${buildPercent(RULES, home)}%)`,
+    );
+    delete home.progress;
+    expect(tileLook(ctx, at(6, 1)).bg).toBe('t-wall');
   });
 
   it('outlines the hall quarter around the followed homes', () => {

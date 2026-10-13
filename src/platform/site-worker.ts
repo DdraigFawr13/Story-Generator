@@ -54,12 +54,21 @@ let owed = 0;
 let windowStart = 0;
 let rate = 0;
 let lastSnapshot = 0;
+/** `layoutVersion` of the last snapshot sent; the map layers ride along only when it moves. */
+let sentVersion = -1;
 /** Days run since the window began, in blocks. */
 let windowBlocks = 0;
 
 function stop(): void {
   if (timer !== undefined) clearTimeout(timer);
   timer = undefined;
+}
+
+/** A snapshot that leaves out the map layers the main thread already has. */
+function snapshotNow(current: WorldState): SiteSnapshot {
+  const snapshot = siteSnapshot(current, sentVersion);
+  sentVersion = snapshot.layoutVersion;
+  return snapshot;
 }
 
 function slice(): void {
@@ -87,7 +96,7 @@ function slice(): void {
     windowBlocks = 0;
   }
   if (blocks > 0) {
-    const snapshot = now - lastSnapshot >= SNAPSHOT_MS ? siteSnapshot(world) : undefined;
+    const snapshot = now - lastSnapshot >= SNAPSHOT_MS ? snapshotNow(world) : undefined;
     if (snapshot) lastSnapshot = now;
     scope.postMessage(
       snapshot
@@ -122,6 +131,8 @@ self.addEventListener('message', (event: MessageEvent<SiteRequest>) => {
           ? request.siteId
           : foundOutpost(world, content, request.cell, request.name);
       embark(world, content, siteId);
+      // The copy sent back carries the map as it stands now.
+      sentVersion = world.activeSite?.layoutVersion ?? -1;
       scope.postMessage({ type: 'embarked', world });
     } else if (request.type === 'speed') {
       speed = request.daysPerSecond;
@@ -133,7 +144,7 @@ self.addEventListener('message', (event: MessageEvent<SiteRequest>) => {
           day: world.day,
           events: [],
           rate: 0,
-          snapshot: siteSnapshot(world),
+          snapshot: snapshotNow(world),
         });
       }
     } else if (request.type === 'run') {
@@ -142,7 +153,7 @@ self.addEventListener('message', (event: MessageEvent<SiteRequest>) => {
       for (let i = 0; i < request.days; i += 1) {
         for (const e of stepSite(world, content)) events.push(e);
       }
-      scope.postMessage({ type: 'ran', day: world.day, events, snapshot: siteSnapshot(world) });
+      scope.postMessage({ type: 'ran', day: world.day, events, snapshot: snapshotNow(world) });
     } else {
       if (!world || !content) throw new Error('No site is being watched.');
       stop();

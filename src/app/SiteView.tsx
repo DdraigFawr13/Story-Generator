@@ -50,6 +50,7 @@ import {
   clampViewport,
   formatSelection,
   movePeople,
+  refreshLayout,
   parseSelection,
   selectionRect,
   tileAtPoint,
@@ -390,6 +391,11 @@ export function SiteView(props: Props) {
         // The worker owns the running world; this copy mirrors it from the snapshots.
         applySiteSnapshot(world, snapshot);
         base.clock.day = snapshot.day;
+        // A building went up or the map changed: rebuild the scene's lookups and redraw the layers.
+        if (snapshot.map) {
+          refreshLayout(model.scene, world, content.site);
+          renderer.current?.refreshLayout();
+        }
         const before = new Map<Id, number>();
         for (const mark of model.scene.marks.values()) before.set(mark.id, mark.k);
         movePeople(model.scene, world);

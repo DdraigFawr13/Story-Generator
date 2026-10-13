@@ -54,7 +54,8 @@ export interface PersonDetail {
   stress: number;
   memories: Memory[];
   relationships: Map<Id, Relationship>;
-  jobId?: string;
+  /** M3.3: the steward's assignment for the day; undefined when idle (set, never deleted, so records keep one shape). */
+  jobId?: string | undefined;
   pos?: [number, number];
   /** M3.2: what they did in the last block run, and where (a building id, or null outdoors). */
   activity?: Activity;
@@ -66,9 +67,9 @@ export interface PersonDetail {
   /** Need id → last day something restored it, for "no work for 3 days" lines. */
   lastMet?: Record<string, number>;
   /** A small child's carer this block: they go where the carer goes. */
-  with?: Id;
+  with?: Id | undefined;
   /** A running breakdown: despair and wandering last days, tantrum and theft one block. */
-  breakdown?: { kind: BreakdownKind; untilDay: number; eventId: Id };
+  breakdown?: { kind: BreakdownKind; untilDay: number; eventId: Id } | undefined;
 }
 
 /** One term of a person's mood: a low need, a memory or a trait. */
@@ -492,6 +493,12 @@ export interface Building {
   h: number;
   /** False for homes of counted (unfollowed) households. */
   followed: boolean;
+  /** M3.3: builder-blocks done while it is being raised; absent once complete. */
+  progress?: number;
+  /** Materials hauled to it so far, by item id. */
+  delivered?: Record<string, number>;
+  /** The event that began its raising, for the "finished" cause link. */
+  begunEvent?: Id;
 }
 
 /** The live site (M3.1): its map, the people followed and what they own. */
@@ -504,12 +511,13 @@ export interface ActiveSite {
   promoted: Id[];
   households: Map<Id, Household>;
   buildings: Map<Id, Building>;
-  /** Good id → count. */
+  /** Item id → count (M3.3); food is counted in meals. */
   stock: Map<string, number>;
   /** Share of the site's people followed (1 when all). */
   share: number;
   /** Site goods when watching began, for exact demotion. */
   goodsAtEntry: Goods;
+  /** World good → amount the item stock was worth at embark (followed share only). */
   stockAtEntry: Record<string, number>;
   /** Tile the layout grew from (the village green). */
   origin: [number, number];
@@ -517,6 +525,12 @@ export interface ActiveSite {
   block: number;
   /** The open `stores_empty` event while the stores are bare, for cause links; null once refilled. */
   storesEmptyEvent: Id | null;
+  /** M3.3: bumped whenever buildings or map tiles change, so views and caches know to refresh. */
+  layoutVersion: number;
+  /** World items held by residents at embark → their holder then (they go back on demotion). */
+  itemsAtEntry: [Id, Id | null][];
+  /** The steward's top priority last announced; null until the first day. */
+  stewardFocus: string | null;
 }
 
 export interface WorldState {

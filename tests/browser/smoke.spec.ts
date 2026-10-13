@@ -182,10 +182,13 @@ test('a site can be watched: embark, play, inspect a person and return to the ma
   await first.click();
   await expect(page.getByRole('tab', { name: 'Inspect' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.sv-root .pane h3')).toHaveText(name!);
+  // M3.3: every person has a Work fact, whatever their job.
+  await expect(page.locator('.sv-root .pane .facts dt', { hasText: /^Work$/ })).toBeVisible();
 
   // "Open in Legends" for the site this view was entered from still adds a history entry, so
   // Back returns to the site.
   await page.getByRole('tab', { name: /^Site/ }).click();
+  await expect(page.locator('.sv-root .pane .sect', { hasText: /^Work$/ })).toBeVisible();
   await page.getByRole('button', { name: 'Open in Legends' }).click();
   await expect(page.getByRole('region', { name: 'Legends' })).toBeVisible();
   await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });

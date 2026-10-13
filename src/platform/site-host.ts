@@ -34,6 +34,7 @@ export interface SiteHostHandlers {
 export function siteContentOf(content: SiteContent): SiteContent {
   const { biomes, resources, races, cultures, eventTypes, settlement, site } = content;
   const { history, needs, traits, memories, life } = content;
+  const { abilities, items, jobs, steward } = content;
   return {
     biomes,
     resources,
@@ -47,6 +48,10 @@ export function siteContentOf(content: SiteContent): SiteContent {
     traits,
     memories,
     life,
+    abilities,
+    items,
+    jobs,
+    steward,
   };
 }
 

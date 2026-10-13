@@ -219,6 +219,10 @@ export interface ContentBundle {
   traits: TraitDef[];
   memories: MemoryDef[];
   life: LifeRules;
+  /** Work, items and the steward (M3.3): what people make, from what, and who is sent where. */
+  items: ItemDef[];
+  jobs: JobDef[];
+  steward: StewardRules;
 }
 
 /** The four blocks of a site day (M3.2), in the order they run. */
@@ -307,10 +311,7 @@ export interface LifeRules {
   restDayAfternoon: { faithful: Activity; others: Activity };
   /** Food eaten per meal, as a share of the race's yearly food need. */
   mealShare: number;
-  /**
-   * Work output by age band (children 0). Until M3.3 brings jobs, field work brings in the site's
-   * normal-year history harvest, spread over the expected work blocks by these weights.
-   */
+  /** Work output by age band: children 0, elders part of a day. */
   workOutput: Record<'child' | 'adult' | 'elder', number>;
   warmth: {
     /** Month (0-11) of the coldest day; the warmest is six months on. */
@@ -356,6 +357,10 @@ export interface LifeRules {
     sawDespair: string;
     kinWandered: string;
     sawTheft: string;
+    /** M3.3: a cooked meal eaten, a cursed heirloom held, a neighbour's treasure envied. */
+    ateWell: string;
+    cursed: string;
+    envied: string;
   };
   /** Walking cost a person spends in one block; a longer route ends part way. */
   walkPerBlock: number;
@@ -363,6 +368,8 @@ export interface LifeRules {
   pathBudget: number;
   /** Routes kept in the path cache. */
   pathCache: number;
+  /** A* weights its distance estimate by this: above 1 trades a slightly longer route for far fewer tiles searched. */
+  pathWeight: number;
   /** Walking cost per tile by terrain id; trees and minerals add theirs. Water and walls block. */
   walkCost: Record<string, number>;
   treeCost: number;
@@ -374,6 +381,190 @@ export interface LifeRules {
     theft: string;
     returned: string;
     storesEmpty: string;
+  };
+}
+
+/** A building's footprint (tiles) and, where people raise it, what it takes (M3.3). */
+export interface BuildingDef extends SiteGlyphDef {
+  w: number;
+  h: number;
+  /** Builder-blocks at effectiveness 1 to raise it, or to restore it from nothing. */
+  work?: number;
+  /** Items consumed while it is raised, by item id. */
+  cost?: Record<string, number>;
+  /** The steward may order it. */
+  buildable?: boolean;
+}
+
+export type ItemEffect =
+  | { kind: 'attribute'; attribute: keyof Attributes; bonus: number }
+  /** Known while held, only if its requirements are met on effective attributes and power. */
+  | { kind: 'ability'; abilityId: string }
+  /** Weapon hits; used from M3.8, shown now. */
+  | { kind: 'combat'; value: number }
+  /** Capped: see `effectivePower`. */
+  | { kind: 'power'; bonus: number };
+export type ItemDownside = 'envy' | 'theftDraw' | 'curse';
+
+/** Something a site holds in stock or a notable carries (M3.3). */
+export interface ItemDef {
+  id: string;
+  /** The display word: "grain", "tools". */
+  name: string;
+  /** Demotion sums count × per into this world good. */
+  good: GoodId;
+  /** World-good units per item. */
+  per: number;
+  kind: 'food' | 'material' | 'tool' | 'goods' | 'artifact' | 'book';
+  /** Food eaten as a cooked meal (the ate-well memory). */
+  cooked?: boolean;
+  /** Artifacts and books: the world `Item.form` values this entry covers. */
+  forms?: string[];
+  effects?: ItemEffect[];
+  downsides?: ItemDownside[];
+}
+
+export type Workplace =
+  | 'field'
+  | 'trees'
+  | 'water'
+  | 'stone'
+  | 'ore'
+  | 'wild'
+  | 'workshop'
+  | 'kitchen'
+  | 'construction'
+  | 'herbs';
+
+/** A kind of work the steward hands out (M3.3). */
+export interface JobDef {
+  id: string;
+  name: string;
+  /** The person's trade word: "farmer". */
+  worker: string;
+  /** Ability id; hauling has none. */
+  skill?: string;
+  /** Hard gate (R-25) on effective attributes. */
+  requirements: Partial<Attributes>;
+  workplace: Workplace;
+  /** Items used per block at effectiveness 1. */
+  inputs?: Record<string, number>;
+  /** Items of `inputs` that stay in stock: the job stops rather than use them. */
+  reserve?: Record<string, number>;
+  /** Raw food items (grain first, then fish, game, berries) used per block at effectiveness 1. */
+  rawFood?: number;
+  /** Items made per block at effectiveness 1. */
+  outputs?: Record<string, number>;
+  /** Work at a building site: raise or repair a building, or carry materials to it. */
+  action?: 'build' | 'haul';
+  serves: 'food' | 'materials' | 'tools' | 'goods' | 'health' | 'shelter';
+  /** Elders are never given it. */
+  heavy?: boolean;
+  /** Output is multiplied by `toolBonus` while tools are in stock, and wears them. */
+  tools?: boolean;
+  /** Most workers per field (farming). */
+  perWorkplace?: number;
+  /** Trait ids whose bearers prefer it. */
+  likedBy?: string[];
+}
+
+/** How the steward sizes and fills the day's jobs, and how work teaches (M3.3). */
+export interface StewardRules {
+  /** Days of food the steward tries to keep in store. */
+  foodTargetDays: number;
+  /** Share of workers on food jobs at full stores and at empty stores. */
+  foodShare: [full: number, empty: number];
+  /** Eaters per cook. */
+  cooksPer: number;
+  /** Residents per healer. */
+  healersPer: number;
+  /** Tools wanted per tool-using worker. */
+  toolsPerWorker: number;
+  /** Output multiplier while tools are in stock. */
+  toolBonus: number;
+  /** Tools used up per tool-using block. */
+  toolWear: number;
+  /** Items the steward keeps in stock by felling and quarrying. */
+  materialTargets: Record<string, number>;
+  /** A building below this condition (0-100) is repaired. */
+  repairBelow: number;
+  /** A building loses 1 condition every this many days. */
+  conditionLossDays: number;
+  /** Condition restored per builder-block at effectiveness 1... */
+  repairPerBlock: number;
+  /** ...for these items. */
+  repairCost: Record<string, number>;
+  /** Added to a worker's score for keeping the job they had. */
+  stickiness: number;
+  /** Added for a job a trait of theirs prefers. */
+  likedBonus: number;
+  /** Extra purpose a worker with a liked job gains per work block. */
+  likedPurpose: number;
+  /** Skill gained per work block at attributes 10, before the slowdown near potential. */
+  learnRate: number;
+  /** Learning speed multiplier beside a teacher. */
+  teacherBonus: number;
+  /** A teacher's skill must lead the learner's by this much. */
+  teacherGap: number;
+  /** Below this mood people work slower, by `moodSlow`. */
+  moodSlowBelow: number;
+  moodSlow: number;
+  /** Skill at which a level word is earned. */
+  skillLevels: [skill: number, word: string][];
+  /** Skill at embark: base plus per-year worked since maturity, farming and one trade. */
+  startSkill: Record<'farming' | 'trade', { base: number; perYear: number }>;
+  /** Material items a hauler carries to a building site per block. */
+  haulPerBlock: number;
+  /** A household with more members than this wants a new home. */
+  crowdedHome: number;
+  /** A worker is sent to one of this many workplace tiles nearest the origin. */
+  workSpread: number;
+  /** Wild and herb tiles are at least this far (tiles) from the origin. */
+  wildFrom: number;
+  /** Jobs are drawn up again at least this often even if nothing changed (days). */
+  replanDays: number;
+  /** Builders on an open construction or a repair. */
+  builders: number;
+  /** Crafters on tools, and fellers and quarriers each, while stocks are low. */
+  crafters: number;
+  /** Residents per craftsman making wares with spare hands. */
+  waresPer: number;
+  /** Spare hands gather food only below this many days of stores. */
+  spareFoodDays: number;
+  /** Most miners. */
+  miners: number;
+  /** The item each world good becomes when a site is entered (and counts back into on leaving). */
+  startItems: Record<GoodId, string>;
+  /** The first ring (tiles from the origin) and padding a new building may take. */
+  buildRing: number;
+  buildPad: number;
+  /** The buildings the steward raises. */
+  homeBuilding: string;
+  workshopBuilding: string;
+  /** The job ids that fill each role the steward plans for. */
+  roles: Record<
+    | 'farm'
+    | 'cook'
+    | 'forage'
+    | 'fish'
+    | 'hunt'
+    | 'build'
+    | 'haul'
+    | 'mine'
+    | 'craftTools'
+    | 'craftWares'
+    | 'heal',
+    string
+  >;
+  /** Trait whose bearers envy a neighbour's treasure. */
+  envyTrait: string;
+  /** Event type ids the steward emits. */
+  events: {
+    buildBegun: string;
+    built: string;
+    skilled: string;
+    foodShort: string;
+    itemStolen: string;
   };
 }
 
@@ -408,7 +599,7 @@ export interface SiteRules {
   trees: SiteGlyphDef[];
   /** Index = `LocalMap.mineral` value. */
   minerals: SiteGlyphDef[];
-  buildings: (SiteGlyphDef & { w: number; h: number })[];
+  buildings: BuildingDef[];
   /** Glyph drawn where a path crosses a river. */
   bridgeGlyph: string;
   outpost: {

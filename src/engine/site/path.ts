@@ -16,6 +16,8 @@ interface PathCache {
   /** Cost to enter each tile; 0 blocks. */
   cost: Uint8Array;
   routes: Map<number, number[] | null>;
+  /** Running walking cost along a route, kept so a walk is found by binary search. */
+  sums: WeakMap<number[], Int32Array>;
   /** Scratch per search; `seen` and `closed` mark tiles by search number so nothing is cleared. */
   g: Float64Array;
   from: Int32Array;
@@ -26,9 +28,23 @@ interface PathCache {
   heap: number[];
   /** Nodes expanded since the site started (for tests and tuning). */
   expanded: number;
+  /** Tiles changed since the grid was built; null when it is current. */
+  changed: number[] | null;
 }
 
 const caches = new WeakMap<ActiveSite, PathCache>();
+
+/**
+ * Call after buildings or map tiles change. With the tiles that were blocked or made dearer, only
+ * the routes through them are dropped; without, everything is rebuilt. Tiles only made cheaper
+ * (a new path) pass an empty list: old routes still work.
+ */
+export function invalidatePaths(active: ActiveSite, changed?: readonly number[]): void {
+  const cache = caches.get(active);
+  if (!cache) return;
+  if (changed) cache.changed = [...(cache.changed ?? []), ...changed];
+  else caches.delete(active);
+}
 
 /** The door tile of a home or hall: the middle of its bottom edge (layout.ts carves paths from it). */
 export function doorOf(b: Pick<Building, 'x' | 'y' | 'w' | 'h'>): [number, number] {
@@ -65,6 +81,7 @@ function cacheOf(active: ActiveSite, rules: SiteRules, life: LifeRules): PathCac
     cache = {
       cost: buildCost(active.map, active.buildings.values(), rules, life),
       routes: new Map(),
+      sums: new WeakMap(),
       g: new Float64Array(n),
       from: new Int32Array(n),
       seen: new Int32Array(n),
@@ -72,13 +89,61 @@ function cacheOf(active: ActiveSite, rules: SiteRules, life: LifeRules): PathCac
       search: 0,
       heap: [],
       expanded: 0,
+      changed: null,
     };
     caches.set(active, cache);
+  } else if (cache.changed) {
+    // Rebuild the cost grid and drop only the routes the change can have broken.
+    const changed = new Set(cache.changed);
+    cache.cost = buildCost(active.map, active.buildings.values(), rules, life);
+    cache.changed = null;
+    cache.sums = new WeakMap();
+    for (const [key, route] of cache.routes) {
+      if (route === null || route.some((k) => changed.has(k))) cache.routes.delete(key);
+    }
   }
   return cache;
 }
 
 /** Cost to enter tile `k` (0 = blocked). */
+/**
+ * The last tile of `route` reachable within `limit` walking cost (each step costs its tile's cost,
+ * at least 1), or -1 when not even the first step is.
+ */
+export function walkAlong(
+  active: ActiveSite,
+  rules: SiteRules,
+  life: LifeRules,
+  route: number[],
+  limit: number,
+): number {
+  const c = cacheOf(active, rules, life);
+  let sums = c.sums.get(route);
+  if (!sums) {
+    sums = new Int32Array(route.length);
+    let total = 0;
+    for (let i = 0; i < route.length; i += 1) {
+      total += Math.max(1, c.cost[route[i]!]!);
+      sums[i] = total;
+    }
+    c.sums.set(route, sums);
+  }
+  let lo = 0;
+  let hi = route.length;
+  // The first index whose running cost passes the limit.
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (sums[mid]! > limit) hi = mid;
+    else lo = mid + 1;
+  }
+  return lo === 0 ? -1 : route[lo - 1]!;
+}
+
+/** The whole cost grid (0 blocks); read it, do not write it. */
+export function pathCosts(active: ActiveSite, rules: SiteRules, life: LifeRules): Uint8Array {
+  return cacheOf(active, rules, life).cost;
+}
+
 export function tileCost(active: ActiveSite, rules: SiteRules, life: LifeRules, k: number) {
   return cacheOf(active, rules, life).cost[k]!;
 }
@@ -176,11 +241,12 @@ export function findRoute(
   if (c.cost[to] === BLOCKED) return null;
   c.search += 1;
   const { search, heap, cost, g, seen, closed } = c;
+  const weight = life.pathWeight;
   const tx = to % width;
   const ty = (to - tx) / width;
   const h = (k: number) => {
     const x = k % width;
-    return Math.abs(x - tx) + Math.abs((k - x) / width - ty);
+    return weight * (Math.abs(x - tx) + Math.abs((k - x) / width - ty));
   };
   heap.length = 0;
   g[from] = 0;
