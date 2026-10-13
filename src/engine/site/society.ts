@@ -311,7 +311,7 @@ function pilfer(env: SocialEnv, culture: CultureDef | undefined): void {
 // ---- Judgement ----
 
 /** The nearest other live site, preferring the same civ; null if there is none. */
-function refuge(world: WorldState, active: ActiveSite): Site | null {
+export function refuge(world: WorldState, active: ActiveSite): Site | null {
   const from = world.sites.get(active.siteId);
   if (!from) return null;
   const width = world.params.width;
@@ -356,23 +356,11 @@ function amends(env: SocialEnv, offender: Person, victim: Person, cause: Id): vo
   shiftOpinion(env, victim, offender, env.content.society.justice.amends, cause, false);
 }
 
-/** Sends the offender (and the young children with no other parent here) to another site. */
-function exile(env: SocialEnv, offender: Person, dest: Site, judged: SimEvent): void {
+/** Moves people out of the watched site to another site's counts (they carry on there). */
+export function relocate(env: SocialEnv, people: readonly Person[], dest: Site): void {
   const { world, content, active } = env;
-  const leavers = [
-    offender,
-    ...offender.family.children
-      .map((id) => world.people.get(id))
-      .filter(here)
-      .filter(
-        (c) =>
-          ageOf(world, active, c) < content.races.find((r) => r.id === c.raceId)!.maturityYears &&
-          c.family.parents.every((id) => id === offender.id || !here(world.people.get(id))),
-      ),
-  ];
-  const gone = new Set(leavers.map((p) => p.id));
-  const kin = kinHere(world, offender).filter((q) => !gone.has(q.id));
-  for (const p of leavers) {
+  const gone = new Set(people.map((p) => p.id));
+  for (const p of people) {
     const race = content.races.find((r) => r.id === p.raceId)!;
     const band = bandOfAge(race, ageOf(world, active, p));
     const key = `${p.raceId}|${p.cultureId}|${band}`;
@@ -391,6 +379,25 @@ function exile(env: SocialEnv, offender: Person, dest: Site, judged: SimEvent): 
   active.promoted = active.promoted.filter((id) => !gone.has(id));
   active.peopleVersion += 1;
   refreshWork(content, active);
+}
+
+/** Sends the offender (and the young children with no other parent here) to another site. */
+function exile(env: SocialEnv, offender: Person, dest: Site, judged: SimEvent): void {
+  const { world, content, active } = env;
+  const leavers = [
+    offender,
+    ...offender.family.children
+      .map((id) => world.people.get(id))
+      .filter(here)
+      .filter(
+        (c) =>
+          ageOf(world, active, c) < content.races.find((r) => r.id === c.raceId)!.maturityYears &&
+          c.family.parents.every((id) => id === offender.id || !here(world.people.get(id))),
+      ),
+  ];
+  const gone = new Set(leavers.map((p) => p.id));
+  const kin = kinHere(world, offender).filter((q) => !gone.has(q.id));
+  relocate(env, leavers, dest);
   env.emit({
     type: content.society.events.exiled,
     actors: leavers.map((p) => p.id),

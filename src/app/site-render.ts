@@ -329,11 +329,61 @@ export interface LiveLayers {
   burnt: Set<number>;
   fire: Set<number>;
   animals: { x: number; y: number; glyph: string }[];
+  /** M3.8: the attackers on the map (a few glyphs and a label) and where the fled gathered. */
+  threat: ThreatMark | null;
+}
+
+/** The attackers as drawn: one glyph for a beast, up to `RAIDER_GLYPHS` for a band, and a few words. */
+export interface ThreatMark {
+  glyph: string;
+  at: { x: number; y: number }[];
+  label: string;
+  camp: { x: number; y: number; label: string } | null;
+}
+
+/** A band shows at most this many raider glyphs, however many came (calm: the label carries the count). */
+const RAIDER_GLYPHS = 5;
+/** Where the raider glyphs stand around the band's tile. */
+const BAND_SPOTS: [number, number][] = [
+  [0, 0],
+  [1, 0],
+  [0, 1],
+  [-1, 0],
+  [0, -1],
+];
+
+/** The threat as the map shows it; nothing while it is only a warning sign. */
+export function threatMark(
+  active: ActiveSite,
+  siteName: (id: Id) => string | undefined,
+): ThreatMark | null {
+  const threat = active.threat;
+  if (!threat) return null;
+  const width = active.map.width;
+  const camp =
+    threat.fled && threat.camp !== undefined
+      ? {
+          x: threat.camp % width,
+          y: Math.floor(threat.camp / width),
+          label: `Fled toward ${(threat.refugeId === undefined ? undefined : siteName(threat.refugeId)) ?? 'safety'} · ${active.residents.length}`,
+        }
+      : null;
+  // Only a warning, or gone from the map: at most the fled's camp shows.
+  if (threat.stage === 'warned' || threat.tile < 0) {
+    return camp ? { glyph: '', at: [], label: '', camp } : null;
+  }
+  const x = threat.tile % width;
+  const y = Math.floor(threat.tile / width);
+  const shown = threat.kind === 'raid' ? Math.min(RAIDER_GLYPHS, threat.count) : 1;
+  const at = BAND_SPOTS.slice(0, shown).map(([dx, dy]) => ({ x: x + dx, y: y + dy }));
+  const label = threat.kind === 'raid' ? `${cap(threat.name)} · ${threat.count}` : cap(threat.name);
+  return { glyph: threat.glyph, at, label, camp };
 }
 
 export function liveLayers(
   active: ActiveSite,
   animalGlyphs: ReadonlyMap<string, string>,
+  siteName: (id: Id) => string | undefined = () => undefined,
 ): LiveLayers {
   const fields: LiveLayers['fields'] = [];
   const burnt = new Set<number>();
@@ -355,12 +405,19 @@ export function liveLayers(
       y: a.y,
       glyph: animalGlyphs.get(a.kind) ?? '?',
     })),
+    threat: threatMark(active, siteName),
   };
 }
 
 /** Re-reads the moving parts after a snapshot, in place. */
 export function refreshLive(scene: Scene, world: WorldState): void {
-  if (world.activeSite) scene.live = liveLayers(world.activeSite, scene.animalGlyphs);
+  if (world.activeSite) {
+    scene.live = liveLayers(
+      world.activeSite,
+      scene.animalGlyphs,
+      (id) => world.sites.get(id)?.name,
+    );
+  }
 }
 
 // ---- people ----
@@ -509,7 +566,7 @@ export function buildScene(
     countedCentre: centre,
     jarl,
     quarter: quarterOf(buildings),
-    live: liveLayers(active, glyphs),
+    live: liveLayers(active, glyphs, (id) => world.sites.get(id)?.name),
     animalGlyphs: glyphs,
   };
 }
@@ -633,6 +690,8 @@ export const TOKENS = [
   't-burnt',
   't-burnt-ink',
   't-animal',
+  't-threat',
+  't-threat-ink',
   't-path',
   't-path-ink',
   't-floor',
@@ -1007,7 +1066,8 @@ export class SiteRenderer {
       t.globalAlpha = 1;
       t.font = `600 ${Math.max(11, Math.round(s * 0.55))}px system-ui, sans-serif`;
       for (const b of scene.buildings) {
-        if (b.defId === 'home' || b.defId === 'field') continue;
+        // Homes, fields and wall segments go unlabelled (a wall line would repeat its name per tile).
+        if (b.defId === 'home' || b.defId === 'field' || b.defId === 'wall') continue;
         const label = buildingLabel(scene.rules, b.defId, scene.jarl);
         const sx = (b.x + b.w / 2) * s;
         const sy = (b.y - 0.15) * s;
@@ -1125,6 +1185,61 @@ export class SiteRenderer {
         const [sx, sy] = tileToScreen(a.x, a.y, view, s, vw, vh);
         ctx.fillText(a.glyph, sx + s / 2, sy + s / 2 + 1);
       }
+    }
+  }
+
+  /**
+   * M3.8: the attackers, over the people so they are never hidden: a filled tile with a bold
+   * glyph each (no animation; they only step from block to block), one label beside them, and the
+   * fled's gathering place named. Drawn at every zoom: a threat is the story while it lasts.
+   */
+  private paintThreat(ctx: CanvasRenderingContext2D): void {
+    const mark = this.scene.live.threat;
+    if (!mark) return;
+    const { colors: C, state, vw, vh } = this;
+    const s = this.scale;
+    const { view } = state;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `700 ${Math.max(9, Math.round(s * 0.85))}px ui-monospace, Menlo, Consolas, monospace`;
+    for (const { x, y } of mark.at) {
+      const [sx, sy] = tileToScreen(x, y, view, s, vw, vh);
+      const r = Math.max(3, s * 0.55);
+      ctx.beginPath();
+      ctx.arc(sx + s / 2, sy + s / 2, r, 0, Math.PI * 2);
+      ctx.fillStyle = C['t-threat'];
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = C.panel;
+      ctx.stroke();
+      if (s >= 6) {
+        ctx.fillStyle = C['t-threat-ink'];
+        ctx.fillText(mark.glyph, sx + s / 2, sy + s / 2 + 1);
+      }
+    }
+    const top = mark.at.reduce(
+      (best, p) => (p.y < best.y ? p : best),
+      mark.at[0] ?? { x: 0, y: 0 },
+    );
+    // Labels stay inside the canvas: the attackers often stand at the map's edge.
+    const inside = (text: string, sx: number) => {
+      ctx.font = '600 12px system-ui, sans-serif';
+      const half = ctx.measureText(text).width / 2 + 4;
+      return Math.min(Math.max(sx, half), vw - half);
+    };
+    if (mark.at.length > 0) {
+      const [sx, sy] = tileToScreen(top.x, top.y, view, s, vw, vh);
+      const bottom = mark.at.reduce((best, p) => (p.y > best.y ? p : best), top);
+      // Above the band, or below it when the band stands at the top of the view.
+      const above = sy - Math.max(4, s * 0.2);
+      const below = tileToScreen(bottom.x, bottom.y, view, s, vw, vh)[1] + s + 14;
+      this.label(ctx, mark.label, inside(mark.label, sx + s / 2), above < 16 ? below : above);
+    }
+    if (mark.camp) {
+      const [sx, sy] = tileToScreen(mark.camp.x, mark.camp.y, view, s, vw, vh);
+      const text = mark.camp.label;
+      const above = sy - Math.max(4, s * 0.8);
+      this.label(ctx, text, inside(text, sx + s / 2), above < 16 ? sy + s + 14 : above);
     }
   }
 
@@ -1264,6 +1379,7 @@ export class SiteRenderer {
       }
       this.draw();
     } else this.tween = null;
+    this.paintThreat(ctx);
     // Names for the selected and the hovered person.
     if (!whole) {
       const named = new Set<Id>();

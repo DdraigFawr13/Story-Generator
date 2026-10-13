@@ -59,7 +59,7 @@ import {
   tileAtPoint,
   type Selection,
 } from './site-render';
-import { NARROW_PX, fireLine, shortDate, weatherChip } from './site-season';
+import { NARROW_PX, fireLine, shortDate, threatLine, weatherChip } from './site-season';
 import './site-view.css';
 
 /** The part of a link the site view writes back. */
@@ -108,7 +108,7 @@ const SPEEDS: [SiteSpeed, string, string][] = [
   [4, '4×', '4 days a second (3)'],
   [16, '16×', '16 days a second (4)'],
 ];
-const PAUSE_CATEGORIES = ['deaths', 'breakdowns', 'fires', 'raids', 'arrivals'] as const;
+const PAUSE_CATEGORIES = ['deaths', 'breakdowns', 'fires', 'threats', 'arrivals'] as const;
 type PauseCategory = (typeof PAUSE_CATEGORIES)[number];
 /** Zoom step a selection centres to, and the step "Show on map" raises to. */
 const SELECT_ZOOM = 2;
@@ -153,6 +153,8 @@ interface Banner {
   text: string;
   /** The event started a fire: the banner follows the fight. */
   fire: boolean;
+  /** M3.8: the event was a threat's: the banner follows the danger. */
+  threat: boolean;
   causes: { word: string; text: string }[];
 }
 
@@ -206,6 +208,8 @@ export function SiteView(props: Props) {
   const [banner, setBanner] = useState<Banner | null>(null);
   const [whyOpen, setWhyOpen] = useState(false);
   const [pauseOn, setPauseOn] = useState<ReadonlySet<PauseCategory>>(new Set(PAUSE_CATEGORIES));
+  /** On a phone the pause chips fold behind a button so the map keeps the screen. */
+  const [chipsOpen, setChipsOpen] = useState(false);
   const [keyOpen, setKeyOpen] = useState(false);
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -398,7 +402,12 @@ export function SiteView(props: Props) {
       resumeSpeed.current = next;
       setBanner(null);
     }
-    host.setSpeed(next);
+    // The worker stops on the very block of an auto-pause event, so the map shows that moment.
+    const on = latest.current.pauseOn;
+    host.setSpeed(
+      next,
+      PAUSE_CATEGORIES.filter((c) => on.has(c)).flatMap((c) => content.site.autoPause[c]),
+    );
   };
   const resume = () => setSpeed(resumeSpeed.current || 1);
   const latest = useRef({ speed, pauseOn, m, setSpeed });
@@ -440,7 +449,13 @@ export function SiteView(props: Props) {
         }, INDEX_REBUILD_MS);
       }
       setLive((lines) => [...lines, ...events.map((e) => ({ day: e.day, eventId: e.id }))]);
-      for (const event of events) {
+      // A threat's own line wins the banner over a death in the same block: its count names the dead.
+      const threatFirst = [...events].sort(
+        (x, y) =>
+          Number(!content.site.autoPause.threats.includes(x.type)) -
+          Number(!content.site.autoPause.threats.includes(y.type)),
+      );
+      for (const event of threatFirst) {
         const category = PAUSE_CATEGORIES.find(
           (c) => content.site.autoPause[c].includes(event.type) && on.has(c),
         );
@@ -458,6 +473,7 @@ export function SiteView(props: Props) {
           eventId: event.id,
           text: props.narrator.renderEvent(event),
           fire: category === 'fires',
+          threat: category === 'threats',
           causes,
         });
         setWhyOpen(false);
@@ -477,6 +493,22 @@ export function SiteView(props: Props) {
               r.draw();
             }
           }
+        } else if (category === 'threats') {
+          // M3.8: a threat has no one to select: cut (no pan) to the attackers, or to where the
+          // people gathered if they fled, centred in the part of the map the banner leaves clear.
+          const mark = model.scene.live.threat;
+          const spot = mark?.at[0] ?? mark?.camp;
+          const r = renderer.current;
+          // After the banner has rendered, so its height is known.
+          if (spot && r)
+            window.requestAnimationFrame(() => {
+              if (r.state.view.z < SELECT_ZOOM) r.state.view.z = SELECT_ZOOM;
+              const below = (bannerRef.current?.offsetHeight ?? 0) / 2 / r.scale;
+              r.state.view.cx = spot.x + 0.5;
+              r.state.view.cy = spot.y + 0.5 - below;
+              r.clamp();
+              r.draw();
+            });
         }
         break;
       }
@@ -742,6 +774,12 @@ export function SiteView(props: Props) {
 
   // A fire banner says who is fighting it and with what water, read from the live state.
   const fire = banner?.fire ? fireLine({ world, active, content }) : null;
+  // A threat banner says who stands to arms and how the fight goes (M3.8).
+  // The fight's running count shows under any banner while attackers are on the map (a death in it too).
+  const danger =
+    banner?.threat || (banner && active.threat && active.threat.stage !== 'warned')
+      ? threatLine({ world, active, content })
+      : null;
 
   // On a phone the Key sits beside the speed buttons, so the date and both chips share one row.
   const keyButton = (
@@ -782,8 +820,17 @@ export function SiteView(props: Props) {
           <button type="button" className="primary" onClick={resume}>
             Resume (Space)
           </button>
+          <button
+            type="button"
+            className="chipfold"
+            aria-expanded={chipsOpen}
+            onClick={() => setChipsOpen((o) => !o)}
+          >
+            Pause on…
+          </button>
         </div>
         {fire && <div className="spread">{fire}</div>}
+        {danger && <div className="spread">{danger}</div>}
         {whyOpen && (
           <div className="why">
             {banner.causes.map((c, k) => (
@@ -793,7 +840,7 @@ export function SiteView(props: Props) {
             ))}
           </div>
         )}
-        <div className="chips" role="group" aria-label="Pause on">
+        <div className={`chips${chipsOpen ? '' : ' folded'}`} role="group" aria-label="Pause on">
           <span className="lbl">Pause on:</span>
           {PAUSE_CATEGORIES.map((c) => (
             <button
@@ -1161,6 +1208,7 @@ const KEY_TILES: [string, string, string, string][] = [
   ['t-snow', '', 't-grass-ink', 'snow on open ground'],
   ['t-fire', '▲', 't-fire-ink', 'fire'],
   ['t-burnt', '#', 't-burnt-ink', 'burnt ground'],
+  ['t-threat', 'x', 't-threat-ink', 'raiders or a beast (red disc)'],
   ['t-path', '·', 't-path-ink', 'path'],
 ];
 const KEY_BUILDINGS: [string, string, string, string, string?][] = [

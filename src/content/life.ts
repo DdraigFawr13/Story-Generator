@@ -33,6 +33,11 @@ export const NEEDS: NeedDef[] = [
       steal: 10,
       // Fighters at the well or river drink as they go.
       fight: 15,
+      // Threats (M3.8): the people at arms drink at the well, those sheltering at home have a jug,
+      // those on the road find streams.
+      defend: 15,
+      shelter: 15,
+      flee: 25,
     },
     awayShare: 1,
     lowAt: 30,
@@ -44,7 +49,8 @@ export const NEEDS: NeedDef[] = [
     id: 'rest',
     name: 'Rest',
     decayPerDay: 40,
-    restore: { sleep: 70, despair: 15 },
+    // Sheltering indoors is half a night's rest; defending drains it instead (THREATS.combat.defendRest).
+    restore: { sleep: 70, despair: 15, shelter: 35 },
     // Sleeping rough rests half as well.
     awayShare: 0.5,
     lowAt: 30,
@@ -57,7 +63,7 @@ export const NEEDS: NeedDef[] = [
     name: 'Warmth',
     // Decay comes from the day's temperature (LIFE.warmth), not a fixed rate.
     decayPerDay: 0,
-    restore: { sleep: 50, eat: 20, despair: 20 },
+    restore: { sleep: 50, eat: 20, despair: 20, shelter: 30 },
     // Only a roof and a hearth warm you.
     awayShare: 0,
     lowAt: 30,
@@ -68,9 +74,9 @@ export const NEEDS: NeedDef[] = [
   {
     id: 'safety',
     name: 'Safety',
-    // Threats arrive in M3.8; until then only nights away from home wear it down.
+    // Nights away from home wear it down (M3.8 adds attacks, which cost mood through memories).
     decayPerDay: 6,
-    restore: { sleep: 10 },
+    restore: { sleep: 10, shelter: 10 },
     awayShare: 0,
     lowAt: 30,
     moodAtZero: -15,
@@ -82,7 +88,16 @@ export const NEEDS: NeedDef[] = [
     name: 'Company',
     decayPerDay: 10,
     // The evening meal together is most people's company; a working day adds a little.
-    restore: { eat: 12, socialise: 12, play: 8, worship: 6, work: 3, fight: 3 },
+    restore: {
+      eat: 12,
+      socialise: 12,
+      play: 8,
+      worship: 6,
+      work: 3,
+      fight: 3,
+      defend: 3,
+      shelter: 8,
+    },
     awayShare: 1,
     needsCompany: true,
     lowAt: 30,
@@ -95,7 +110,7 @@ export const NEEDS: NeedDef[] = [
     name: 'Purpose',
     decayPerDay: 8,
     // Elders work one block and pass the afternoon in company, which also keeps them useful.
-    restore: { work: 6, play: 6, socialise: 6, fight: 6 },
+    restore: { work: 6, play: 6, socialise: 6, fight: 6, defend: 6 },
     awayShare: 1,
     lowAt: 30,
     moodAtZero: -12,

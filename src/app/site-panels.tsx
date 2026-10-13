@@ -54,7 +54,7 @@ import {
 } from '../engine';
 import { cap, roundedCount as count } from './format';
 import { plainClick, refName, type PageRef } from './legends-ctx';
-import { briefDate, fieldFacts, seasonRows, stewardLine } from './site-season';
+import { briefDate, fieldFacts, seasonRows, stewardLine, threatLine } from './site-season';
 import {
   buildPercent,
   buildScene,
@@ -635,6 +635,9 @@ const ACTIVITY_VERB: Record<Activity, string> = {
   wander: 'Wandered off',
   steal: 'Stealing',
   fight: 'Fighting the fire',
+  defend: 'Standing to arms',
+  shelter: 'Sheltering at home',
+  flee: 'Fled the town',
 };
 /** One word for the People list. */
 const ACTIVITY_SHORT: Record<Activity, string> = {
@@ -649,6 +652,9 @@ const ACTIVITY_SHORT: Record<Activity, string> = {
   wander: 'wandering',
   steal: 'stealing',
   fight: 'fighting fire',
+  defend: 'under arms',
+  shelter: 'sheltering',
+  flee: 'fled',
 };
 const BREAKDOWN_TEXT: Record<BreakdownKind, string> = {
   tantrum: 'A tantrum',
@@ -1752,6 +1758,22 @@ export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
           : 'snow lying'
         : weather.sky;
   const today = `${weather.tempC < 0 ? '−' : ''}${Math.abs(Math.round(weather.tempC))} °C`;
+  // M3.8: a threat coming or at the gates, named with its arrival (or first sign) and the live count.
+  const threat = m.active.threat;
+  const danger = threatLine({ world: m.world, active: m.active, content: m.content });
+  const dangerEvent = threat ? (threat.arriveEvent ?? threat.signEvent) : undefined;
+  // M3.8: walls the steward planned after an attack: standing, rising and still planned.
+  const wallsAfter = m.active.threats.wallsAfter;
+  const wallsEvent = wallsAfter === undefined ? undefined : eventOf(m, wallsAfter);
+  const wallId = m.content.threats.walls.building;
+  let wallsUp = 0;
+  let wallsRising = 0;
+  for (const b of m.active.buildings.values()) {
+    if (b.defId !== wallId) continue;
+    if (b.progress === undefined) wallsUp += 1;
+    else wallsRising += 1;
+  }
+  const wallsWaiting = m.active.threats.wallPlan.length;
   const season = seasonRows({ world, active, content });
   const steward = stewardLine({ world, active, content }, (id) => eventOf(m, id));
   const rulerName = m.ruler ? m.scene.marks.get(m.ruler.id)?.name : undefined;
@@ -1834,6 +1856,33 @@ export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
           {weather.wellLow && <span className="warnw"> · the well is low</span>}
           {weather.outdoorDark && <span className="empty"> · too dark for outdoor work</span>}
         </Fact>
+        {threat && danger && (
+          <Fact term="Danger">
+            {dangerEvent === undefined ? (
+              <span className="warnw">{threat.name}</span>
+            ) : (
+              <EventLink a={a} id={dangerEvent}>
+                {threat.name}
+              </EventLink>
+            )}
+            <span className="warnw">: {danger}</span>
+          </Fact>
+        )}
+        {wallsEvent && (
+          <Fact term="Walls">
+            {[
+              wallsUp > 0 && `${wallsUp} standing`,
+              wallsRising > 0 && `${wallsRising} rising`,
+              wallsWaiting > 0 && `${wallsWaiting} planned`,
+            ]
+              .filter(Boolean)
+              .join(', ') || 'none yet'}
+            , begun after{' '}
+            <EventLink a={a} id={wallsEvent.id}>
+              the attack of {briefDate(wallsEvent.day)}
+            </EventLink>
+          </Fact>
+        )}
       </Facts>
       <div className="sect" data-testid="season">
         Season{' '}

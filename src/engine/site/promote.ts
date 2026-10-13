@@ -22,6 +22,7 @@ import { blankEnvironment, initEnvironment } from './environment';
 import { layoutSite } from './layout';
 import { buildLocalMap } from './localmap';
 import { blankSociety } from './society';
+import { blankThreats } from './threats';
 import { goodAmount } from './stock';
 import { seedSkills } from './work';
 import { hash2 } from '../worldgen/noise';
@@ -488,6 +489,8 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
     popDelta: {},
     interactions: 0,
     society: blankSociety(),
+    threat: null,
+    threats: blankThreats(),
     ...blankEnvironment(year),
   };
   for (const good of GOODS) active.stockAtEntry[good] = goodAmount(active, content, good);

@@ -26,6 +26,12 @@ export function fillTemplate(template: string, vars: Record<string, string | num
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+/** A whole number of 1,000 or more with thousands commas (9128 -> "9,128"); others as they are. */
+export function grouped(n: number): string {
+  if (!Number.isInteger(n) || Math.abs(n) < 1000) return String(n);
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
 /**
  * The placeholder values for an event: `date`, `year` (history year), its data, and its actors
  * as `actor`, `actor2`, ... History events carry no real day, so `precision: 'year'` types print "Year N".
@@ -40,7 +46,8 @@ export function eventVars(
     date: def?.precision === 'year' ? `Year ${year}` : formatDate(event.day),
     year,
   };
-  for (const [key, value] of Object.entries(event.data)) vars[key] = String(value);
+  for (const [key, value] of Object.entries(event.data))
+    vars[key] = typeof value === 'number' && !/year/i.test(key) ? grouped(value) : String(value);
   event.actors.forEach((id, index) => {
     vars[index === 0 ? 'actor' : `actor${index + 1}`] = nameOf(id);
   });

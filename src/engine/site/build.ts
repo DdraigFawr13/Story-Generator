@@ -6,7 +6,7 @@ import { manhattan } from '../core/math';
 import type { EmitInput } from '../core/context';
 import type { StewardRules } from '../core/content-types';
 import type { ActiveSite, Building, Id, SimEvent } from '../core/types';
-import { buildingDef, type SiteContent } from './defs';
+import { buildingDef, siteCodes, type SiteContent } from './defs';
 import { carvePath, findSpot, stampBuilding } from './layout';
 import { invalidatePaths } from './path';
 
@@ -118,6 +118,54 @@ export function beginBuilding(
   return b;
 }
 
+/** True when the tile is free grass or scrub: no building, water or mineral. */
+export function buildableTile(content: SiteContent, active: ActiveSite, tile: number): boolean {
+  const map = active.map;
+  const code = siteCodes(content.site);
+  return (
+    map.building[tile] === 0 &&
+    map.water[tile] === 0 &&
+    map.mineral[tile] === 0 &&
+    (map.terrain[tile] === code.grass || map.terrain[tile] === code.scrub)
+  );
+}
+
+/**
+ * Stamps a new unfinished one-tile building at an exact tile (a wall segment, M3.8) and announces
+ * it. Returns null when the tile is not free grass or scrub.
+ */
+export function beginBuildingAt(
+  content: SiteContent,
+  active: ActiveSite,
+  defId: string,
+  tile: number,
+  emit: Emit,
+  label: SiteLabel,
+): Building | null {
+  const { site: rules, steward } = content;
+  const map = active.map;
+  if (!buildableTile(content, active, tile)) return null;
+  let id = 1;
+  for (const key of active.buildings.keys()) id = Math.max(id, key + 1);
+  const ground = map.terrain[tile]!;
+  const b = stampBuilding(map, rules, id, defId, tile % map.width, Math.floor(tile / map.width));
+  // The builders stand on the tile, so it blocks only once the wall is finished.
+  map.terrain[tile] = ground;
+  b.condition = 0;
+  b.progress = 0;
+  b.delivered = {};
+  const event = emit({
+    type: steward.events.buildBegun,
+    place: label.cell,
+    data: { site: label.name, building: buildingDef(rules, defId).name },
+  });
+  b.begunEvent = event.id;
+  active.buildings.set(id, b);
+  active.layoutVersion += 1;
+  invalidatePaths(active, b.cells);
+  return b;
+}
+
 /** The first burnt building not yet being raised again, by id: a home, workshop or other buildable. */
 export function burntBuilding(active: ActiveSite, buildable: (defId: string) => boolean) {
   let found: Building | undefined;
@@ -180,6 +228,13 @@ export function finishBuilding(
       household.home = b.id;
       if (rebuilt) delete household.lodgingHome;
     }
+  }
+  // A wall segment has no door to reach.
+  if (b.defId === 'wall') {
+    for (const k of b.cells) active.map.terrain[k] = siteCodes(rules).wall;
+    active.layoutVersion += 1;
+    invalidatePaths(active, b.cells);
+    return;
   }
   // A path from the door to the nearest path tile.
   const map = active.map;

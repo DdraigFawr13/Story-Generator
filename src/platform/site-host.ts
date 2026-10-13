@@ -15,7 +15,8 @@ export interface SiteHost {
     cell: number,
     name: string | null,
   ): Promise<WorldState>;
-  setSpeed(daysPerSecond: SiteSpeed): void;
+  /** `stopOn`: event types that stop the clock on the block that emits them (the auto-pause). */
+  setSpeed(daysPerSecond: SiteSpeed, stopOn?: readonly string[]): void;
   /** Runs `days` days at once and resolves with the new day, the events they emitted and the state after. */
   run(days: number): Promise<{ day: number; events: SimEvent[]; snapshot: SiteSnapshot }>;
   /** Demotes the site; resolves with the world as it stands, activeSite null. */
@@ -36,7 +37,7 @@ export function siteContentOf(content: SiteContent): SiteContent {
   const { history, needs, traits, memories, life } = content;
   const { abilities, items, jobs, steward, environment } = content;
   const { health, conditions, ailments, diseases } = content;
-  const { interactions, social, family, society } = content;
+  const { interactions, social, family, society, creatures, threats } = content;
   return {
     biomes,
     resources,
@@ -63,6 +64,8 @@ export function siteContentOf(content: SiteContent): SiteContent {
     social,
     family,
     society,
+    creatures,
+    threats,
   };
 }
 
@@ -127,8 +130,8 @@ export function createSiteHost(handlers: SiteHostHandlers): SiteHost {
         'embarked',
         worldOf,
       ),
-    setSpeed: (daysPerSecond) =>
-      worker?.postMessage({ type: 'speed', daysPerSecond } satisfies SiteRequest),
+    setSpeed: (daysPerSecond, stopOn = []) =>
+      worker?.postMessage({ type: 'speed', daysPerSecond, stopOn } satisfies SiteRequest),
     run(days) {
       if (!worker) return Promise.reject(new Error('No site is being watched.'));
       return request(worker, { type: 'run', days }, 'ran', (reply) => {

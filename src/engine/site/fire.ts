@@ -165,6 +165,47 @@ export function igniteDaily(
     }
   }
   if (!building && tile < 0) return null;
+  return startFire(world, content, active, building, tile, cause, causeEvent, emit, label);
+}
+
+/** A fire set deliberately (a dragon's breath, M3.8): the building at the tile, else the tile itself. */
+export function igniteTile(
+  world: WorldState,
+  content: SiteContent,
+  active: ActiveSite,
+  tile: number,
+  cause: string,
+  causeEvent: Id | null,
+  emit: Emit,
+  label: SiteLabel,
+): FireStart | null {
+  if (active.fire) return null;
+  const id = active.map.building[tile]!;
+  const building = id === 0 ? undefined : active.buildings.get(id);
+  return startFire(
+    world,
+    content,
+    active,
+    building,
+    building ? -1 : tile,
+    cause,
+    causeEvent,
+    emit,
+    label,
+  );
+}
+
+function startFire(
+  world: WorldState,
+  content: SiteContent,
+  active: ActiveSite,
+  building: Building | undefined,
+  tile: number,
+  cause: string,
+  causeEvent: Id | null,
+  emit: Emit,
+  label: SiteLabel,
+): FireStart {
   // A hearth fire takes the whole thatch at once; lightning starts at one tile.
   const burning = building && tile < 0 ? [...building.cells] : [tile];
   const start = building && tile < 0 ? building.cells[0]! : tile;

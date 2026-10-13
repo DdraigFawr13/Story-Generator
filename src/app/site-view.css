@@ -63,6 +63,8 @@
   --t-burnt: #3a322e;
   --t-burnt-ink: #beb6ac;
   --t-animal: #703a0a;
+  --t-threat: #8e1b1b;
+  --t-threat-ink: #fff3e6;
   --t-path: #d6c9ab;
   --t-path-ink: #6f5f3c;
   --t-floor: #f6eed8;
@@ -145,6 +147,8 @@
     --t-burnt: #1e1a19;
     --t-burnt-ink: #96928c;
     --t-animal: #ecc48c;
+    --t-threat: #e05a4a;
+    --t-threat-ink: #1a0d0b;
     --t-path: #3b3225;
     --t-path-ink: #aa9b78;
     --t-floor: #524d3b;
@@ -1212,6 +1216,21 @@
   .sv-root .bar .sub {
     display: none;
   }
+  /* M3.8: the map fills the screen down to the clock; the pause chips fold behind a button. */
+  .sv-root .mapbox {
+    aspect-ratio: auto;
+    height: max(300px, calc(100dvh - var(--timeh, 90px) - 150px));
+  }
+  .sv-root .banner .chipfold {
+    display: inline-block;
+  }
+  .sv-root .banner .chips.folded {
+    display: none;
+  }
+}
+.sv-root .banner .chipfold {
+  display: none;
+  font-size: 12px;
 }
 @media (prefers-reduced-motion: reduce) {
   .sv-root *,

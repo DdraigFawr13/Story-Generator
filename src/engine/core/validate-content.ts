@@ -105,6 +105,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...healthProblems(content));
   problems.push(...familyProblems(content));
   problems.push(...societyProblems(content));
+  problems.push(...threatsProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -872,6 +873,62 @@ export function societyProblems(content: ContentBundle): string[] {
     known('Society pilferTraits', 'trait', traits.has(id), id);
   for (const id of rules.crime.brawlWounds)
     known('Society brawlWounds', 'condition', conditions.has(id), id);
+  return problems;
+}
+
+/** Threat rules (M3.8): fractions in 0-1, signs for every great or legendary beast, known ids. */
+export function threatsProblems(content: ContentBundle): string[] {
+  const rules = content.threats;
+  if (!rules) return ['Content has no threats tables.'];
+  const problems: string[] = [];
+  const known = (where: string, what: string, ok: boolean, id: string) => {
+    if (!ok) problems.push(`${where}: unknown ${what} "${id}".`);
+  };
+  const fraction = (where: string, x: number) => {
+    if (!(x >= 0 && x <= 1)) problems.push(`${where} must be 0-1, not ${x}.`);
+  };
+  const biomes = new Set(content.biomes.map((b) => b.id));
+  const events = new Set(content.eventTypes.map((e) => e.id));
+  const memories = new Set(content.memories.map((m) => m.id));
+  const conditions = new Set(content.conditions.map((c) => c.id));
+  const buildings = new Set(content.site.buildings.map((b) => b.id));
+  fraction('Threats prowlers killShare', rules.prowlers.killShare);
+  for (const kind of rules.prowlers.kinds) {
+    for (const b of kind.biomes) known(`Prowler ${kind.id}`, 'biome', biomes.has(b), b);
+    if (!(kind.danger > 0)) problems.push(`Prowler ${kind.id}: danger must be above 0.`);
+  }
+  for (const def of content.creatures) {
+    if (def.tier !== 'beast' && (rules.beasts.signs[def.id] ?? []).length === 0)
+      problems.push(`Threats: ${def.tier} creature "${def.id}" has no signs.`);
+    if (!rules.beasts.glyphs[def.id]) problems.push(`Threats: creature "${def.id}" has no glyph.`);
+  }
+  const creatureIds = new Set(content.creatures.map((c) => c.id));
+  for (const id of [...Object.keys(rules.beasts.signs), ...rules.beasts.fireBreath])
+    known('Threats beasts', 'creature', creatureIds.has(id), id);
+  fraction('Threats raids warnChance', rules.raids.warnChance);
+  fraction('Threats raids retreatAt', rules.raids.retreatAt);
+  fraction('Threats raids lootShare', rules.raids.lootShare);
+  fraction('Threats raids bandShare', rules.raids.bandShare);
+  fraction('Threats raids targetShare', rules.raids.targetShare);
+  if (!(rules.combat.militiaOdds > 0)) problems.push('Threats combat militiaOdds must be above 0.');
+  fraction('Threats combat fatigueBase', rules.combat.fatigueBase);
+  fraction('Threats combat leavesAt', rules.combat.leavesAt);
+  for (const [tier, x] of Object.entries(rules.combat.slainShare))
+    fraction(`Threats combat slainShare ${tier}`, x);
+  for (const id of Object.keys(rules.combat.woundShares))
+    known('Threats woundShares', 'condition', conditions.has(id), id);
+  if (rules.raids.band[0] > rules.raids.band[1])
+    problems.push('Threats raids band must run low to high.');
+  if (rules.beasts.warnDays[0] > rules.beasts.warnDays[1])
+    problems.push('Threats beasts warnDays must run low to high.');
+  if (rules.beasts.warnDays[0] <= rules.flight.judgeDaysAhead)
+    problems.push('Threats beasts warnDays must start after flight judgeDaysAhead.');
+  if (rules.compass.length !== 8) problems.push('Threats compass needs eight words.');
+  known('Threats walls', 'building', buildings.has(rules.walls.building), rules.walls.building);
+  for (const id of Object.values(rules.memoryOf))
+    known('Threats memoryOf', 'memory', memories.has(id), id);
+  for (const id of Object.values(rules.events))
+    known('Threats events', 'event type', events.has(id), id);
   return problems;
 }
 

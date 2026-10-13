@@ -36,6 +36,8 @@ export type SiteContent = Pick<
   | 'social'
   | 'family'
   | 'society'
+  | 'creatures'
+  | 'threats'
 >;
 
 /** A person's age band: children play, adults work, elders work lightly. */

@@ -20,3 +20,4 @@ export * from './health';
 export * from './family';
 export * from './social';
 export * from './society';
+export * from './threats';

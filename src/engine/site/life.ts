@@ -35,6 +35,8 @@ import type {
   SiteFire,
   SiteFirewood,
   SiteHarvest,
+  SiteThreat,
+  SiteThreats,
   SiteWeather,
   SiteWild,
   SiteWoods,
@@ -51,6 +53,7 @@ import { findRoute, tileCost, walkAlong } from './path';
 import { envOf, runSocial, witnessedWrong } from './social';
 import { festivalToday, reportCrime, runSocietyMorning, serveSentences } from './society';
 import { foodMeals, takeFood } from './stock';
+import { planThreat, resolveThreat, runThreatsDay } from './threats';
 import { stepAnimals } from './wild';
 import {
   residentItems,
@@ -420,9 +423,13 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   if (block === 0) {
     runHealthDay(world, content, active, voice.emit, voice.label);
     runSocietyMorning(world, content, active, voice.emit, voice.label);
+    // Threats (M3.8): prowlers, signs and arrivals; a death here moves the layout like any other.
+    runThreatsDay(world, content, active, voice.emit, voice.label);
   }
   spreadFire(world, content, active, voice.emit, voice.label, fightersAt(world, active));
   stepAnimals(world, content, active);
+  // Who defends, shelters or flees this block, before the profiles are built.
+  const threatPlan = planThreat(world, content, active);
   // Buildings or the map changed since the profiles were built (a home finished): rebuild them.
   const cache = cacheFor(world, content, active);
   const { life, site: rules, steward } = content;
@@ -630,11 +637,13 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     }
     detail.with = undefined;
     const bd = detail.breakdown;
+    const order = threatPlan.get(p.id);
     let activity: Activity;
     if (bd?.kind === 'despair') activity = block === 0 ? 'sleep' : 'despair';
     else if (bd?.kind === 'wandering') activity = 'wander';
     else if (bd?.kind === 'tantrum') activity = 'tantrum';
     else if (bd?.kind === 'theft') activity = 'steal';
+    else if (order) activity = order.activity;
     else if (fighting.has(p)) activity = 'fight';
     else if (block === 2 && restDay) {
       activity = p.faithful ? life.restDayAfternoon.faithful : life.restDayAfternoon.others;
@@ -670,23 +679,31 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     const to =
       activity === 'tantrum'
         ? from
-        : activity === 'fight'
-          ? fighting.get(p)!
-          : activity === 'eat'
-            ? p.table
-            : activity === 'sleep' || activity === 'despair'
-              ? p.home
-              : activity === 'work'
-                ? p.workTile >= 0
-                  ? p.workTile
-                  : p.field
-                : activity === 'worship'
-                  ? p.shrine
-                  : activity === 'wander'
-                    ? p.wander
-                    : activity === 'steal'
-                      ? p.stockpile
-                      : p.green;
+        : activity === 'defend'
+          ? order!.tile
+          : activity === 'shelter'
+            ? p.home
+            : activity === 'flee'
+              ? order!.tile >= 0
+                ? order!.tile
+                : p.home
+              : activity === 'fight'
+                ? fighting.get(p)!
+                : activity === 'eat'
+                  ? p.table
+                  : activity === 'sleep' || activity === 'despair'
+                    ? p.home
+                    : activity === 'work'
+                      ? p.workTile >= 0
+                        ? p.workTile
+                        : p.field
+                      : activity === 'worship'
+                        ? p.shrine
+                        : activity === 'wander'
+                          ? p.wander
+                          : activity === 'steal'
+                            ? p.stockpile
+                            : p.green;
     let tile = from;
     if (to !== from) {
       const route = findRoute(active, rules, life, from, to, budget);
@@ -702,12 +719,27 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     const theirs = carer.person.detail!.activity!;
     // A carer who wandered off or broke down leaves the child asleep at home.
     const away =
-      theirs === 'wander' || theirs === 'tantrum' || theirs === 'steal' || theirs === 'fight';
+      theirs === 'wander' ||
+      theirs === 'tantrum' ||
+      theirs === 'steal' ||
+      theirs === 'fight' ||
+      theirs === 'defend';
     detail.with = carer.id;
     detail.activity = away ? 'sleep' : theirs;
     const tile = away ? p.home : carer.tile;
     detail.pos = [tile % width, Math.floor(tile / width)];
     standAt(p, tile);
+  }
+
+  // The attackers move and trade blows with whoever has walked up to them. A death drops the
+  // person from this block's profiles (they stay in the saved lookups until the next rebuild).
+  resolveThreat(world, content, active, voice.emit, voice.label);
+  if (active.residents.length !== profiles.length) {
+    for (let i = profiles.length - 1; i >= 0; i -= 1) {
+      if (profiles[i]!.person.died === undefined) continue;
+      cache.byId.delete(profiles[i]!.id);
+      profiles.splice(i, 1);
+    }
   }
 
   // Pass 2: work, needs, meals, memories, mood, stress.
@@ -822,6 +854,8 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       let value = needs[need.id];
       if (value === undefined) continue;
       value -= decays[j]! * p.rates[j]! * (need.id === 'warmth' ? warmthMul : 1);
+      // Standing to arms is tiring.
+      if (activity === 'defend' && need.id === 'rest') value -= content.threats.combat.defendRest;
       const restore = restoreRow[j]!;
       if (restore === restore && (need.id !== 'food' || fed)) {
         let gain =
@@ -954,6 +988,9 @@ export interface SiteSnapshot {
   harvestSoFar: HarvestSoFar;
   /** M3.6: bumped when people are born, move household or die. */
   peopleVersion: number;
+  /** M3.8: the threat at the site, if any, and the record of threats so far. */
+  threat: SiteThreat | null;
+  threats: SiteThreats;
   /** Present only when `peopleVersion` differs from the version the caller last received. */
   roster?: SiteRoster;
   /** Present only when `layoutVersion` differs from the version the caller last received. */
@@ -1081,6 +1118,8 @@ export function siteSnapshot(
     firewood: active.firewood,
     harvestSoFar: harvestSoFar(active),
     peopleVersion: active.peopleVersion,
+    threat: active.threat,
+    threats: active.threats,
   };
   snapshot.peopleVersion = active.peopleVersion;
   if (sentPeople !== active.peopleVersion) {
@@ -1181,6 +1220,8 @@ export function applySiteSnapshot(world: WorldState, snapshot: SiteSnapshot): vo
   active.burnt = snapshot.burnt;
   active.harvest = snapshot.harvest;
   active.firewood = snapshot.firewood;
+  active.threat = snapshot.threat;
+  active.threats = snapshot.threats;
   for (const [id, holder] of snapshot.items) {
     const item = world.items.get(id);
     if (item) item.holder = holder;
