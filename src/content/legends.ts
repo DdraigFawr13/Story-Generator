@@ -35,7 +35,7 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
   {
     id: 'lives',
     label: 'Lives',
-    types: ['notable_born', 'mage_born', 'marriage', 'notable_died'],
+    types: ['notable_born', 'mage_born', 'marriage', 'remarriage', 'notable_died'],
   },
   {
     id: 'daily',

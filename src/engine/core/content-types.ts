@@ -77,6 +77,8 @@ export interface CultureNames {
   /** Given names are a start plus an end: "Cad" + "oc". */
   givenStarts: string[];
   givenEnds: string[];
+  /** Whole given names by sex, drawn beside the made-up ones when the person's sex is known. */
+  givenNames?: { f: string[]; m: string[] };
   /** Place names: start, optional middle, end. */
   placeStarts: string[];
   placeMiddles: string[];
@@ -1176,6 +1178,8 @@ export interface NotableRules {
     legend: number;
     /** Fame of a mage by birth tier id (tiers not listed get 0). */
     mage: Partial<Record<string, number>>;
+    /** Fame the first actor of an event gains, by event type (types not listed give none). */
+    deeds: Partial<Record<string, number>>;
   };
   /** An event's importance gains floor(best actor fame / this), at most `actorFameCap`. */
   famePerImportance: number;
@@ -1185,6 +1189,8 @@ export interface NotableRules {
   deathPhrases: Record<DeathCause, string>;
   /** Succession clause per rule, for `ruler_succeeded`. */
   successionPhrases: Record<SuccessionRule, string>;
+  /** Clause on a death a spouse outlives ({names}); empty data when none does. */
+  widowedPhrase: string;
   /** Succession clause when no kin or notable of the civ was left to take the seat. */
   noHeirPhrase: string;
   /** Succession clause after a dispute: `held` when the heir by custom won, `seized` when the rival did ({rule}, {rival}). */
@@ -1211,6 +1217,8 @@ export interface NotableRules {
   captainDeathWin: number;
   /** Yearly chance an unmarried adult marries. */
   marryChance: number;
+  /** Years a widow or widower waits after the spouse's death before marrying again. */
+  mourningYears: number;
   /** Chance a ruler's child in an arranged-marriage culture marries into a linked civ. */
   allianceChance: number;
   /** Share of the two civs' grievance against each other that an alliance marriage removes. */
@@ -1533,6 +1541,9 @@ export interface SettlementRules {
   civNames: Record<GovernmentKind, string>;
   /** Cost cap (summed travel cost) of a site's territory. */
   territoryReach: number;
+  /** Wildness at or above which history founds no site, and borders spread at `deepWildClaim` times the cost. */
+  deepWild: number;
+  deepWildClaim: number;
 }
 
 /** Tunable numbers for the yearly history stage (M2.3); see engine/history/. Rates are per year. */

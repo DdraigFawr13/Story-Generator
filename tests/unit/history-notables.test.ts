@@ -139,7 +139,7 @@ describe('notables', () => {
       artifactEpithets: ['Grey'],
       bookForms: forms,
     };
-    const world = generate('NOT-A', 100, { ...DEFAULT_CONTENT, notables });
+    const world = generate('NOT-A', YEARS, { ...DEFAULT_CONTENT, notables });
     const names = [...world.items.values()].map((item) => item.name);
     expect(names.length).toBeGreaterThan(10);
     expect(new Set(names).size).toBe(names.length);

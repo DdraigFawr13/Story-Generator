@@ -40,7 +40,7 @@ export function recordPlaybackYear(
   if (key !== recorder.key) {
     recorder.key = key;
     entry.territory = encodeTerritory(
-      computeTerritory(cells, standing, content.settlement.territoryReach),
+      computeTerritory(cells, standing, content.settlement.territoryReach, content.settlement),
     );
   }
   world.playback.years.push(entry);

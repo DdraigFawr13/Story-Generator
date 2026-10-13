@@ -152,9 +152,11 @@ function runVengeance(run: HistoryRun): void {
     if (!enemy || !target || !rng.chance(deeds.vengeanceChance)) continue;
     const victim = liveCiv(run, target.civId)!;
     // Kin of the same people sworn on the same enemy ride together: one raid keeps all their oaths.
+    // Whoever already rode once stays home.
     const riders: Person[] = [];
     for (const kin of livingList(run)) {
       if (kin.civId !== civ.id || !kin.enemies?.includes(enemy.id)) continue;
+      if (kin.id !== avenger.id && run.notables.avenged.has(kin.id)) continue;
       run.notables.avenged.add(kin.id);
       if (kin.id !== avenger.id && isAdult(run, kin)) riders.push(kin);
     }

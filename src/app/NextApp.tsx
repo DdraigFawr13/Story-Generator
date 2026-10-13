@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_CONTENT } from '../content';
 import {
   BIRTH_TIER_IDS,
-  DEFAULT_PARAMS,
   DAYS_PER_YEAR,
   DEFAULT_SYSTEMS,
   RngStream,
@@ -67,6 +66,8 @@ import {
   type SiteLink,
   type ViewState,
   type WorldSize,
+  type HistoryLength,
+  HISTORY_YEARS,
   type SiteTab,
   type PersonSection,
 } from './map-view';
@@ -193,6 +194,7 @@ export function NextApp() {
   const [initial] = useState(() => parseViewUrl(window.location.search, VIEWER_LAYER_IDS));
   const [seedInput, setSeedInput] = useState(initial.seed ?? DEFAULT_SEED);
   const [size, setSize] = useState<WorldSize>(initial.size);
+  const [years, setYears] = useState<HistoryLength>(initial.years);
   const [seedError, setSeedError] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ label: string; fraction: number } | null>(null);
   const [view, setView] = useState<View>({
@@ -225,8 +227,8 @@ export function NextApp() {
   /** Counts site worker errors; the site view pauses its clock on each. */
   const [siteFailures, setSiteFailures] = useState(0);
   const watchKey = useRef(0);
-  /** Seed and size of the map on screen (the inputs may be mid-edit). */
-  const shown = useRef<{ seed: string; size: WorldSize } | null>(null);
+  /** Seed, size and history length of the map on screen (the inputs may be mid-edit). */
+  const shown = useRef<{ seed: string; size: WorldSize; years: HistoryLength } | null>(null);
   const job = useRef<WorldgenJob | null>(null);
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -256,7 +258,7 @@ export function NextApp() {
   const pushNext = useRef(false);
 
   const urlFor = (
-    state: { seed: string; size: WorldSize },
+    state: { seed: string; size: WorldSize; years: HistoryLength },
     v: View,
     n: LegendNav,
     y: number | null,
@@ -281,6 +283,7 @@ export function NextApp() {
   const generate = (
     seedText: string,
     worldSize: WorldSize,
+    historyYears: HistoryLength,
     next: View,
     mode: 'push' | 'replace',
     restore?: Restore,
@@ -299,13 +302,13 @@ export function NextApp() {
     setProgress({ label: 'Starting…', fraction: 0 });
     const started = generateInWorker(
       seed,
-      { width: worldSize, height: worldSize },
+      { width: worldSize, height: worldSize, historyYears },
       DEFAULT_CONTENT,
       (stage, done, total, within) =>
         setProgress({
           label:
             stage === 'history' && within !== undefined
-              ? `History, year ${Math.round(within * DEFAULT_PARAMS.historyYears)}…`
+              ? `History, year ${Math.round(within * historyYears)}…`
               : `${STAGE_LABELS[stage]}…`,
           fraction: (done + (within ?? 0)) / total,
         }),
@@ -314,7 +317,7 @@ export function NextApp() {
     started.promise.then(
       (generated) => {
         world.current = generated;
-        shown.current = { seed, size: worldSize };
+        shown.current = { seed, size: worldSize, years: historyYears };
         const place = restore ?? {
           year: null,
           nav: { ...EMPTY_NAV, rev: latest.current.nav.rev + 1 },
@@ -424,6 +427,7 @@ export function NextApp() {
       const url = buildSiteUrl({
         seed: embarked.seed,
         size: shown.current?.size ?? 256,
+        years: shown.current?.years ?? 250,
         site: active.siteId,
         ...siteLinkPoint(embarked.day, active.enteredDay, active.block),
         open: next.restore.open,
@@ -458,6 +462,7 @@ export function NextApp() {
   const openSave = async (loaded: WorldState, view?: SaveView) => {
     job.current?.cancel();
     const loadedSize: WorldSize = loaded.params.width <= 128 ? 128 : 256;
+    const loadedYears = HISTORY_YEARS.find((y) => y === loaded.params.historyYears) ?? 250;
     const active = loaded.activeSite;
     if (active) {
       const name = loaded.sites.get(active.siteId)?.name ?? 'the site';
@@ -475,9 +480,10 @@ export function NextApp() {
         return;
       }
       world.current = loaded;
-      shown.current = { seed: loaded.seed, size: loadedSize };
+      shown.current = { seed: loaded.seed, size: loadedSize, years: loadedYears };
       setSeedInput(loaded.seed);
       setSize(loadedSize);
+      setYears(loadedYears);
       watchKey.current += 1;
       const next: Watching = {
         siteId: active.siteId,
@@ -500,6 +506,7 @@ export function NextApp() {
         buildSiteUrl({
           seed: loaded.seed,
           size: loadedSize,
+          years: loadedYears,
           site: active.siteId,
           ...siteLinkPoint(loaded.day, active.enteredDay, active.block),
           open: next.restore.open,
@@ -521,9 +528,10 @@ export function NextApp() {
     watchingRef.current = null;
     setWatching(null);
     world.current = loaded;
-    shown.current = { seed: loaded.seed, size: loadedSize };
+    shown.current = { seed: loaded.seed, size: loadedSize, years: loadedYears };
     setSeedInput(loaded.seed);
     setSize(loadedSize);
+    setYears(loadedYears);
     setProgress(null);
     setPlayback(null);
     setView((v) => ({ ...v, at: null, zoom: 0 }));
@@ -605,6 +613,7 @@ export function NextApp() {
         buildSiteUrl({
           seed: world.current.seed,
           size: shown.current.size,
+          years: shown.current.years,
           site: current.siteId,
           ...link.parts,
         }),
@@ -626,6 +635,7 @@ export function NextApp() {
     generateRef.current(
       initial.seed ?? DEFAULT_SEED,
       initial.size,
+      initial.years,
       {
         layer: initial.layer,
         at: initial.at,
@@ -647,13 +657,18 @@ export function NextApp() {
       const apply = () => {
         setSeedInput(seed);
         setSize(url.size);
+        setYears(url.years);
         if (place.nav.open) setTab('legends');
         setPlayback(null);
-        if (shown.current?.seed === seed && shown.current.size === url.size) {
+        if (
+          shown.current?.seed === seed &&
+          shown.current.size === url.size &&
+          shown.current.years === url.years
+        ) {
           setView(next);
           setSliderYear(place.year);
           setNav(place.nav);
-        } else generateRef.current(seed, url.size, next, 'replace', place);
+        } else generateRef.current(seed, url.size, url.years, next, 'replace', place);
       };
       if (watchingRef.current) {
         // Back out of a site: leave it, then show the world the link names.
@@ -664,10 +679,18 @@ export function NextApp() {
         }
         return;
       }
-      if (url.site && shown.current?.seed === seed && shown.current.size === url.size) {
+      if (
+        url.site &&
+        shown.current?.seed === seed &&
+        shown.current.size === url.size &&
+        shown.current.years === url.years
+      ) {
         void watchRef.current({ kind: 'site', id: url.site.site }, url.site, next, place);
       } else if (url.site) {
-        generateRef.current(seed, url.size, next, 'replace', { ...place, site: url.site });
+        generateRef.current(seed, url.size, url.years, next, 'replace', {
+          ...place,
+          site: url.site,
+        });
       } else apply();
     };
     window.addEventListener('popstate', popstate);
@@ -861,6 +884,7 @@ export function NextApp() {
             generate(
               seedInput,
               size,
+              years,
               { ...INITIAL_VIEW, layer: view.layer },
               'push',
               undefined,
@@ -886,6 +910,17 @@ export function NextApp() {
             >
               <option value={256}>256 × 256</option>
               <option value={128}>128 × 128 (small)</option>
+            </select>
+          </label>
+          <label>
+            History{' '}
+            <select
+              value={years}
+              onChange={(event) => setYears(Number(event.target.value) as HistoryLength)}
+            >
+              <option value={250}>250 years</option>
+              <option value={500}>500 years (slower)</option>
+              <option value={1000}>1000 years (slowest)</option>
             </select>
           </label>
           <button type="submit" className="primary">

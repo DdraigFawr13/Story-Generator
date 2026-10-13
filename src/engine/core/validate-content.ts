@@ -362,6 +362,7 @@ const HISTORY_EVENT_IDS = [
   'notable_born',
   'mage_born',
   'marriage',
+  'remarriage',
   'notable_died',
   'ruler_succeeded',
   'succession_disputed',

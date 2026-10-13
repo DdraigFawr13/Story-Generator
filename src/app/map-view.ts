@@ -91,6 +91,9 @@ export function parseOpen(text: string | null): { kind: LegendCategory; id: stri
 
 export const WORLD_SIZES = [256, 128] as const;
 export type WorldSize = (typeof WORLD_SIZES)[number];
+/** Years of history the world generates; the first is the default. */
+export const HISTORY_YEARS = [250, 500, 1000] as const;
+export type HistoryLength = (typeof HISTORY_YEARS)[number];
 export const DEFAULT_SEED = 'S1';
 export const DEFAULT_LAYER = 'elevation';
 
@@ -98,6 +101,7 @@ export interface ViewState {
   /** Null when the link has no seed. */
   seed: string | null;
   size: WorldSize;
+  years: HistoryLength;
   layer: string;
   at: { x: number; y: number } | null;
   zoom: number;
@@ -142,6 +146,8 @@ const SITE_OPEN = /^(?:(?:person|household|building):\d{1,9}|tile:\d{1,3},\d{1,3
 export function parseViewUrl(search: string, layerIds: readonly string[]): ViewState {
   const params = new URLSearchParams(search);
   const size = Number(params.get('size')) === 128 ? 128 : 256;
+  const yearsParam = Number(params.get('years'));
+  const years = yearsParam === 500 || yearsParam === 1000 ? yearsParam : 250;
   const layer = params.get('layer') ?? '';
   const at = /^(\d{1,3}),(\d{1,3})$/.exec(params.get('at') ?? '');
   const zoom = Number(params.get('z'));
@@ -151,6 +157,7 @@ export function parseViewUrl(search: string, layerIds: readonly string[]): ViewS
   return {
     seed: params.get('seed') || null,
     size,
+    years,
     layer: layerIds.includes(layer) ? layer : DEFAULT_LAYER,
     // With `site=`, open, z and at belong to the site view.
     at: at && !site ? { x: Number(at[1]), y: Number(at[2]) } : null,
@@ -208,6 +215,8 @@ export function siteLinkPoint(
 export function buildSiteUrl(link: {
   seed: string;
   size: WorldSize;
+  /** Years of history; 250 (or none) is left out. */
+  years?: HistoryLength;
   site: number;
   day: number;
   /** The last block run on `day`; omitted before any block ran. */
@@ -226,6 +235,7 @@ export function buildSiteUrl(link: {
     `site=${link.site}`,
     `day=${link.day}`,
   ];
+  if (link.years && link.years !== 250) parts.splice(2, 0, `years=${link.years}`);
   if (link.block != null) parts.push(`b=${link.block}`);
   if (link.open)
     parts.push(`open=${encodeURIComponent(link.open).replace(/%3A/g, ':').replace(/%2C/g, ',')}`);
@@ -245,6 +255,7 @@ export function buildViewUrl(
     `size=${view.size}`,
     `layer=${view.layer}`,
   ];
+  if (view.years !== 250) parts.splice(2, 0, `years=${view.years}`);
   if (view.at) parts.push(`at=${view.at.x},${view.at.y}`);
   if (view.zoom > 0) parts.push(`z=${view.zoom}`);
   if (view.year != null) parts.push(`year=${view.year}`);

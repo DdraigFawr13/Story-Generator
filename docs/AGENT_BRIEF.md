@@ -11,6 +11,7 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256Ã
 - `src/engine` and `src/content` are pure: no DOM, `Date`, `Math.random`, timers, I/O, `**`, or `Math.sin/cos/exp/pow/log`. Named RNG stream per system (`streamFor(world, 'name')`), iterate in id order. `npm run boundaries` enforces the layer table in [ARCHITECTURE.md](ARCHITECTURE.md).
 - Prefer a content entry over an engine special case; put tunable numbers in `src/content/` with a one-line comment.
 - Every state change a person would notice emits an event with a content template and cause links. Chronicle text never invents facts.
+- A name a reader takes as identity never repeats in the same role (a person's spouses, items); a repeated life event says what changed (LESSONS 2026-10-13).
 - Tests are light: tiny fixtures, one determinism test, invariant checkers, one Chromium smoke. No seed batteries. Never skip or weaken a test to get green.
 - No new runtime dependencies, API keys or backend without the user.
 

@@ -53,6 +53,7 @@ function fixture(rows: string[]): WorldCells {
     travelCost: new Uint8Array(size).fill(2),
     roads: new Uint8Array(size),
     territory: new Uint16Array(size),
+    wildness: new Uint8Array(size),
   };
   rows.forEach((row, y) => {
     for (let x = 0; x < width; x += 1) {
@@ -177,6 +178,8 @@ describe('population and capacity', () => {
   });
 });
 
+const WILD = { deepWild: 70, deepWildClaim: 3 };
+
 describe('territory', () => {
   it('goes to the nearer site by travel cost, never over sea, and stops at the reach', () => {
     const cells = fixture(['.....~.....', '.....~.....', '.....~.....']);
@@ -184,14 +187,24 @@ describe('territory', () => {
       { id: 1, cell: 1, civId: 1 },
       { id: 2, cell: 9, civId: 2 },
     ];
-    const t = computeTerritory(cells, sites, 6);
+    const t = computeTerritory(cells, sites, 6, WILD);
     expect(t[0]).toBe(1);
     expect(t[1]).toBe(1);
     expect(t[9]).toBe(2);
     expect(t[5]).toBe(0);
     expect(t[11 + 4]).toBe(1);
     // Reach 4 at cost 2 per cell is 2 cells: cell 4, three away, is unclaimed.
-    expect(computeTerritory(cells, [sites[0]!], 4)[4]).toBe(0);
+    expect(computeTerritory(cells, [sites[0]!], 4, WILD)[4]).toBe(0);
+  });
+
+  it('reaches into deep wilds at a higher cost', () => {
+    const cells = fixture(['.......']);
+    cells.wildness[2] = WILD.deepWild;
+    const site = [{ id: 1, cell: 0, civId: 1 }];
+    // Reach 6 at cost 2 is three cells; the deep-wild cell 2 costs 6, so only cell 1 is held.
+    const t = computeTerritory(cells, site, 6, WILD);
+    expect([t[1], t[2], t[3]]).toEqual([1, 0, 0]);
+    expect(computeTerritory(cells, site, 6, { ...WILD, deepWildClaim: 1 })[3]).toBe(1);
   });
 });
 

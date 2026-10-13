@@ -175,13 +175,15 @@ describe('lore', () => {
 
   it('calms the most stressed member of the household, once a day', () => {
     const t = fresh();
-    t.child.knownAbilities = ['calm'];
-    t.child.magic = { power: 1, affinities: { mind: 1 } };
-    const members = t.active.households.get(t.child.family.householdId!)!.members;
-    const other = t.world.people.get(members.find((id) => id !== t.child.id)!)!;
+    // Any household of two or more: the caster calms the other.
+    const members = [...t.active.households.values()].find((h) => h.members.length >= 2)!.members;
+    const caster = t.world.people.get(members[0]!)!;
+    caster.knownAbilities = ['calm'];
+    caster.magic = { power: 1, affinities: { mind: 1 } };
+    const other = t.world.people.get(members[1]!)!;
     other.detail!.stress = 100;
     run(t.world, t.content, 1);
-    expect(t.child.detail!.lore!.castTotal.calm).toBe(1);
+    expect(caster.detail!.lore!.castTotal.calm).toBe(1);
     expect(t.active.lore.stats.calmed).toBeCloseTo(C.lore.effects.calmStress);
   });
 

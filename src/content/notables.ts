@@ -14,22 +14,38 @@ export const NOTABLES: NotableRules = {
     dvergar: 'the {name}hold',
   },
   fame: {
-    ruler: 30,
+    ruler: 20,
     founder: 12,
     captain: 10,
     raider: 8,
     crafter: 6,
     scholar: 6,
     hero: 10,
-    heroPerDanger: 0.5,
-    heroMax: 60,
+    heroPerDanger: 0.25,
+    heroMax: 30,
     victory: 8,
     // Rising to legend is a start; victories, slayings and foundings add the rest.
     legend: 50,
-    mage: { strong: 15, exceptional: 30 },
+    // A gift at birth is a rumour, not renown: fame comes from what a mage does with it.
+    mage: { strong: 5, exceptional: 10 },
+    // Fame the doer (first actor) gains per event of each type, on top of the grants above.
+    deeds: {
+      war_declared: 5,
+      battle: 4,
+      champion_fought: 6,
+      vengeance_raid: 8,
+      oath_sworn: 2,
+      insult: 2,
+      succession_disputed: 3,
+      dynasty_founded: 6,
+      site_founded: 4,
+      civ_raid: 4,
+      artifact_made: 8,
+      book_written: 6,
+    },
   },
-  // A ruler (fame 30) adds 2 importance to the events around them; a legend adds the cap.
-  famePerImportance: 15,
+  // A ruler (fame 20) adds 2 importance to the events around them; a legend adds the cap.
+  famePerImportance: 10,
   actorFameCap: 3,
   roleNames: {
     ruler: 'ruler',
@@ -66,6 +82,8 @@ export const NOTABLES: NotableRules = {
     'elder-council': 'by the choice of the council of elders',
     'eldest-child': 'by the custom of the eldest child',
   },
+  // Appended to a notable's death when a spouse outlives them ({names}).
+  widowedPhrase: ', leaving {names} widowed',
   noHeirPhrase: 'when no heir of the line was left',
   disputePhrases: {
     held: '{rule}, after winning the quarrel with {rival}',
@@ -85,6 +103,8 @@ export const NOTABLES: NotableRules = {
   captainDeath: 0.3,
   captainDeathWin: 0.08,
   marryChance: 0.2,
+  // A widow or widower waits this many years after the spouse's death before marrying again.
+  mourningYears: 2,
   allianceChance: 0.25,
   allianceGrievanceCut: 0.5,
   extraSpouseChance: 0.04,

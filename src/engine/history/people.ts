@@ -114,6 +114,9 @@ export function civOfPerson(run: HistoryRun, person: Person): Civ | undefined {
 }
 
 /** Records an event among a person's deeds. */
+/** Fame runs 0-100. */
+export const FAME_MAX = 100;
+
 export function addDeed(person: Person, event: Id): void {
   if (!person.deeds.includes(event)) person.deeds.push(event);
 }
@@ -160,7 +163,7 @@ export function createPerson(run: HistoryRun, spec: PersonSpec): Person {
   const race = run.races.get(spec.raceId)!;
   const culture = run.content.cultures.find((c) => c.id === spec.cultureId)!;
   const sex = spec.sex ?? (rng.chance(0.5) ? 'f' : 'm');
-  const name = spec.name ?? cultureGivenName(culture.names, rng);
+  const name = spec.name ?? cultureGivenName(culture.names, rng, sex);
   const parents = spec.parents ?? [];
   const aptitude = rollAptitude(
     {

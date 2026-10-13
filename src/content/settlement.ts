@@ -66,4 +66,8 @@ export const SETTLEMENT: SettlementRules = {
     thanedom: 'Thanedom of {n}',
   },
   territoryReach: 150,
+  // Deep wilds (wildness at or above this) take no new sites in history and cost `deepWildClaim`
+  // times as much for a border to reach, so some land stays unclaimed however long history runs.
+  deepWild: 60,
+  deepWildClaim: 4,
 };

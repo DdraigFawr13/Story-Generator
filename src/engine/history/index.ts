@@ -42,7 +42,12 @@ function recomputeTerritory(run: HistoryRun): void {
     const civ = site.civId === null ? undefined : world.civs.get(site.civId);
     return civ !== undefined && civ.fell === undefined;
   });
-  cells.territory = computeTerritory(cells, live, content.settlement.territoryReach);
+  cells.territory = computeTerritory(
+    cells,
+    live,
+    content.settlement.territoryReach,
+    content.settlement,
+  );
   run.territory = cells.territory;
 }
 

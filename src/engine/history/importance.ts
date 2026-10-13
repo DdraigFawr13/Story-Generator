@@ -4,6 +4,7 @@
 
 import type { EmitInput } from '../core/context';
 import type { Id, SimEvent } from '../core/types';
+import { FAME_MAX } from './people';
 import { isLive, type HistoryRun } from './state';
 
 /** Fame of the live site at `place`, plus its civ's capital bonus. */
@@ -38,6 +39,13 @@ function actorFameBonus(run: HistoryRun, actors: readonly Id[] | undefined): num
   return Math.min(rules.actorFameCap, Math.floor(best / rules.famePerImportance));
 }
 
+/** The event's first actor (the doer, by convention) gains the fame its type is worth. */
+function creditDeedFame(run: HistoryRun, event: SimEvent): void {
+  const gain = run.content.notables.fame.deeds[event.type];
+  const doer = event.actors[0] === undefined ? undefined : run.world.people.get(event.actors[0]);
+  if (gain && doer) doer.fame = Math.min(FAME_MAX, doer.fame + gain);
+}
+
 /** Emits an event with its importance scored; trivial events are counted for the yearly summary. */
 export function emitScored(run: HistoryRun, input: EmitInput): SimEvent {
   const rules = run.rules.importance;
@@ -60,6 +68,7 @@ export function emitScored(run: HistoryRun, input: EmitInput): SimEvent {
   const base = state.types.get(input.type)?.baseImportance ?? 0;
   // Importance never drops under zero.
   const event = state.base({ ...input, importanceBonus: Math.max(-base, bonus) });
+  creditDeedFame(run, event);
   if (event.type !== 'year_summary' && event.importance < rules.rollupBelow) {
     state.trivial.add(event.id);
     state.yearCounts.set(event.type, (state.yearCounts.get(event.type) ?? 0) + 1);
