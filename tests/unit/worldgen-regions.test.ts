@@ -161,7 +161,8 @@ describe('generated worlds', () => {
 
   it('give every 256x256 seed S1-S5 a pass and a harbour', () => {
     for (const seed of ['S1', 'S2', 'S3', 'S4', 'S5']) {
-      const w = generateWorld(seed, {}, DEFAULT_CONTENT);
+      // Regions are worldgen only; history never changes them, so the 250 years are skipped.
+      const w = generateWorld(seed, { historyYears: 0 }, DEFAULT_CONTENT);
       const list = [...w.regions.values()];
       expect(checkRegions(w.cells!, list), seed).toEqual([]);
       expect(

@@ -17,7 +17,8 @@ export const DEFAULT_PARAMS: WorldParams = {
   height: 256,
   historyYears: 250,
   continents: 3,
-  landFraction: 0.25,
+  // A third of the map is land (was a quarter): bigger landmasses with room for more realms.
+  landFraction: 0.35,
   temperatureShift: 0,
   rainfallScale: 1,
 };

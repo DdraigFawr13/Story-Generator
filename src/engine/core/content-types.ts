@@ -1178,6 +1178,8 @@ export interface BiographyRules {
 export interface NotableRules {
   /** Living notables at most; kin spouses and children stop here, deed notables never do. */
   notableCap: number;
+  /** Named folk at a site stay under this share of its people; past it no kin spouse or child joins them. */
+  siteShare: number;
   /** Per culture id: the dynasty name pattern, `{name}` being the founder's given name. */
   dynastyNames: Record<string, string>;
   /** Fame (0-100) each way of becoming known starts with. */
@@ -1798,7 +1800,7 @@ export interface HistoryRules {
   warThreshold: number;
   /** Share of a civ's strength in the field each year. */
   campaignShare: number;
-  /** Defence multipliers by site feature (heights, pass, ford), kind (fortress) and 'capital'. */
+  /** Defence multipliers by site feature (heights, pass, ford), kind (fortress), 'capital' and 'freeCity'. */
   defence: Record<string, number>;
   /** Each side's strength is multiplied by 1 plus or minus this. */
   battleLuck: number;

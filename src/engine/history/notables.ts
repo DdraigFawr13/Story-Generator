@@ -33,7 +33,7 @@ import {
   siteOf,
   wed,
 } from './people';
-import { stochasticRound } from './pop';
+import { stochasticRound, totalPop } from './pop';
 import { cellDistance } from './settle';
 import {
   addGrievance,
@@ -997,10 +997,34 @@ function createSpouse(run: HistoryRun, of: Person): Person {
   return spouse;
 }
 
+/** Living notables per site, for `siteHasRoom`. */
+function notablesBySite(run: HistoryRun): Map<Id, number> {
+  const counts = new Map<Id, number>();
+  for (const person of livingList(run)) {
+    if (person.died !== undefined || person.siteId == null) continue;
+    counts.set(person.siteId, (counts.get(person.siteId) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/**
+ * Whether a site's named folk may grow by one: they stay under `siteShare` of its people, so a
+ * small free city never houses a dynasty larger than the town. Counts the newcomer when it does.
+ */
+function siteHasRoom(run: HistoryRun, counts: Map<Id, number>, siteId: Id | null | undefined) {
+  const site = siteId == null ? undefined : run.world.sites.get(siteId);
+  if (!site) return false;
+  const here = counts.get(site.id) ?? 0;
+  if (here + 1 > totalPop(site) * run.content.notables.siteShare) return false;
+  counts.set(site.id, here + 1);
+  return true;
+}
+
 function runMarriages(run: HistoryRun): void {
   const rules = run.content.notables;
   const rng = run.rng.notables;
   const cap = rules.notableCap;
+  const counts = notablesBySite(run);
   const pool = new Map<Id, Person[]>();
   for (const person of livingList(run)) {
     if (!eligibleToMarry(run, person)) continue;
@@ -1053,7 +1077,7 @@ function runMarriages(run: HistoryRun): void {
       if (list.length > 0) partner = rng.pick(list);
     }
     if (!partner) {
-      if (run.notables.living.size >= cap) continue;
+      if (run.notables.living.size >= cap || !siteHasRoom(run, counts, person.siteId)) continue;
       partner = createSpouse(run, person);
       marriageEvent(run, person, partner, undefined);
       continue;
@@ -1082,6 +1106,7 @@ function runMarriages(run: HistoryRun): void {
     if (!isMarried(run, ruler) || !isAdult(run, ruler) || isElder(run, ruler)) continue;
     if (inMourning(run, ruler)) continue;
     if (run.notables.living.size >= cap || !rng.chance(rules.extraSpouseChance)) continue;
+    if (!siteHasRoom(run, counts, ruler.siteId)) continue;
     marriageEvent(run, ruler, createSpouse(run, ruler), undefined);
   }
 }
@@ -1125,6 +1150,7 @@ function birthEvent(run: HistoryRun, child: Person, parents: string, site: Site 
 function runBirths(run: HistoryRun): void {
   const rules = run.content.notables;
   const rng = run.rng.notables;
+  const counts = notablesBySite(run);
   for (const mother of livingList(run)) {
     if (mother.sex !== 'f' || mother.died !== undefined || mother.siteId == null) continue;
     if (!isFertile(run, mother)) continue;
@@ -1134,6 +1160,7 @@ function runBirths(run: HistoryRun): void {
     if (!father) continue;
     const room = Math.max(0, 1 - run.notables.living.size / rules.notableCap);
     if (!rng.chance(rules.childChance * raceOf(run, mother).fertility * room)) continue;
+    if (!siteHasRoom(run, counts, mother.siteId)) continue;
     const child = createPerson(run, {
       raceId: mother.raceId,
       cultureId: mother.cultureId!,

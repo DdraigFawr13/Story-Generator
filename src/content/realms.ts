@@ -56,8 +56,8 @@ export const COLLEGES: CollegeRules = {
 };
 
 export const FREE_CITIES: FreeCityRules = {
-  // Two to four on a 256x256 map.
-  start: { min: 2, max: 4, landCellsPerCity: 9000 },
+  // About seven on a default 256x256 map (35% land), three on 128x128.
+  start: { min: 3, max: 8, landCellsPerCity: 3000 },
   capitalSpacing: 16,
   siteSpacing: 6,
   pop: [120, 260],
@@ -70,14 +70,15 @@ export const CITY_STATES: CityStateRules = {
     minPop: 150,
     // About a day and a half's ride from the throne.
     minDistance: 16,
-    chance: 0.03,
+    // About one far town in twenty a decade for a freedom-loving people, before famine, war or a dispute.
+    chance: 0.05,
     famine: 3,
     war: 2,
     dispute: 3,
-    maxFree: 6,
+    maxFree: 12,
     grievance: 3,
-    // Long enough to swear a pact before the old realm comes back.
-    graceYears: 10,
+    // Long enough to swear a pact and raise walls before the old realm comes back.
+    graceYears: 20,
   },
-  pact: { chance: 0.5, maxGrievance: 1, aidShare: 0.3, grievance: 0.5 },
+  pact: { chance: 0.8, maxGrievance: 1, aidShare: 0.3, grievance: 0.5 },
 };
