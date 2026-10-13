@@ -541,6 +541,22 @@ export const eventTypes: EventTypeDef[] = [
     ],
   },
   {
+    id: 'remarriage',
+    baseImportance: 1,
+    title: 'Marriage of {a} and {b}',
+    category: 'life',
+    precision: 'year',
+    links: { site: 'site' },
+    rollup: ['remarriage', 'remarriages'],
+    templates: [
+      'In {date} {a} wed {b} at {site}, {bond}; {who} had lost {late} in Year {lateYear}.',
+      '{date}: {a} and {b} were married at {site}, {bond}, {who} widowed since Year {lateYear}.',
+      'At {site} in {date} {a} took {b} to spouse, {bond}; {who} had buried {late} in Year {lateYear}.',
+      'In {date} {who}, who lost {late} in Year {lateYear}, married again: {a} and {b} wed at {site}, {bond}.',
+      '{a} and {b}, {bond}, were wed at {site} in {date}, {who} having lost {late} in Year {lateYear}.',
+    ],
+  },
+  {
     id: 'notable_died',
     baseImportance: 2,
     title: 'Death of {name}',

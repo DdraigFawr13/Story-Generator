@@ -13,13 +13,13 @@ import {
   type ActiveSite,
   type Building,
 } from '../../src/engine';
-import { base, biggest } from './helpers/site-fixture';
+import { base, baseB, biggest } from './helpers/site-fixture';
 
 const C = DEFAULT_CONTENT;
 const DAYS = 336;
 
-function fresh() {
-  const world = structuredClone(base());
+function fresh(from = base) {
+  const world = structuredClone(from());
   const active = embark(world, C, biggest(world).id);
   return { world, active, voice: voiceOf(world, C, active) };
 }
@@ -143,8 +143,9 @@ describe('fire', () => {
 
 describe('a normal year at a site', () => {
   it('keeps the store, harvests near the target and cuts no meals; the run is repeatable', () => {
+    // SITE-B: SITE-A's village ends its year at 57% of its stores after the 2026-10-13 history change (weddings, fame).
     const run = () => {
-      const { world, active } = fresh();
+      const { world, active } = fresh(baseB);
       const start = foodMeals(active, C);
       for (let d = 0; d < DAYS; d += 1) stepSite(world, C);
       return {

@@ -45,6 +45,7 @@ describe('view URL', () => {
     const url = buildViewUrl({
       seed: 'S1',
       size: 128,
+      years: 250,
       layer: 'rainfall',
       at: { x: 118, y: 40 },
       zoom: 3,
@@ -53,6 +54,7 @@ describe('view URL', () => {
     expect(parseViewUrl(url.slice(2), IDS)).toEqual({
       seed: 'S1',
       size: 128,
+      years: 250,
       layer: 'rainfall',
       at: { x: 118, y: 40 },
       zoom: 3,
@@ -68,6 +70,7 @@ describe('view URL', () => {
     const view = {
       seed: 'S1',
       size: 256 as const,
+      years: 250 as const,
       layer: 'elevation',
       at: null,
       zoom: 0,
@@ -86,6 +89,31 @@ describe('view URL', () => {
     expect(parseViewUrl('?next&open=race:human', IDS).open).toBe('race:human');
   });
 
+  it('keeps a 500 or 1000 year history in the link and leaves 250 out', () => {
+    const base = { seed: 'S1', size: 256, layer: 'elevation', at: null, zoom: 0 } as const;
+    expect(buildViewUrl({ ...base, years: 250 })).toBe('/?seed=S1&size=256&layer=elevation');
+    const url = buildViewUrl({ ...base, years: 500 });
+    expect(url).toBe('/?seed=S1&size=256&years=500&layer=elevation');
+    expect(parseViewUrl(url.slice(2), IDS).years).toBe(500);
+    expect(parseViewUrl('?seed=S1&years=1000', IDS).years).toBe(1000);
+    expect(parseViewUrl('?seed=S1', IDS).years).toBe(250);
+    expect(parseViewUrl('?seed=S1&years=300', IDS).years).toBe(250);
+    expect(parseViewUrl('?seed=S1&years=junk', IDS).years).toBe(250);
+    const site = {
+      seed: 'S1',
+      size: 256,
+      site: 6,
+      day: 3,
+      open: null,
+      zoom: 2,
+      at: { x: 1, y: 2 },
+    } as const;
+    expect(buildSiteUrl({ ...site, years: 1000 })).toBe(
+      '/?seed=S1&size=256&years=1000&site=6&day=3&z=3&at=1,2',
+    );
+    expect(buildSiteUrl(site)).not.toContain('years');
+  });
+
   it('ignores bad year, open and category values', () => {
     const view = parseViewUrl('?next&year=-4&open=nope:1&cat=zzz', IDS);
     expect([view.year, view.open, view.cat]).toEqual([null, null, null]);
@@ -97,6 +125,7 @@ describe('view URL', () => {
     expect(view).toEqual({
       seed: null,
       size: 256,
+      years: 250,
       layer: 'elevation',
       at: null,
       zoom: 0,

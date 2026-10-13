@@ -1176,6 +1176,8 @@ export interface NotableRules {
     legend: number;
     /** Fame of a mage by birth tier id (tiers not listed get 0). */
     mage: Partial<Record<string, number>>;
+    /** Fame the first actor of an event gains, by event type (types not listed give none). */
+    deeds: Partial<Record<string, number>>;
   };
   /** An event's importance gains floor(best actor fame / this), at most `actorFameCap`. */
   famePerImportance: number;
@@ -1211,6 +1213,8 @@ export interface NotableRules {
   captainDeathWin: number;
   /** Yearly chance an unmarried adult marries. */
   marryChance: number;
+  /** Years a widow or widower waits after the spouse's death before marrying again. */
+  mourningYears: number;
   /** Chance a ruler's child in an arranged-marriage culture marries into a linked civ. */
   allianceChance: number;
   /** Share of the two civs' grievance against each other that an alliance marriage removes. */

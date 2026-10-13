@@ -4,6 +4,7 @@
 // culture's rule; a killing by a foreign notable becomes sworn vengeance, which can become war.
 
 import type { Civ, DeathCause, Dynasty, Id, Person, SimEvent, Site } from '../core/types';
+import { cultureGivenName } from '../people/names';
 import { BIRTH_TIER_IDS, TIERS, legendSlotOpen, tierOfPower } from '../people/tiers';
 import { passItems, primarySchool, stealItem, itemsHeldBy } from './items';
 import {
@@ -21,6 +22,7 @@ import {
   livingAt,
   livingList,
   livingPerson,
+  FAME_MAX,
   makeRivals,
   mostFamous,
   placeOf,
@@ -46,9 +48,9 @@ import {
 export { livingList } from './people';
 
 /** Fame never passes this. */
-const FAME_MAX = 100;
 /** A spouse made up for a notable is within this many years of their age. */
 const SPOUSE_AGE_GAP = 4;
+const NAME_REROLLS = 5;
 /** A new ruler with no kin to take the seat is this many years past maturity at most. */
 const NEW_RULER_SPAN = 20;
 /** Rulers' children at the start are at most this old (years past maturity of the ruler). */
@@ -444,7 +446,7 @@ export function slayerFor(run: HistoryRun, site: Site): Person | undefined {
 /** An existing figure slew a beast: fame as a new hero would have had, on top of their own. */
 export function creditSlaying(run: HistoryRun, person: Person, danger: number, event: Id): void {
   const fame = run.content.notables.fame;
-  const gain = Math.min(fame.heroMax, fame.hero + fame.heroPerDanger * danger);
+  const gain = Math.round(Math.min(fame.heroMax, fame.hero + fame.heroPerDanger * danger));
   person.fame = Math.min(FAME_MAX, person.fame + gain);
   addDeed(person, event);
   markDeed(run, person);
@@ -460,7 +462,7 @@ export function createHero(
   const civ = site.civId === null ? undefined : run.world.civs.get(site.civId);
   if (!civ) return undefined;
   const fame = run.content.notables.fame;
-  const standing = Math.min(fame.heroMax, fame.hero + fame.heroPerDanger * danger);
+  const standing = Math.round(Math.min(fame.heroMax, fame.hero + fame.heroPerDanger * danger));
   return createAdult(run, civ, site, 'hero', standing, name);
 }
 
@@ -836,8 +838,34 @@ function succeed(run: HistoryRun, civ: Civ, dead: Person, death: SimEvent): void
 
 // --- marriage and children ----------------------------------------------------------------------
 
+/** The person's most recently dead spouse, if any. */
+function lateSpouse(run: HistoryRun, p: Person): Person | undefined {
+  let late: Person | undefined;
+  for (const id of p.family.spouses) {
+    const spouse = run.world.people.get(id);
+    if (spouse?.died !== undefined && (!late || spouse.died > late.died!)) late = spouse;
+  }
+  return late;
+}
+
+const inMourning = (run: HistoryRun, p: Person) => {
+  const late = lateSpouse(run, p);
+  return late !== undefined && run.year - late.died! < run.content.notables.mourningYears;
+};
+
 const eligibleToMarry = (run: HistoryRun, p: Person) =>
-  p.civId != null && isAdult(run, p) && !isElder(run, p) && !isMarried(run, p);
+  p.civId != null &&
+  isAdult(run, p) &&
+  !isElder(run, p) &&
+  !isMarried(run, p) &&
+  !inMourning(run, p);
+
+/** True if either has had a spouse of the other's name: a second "Erilu" reads as the same one. */
+function sharesSpouseName(run: HistoryRun, a: Person, b: Person): boolean {
+  const named = (p: Person, name: string) =>
+    p.family.spouses.some((id) => run.world.people.get(id)?.name === name);
+  return named(a, b.name) || named(b, a.name);
+}
 
 /** Civs sharing a link between their sites with the given civ, not at war with it. */
 function linkedCivs(run: HistoryRun, civId: Id): Set<Id> {
@@ -860,12 +888,23 @@ function marriageEvent(run: HistoryRun, a: Person, b: Person, otherCiv: Civ | un
     otherCiv && civA && otherCiv.id !== civA.id
       ? `binding the ${civA.name} to the ${otherCiv.name}`
       : `both of the ${civName(civA)}`;
+  const data: SimEvent['data'] = {
+    a: a.name,
+    b: b.name,
+    site: siteOf(run, a)?.name ?? 'the wilds',
+    bond,
+  };
+  // A widow or widower's new marriage says whom they lost, so it never reads as the first again.
+  const widowed = [a, b].find((p) => lateSpouse(run, p) !== undefined);
+  const late = widowed && lateSpouse(run, widowed);
+  if (widowed && late)
+    Object.assign(data, { who: widowed.name, late: late.name, lateYear: late.died! });
   const event = run.emit({
-    type: 'marriage',
+    type: late ? 'remarriage' : 'marriage',
     actors: [a.id, b.id],
     place: placeOf(run, a),
     causes: [],
-    data: { a: a.name, b: b.name, site: siteOf(run, a)?.name ?? 'the wilds', bond },
+    data,
   });
   addDeed(a, event.id);
   addDeed(b, event.id);
@@ -876,14 +915,22 @@ function createSpouse(run: HistoryRun, of: Person): Person {
   const race = raceOf(run, of);
   const age = ageOf(run, of);
   const low = Math.max(race.maturityYears, age - SPOUSE_AGE_GAP);
+  const spouseAge = run.rng.notables.between(low, Math.max(low, age + SPOUSE_AGE_GAP));
+  // Never a second spouse with an earlier one's name (a few rerolls; the name lists are long).
+  const culture = run.content.cultures.find((c) => c.id === of.cultureId)!;
+  const taken = new Set(of.family.spouses.map((id) => run.world.people.get(id)?.name));
+  let name = cultureGivenName(culture.names, run.rng.notables);
+  for (let tries = 0; taken.has(name) && tries < NAME_REROLLS; tries += 1)
+    name = cultureGivenName(culture.names, run.rng.notables);
   const spouse = createPerson(run, {
+    name,
     raceId: of.raceId,
     cultureId: of.cultureId!,
     siteId: of.siteId ?? null,
     civId: of.civId ?? null,
     cell: placeOf(run, of),
     title: 'kin',
-    age: run.rng.notables.between(low, Math.max(low, age + SPOUSE_AGE_GAP)),
+    age: spouseAge,
     sex: of.sex === 'f' ? 'm' : 'f',
     fame: 0,
   });
@@ -909,7 +956,11 @@ function runMarriages(run: HistoryRun): void {
     const civ = civOfPerson(run, person)!;
     const culture = cultureOf(run, civ);
     const open = (q: Person) =>
-      q.id !== person.id && q.sex !== person.sex && !closeKin(person, q) && eligibleToMarry(run, q);
+      q.id !== person.id &&
+      q.sex !== person.sex &&
+      !closeKin(person, q) &&
+      eligibleToMarry(run, q) &&
+      !sharesSpouseName(run, person, q);
     let partner: Person | undefined;
     let otherCiv: Civ | undefined;
     // A ruler's child in an arranged-marriage culture may be matched with a linked civ.

@@ -33,6 +33,8 @@ import { hash2 } from '../worldgen/noise';
 const MARRIED_CHANCE = 0.8;
 /** Most years a spouse may differ in age from the first. */
 const SPOUSE_AGE_GAP = 6;
+/** Bands a notable may stand in for when their own is full, in order. */
+const BANDS = ['adult', 'elder', 'child'] as const;
 /** Tries to find a given name nobody else at the site has. */
 const NAME_TRIES = 12;
 /** A generated mother is at least this many years past maturity. */
@@ -115,8 +117,13 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
     const age = year - p.born;
     residents.set(p.id, { person: p, age, notable: true });
     names.add(p.name);
+    // A notable fills a place in their age band, or in another band of their people when that
+    // band is already full, so the residents never outnumber the site.
     const key = groupKey(p.raceId, p.cultureId ?? '', bandOfAge(raceOf(p.raceId), age));
-    want.set(key, Math.max(0, (want.get(key) ?? 0) - 1));
+    const place = [key, ...BANDS.map((band) => groupKey(p.raceId, p.cultureId ?? '', band))].find(
+      (k) => (want.get(k) ?? 0) > 0,
+    );
+    if (place !== undefined) want.set(place, want.get(place)! - 1);
   }
 
   const spousesHere = (r: Resident) => r.person.family.spouses.filter((id) => residents.has(id));

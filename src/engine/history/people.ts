@@ -114,6 +114,9 @@ export function civOfPerson(run: HistoryRun, person: Person): Civ | undefined {
 }
 
 /** Records an event among a person's deeds. */
+/** Fame runs 0-100. */
+export const FAME_MAX = 100;
+
 export function addDeed(person: Person, event: Id): void {
   if (!person.deeds.includes(event)) person.deeds.push(event);
 }

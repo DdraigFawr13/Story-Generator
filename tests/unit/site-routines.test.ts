@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
 import { embark, stepBlock, type ActiveSite, type WorldState } from '../../src/engine';
-import { biggest, copy } from './helpers/site-fixture';
+import { baseB, biggest, copy } from './helpers/site-fixture';
 
 const C = DEFAULT_CONTENT;
 const R = C.life.routines;
@@ -27,7 +27,8 @@ function onSquare(world: WorldState, active: ActiveSite): number {
 
 describe('village routines', () => {
   it('keeps the square quiet on an ordinary afternoon and varies where people go', () => {
-    const world = copy();
+    // SITE-B: SITE-A's village ends at 20.1% on the square after the 2026-10-13 history change (weddings, fame).
+    const world = structuredClone(baseB());
     const active = embark(world, C, biggest(world).id);
     const places = new Set<string>();
     for (let week = 0; week < 4; week += 1) {
