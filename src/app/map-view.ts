@@ -116,8 +116,10 @@ export interface ViewState {
 /** The site-mode part of a link: `?site=6&day=43&open=person:776&z=3&at=65,47`. */
 export interface SiteLink {
   site: number;
-  /** Days since watching began. */
+  /** Days since watching began (the day of the shown block, or whole days to run when `block` is null). */
   day: number;
+  /** The last block run on that day, 0-3 (the time-of-day chip); null before any block ran or in older links. */
+  block: number | null;
   /** The selection as "person:776", "household:3", "building:5" or "tile:65,47". */
   open: string | null;
   /** Zoom step, 0-based (the link's `z` counts from 1). */
@@ -160,16 +162,34 @@ function parseSiteLink(params: URLSearchParams): SiteLink | null {
   const site = params.get('site');
   if (site === null || !/^\d{1,9}$/.test(site)) return null;
   const day = params.get('day');
+  const block = params.get('b');
   const open = params.get('open') ?? '';
   const z = Number(params.get('z'));
   const at = /^(\d{1,3}),(\d{1,3})$/.exec(params.get('at') ?? '');
   return {
     site: Number(site),
     day: day !== null && /^\d{1,6}$/.test(day) ? Math.min(Number(day), MAX_LINK_DAY) : 0,
+    block: block !== null && /^[0-3]$/.test(block) ? Number(block) : null,
     open: SITE_OPEN.test(open) ? open : null,
     zoom: Number.isInteger(z) && z >= 1 && z <= SITE_ZOOM_STEPS ? z - 1 : null,
     at: at ? { x: Number(at[1]), y: Number(at[2]) } : null,
   };
+}
+
+/**
+ * The link's day and block for a site clock: the block last run and its day, as the date chip
+ * shows it (after the evening the clock has turned, so that block belongs to the day before).
+ * Before anything ran (the entry day at night) the block is null.
+ */
+export function siteLinkPoint(
+  clockDay: number,
+  enteredDay: number,
+  nextBlock: number,
+): { day: number; block: number | null } {
+  if (clockDay === enteredDay && nextBlock === 0) return { day: 0, block: null };
+  return nextBlock === 0
+    ? { day: clockDay - 1 - enteredDay, block: 3 }
+    : { day: clockDay - enteredDay, block: nextBlock - 1 };
 }
 
 /** Path and query for the site view; the world-map fields are left out. */
@@ -178,6 +198,8 @@ export function buildSiteUrl(link: {
   size: WorldSize;
   site: number;
   day: number;
+  /** The last block run on `day`; omitted before any block ran. */
+  block?: number | null;
   open: string | null;
   zoom: number;
   at: { x: number; y: number };
@@ -188,6 +210,7 @@ export function buildSiteUrl(link: {
     `site=${link.site}`,
     `day=${link.day}`,
   ];
+  if (link.block != null) parts.push(`b=${link.block}`);
   if (link.open)
     parts.push(`open=${encodeURIComponent(link.open).replace(/%3A/g, ':').replace(/%2C/g, ',')}`);
   parts.push(`z=${link.zoom + 1}`, `at=${link.at.x},${link.at.y}`);

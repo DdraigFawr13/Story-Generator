@@ -29,6 +29,7 @@ import {
 import type { SiteHost } from '../platform/site-host';
 import type { SiteSpeed } from '../platform/site-worker';
 import type { PageRef } from './legends-ctx';
+import { siteLinkPoint } from './map-view';
 import {
   ChroniclePane,
   InspectPane,
@@ -65,6 +66,7 @@ import './site-view.css';
 /** The part of a link the site view writes back. */
 export interface SiteLinkParts {
   day: number;
+  block: number | null;
   open: string | null;
   zoom: number;
   at: { x: number; y: number };
@@ -566,20 +568,22 @@ export function SiteView(props: Props) {
     : (props.restore.at ?? { x: Math.round(size / 2), y: Math.round(size / 2) });
   const openText = sel ? formatSelection(sel, size) : null;
   const zoomIndex = painted ? painted.z : (props.restore.zoom ?? SELECT_ZOOM);
-  // Whole days to run so a reload shows the same date: a pause part-way through a day links to
-  // the end of that day, not to the night before it.
-  const linkDay = day - active.enteredDay + (active.block === 0 ? 0 : 1);
+  // The day and block the chips show, so a reload replays to the same moment.
+  const point = siteLinkPoint(day, active.enteredDay, active.block);
+  const linkDay = point.day;
+  const linkBlock = point.block;
   const linkText = useMemo(() => {
     const parts = [`seed=${world.seed}`, `site=${active.siteId}`, `day=${linkDay}`];
+    if (linkBlock !== null) parts.push(`b=${linkBlock}`);
     if (openText) parts.push(`open=${openText}`);
     parts.push(`z=${zoomIndex + 1}`, `at=${rounded.x},${rounded.y}`);
     return `?${parts.join('&')}`;
     // viewKey stands for the zoom and centre, which live in the renderer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [world.seed, active, linkDay, openText, viewKey]);
+  }, [world.seed, active, linkDay, linkBlock, openText, viewKey]);
   const { onLink } = props;
   useEffect(() => {
-    onLink({ day: linkDay, open: openText, zoom: zoomIndex, at: rounded });
+    onLink({ day: linkDay, block: linkBlock, open: openText, zoom: zoomIndex, at: rounded });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkText]);
 

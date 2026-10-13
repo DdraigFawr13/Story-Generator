@@ -56,6 +56,7 @@ import {
   DEFAULT_LAYER,
   DEFAULT_SEED,
   buildSiteUrl,
+  siteLinkPoint,
   buildViewUrl,
   parseViewUrl,
   type SiteLink,
@@ -379,8 +380,14 @@ export function NextApp() {
       const active = embarked.activeSite;
       if (!active) throw new Error('The site did not start.');
       let events: SimEvent[] = [];
-      if (link && link.day > 0) {
-        const ran = await host.run(link.day);
+      // A link with a block replays through that block of its day; one without runs whole days.
+      const toRun = link ? { days: link.day, blocks: 0 } : { days: 0, blocks: 0 };
+      if (link && link.block !== null) {
+        toRun.days = link.block === 3 ? link.day + 1 : link.day;
+        toRun.blocks = link.block === 3 ? 0 : link.block + 1;
+      }
+      if (link && (toRun.days > 0 || toRun.blocks > 0)) {
+        const ran = await host.run(toRun.days, toRun.blocks);
         embarked.day = ran.day;
         applySiteSnapshot(embarked, ran.snapshot);
         events = ran.events;
@@ -405,7 +412,7 @@ export function NextApp() {
         seed: embarked.seed,
         size: shown.current?.size ?? 256,
         site: active.siteId,
-        day: embarked.day - active.enteredDay,
+        ...siteLinkPoint(embarked.day, active.enteredDay, active.block),
         open: next.restore.open,
         zoom: next.restore.zoom ?? 2,
         at: next.restore.at ?? { x: 0, y: 0 },

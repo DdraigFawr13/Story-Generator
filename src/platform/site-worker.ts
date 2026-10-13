@@ -24,7 +24,7 @@ export type SiteRequest =
   | { type: 'found'; world: WorldState; content: SiteContent; cell: number; name: string | null }
   | { type: 'speed'; daysPerSecond: SiteSpeed; stopOn?: readonly string[] }
   /** Runs this many days at once (restoring a link), paused. */
-  | { type: 'run'; days: number }
+  | { type: 'run'; days: number; blocks?: number }
   | { type: 'leave' };
 
 export type SiteReply =
@@ -167,6 +167,10 @@ self.addEventListener('message', (event: MessageEvent<SiteRequest>) => {
       const events: SimEvent[] = [];
       for (let i = 0; i < request.days; i += 1) {
         for (const e of stepSite(world, content)) events.push(e);
+      }
+      // Then part of a day: the link's block (0-3 more blocks, short of a whole day).
+      for (let i = 0; i < (request.blocks ?? 0); i += 1) {
+        for (const e of stepBlock(world, content)) events.push(e);
       }
       scope.postMessage({ type: 'ran', day: world.day, events, snapshot: snapshotNow(world) });
     } else {

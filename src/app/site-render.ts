@@ -187,7 +187,7 @@ export function tileLook(ctx: LookCtx, k: number): TileLook {
   if (b && def?.walled) {
     const counted = !b.followed;
     if (ctx.doors.has(k)) {
-      return look(counted ? 't-counted' : 't-floor', '∩', counted ? 't-counted-ink' : 't-door');
+      return look(counted ? 't-counted' : 't-floor', '∩', counted ? 't-cwall-ink' : 't-door');
     }
     if (map.terrain[k] === code.wall) {
       return counted
@@ -203,7 +203,7 @@ export function tileLook(ctx: LookCtx, k: number): TileLook {
     )
       return look('t-floor', def.glyph, 't-feature');
     return counted
-      ? look('t-counted', '', 't-counted-ink')
+      ? look('t-counted', (x + y) % 3 === 0 ? '·' : '', 't-counted-ink')
       : look('t-floor', (x + y) % 3 === 0 ? '·' : '', 't-floor-ink');
   }
   if (b) {
@@ -338,6 +338,8 @@ export interface LiveLayers {
   burnt: Set<number>;
   fire: Set<number>;
   animals: { x: number; y: number; glyph: string }[];
+  /** Village life: the market stall tiles, only while a market morning runs. */
+  stalls: number[];
   /** M3.8: the attackers on the map (a few glyphs and a label) and where the fled gathered. */
   threat: ThreatMark | null;
   /** M3.9: someone who woke to the magic today or yesterday: a still ring and a few words. */
@@ -416,6 +418,7 @@ export function liveLayers(
       y: a.y,
       glyph: animalGlyphs.get(a.kind) ?? '?',
     })),
+    stalls: active.stalls ?? [],
     threat: threatMark(active, siteName),
     marvel: null,
   };
@@ -462,6 +465,8 @@ export interface PersonMark {
   k: number;
   /** Village life: share of the block's walk that passes before they set off (from the engine). */
   leaveAt?: number;
+  /** Village life: the tiles walked this block, in order, ending at `k` (absent when they stayed). */
+  walk?: number[] | undefined;
 }
 
 /** First letters of a name: capitalised for adults, lower case for children. */
@@ -618,6 +623,7 @@ export function movePeople(scene: Scene, world: WorldState): void {
     const pos = detail?.pos;
     if (pos) mark.k = pos[1] * scene.size + pos[0];
     mark.leaveAt = detail?.leaveAt ?? 0;
+    mark.walk = detail?.walk;
     const list = scene.at.get(mark.k);
     if (list) list.push(mark.id);
     else scene.at.set(mark.k, [mark.id]);
@@ -834,6 +840,10 @@ const SNOWY: ReadonlySet<string> = new Set([
 ]);
 /** Animals show from this many pixels per tile (every step but the whole-site one). */
 const ANIMALS_FROM = FIXED_ZOOMS[0]!;
+/** Walking pace floor (tiles per whole tween) and the longest wait a leaver can have (share of it). */
+const MIN_PACE = 24;
+const MAX_WAIT = 0.9;
+
 /** Fire flickers between its two tints this often (ms); everything else on the map stays still. */
 const FLICKER_MS = 450;
 /** Cap on the offscreen terrain layer, in pixels a side. */
@@ -864,7 +874,13 @@ export class SiteRenderer {
   private flicker = 0;
   private flickerOn = false;
   /** Discs walking from where they were to where the last snapshot put them. */
-  private tween: { from: Map<Id, number>; start: number; ms: number } | null = null;
+  private tween: {
+    from: Map<Id, number>;
+    start: number;
+    ms: number;
+    /** Tiles walked per whole tween, the same for everyone. */
+    pace: number;
+  } | null = null;
   private readonly onPaint: (info: { zoomLabel: string; whole: boolean }) => void;
 
   constructor(
@@ -917,7 +933,7 @@ export class SiteRenderer {
 
   /**
    * Walks each disc that moved from its tile in `from` (tile index by person) to its tile now, in a
-   * straight line over `ms`. Call after `movePeople`. Does nothing for `ms <= 0` or when the reader
+   * along its walk (a straight line when it has none) over `ms`. Call after `movePeople`. Does nothing for `ms <= 0` or when the reader
    * prefers reduced motion.
    */
   beginTween(from: Map<Id, number>, ms: number): void {
@@ -928,7 +944,15 @@ export class SiteRenderer {
     }
     const moved = new Map<Id, number>();
     for (const [id, k] of from) if (this.scene.marks.get(id)?.k !== k) moved.set(id, k);
-    this.tween = moved.size > 0 ? { from: moved, start: performance.now(), ms } : null;
+    // One pace for all: slow enough to look like walking, fast enough that the longest walk, after
+    // its leaver's wait, still ends within the tween.
+    let pace = MIN_PACE;
+    for (const id of moved.keys()) {
+      const mark = this.scene.marks.get(id);
+      const wait = Math.min(MAX_WAIT, Math.max(0, mark?.leaveAt ?? 0));
+      if (mark?.walk) pace = Math.max(pace, mark.walk.length / (1 - wait));
+    }
+    this.tween = moved.size > 0 ? { from: moved, start: performance.now(), ms, pace } : null;
   }
 
   /** Tile coordinates (fractional while walking) where a person's disc is drawn. */
@@ -940,8 +964,23 @@ export class SiteRenderer {
     if (prev === undefined) return [x, y];
     const px = prev % size;
     const py = (prev - px) / size;
-    // Not everyone sets off at once: each waits their share of the walk, then catches up.
-    const wait = Math.min(0.9, Math.max(0, mark.leaveAt ?? 0));
+    // Not everyone sets off at once: each waits their share of the tween.
+    const wait = Math.min(MAX_WAIT, Math.max(0, mark.leaveAt ?? 0));
+    const walk = mark.walk;
+    if (walk && walk.length > 0 && this.tween) {
+      // Along the route at the shared pace: tile by tile, arriving early on a short walk.
+      const at = Math.max(0, (progress - wait) * this.tween.pace);
+      if (at >= walk.length) return [x, y];
+      const i = Math.floor(at);
+      const f = at - i;
+      const a = i === 0 ? prev : walk[i - 1]!;
+      const b = walk[i]!;
+      const ax = a % size;
+      const ay = (a - ax) / size;
+      const bx = b % size;
+      const by = (b - bx) / size;
+      return [ax + (bx - ax) * f, ay + (by - ay) * f];
+    }
     const t = Math.max(0, (progress - wait) / (1 - wait));
     return [px + (x - px) * t, py + (y - py) * t];
   }
@@ -1049,32 +1088,6 @@ export class SiteRenderer {
       t.strokeRect(b.x * s, b.y * s, b.w * s, b.h * s);
       t.restore();
     }
-    // Counted homes: hatching inside and a dotted outline around the whole home.
-    for (const b of scene.counted) {
-      t.save();
-      t.beginPath();
-      t.rect((b.x + 1) * s, (b.y + 1) * s, (b.w - 2) * s, (b.h - 2) * s);
-      t.clip();
-      t.strokeStyle = C['t-counted-ink'];
-      t.lineWidth = 1;
-      t.beginPath();
-      const step = Math.max(3, s * 0.4);
-      const W = b.w * s;
-      const H = b.h * s;
-      for (let i = -H; i < W; i += step) {
-        t.moveTo(b.x * s + i, b.y * s + H);
-        t.lineTo(b.x * s + i + H, b.y * s);
-      }
-      t.stroke();
-      t.restore();
-      t.save();
-      t.strokeStyle = C['t-counted-ink'];
-      t.lineWidth = Math.max(1, s * 0.09);
-      t.setLineDash([Math.max(1.5, s * 0.14), Math.max(2, s * 0.2)]);
-      const o = Math.max(1, s * 0.12);
-      t.strokeRect(b.x * s - o, b.y * s - o, b.w * s + 2 * o, b.h * s + 2 * o);
-      t.restore();
-    }
     if (s >= LETTERS_FROM) {
       t.textAlign = 'center';
       t.textBaseline = 'middle';
@@ -1098,28 +1111,6 @@ export class SiteRenderer {
         t.fillText(glyph, (b.x + (b.w >> 1)) * s + s / 2, (b.y + (b.h >> 1)) * s + s / 2 + 1);
       }
       t.globalAlpha = 1;
-      t.font = `600 ${Math.max(11, Math.round(s * 0.55))}px system-ui, sans-serif`;
-      for (const b of scene.buildings) {
-        // Homes, fields and wall segments go unlabelled (a wall line would repeat its name per tile).
-        if (b.defId === 'home' || b.defId === 'field' || b.defId === 'wall') continue;
-        const label = buildingLabel(scene.rules, b.defId, scene.jarl);
-        const sx = (b.x + b.w / 2) * s;
-        const sy = (b.y - 0.15) * s;
-        t.lineWidth = 3;
-        t.strokeStyle = C.panel;
-        t.strokeText(label, sx, sy);
-        t.fillStyle = C.ink;
-        t.fillText(label, sx, sy);
-      }
-      for (const spot of fieldLabelSpots(scene.buildings)) {
-        const sx = spot.x * s;
-        const sy = (spot.y - 0.15) * s;
-        t.lineWidth = 3;
-        t.strokeStyle = C.panel;
-        t.strokeText('Fields', sx, sy);
-        t.fillStyle = C.ink;
-        t.fillText('Fields', sx, sy);
-      }
     }
     this.terrainKey = key;
     this.terrainScale = f;
@@ -1209,6 +1200,17 @@ export class SiteRenderer {
       }
     }
     this.keepFlickering();
+    // Market stalls: a still awning glyph on each stall tile, only on a market morning.
+    if (letters && live.stalls.length > 0) {
+      ctx.font = `600 ${Math.round(s * 0.78)}px ui-monospace, Menlo, Consolas, monospace`;
+      ctx.fillStyle = C['t-feature'];
+      for (const k of live.stalls) {
+        if (!visible(k)) continue;
+        const x = k % size;
+        const [sx, sy] = tileToScreen(x, (k - x) / size, view, s, vw, vh);
+        ctx.fillText('⌂', sx + s / 2, sy + s / 2 + 1);
+      }
+    }
     // Wild animals: plain letters, no disc.
     if (s >= ANIMALS_FROM) {
       ctx.font = `700 ${Math.round(s * 0.8)}px ui-monospace, Menlo, Consolas, monospace`;
@@ -1219,6 +1221,148 @@ export class SiteRenderer {
         const [sx, sy] = tileToScreen(a.x, a.y, view, s, vw, vh);
         ctx.fillText(a.glyph, sx + s / 2, sy + s / 2 + 1);
       }
+    }
+  }
+
+  /**
+   * Building and field names and the counted-quarter chip, over the discs so they are never hidden.
+   * Each stays inside the map view and steps off the discs where it can; a name with no clear spot
+   * is skipped (the inspector still names the building).
+   */
+  private paintLabels(
+    ctx: CanvasRenderingContext2D,
+    first: { x: number; y: number },
+    last: { x: number; y: number },
+    discs: readonly [number, number][],
+  ): void {
+    const { scene, state, colors: C, vw, vh } = this;
+    const s = this.scale;
+    const { view } = state;
+    const rad = Math.max(2, s * 0.44);
+    const pts = discs.map(([x, y]) => {
+      const [sx, sy] = tileToScreen(x, y, view, s, vw, vh);
+      return [sx + s / 2, sy + s / 2] as const;
+    });
+    // Rectangles already taken by the chip and names drawn (x0, y0, x1, y1).
+    const blocked: [number, number, number, number][] = [];
+    const clear = (cx: number, cy: number, w: number, h: number) =>
+      !blocked.some(
+        ([x0, y0, x1, y1]) =>
+          cx + w / 2 > x0 && cx - w / 2 < x1 && cy + h / 2 > y0 && cy - h / 2 < y1,
+      ) &&
+      !pts.some(
+        ([px, py]) =>
+          px + rad > cx - w / 2 &&
+          px - rad < cx + w / 2 &&
+          py + rad > cy - h / 2 &&
+          py - rad < cy + h / 2,
+      );
+    // The first candidate (centre x, centre y) that fits the view and sits on no disc, if any.
+    const spot = (cands: [number, number][], w: number, h: number): [number, number] | null => {
+      for (const [cx0, cy] of cands) {
+        const cx = Math.min(Math.max(cx0, w / 2 + 2), vw - w / 2 - 2);
+        if (cy - h / 2 < 0 || cy + h / 2 > vh) continue;
+        if (clear(cx, cy, w, h)) return [cx, cy];
+      }
+      return null;
+    };
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.font = `600 ${Math.max(11, Math.round(s * 0.55))}px system-ui, sans-serif`;
+    const names: { text: string; x: number; y: number; w: number; h: number }[] = [];
+    if (s >= LETTERS_FROM) {
+      // Homes, fields and wall segments go unlabelled (a wall line would repeat its name per tile).
+      for (const b of scene.buildings) {
+        if (b.defId === 'home' || b.defId === 'field' || b.defId === 'wall') continue;
+        if (
+          b.x > last.x + 1 ||
+          b.x + b.w < first.x - 1 ||
+          b.y > last.y + 1 ||
+          b.y + b.h < first.y - 1
+        )
+          continue;
+        names.push({
+          text: buildingLabel(scene.rules, b.defId, scene.jarl),
+          x: b.x + b.w / 2,
+          y: b.y,
+          w: b.w,
+          h: b.h,
+        });
+      }
+      for (const f of fieldLabelSpots(scene.buildings)) {
+        if (f.x < first.x - 4 || f.x > last.x + 4 || f.y < first.y - 2 || f.y > last.y + 2)
+          continue;
+        names.push({ text: 'Fields', x: f.x, y: f.y, w: 0, h: 0 });
+      }
+    }
+    // The counted quarter, summed up in one marker.
+    if (view.z >= 1 && scene.countedPeople > 0) {
+      const [px, py] = tileToScreen(
+        scene.countedCentre[0],
+        scene.countedCentre[1],
+        view,
+        s,
+        vw,
+        vh,
+      );
+      const text = `${scene.countedPeople} counted`;
+      ctx.font = '600 12px system-ui, sans-serif';
+      const w = ctx.measureText(text).width + 16;
+      if (px > -w && px < vw + w && py > -20 && py < vh + 20) {
+        const at = spot(
+          [
+            [px, py],
+            [px, py - 24],
+            [px, py + 24],
+            [px - w, py],
+            [px + w, py],
+            [px, py - 48],
+            [px, py + 48],
+          ],
+          w,
+          20,
+        ) ?? [
+          Math.min(Math.max(px, w / 2 + 2), vw - w / 2 - 2),
+          Math.min(Math.max(py, 12), vh - 12),
+        ];
+        blocked.push([at[0] - w / 2, at[1] - 10, at[0] + w / 2, at[1] + 10]);
+        ctx.beginPath();
+        ctx.roundRect(at[0] - w / 2, at[1] - 10, w, 20, 10);
+        ctx.fillStyle = C.panel;
+        ctx.fill();
+        ctx.setLineDash([3, 2]);
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = C['t-counted-ink'];
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = C.ink;
+        ctx.fillText(text, at[0], at[1] + 0.5);
+      }
+    }
+    ctx.font = `600 ${Math.max(11, Math.round(s * 0.55))}px system-ui, sans-serif`;
+    const lh = Math.max(11, Math.round(s * 0.55)) + 4;
+    for (const n of names) {
+      const [sx, sy] = tileToScreen(n.x, n.y, view, s, vw, vh);
+      const w = ctx.measureText(n.text).width + 4;
+      const top = sy - 0.15 * s - lh / 2;
+      const bottom = sy + n.h * s + lh / 2;
+      const at = spot(
+        [
+          [sx, top],
+          [sx, bottom],
+          [sx, top - lh],
+        ],
+        w,
+        lh,
+      );
+      if (!at) continue;
+      blocked.push([at[0] - w / 2, at[1] - lh / 2, at[0] + w / 2, at[1] + lh / 2]);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = C.panel;
+      ctx.strokeText(n.text, at[0], at[1]);
+      ctx.fillStyle = C.ink;
+      ctx.fillText(n.text, at[0], at[1]);
     }
   }
 
@@ -1333,35 +1477,6 @@ export class SiteRenderer {
     const first = tileAtPoint(0, 0, view, s, vw, vh, 1e6) ?? { x: 0, y: 0 };
     const last = tileAtPoint(vw, vh, view, s, vw, vh, 1e6) ?? { x: size, y: size };
     this.paintLive(ctx, first, last);
-    // The counted quarter, summed up in one marker.
-    if (view.z >= 1 && scene.countedPeople > 0) {
-      const [px, py] = tileToScreen(
-        scene.countedCentre[0],
-        scene.countedCentre[1],
-        view,
-        s,
-        vw,
-        vh,
-      );
-      const text = `${scene.countedPeople} counted`;
-      ctx.font = '600 12px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const w = ctx.measureText(text).width + 16;
-      if (px > -w && px < vw + w && py > -20 && py < vh + 20) {
-        ctx.beginPath();
-        ctx.roundRect(px - w / 2, py - 10, w, 20, 10);
-        ctx.fillStyle = C.panel;
-        ctx.fill();
-        ctx.setLineDash([3, 2]);
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = C['t-counted-ink'];
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.fillStyle = C.ink;
-        ctx.fillText(text, px, py + 0.5);
-      }
-    }
     // People, a separate pass over the terrain.
     const letters = s >= LETTERS_FROM;
     const two = s >= TWO_LETTERS_FROM;
@@ -1369,7 +1484,9 @@ export class SiteRenderer {
     const tween = whole ? null : this.tween;
     const progress = tween ? Math.min(1, (performance.now() - tween.start) / tween.ms) : 1;
     const walking = tween && progress < 1 ? tween.from : null;
+    const discs: [number, number][] = [];
     const disc = (mark: PersonMark, ids: Id[], x: number, y: number) => {
+      discs.push([x, y]);
       const [sx, sy] = tileToScreen(x, y, view, s, vw, vh);
       const cx = sx + s / 2;
       const cy = sy + s / 2;
@@ -1436,6 +1553,7 @@ export class SiteRenderer {
       }
       this.draw();
     } else this.tween = null;
+    if (!whole) this.paintLabels(ctx, first, last, discs);
     this.paintThreat(ctx);
     this.paintMarvel(ctx, progress);
     // Names for the selected and the hovered person.

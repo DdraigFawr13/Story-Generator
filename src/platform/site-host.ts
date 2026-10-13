@@ -17,8 +17,11 @@ export interface SiteHost {
   ): Promise<WorldState>;
   /** `stopOn`: event types that stop the clock on the block that emits them (the auto-pause). */
   setSpeed(daysPerSecond: SiteSpeed, stopOn?: readonly string[]): void;
-  /** Runs `days` days at once and resolves with the new day, the events they emitted and the state after. */
-  run(days: number): Promise<{ day: number; events: SimEvent[]; snapshot: SiteSnapshot }>;
+  /** Runs `days` days, then `blocks` more blocks, at once; resolves with the new day, the events they emitted and the state after. */
+  run(
+    days: number,
+    blocks?: number,
+  ): Promise<{ day: number; events: SimEvent[]; snapshot: SiteSnapshot }>;
   /** Demotes the site; resolves with the world as it stands, activeSite null. */
   leave(): Promise<WorldState>;
   /** Stops the worker without demoting. */
@@ -137,9 +140,9 @@ export function createSiteHost(handlers: SiteHostHandlers): SiteHost {
       ),
     setSpeed: (daysPerSecond, stopOn = []) =>
       worker?.postMessage({ type: 'speed', daysPerSecond, stopOn } satisfies SiteRequest),
-    run(days) {
+    run(days, blocks = 0) {
       if (!worker) return Promise.reject(new Error('No site is being watched.'));
-      return request(worker, { type: 'run', days }, 'ran', (reply) => {
+      return request(worker, { type: 'run', days, blocks }, 'ran', (reply) => {
         const { day, events, snapshot } = reply as {
           day: number;
           events: SimEvent[];
