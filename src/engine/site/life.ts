@@ -61,6 +61,7 @@ import { festivalToday, reportCrime, runSocietyMorning, serveSentences } from '.
 import { foodMeals, takeFood } from './stock';
 import { planThreat, resolveThreat, runThreatsDay } from './threats';
 import { keepLeader, runPoliticsDay } from './politics';
+import { runRecaps } from './recap';
 import { stepAnimals } from './wild';
 import {
   residentItems,
@@ -1365,6 +1366,16 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     }
     p.ate = false;
     settleMood(p, content, day);
+    // M3.11: the day so far, for the inspector; a new day starts with the night.
+    const d = p.person.detail!;
+    if (block === 0 || !d.today) d.today = [];
+    d.today[block] = {
+      activity: d.activity,
+      placeId: d.placeId ?? null,
+      where: d.where,
+      with: d.with,
+      jobId: d.jobId,
+    };
     if (p.placeId === null) cache.outdoors[p.tile] = 0;
   }
   // Evening: the day's interactions and family business (births due, matches, households).
@@ -1382,6 +1393,8 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   // M3.10: whoever died or left this block, the site ends it with a leader.
   keepLeader(world, content, active, voice.emit, voice.label);
   if (block === BLOCKS - 1) {
+    // M3.11: the historian's season and year recaps, on the last evening of each.
+    runRecaps(world, content, active, voice.emit, voice.label);
     world.day += 1;
     active.block = 0;
   } else active.block += 1;

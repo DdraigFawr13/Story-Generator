@@ -243,6 +243,8 @@ export interface ContentBundle {
   awakenings: AwakeningDef[];
   /** Thin politics and trade (M3.10): the site's leader and succession, and caravans from trade partners. */
   politics: PoliticsRules;
+  /** Chronicle, recaps and inspector (M3.11): rollups of small site lines and the historian's recaps. */
+  chronicle: ChronicleRules;
 }
 
 /** What a condition is, for its harm and the words of its chronicle lines (M3.5). */
@@ -2338,5 +2340,34 @@ export interface PoliticsRules {
     caravanBought: string;
     caravanNothing: string;
     caravanWaits: string;
+  };
+}
+
+/** One entry of a recap's tally (M3.11): events of these types counted, worded for one and for many. */
+export interface RecapTally {
+  types: string[];
+  /** `{n}` is the count. */
+  one: string;
+  many: string;
+}
+
+/** The watched site's chronicle (M3.11). */
+export interface ChronicleRules {
+  /** Site lines below this importance fold into one line a month in the live chronicle. */
+  rollupBelow: number;
+  recap: {
+    seasonType: string;
+    yearType: string;
+    /** The period's most important events, cited as the recap's causes, so "why?" shows them. */
+    causes: number;
+    /** Events below this importance are never cited. */
+    causeAtLeast: number;
+    /** Counted in this order; a zero count is left out, and at most `maxTally` are named. */
+    tally: RecapTally[];
+    maxTally: number;
+    /** The tally when nothing on the list happened. */
+    quiet: string;
+    /** The names of the seasons, spring first. */
+    seasons: string[];
   };
 }

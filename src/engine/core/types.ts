@@ -102,6 +102,17 @@ export interface PersonDetail {
   lows?: Record<string, number>;
   /** M3.9: cantrips, lessons and reading. */
   lore?: PersonLore;
+  /** M3.11: each block run so far today (index = block), for the inspector's "Today" line. */
+  today?: BlockSpent[];
+}
+
+/** What a resident did in one block (M3.11): copies of the detail fields at the block's end. */
+export interface BlockSpent {
+  activity: Activity | undefined;
+  placeId: Id | null;
+  where: string | undefined;
+  with: Id | undefined;
+  jobId: string | undefined;
 }
 
 /** A resident's magic at the site (M3.9). */
@@ -827,6 +838,8 @@ export interface ActiveSite {
   stalls?: number[] | undefined;
   siteId: Id;
   enteredDay: number;
+  /** M3.11, for recaps: the site's people (followed and counted) when the season and year began, the first event id of the watch, and the counted share. */
+  recap?: { season: number; year: number; firstEvent: Id; counted: number } | undefined;
   map: LocalMap;
   residents: Id[];
   /** Residents created at promotion (removed again on demotion). */
