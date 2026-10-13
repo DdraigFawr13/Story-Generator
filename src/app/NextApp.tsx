@@ -34,7 +34,12 @@ import {
   type WorldState,
   type WorldgenStage,
 } from '../engine';
-import { openSaveStore, type SaveStore, type SaveSummary } from '../platform/save-store';
+import {
+  openSaveStore,
+  type SaveStore,
+  type SaveSummary,
+  type SaveView,
+} from '../platform/save-store';
 import { createSiteHost, type SiteHost } from '../platform/site-host';
 import { generateInWorker, type WorldgenJob } from '../platform/worldgen-host';
 import { HistoryPlayback } from './HistoryPlayback';
@@ -65,6 +70,7 @@ import {
   type SiteTab,
   type PersonSection,
 } from './map-view';
+import { nameSaysWhen } from './site-saves';
 import './world-map.css';
 import './site-view.css';
 
@@ -449,7 +455,7 @@ export function NextApp() {
    * M3.12: opens a loaded save. A save made while watching a site carries on watching it in a new
    * worker, exactly where it was saved; any other save shows its world on the map.
    */
-  const openSave = async (loaded: WorldState) => {
+  const openSave = async (loaded: WorldState, view?: SaveView) => {
     job.current?.cancel();
     const loadedSize: WorldSize = loaded.params.width <= 128 ? 128 : 256;
     const active = loaded.activeSite;
@@ -477,7 +483,15 @@ export function NextApp() {
         siteId: active.siteId,
         name,
         key: watchKey.current,
-        restore: { events: [], open: null, zoom: null, at: null, tab: null, sec: null },
+        // The save's view (selection, zoom, centre, tabs) reopens the scene it was made in.
+        restore: {
+          events: [],
+          open: view?.open ?? null,
+          zoom: view?.zoom ?? null,
+          at: view?.at ?? null,
+          tab: (view?.tab as SiteTab | null | undefined) ?? null,
+          sec: (view?.sec as PersonSection | null | undefined) ?? null,
+        },
       };
       watchingRef.current = next;
       window.history.pushState(
@@ -488,9 +502,11 @@ export function NextApp() {
           size: loadedSize,
           site: active.siteId,
           ...siteLinkPoint(loaded.day, active.enteredDay, active.block),
-          open: null,
-          zoom: 2,
-          at: { x: 0, y: 0 },
+          open: next.restore.open,
+          zoom: next.restore.zoom ?? 2,
+          at: next.restore.at ?? { x: 0, y: 0 },
+          tab: next.restore.tab,
+          sec: next.restore.sec,
         }),
       );
       setWatching(next);
@@ -811,7 +827,7 @@ export function NextApp() {
           failures={siteFailures}
           restore={watching.restore}
           onLeave={() => void leave(true)}
-          onLoadSave={(loaded) => void openSave(loaded)}
+          onLoadSave={(loaded, view) => void openSave(loaded, view)}
           onOpenLegends={(ref) => void leaveToLegends(ref)}
           hrefOf={hrefOf}
           onLink={writeSiteLink}
@@ -1045,7 +1061,7 @@ export function NextApp() {
           <strong>{historyDate(state.day)}</strong> · weather: {state.weather.current} · events:{' '}
           {state.events.length}
         </p>
-        <SavePanel world={state} onLoad={(loaded) => void openSave(loaded)} />
+        <SavePanel world={state} onLoad={(loaded, view) => void openSave(loaded, view)} />
         <AptitudePreview seed={state.seed} />
       </div>
     </main>
@@ -1102,7 +1118,13 @@ function AptitudePreview({ seed }: { seed: string }) {
 }
 
 /** Named browser saves (M0.3). Loading replaces the world only after it validates. */
-function SavePanel({ world, onLoad }: { world: WorldState; onLoad: (world: WorldState) => void }) {
+function SavePanel({
+  world,
+  onLoad,
+}: {
+  world: WorldState;
+  onLoad: (world: WorldState, view?: SaveView) => void;
+}) {
   const [store, setStore] = useState<SaveStore | null>(null);
   const [persistent, setPersistent] = useState(true);
   const [saves, setSaves] = useState<SaveSummary[]>([]);
@@ -1157,13 +1179,14 @@ function SavePanel({ world, onLoad }: { world: WorldState; onLoad: (world: World
       <ul style={{ paddingLeft: 20 }}>
         {saves.map((save) => (
           <li key={save.name}>
-            {save.name} · {save.seed} · {historyDate(save.day)}
+            {save.name} · {save.seed}
+            {nameSaysWhen(save) ? '' : ` · ${historyDate(save.day)}`}
             {save.site ? ` · watching ${save.site}` : ''}{' '}
             <button
               aria-label={`Load ${save.name}`}
               onClick={() =>
                 void attempt(async () => {
-                  onLoad(await store!.load(save.name));
+                  onLoad(await store!.load(save.name), save.view);
                   return `Loaded "${save.name}".`;
                 })
               }

@@ -14,6 +14,17 @@ export interface SaveSummary {
   savedAt: string;
   /** M3.12: the watched site's name, when the save was made while watching one. */
   site?: string;
+  /** M3.12: what the site view showed when saved (the link's selection, zoom, centre and tabs). */
+  view?: SaveView;
+}
+
+/** The site view's place in a save, in the link's terms; loading restores it. */
+export interface SaveView {
+  open: string | null;
+  zoom: number;
+  at: { x: number; y: number };
+  tab: string | null;
+  sec: string | null;
 }
 
 /** What a save says about its world, before the save name and time are added. */
@@ -39,7 +50,12 @@ export interface SaveStore {
   list(): Promise<SaveSummary[]>;
   save(name: string, world: WorldState): Promise<SaveSummary>;
   /** Stores a world already serialized and gzipped (the site worker does that off the page). */
-  saveCompressed(name: string, header: SaveHeader, data: Uint8Array): Promise<SaveSummary>;
+  saveCompressed(
+    name: string,
+    header: SaveHeader,
+    data: Uint8Array,
+    view?: SaveView,
+  ): Promise<SaveSummary>;
   load(name: string): Promise<WorldState>;
   remove(name: string): Promise<void>;
 }
@@ -82,6 +98,20 @@ export function headerOf(world: WorldState): SaveHeader {
     : { seed: world.seed, day: world.day, site };
 }
 
+function looksLikeWorld(world: unknown): world is WorldState {
+  const w = world as Partial<WorldState> | null;
+  return (
+    typeof w === 'object' &&
+    w !== null &&
+    typeof w.seed === 'string' &&
+    typeof w.day === 'number' &&
+    typeof w.params?.width === 'number' &&
+    typeof w.params?.height === 'number' &&
+    w.sites instanceof Map &&
+    Array.isArray(w.events)
+  );
+}
+
 export function createSaveStore(
   backend: SaveBackend,
   now: () => Date = () => new Date(),
@@ -95,10 +125,11 @@ export function createSaveStore(
       validateSaveName(name);
       return this.saveCompressed(name, headerOf(world), await compress(serializeWorld(world)));
     },
-    async saveCompressed(name, header, data) {
+    async saveCompressed(name, header, data, view) {
       const validName = validateSaveName(name);
       const summary: SaveSummary = { name: validName, ...header, savedAt: now().toISOString() };
       if (summary.site === undefined) delete summary.site;
+      if (view) summary.view = view;
       await backend.write(summary, { name: validName, checksum: await checksumOf(data), data });
       return summary;
     },
@@ -109,7 +140,11 @@ export function createSaveStore(
         throw new Error(`The save "${name}" is damaged and cannot be loaded.`);
       }
       try {
-        return deserializeWorld(await decompress(record.data));
+        const world = deserializeWorld(await decompress(record.data));
+        // Readable JSON that is not a world (another app's data, a hand-edited save) fails here,
+        // not later inside the map.
+        if (!looksLikeWorld(world)) throw new Error('not a world');
+        return world;
       } catch {
         throw new Error(`The save "${name}" could not be read by this version.`);
       }

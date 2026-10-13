@@ -14,6 +14,7 @@ import {
   type WorldState,
 } from '../../src/engine';
 import {
+  compress,
   createSaveStore,
   decompress,
   memoryBackend,
@@ -76,6 +77,16 @@ describe('named world saves', () => {
     await expect(store.save('   ', createWorld('X'))).rejects.toThrow(/1–60/);
     await store.remove('slot');
     expect(await store.list()).toEqual([]);
+  });
+
+  it("refuses readable data that is not a world, and keeps a site save's view (M3.12)", async () => {
+    const store = createSaveStore(memoryBackend());
+    const header = { seed: 'S1', day: 40 };
+    await store.saveCompressed('odd', header, await compress(JSON.stringify({ hello: 1 })));
+    await expect(store.load('odd')).rejects.toThrow(/could not be read by this version/);
+    const view = { open: 'person:795', zoom: 2, at: { x: 30, y: 41 }, tab: null, sec: 'ties' };
+    await store.saveCompressed('seen', header, await compress('{}'), view);
+    expect((await store.list()).find((save) => save.name === 'seen')?.view).toEqual(view);
   });
 
   it('stores worlds gzipped and still reads uncompressed older records', async () => {

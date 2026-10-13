@@ -481,6 +481,10 @@
   align-items: center;
   gap: 4px 8px;
 }
+/* M3.12: the buttons sit on their own row under the message, so the banner keeps one shape. */
+.sv-root .banner .bbtns {
+  gap: 4px 6px;
+}
 .sv-root .banner .b1 b {
   color: var(--warn);
 }
@@ -1513,6 +1517,19 @@
 }
 .sv-root .savepop .savestatus {
   color: var(--ink);
+}
+.sv-root .savepop .saveask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  font-size: 13px;
+  border-left: 3px solid var(--warn);
+  padding-left: 8px;
+}
+.sv-root .savepop .saveask span {
+  flex-basis: 100%;
+  overflow-wrap: anywhere;
 }
 .sv-root .savelist {
   list-style: none;

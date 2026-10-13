@@ -4,7 +4,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { WorldState } from '../engine';
-import { openSaveStore, type SaveStore, type SaveSummary } from '../platform/save-store';
+import {
+  openSaveStore,
+  validateSaveName,
+  type SaveHeader,
+  type SaveStore,
+  type SaveSummary,
+  type SaveView,
+} from '../platform/save-store';
 import type { SiteHost } from '../platform/site-host';
 import { dayText } from './site-panels';
 import { shortDate } from './site-season';
@@ -14,10 +21,35 @@ const AUTOSAVE_MIN_MS = 30_000;
 
 export const autosaveName = (site: string) => `Autosave · ${site}`;
 
-/** The save list's date: the day, then the site when the save is of one. */
+/** The default name of a save: the site and the day it holds. */
+export const defaultSaveName = (site: string, day: number) => `${site}, ${shortDate(day)}`;
+
+/** The name already says where and when (a default name), so the list need not repeat it. */
+export const nameSaysWhen = (save: SaveSummary) =>
+  save.name.includes(shortDate(save.day)) && (!save.site || save.name.includes(save.site));
+
+/** The save list's second line: the site and day unless the name says them, then the seed. */
 export function saveLine(save: SaveSummary): string {
+  if (nameSaysWhen(save)) return `seed ${save.seed}`;
   const where = save.site ?? 'the world map';
   return `${where} · ${shortDate(save.day)} · seed ${save.seed}`;
+}
+
+/** "Name (2)", "Name (3)"…: the first name not in the list, kept within the 60-character limit. */
+export function freeName(name: string, taken: readonly string[]): string {
+  for (let n = 2; ; n += 1) {
+    const tail = ` (${n})`;
+    const next = `${name.slice(0, 60 - tail.length).trimEnd()}${tail}`;
+    if (!taken.includes(next)) return next;
+  }
+}
+
+/** A save taken from the worker that waits on "Replace?" because its name is in use. */
+interface Pending {
+  name: string;
+  header: SaveHeader;
+  data: Uint8Array;
+  view: SaveView;
 }
 
 interface Props {
@@ -27,9 +59,11 @@ interface Props {
   /** The clock is running (autosave only saves play). */
   playing: boolean;
   autosaveDays: number;
+  /** The view the link shows now; a save keeps it so loading opens the same scene. */
+  view(): SaveView;
   open: boolean;
   setOpen(open: boolean): void;
-  onLoad(world: WorldState): void;
+  onLoad(world: WorldState, view?: SaveView): void;
 }
 
 /** The "Saves" button and its popover; it stays mounted so the autosave keeps watching the days. */
@@ -42,6 +76,7 @@ export function SiteSaves(props: Props) {
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [lastAuto, setLastAuto] = useState<number | null>(null);
+  const [pending, setPending] = useState<Pending | null>(null);
   /** Day and wall-clock time of the last save, manual or auto, for the autosave's spacing. */
   const last = useRef({ day, at: performance.now() });
   const running = useRef(false);
@@ -59,16 +94,34 @@ export function SiteSaves(props: Props) {
     };
   }, []);
 
-  const write = async (saveName: string): Promise<SaveSummary> => {
+  /** Stores a save taken from the worker under `saveName`, replacing any save of that name. */
+  const keep = async (saveName: string, taken: Omit<Pending, 'name'>): Promise<SaveSummary> => {
+    if (!store) throw new Error('Saves are not ready yet.');
+    const saved = await store.saveCompressed(saveName, taken.header, taken.data, taken.view);
+    last.current = { day: taken.header.day, at: performance.now() };
+    setSaves(await store.list());
+    return saved;
+  };
+
+  /**
+   * Takes the world from the worker, then names it: an unedited name is built from the day the
+   * save holds, not the day on screen when Save was pressed (the clock may have run on).
+   */
+  const write = async (
+    nameFor: (day: number) => string,
+    replace: boolean,
+  ): Promise<SaveSummary | Pending> => {
     if (!store) throw new Error('Saves are not ready yet.');
     running.current = true;
     setBusy(true);
     try {
+      const view = props.view();
       const { header, data } = await host.save();
-      const saved = await store.saveCompressed(saveName, header, data);
-      last.current = { day: header.day, at: performance.now() };
-      setSaves(await store.list());
-      return saved;
+      const saveName = validateSaveName(nameFor(header.day));
+      if (!replace && (await store.list()).some((save) => save.name === saveName)) {
+        return { name: saveName, header, data, view };
+      }
+      return await keep(saveName, { header, data, view });
     } finally {
       running.current = false;
       setBusy(false);
@@ -80,8 +133,8 @@ export function SiteSaves(props: Props) {
     if (!store || !props.playing || running.current) return;
     if (day - last.current.day < props.autosaveDays) return;
     if (performance.now() - last.current.at < AUTOSAVE_MIN_MS) return;
-    write(autosaveName(siteName)).then(
-      (saved) => setLastAuto(saved.day),
+    write(() => autosaveName(siteName), true).then(
+      (saved) => setLastAuto((saved as SaveSummary).day),
       // A save cut short by another request (a link run, a manual save) waits for the next day.
       () => {},
     );
@@ -96,7 +149,8 @@ export function SiteSaves(props: Props) {
       setStatus(message === 'cancelled' ? 'The save was interrupted; try again.' : message);
     }
   };
-  const shownName = name ?? `${siteName}, ${shortDate(day)}`;
+  const shownName = name ?? defaultSaveName(siteName, day);
+  const savedLine = (saved: SaveSummary) => `Saved “${saved.name}” at ${dayText(saved.day)}.`;
 
   return (
     <span className="saves">
@@ -108,6 +162,7 @@ export function SiteSaves(props: Props) {
           setOpen(!open);
           setName(null);
           setStatus(null);
+          setPending(null);
         }}
       >
         Saves
@@ -118,9 +173,18 @@ export function SiteSaves(props: Props) {
             className="saverow"
             onSubmit={(event) => {
               event.preventDefault();
+              setPending(null);
               void attempt(async () => {
-                const saved = await write(shownName);
-                return `Saved “${saved.name}” at ${dayText(saved.day)}.`;
+                const typed = name;
+                const saved = await write(
+                  (heldDay) => typed ?? defaultSaveName(siteName, heldDay),
+                  false,
+                );
+                if ('data' in saved) {
+                  setPending(saved);
+                  return `A save named “${saved.name}” already exists.`;
+                }
+                return savedLine(saved);
               });
             }}
           >
@@ -144,6 +208,33 @@ export function SiteSaves(props: Props) {
               {status}
             </p>
           )}
+          {pending && (
+            <div className="saveask" role="group" aria-label="Replace the save?">
+              <span>Replace the save “{pending.name}”?</span>
+              <button
+                type="button"
+                className="primary"
+                onClick={() => {
+                  setPending(null);
+                  void attempt(async () => savedLine(await keep(pending.name, pending)));
+                }}
+              >
+                Replace
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPending(null);
+                  void attempt(async () => {
+                    const taken = (await store!.list()).map((save) => save.name);
+                    return savedLine(await keep(freeName(pending.name, taken), pending));
+                  });
+                }}
+              >
+                Keep both
+              </button>
+            </div>
+          )}
           <ul className="savelist">
             {saves.length === 0 && <li className="quiet">No saves yet.</li>}
             {saves.map((save) => (
@@ -159,7 +250,7 @@ export function SiteSaves(props: Props) {
                       void attempt(async () => {
                         const loaded = await store!.load(save.name);
                         setOpen(false);
-                        props.onLoad(loaded);
+                        props.onLoad(loaded, save.view);
                         return `Loaded “${save.name}”.`;
                       })
                     }

@@ -26,6 +26,7 @@ import {
   type SiteSnapshot,
   type WorldState,
 } from '../engine';
+import type { SaveView } from '../platform/save-store';
 import type { SiteHost } from '../platform/site-host';
 import type { SiteSpeed } from '../platform/site-worker';
 import type { PageRef } from './legends-ctx';
@@ -103,7 +104,7 @@ interface Props {
   };
   onLeave(): void;
   /** M3.12: a save was loaded from the Saves popover: the app takes over the world it holds. */
-  onLoadSave(world: WorldState): void;
+  onLoadSave(world: WorldState, view?: SaveView): void;
   onOpenLegends(ref: PageRef): void;
   hrefOf(ref: PageRef): string;
   onLink(parts: SiteLinkParts): void;
@@ -438,9 +439,12 @@ export function SiteView(props: Props) {
     r.draw();
   }, [sheetOpen, sheet, sel, rectOf]);
 
-  const pauseTypes = () => {
+  /** The event types the clock stops on; "Next notable" leaves caravans and visitors to normal play. */
+  const pauseTypes = (seeking = false) => {
     const on = latest.current.pauseOn;
-    return PAUSE_CATEGORIES.filter((c) => on.has(c)).flatMap((c) => content.site.autoPause[c]);
+    return PAUSE_CATEGORIES.filter((c) => on.has(c) && !(seeking && c === 'arrivals')).flatMap(
+      (c) => content.site.autoPause[c],
+    );
   };
   const setSpeed = (next: SiteSpeed) => {
     if (next !== 0) autoPaused.current = false;
@@ -461,7 +465,7 @@ export function SiteView(props: Props) {
     setSeeking(true);
     setSpeedState(16);
     setRate(0);
-    host.setSpeed(16, pauseTypes(), content.site.notable);
+    host.setSpeed(16, pauseTypes(true), content.site.notable);
   };
   const resume = () => setSpeed(resumeSpeed.current || 0.5);
   const latest = useRef({ speed, pauseOn, m, setSpeed, seeking });
@@ -530,8 +534,12 @@ export function SiteView(props: Props) {
           : null;
       const candidates: [SimEvent, PauseCategory | null][] = threatFirst.map((event) => [
         event,
-        PAUSE_CATEGORIES.find((c) => content.site.autoPause[c].includes(event.type) && on.has(c)) ??
-          null,
+        PAUSE_CATEGORIES.find(
+          (c) =>
+            content.site.autoPause[c].includes(event.type) &&
+            on.has(c) &&
+            !(seekingNow && c === 'arrivals'),
+        ) ?? null,
       ]);
       if (notableEvent) candidates.push([notableEvent, null]);
       for (const [event, category] of candidates) {
@@ -553,7 +561,14 @@ export function SiteView(props: Props) {
           causes,
         });
         setWhyOpen(false);
-        const actor = event.actors.find((id) => model.scene.marks.has(id));
+        // An event that names nobody on the map (an outbreak's spread) selects the first person its
+        // causes name, so the inspector shows who it started with; with no one, the selection clears.
+        const actor =
+          event.actors.find((id) => model.scene.marks.has(id)) ??
+          event.causes
+            .flatMap((id) => world.events.find((e) => e.id === id)?.actors ?? [])
+            .find((id) => model.scene.marks.has(id));
+        if (actor === undefined && category !== 'threats') setSel(null);
         if (actor !== undefined) {
           const next: Selection = { kind: 'person', id: actor };
           setSel(next);
@@ -655,6 +670,9 @@ export function SiteView(props: Props) {
     // viewKey stands for the zoom and centre, which live in the renderer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [world.seed, active, linkDay, linkBlock, openText, viewKey, tab, sec, sheetOpen]);
+  /** What a save keeps of the view: the link's selection, zoom, centre and tabs. */
+  const linkView = useRef<SaveView | null>(null);
+  linkView.current = { open: openText, zoom: zoomIndex, at: rounded, tab, sec };
   const { onLink } = props;
   useEffect(() => {
     onLink({
@@ -776,7 +794,8 @@ export function SiteView(props: Props) {
       return;
     }
     if (event.key === 'n' || event.key === 'N') {
-      seek();
+      if (latest.current.seeking) setSpeed(0);
+      else seek();
       return;
     }
     if (event.key === ' ' && (onBody || onCanvas)) {
@@ -930,6 +949,8 @@ export function SiteView(props: Props) {
               why?
             </a>
           )}
+        </div>
+        <div className="b1 bbtns">
           <button type="button" className="primary" onClick={resume}>
             Resume (Space)
           </button>
@@ -1059,6 +1080,7 @@ export function SiteView(props: Props) {
           day={day}
           playing={speed !== 0}
           autosaveDays={content.site.autosaveDays}
+          view={() => linkView.current!}
           open={savesOpen}
           setOpen={setSavesOpen}
           onLoad={props.onLoadSave}
