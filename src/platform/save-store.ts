@@ -2,6 +2,8 @@
 // CompressionStream (M2.5), plus a SHA-256 checksum of the stored bytes. Summary and data are
 // written in one transaction, so a save either commits completely or leaves the previous one
 // untouched. There is no cross-version migration (R-02): a save from an older build may fail to load.
+// M3.12: a save made while a site is watched holds the site too (`activeSite`), and loading it
+// carries on watching; the site worker compresses its own world so play never stalls the page.
 
 import { deserializeWorld, serializeWorld, type WorldState } from '../engine';
 
@@ -10,7 +12,12 @@ export interface SaveSummary {
   seed: string;
   day: number;
   savedAt: string;
+  /** M3.12: the watched site's name, when the save was made while watching one. */
+  site?: string;
 }
+
+/** What a save says about its world, before the save name and time are added. */
+export type SaveHeader = Pick<SaveSummary, 'seed' | 'day' | 'site'>;
 
 export interface SaveRecord {
   name: string;
@@ -31,6 +38,8 @@ export interface SaveBackend {
 export interface SaveStore {
   list(): Promise<SaveSummary[]>;
   save(name: string, world: WorldState): Promise<SaveSummary>;
+  /** Stores a world already serialized and gzipped (the site worker does that off the page). */
+  saveCompressed(name: string, header: SaveHeader, data: Uint8Array): Promise<SaveSummary>;
   load(name: string): Promise<WorldState>;
   remove(name: string): Promise<void>;
 }
@@ -64,6 +73,15 @@ export async function decompress(data: Uint8Array | string): Promise<string> {
   return new TextDecoder().decode(await pipe(data, new DecompressionStream('gzip')));
 }
 
+/** The summary fields a world gives: its seed, day and the site being watched, if any. */
+export function headerOf(world: WorldState): SaveHeader {
+  const active = world.activeSite;
+  const site = active ? world.sites.get(active.siteId)?.name : undefined;
+  return site === undefined
+    ? { seed: world.seed, day: world.day }
+    : { seed: world.seed, day: world.day, site };
+}
+
 export function createSaveStore(
   backend: SaveBackend,
   now: () => Date = () => new Date(),
@@ -74,14 +92,13 @@ export function createSaveStore(
       return saves.sort((a, b) => (a.savedAt < b.savedAt ? 1 : a.savedAt > b.savedAt ? -1 : 0));
     },
     async save(name, world) {
+      validateSaveName(name);
+      return this.saveCompressed(name, headerOf(world), await compress(serializeWorld(world)));
+    },
+    async saveCompressed(name, header, data) {
       const validName = validateSaveName(name);
-      const data = await compress(serializeWorld(world));
-      const summary: SaveSummary = {
-        name: validName,
-        seed: world.seed,
-        day: world.day,
-        savedAt: now().toISOString(),
-      };
+      const summary: SaveSummary = { name: validName, ...header, savedAt: now().toISOString() };
+      if (summary.site === undefined) delete summary.site;
       await backend.write(summary, { name: validName, checksum: await checksumOf(data), data });
       return summary;
     },

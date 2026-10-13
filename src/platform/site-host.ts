@@ -3,6 +3,7 @@
 // whole world sent on embark and leave, and from the events in each tick.
 
 import type { Id, SimEvent, SiteContent, SiteSnapshot, WorldState } from '../engine';
+import type { SaveHeader } from './save-store';
 import type { SiteReply, SiteRequest, SiteSpeed } from './site-worker';
 
 export interface SiteHost {
@@ -15,8 +16,19 @@ export interface SiteHost {
     cell: number,
     name: string | null,
   ): Promise<WorldState>;
-  /** `stopOn`: event types that stop the clock on the block that emits them (the auto-pause). */
-  setSpeed(daysPerSecond: SiteSpeed, stopOn?: readonly string[]): void;
+  /** M3.12: carries on watching the site of a loaded save, in a new worker. */
+  resume(world: WorldState, content: SiteContent): Promise<void>;
+  /**
+   * `stopOn`: event types that stop the clock on the block that emits them (the auto-pause).
+   * `until` (M3.12): run flat out until an event this important, or `maxDays` pass.
+   */
+  setSpeed(
+    daysPerSecond: SiteSpeed,
+    stopOn?: readonly string[],
+    until?: { minImportance: number; maxDays: number },
+  ): void;
+  /** M3.12: the running world, serialized and gzipped by the worker, for a save. */
+  save(): Promise<{ header: SaveHeader; data: Uint8Array }>;
   /** Runs `days` days, then `blocks` more blocks, at once; resolves with the new day, the events they emitted and the state after. */
   run(
     days: number,
@@ -29,8 +41,14 @@ export interface SiteHost {
 }
 
 export interface SiteHostHandlers {
-  /** `snapshot` rides along at most every 100 ms, and always when the clock stops. */
-  onTick(day: number, events: SimEvent[], rate: number, snapshot?: SiteSnapshot): void;
+  /** `snapshot` rides along at most every 100 ms, and always when the clock stops; `stopped` ends a "Next notable" run. */
+  onTick(
+    day: number,
+    events: SimEvent[],
+    rate: number,
+    snapshot?: SiteSnapshot,
+    stopped?: 'notable' | 'limit',
+  ): void;
   onError?(message: string): void;
 }
 
@@ -92,7 +110,7 @@ export function createSiteHost(handlers: SiteHostHandlers): SiteHost {
     next.onmessage = (event: MessageEvent<SiteReply>) => {
       const reply = event.data;
       if (reply.type === 'tick')
-        handlers.onTick(reply.day, reply.events, reply.rate, reply.snapshot);
+        handlers.onTick(reply.day, reply.events, reply.rate, reply.snapshot, reply.stopped);
       else if (reply.type === 'error') {
         handlers.onError?.(reply.message);
         waiting?.reject(new Error(reply.message));
@@ -139,8 +157,26 @@ export function createSiteHost(handlers: SiteHostHandlers): SiteHost {
         'embarked',
         worldOf,
       ),
-    setSpeed: (daysPerSecond, stopOn = []) =>
-      worker?.postMessage({ type: 'speed', daysPerSecond, stopOn } satisfies SiteRequest),
+    resume: (world, content) =>
+      request(
+        start(),
+        { type: 'resume', world, content: siteContentOf(content) },
+        'resumed',
+        () => undefined,
+      ),
+    setSpeed: (daysPerSecond, stopOn = [], until) =>
+      worker?.postMessage(
+        (until
+          ? { type: 'speed', daysPerSecond, stopOn, until }
+          : { type: 'speed', daysPerSecond, stopOn }) satisfies SiteRequest,
+      ),
+    save() {
+      if (!worker) return Promise.reject(new Error('No site is being watched.'));
+      return request(worker, { type: 'save' }, 'saved', (reply) => {
+        const { header, data } = reply as { header: SaveHeader; data: Uint8Array };
+        return { header, data };
+      });
+    },
     run(days, blocks = 0) {
       if (!worker) return Promise.reject(new Error('No site is being watched.'));
       return request(worker, { type: 'run', days, blocks }, 'ran', (reply) => {

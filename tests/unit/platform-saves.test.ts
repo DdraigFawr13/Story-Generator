@@ -5,9 +5,13 @@ import {
   DEFAULT_SYSTEMS,
   advance,
   createWorld,
+  embark,
+  stepBlock,
+  stepSite,
   serializeWorld,
   worldDigest,
   type Simulation,
+  type WorldState,
 } from '../../src/engine';
 import {
   createSaveStore,
@@ -16,7 +20,27 @@ import {
   type SaveBackend,
 } from '../../src/platform/save-store';
 
+import { biggest, copy } from './helpers/site-fixture';
+
 const SIM: Simulation = { content: DEFAULT_CONTENT, systems: DEFAULT_SYSTEMS };
+
+/** JSON with sorted keys and no undefined fields: the state, whatever order its keys were set in. */
+function canonical(world: WorldState): string {
+  return JSON.stringify(
+    [world.day, world.rng, world.activeSite, world.people, world.events],
+    (_k, v) => {
+      if (v instanceof Map) return { $map: [...v] };
+      if (v instanceof Set) return { $set: [...v] };
+      if (ArrayBuffer.isView(v)) return Array.from(v as Uint8Array);
+      if (v && typeof v === 'object' && !Array.isArray(v)) {
+        const out: Record<string, unknown> = {};
+        for (const key of Object.keys(v).sort()) out[key] = (v as Record<string, unknown>)[key];
+        return out;
+      }
+      return v;
+    },
+  );
+}
 
 describe('named world saves', () => {
   it('saves, lists newest first, loads and continues identically', async () => {
@@ -85,5 +109,22 @@ describe('named world saves', () => {
     fail = true;
     await expect(store.save('slot', world)).rejects.toThrow(/Quota/);
     expect((await store.load('slot')).day).toBe(0);
+  });
+
+  it('a site saved mid-day carries on exactly as the running one (M3.12)', async () => {
+    const store = createSaveStore(memoryBackend());
+    const world = copy();
+    embark(world, DEFAULT_CONTENT, biggest(world).id);
+    for (let d = 0; d < 12; d += 1) stepSite(world, DEFAULT_CONTENT);
+    stepBlock(world, DEFAULT_CONTENT);
+    const saved = await store.save('site', world);
+    expect(saved.site).toBe(world.sites.get(world.activeSite!.siteId)!.name);
+    const loaded = await store.load('site');
+    // Long enough for the steward to replan, the woods to refresh and the routes to be reused.
+    for (let d = 0; d < 14; d += 1) {
+      stepSite(world, DEFAULT_CONTENT);
+      stepSite(loaded, DEFAULT_CONTENT);
+    }
+    expect(canonical(loaded)).toBe(canonical(world));
   });
 });

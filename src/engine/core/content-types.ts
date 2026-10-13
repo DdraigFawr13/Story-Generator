@@ -1135,6 +1135,10 @@ export interface SiteRules {
   travelCostPerDay: number;
   /** Event type ids that pause play, per category. */
   autoPause: Record<'deaths' | 'breakdowns' | 'fires' | 'threats' | 'magic' | 'arrivals', string[]>;
+  /** M3.12: "Next notable" runs until an event of at least this importance, or this many days. */
+  notable: { minImportance: number; maxDays: number };
+  /** M3.12: days of play between autosaves. */
+  autosaveDays: number;
 }
 
 /** Biographies (M2.6): how many chronicle lines an entity keeps and the words of its summary. */

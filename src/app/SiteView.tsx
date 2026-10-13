@@ -59,6 +59,7 @@ import {
   tileAtPoint,
   type Selection,
 } from './site-render';
+import { SiteSaves } from './site-saves';
 import { NARROW_PX, fireLine, shortDate, threatLine, weatherChip } from './site-season';
 import './site-view.css';
 
@@ -78,6 +79,7 @@ export type TickListener = (
   events: SimEvent[],
   rate: number,
   snapshot?: SiteSnapshot,
+  stopped?: 'notable' | 'limit',
 ) => void;
 
 interface Props {
@@ -100,6 +102,8 @@ interface Props {
     sec: PersonSection | null;
   };
   onLeave(): void;
+  /** M3.12: a save was loaded from the Saves popover: the app takes over the world it holds. */
+  onLoadSave(world: WorldState): void;
   onOpenLegends(ref: PageRef): void;
   hrefOf(ref: PageRef): string;
   onLink(parts: SiteLinkParts): void;
@@ -199,6 +203,9 @@ export function SiteView(props: Props) {
   /** Bumped by each snapshot so the panes and the time bar re-read the people. */
   const [, setSnapshots] = useState(0);
   const [speed, setSpeedState] = useState<SiteSpeed>(0);
+  /** M3.12: "Next notable" is running (flat out until an important event). */
+  const [seeking, setSeeking] = useState(false);
+  const [savesOpen, setSavesOpen] = useState(false);
   const [rate, setRate] = useState(0);
   const [sel, setSel] = useState<Selection | null>(() => {
     const found = parseSelection(props.restore.open, size);
@@ -431,8 +438,13 @@ export function SiteView(props: Props) {
     r.draw();
   }, [sheetOpen, sheet, sel, rectOf]);
 
+  const pauseTypes = () => {
+    const on = latest.current.pauseOn;
+    return PAUSE_CATEGORIES.filter((c) => on.has(c)).flatMap((c) => content.site.autoPause[c]);
+  };
   const setSpeed = (next: SiteSpeed) => {
     if (next !== 0) autoPaused.current = false;
+    setSeeking(false);
     setSpeedState(next);
     setRate(0);
     if (next !== 0) {
@@ -440,19 +452,27 @@ export function SiteView(props: Props) {
       setBanner(null);
     }
     // The worker stops on the very block of an auto-pause event, so the map shows that moment.
-    const on = latest.current.pauseOn;
-    host.setSpeed(
-      next,
-      PAUSE_CATEGORIES.filter((c) => on.has(c)).flatMap((c) => content.site.autoPause[c]),
-    );
+    host.setSpeed(next, pauseTypes());
+  };
+  /** M3.12: runs flat out until an event of `notable.minImportance` (or an auto-pause one), or a year. */
+  const seek = () => {
+    window.clearTimeout(paneTimer.current);
+    autoPaused.current = false;
+    setBanner(null);
+    setSeeking(true);
+    setSpeedState(16);
+    setRate(0);
+    host.setSpeed(16, pauseTypes(), content.site.notable);
   };
   const resume = () => setSpeed(resumeSpeed.current || 0.5);
-  const latest = useRef({ speed, pauseOn, m, setSpeed });
-  latest.current = { speed, pauseOn, m, setSpeed };
+  const latest = useRef({ speed, pauseOn, m, setSpeed, seeking });
+  latest.current = { speed, pauseOn, m, setSpeed, seeking };
 
   useEffect(() => {
-    props.ticks.current = (nextDay, events, nextRate, snapshot) => {
-      const { pauseOn: on, m: model, speed: current } = latest.current;
+    props.ticks.current = (nextDay, events, nextRate, snapshot, stopped) => {
+      const { pauseOn: on, m: model, seeking: seekingNow } = latest.current;
+      // A "Next notable" run moves too fast to walk anyone: people jump to their tiles.
+      const current = seekingNow ? 0 : latest.current.speed;
       world.day = nextDay;
       if (snapshot) {
         // The worker owns the running world; this copy mirrors it from the snapshots.
@@ -476,6 +496,15 @@ export function SiteView(props: Props) {
       }
       setDay(nextDay);
       setRate(nextRate);
+      if (stopped) {
+        setSeeking(false);
+        setSpeedState(0);
+        setRate(0);
+        if (stopped === 'limit') {
+          const days = content.site.notable.maxDays;
+          showToast(`Nothing notable in ${days} days; paused`);
+        }
+      }
       if (events.length === 0) return;
       for (const e of events) world.events.push(e);
       // One index rebuild per burst of ticks, not one per tick.
@@ -492,13 +521,24 @@ export function SiteView(props: Props) {
           Number(!content.site.autoPause.threats.includes(x.type)) -
           Number(!content.site.autoPause.threats.includes(y.type)),
       );
-      for (const event of threatFirst) {
-        const category = PAUSE_CATEGORIES.find(
-          (c) => content.site.autoPause[c].includes(event.type) && on.has(c),
-        );
-        if (!category || autoPaused.current) continue;
+      // "Next notable" stopped on an important event that no chip pauses on: the most important
+      // event of the stopping block takes the banner instead (the last one on a tie).
+      const notableEvent =
+        stopped === 'notable'
+          ? events
+              .filter((e) => e.importance >= content.site.notable.minImportance)
+              .reduce<SimEvent | null>((a, e) => (a && a.importance > e.importance ? a : e), null)
+          : null;
+      const candidates: [SimEvent, PauseCategory | null][] = threatFirst.map((event) => [
+        event,
+        PAUSE_CATEGORIES.find((c) => content.site.autoPause[c].includes(event.type) && on.has(c)) ??
+          null,
+      ]);
+      if (notableEvent) candidates.push([notableEvent, null]);
+      for (const [event, category] of candidates) {
+        if ((!category && event !== notableEvent) || autoPaused.current) continue;
         autoPaused.current = true;
-        if (current !== 0) resumeSpeed.current = current;
+        if (current !== 0 && !seekingNow) resumeSpeed.current = current;
         latest.current.setSpeed(0);
         const causes = event.causes.flatMap((id) => {
           const cause = world.events.find((e) => e.id === id);
@@ -736,9 +776,13 @@ export function SiteView(props: Props) {
       setSpeed(KEY_SPEEDS[Number(event.key)]!);
       return;
     }
+    if (event.key === 'n' || event.key === 'N') {
+      seek();
+      return;
+    }
     if (event.key === ' ' && (onBody || onCanvas)) {
       event.preventDefault();
-      if (latest.current.speed) setSpeed(0);
+      if (latest.current.speed || latest.current.seeking) setSpeed(0);
       else resume();
       return;
     }
@@ -821,13 +865,20 @@ export function SiteView(props: Props) {
   const month = monthName(blockDay);
   const chip = weatherChip({ world, active, content }, narrow);
   // On a phone the time of day moves down beside the speed buttons, and the rate is rounded.
+  // The pressed pause button says "paused" on a phone, which keeps the row to one line.
   const rateText = narrow
-    ? `${DAY_BLOCKS[lastBlock]} · ${speed === 0 ? 'paused' : `${rate < 1 ? rate.toFixed(1) : Math.round(rate)} d/s`}`
+    ? speed === 0
+      ? DAY_BLOCKS[lastBlock]!
+      : seeking && rate <= 0
+        ? 'seeking'
+        : `${seeking ? 'seeking' : DAY_BLOCKS[lastBlock]} · ${rate < 1 ? rate.toFixed(1) : Math.round(rate)} d/s`
     : speed === 0
       ? 'paused'
-      : rate <= 0
-        ? `${SPEED_WORD(speed)}× · measuring`
-        : `${SPEED_WORD(speed)}× · ${rate.toFixed(1)} days/s`;
+      : seeking
+        ? `to next notable · ${rate <= 0 ? 'measuring' : `${Math.round(rate)} days/s`}`
+        : rate <= 0
+          ? `${SPEED_WORD(speed)}× · measuring`
+          : `${SPEED_WORD(speed)}× · ${rate.toFixed(1)} days/s`;
   const tabs: [typeof tab, string, string?][] = [
     ['inspect', 'Inspect'],
     ['site', 'Site'],
@@ -882,6 +933,9 @@ export function SiteView(props: Props) {
           )}
           <button type="button" className="primary" onClick={resume}>
             Resume (Space)
+          </button>
+          <button type="button" onClick={seek}>
+            Next notable (N)
           </button>
           <button
             type="button"
@@ -1000,6 +1054,16 @@ export function SiteView(props: Props) {
         <button type="button" onClick={() => void copyLink()}>
           Copy
         </button>
+        <SiteSaves
+          host={host}
+          siteName={m.site.name}
+          day={day}
+          playing={speed !== 0}
+          autosaveDays={content.site.autosaveDays}
+          open={savesOpen}
+          setOpen={setSavesOpen}
+          onLoad={props.onLoadSave}
+        />
       </div>
       <div className="main" ref={mainRef} data-tab={phoneTab}>
         <div className="mapcol">
@@ -1224,13 +1288,23 @@ export function SiteView(props: Props) {
                   type="button"
                   title={title}
                   aria-label={value === 0 ? 'Pause' : `${value}×`}
-                  aria-pressed={speed === value}
+                  aria-pressed={!seeking && speed === value}
                   onClick={() => setSpeed(value)}
                 >
                   {label}
                 </button>
               ))}
             </div>
+            <button
+              type="button"
+              className="small notable"
+              title={`Run until something notable happens, or a year passes (N)`}
+              aria-label="Next notable"
+              aria-pressed={seeking}
+              onClick={() => (seeking ? setSpeed(0) : seek())}
+            >
+              {narrow ? '⏭' : '⏭ Next notable'}
+            </button>
             <span className="rate" data-testid="site-rate">
               {rateText}
             </span>

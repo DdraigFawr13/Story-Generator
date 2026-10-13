@@ -2,9 +2,11 @@
 // also keeps door tiles single-file) with a Manhattan heuristic. Cost per tile entered is its
 // terrain's `walkCost` plus `treeCost` for a tree. Water blocks except at bridges; walls block
 // except a home or hall's door. One expansion budget is shared by everyone in a block; once spent,
-// routes are straight lines. The grid and route cache are derived data kept off the saved state.
+// routes are straight lines. The cost grid is derived data kept off the saved state; the route cache
+// lives on the site (M3.12) because which routes are cached decides how far the budget goes, so a
+// loaded site must walk the same ways as the running one.
 
-import type { ActiveSite, Building, LocalMap } from '../core/types';
+import type { ActiveSite } from '../core/types';
 import type { LifeRules, SiteRules } from '../core/content-types';
 import { doorOf } from './defs';
 
@@ -16,7 +18,6 @@ const MAX_COST = 255;
 interface PathCache {
   /** Cost to enter each tile; 0 blocks. */
   cost: Uint8Array;
-  routes: Map<number, number[] | null>;
   /** Scratch per search; `seen` and `closed` mark tiles by search number so nothing is cleared. */
   g: Float64Array;
   from: Int32Array;
@@ -27,8 +28,9 @@ interface PathCache {
   heap: Heap;
   /** Nodes expanded since the site started (for tests and tuning). */
   expanded: number;
-  /** Tiles changed since the grid was built; null when it is current. */
-  changed: number[] | null;
+  /** The grid is out of date (a building or tile changed), or was built for another layout version. */
+  stale: boolean;
+  version: number;
 }
 
 const caches = new WeakMap<ActiveSite, PathCache>();
@@ -39,25 +41,46 @@ const caches = new WeakMap<ActiveSite, PathCache>();
  * (a new path) pass an empty list: old routes still work.
  */
 export function invalidatePaths(active: ActiveSite, changed?: readonly number[]): void {
+  const routes = routesOf(active);
+  if (!changed) {
+    routes.clear();
+    caches.delete(active);
+    return;
+  }
+  // Drop only the routes the change can have broken (and the failed searches, which may now succeed).
+  const tiles = new Set(changed);
+  for (const [key, route] of routes) {
+    if (route === null || route.some((k) => tiles.has(k))) routes.delete(key);
+  }
   const cache = caches.get(active);
-  if (!cache) return;
-  if (changed) cache.changed = [...(cache.changed ?? []), ...changed];
-  else caches.delete(active);
+  if (cache) cache.stale = true;
 }
 
-function buildCost(
-  map: LocalMap,
-  buildings: Iterable<Building>,
-  rules: SiteRules,
-  life: LifeRules,
-) {
+const routesOf = (active: ActiveSite) => (active.routes ??= new Map());
+
+/**
+ * The tree layer as it stood when the layout version last moved (M3.12). Felling changes the
+ * trees daily but moves the layout only weekly; derived lists (the walking grid, the fellers'
+ * trees) read this copy, which is saved, so a loaded site sees the same woods as the running one.
+ */
+export function treesAtVersion(active: ActiveSite): Uint8Array {
+  if (active.treeView?.version !== active.layoutVersion) {
+    active.treeView = { version: active.layoutVersion, tree: active.map.tree.slice() };
+  }
+  return active.treeView.tree;
+}
+
+function buildCost(active: ActiveSite, rules: SiteRules, life: LifeRules) {
+  const { map } = active;
+  const buildings = active.buildings.values();
+  const tree = treesAtVersion(active);
   const cost = new Uint8Array(map.width * map.height);
   const bridges = new Set(map.bridges);
   for (let k = 0; k < cost.length; k += 1) {
     if (map.water[k] !== 0 && !bridges.has(k)) continue;
     const base = life.walkCost[rules.terrains[map.terrain[k]!]!.id];
     if (base === undefined) continue;
-    cost[k] = Math.min(MAX_COST, base + (map.tree[k] ? life.treeCost : 0));
+    cost[k] = Math.min(MAX_COST, base + (tree[k] ? life.treeCost : 0));
   }
   const floor = life.walkCost['floor'] ?? 1;
   const walled = new Set(rules.buildings.filter((d) => d.walled).map((d) => d.id));
@@ -70,8 +93,7 @@ function cacheOf(active: ActiveSite, rules: SiteRules, life: LifeRules): PathCac
   if (!cache) {
     const n = active.map.width * active.map.height;
     cache = {
-      cost: buildCost(active.map, active.buildings.values(), rules, life),
-      routes: new Map(),
+      cost: buildCost(active, rules, life),
       g: new Float64Array(n),
       from: new Int32Array(n),
       seen: new Int32Array(n),
@@ -79,17 +101,14 @@ function cacheOf(active: ActiveSite, rules: SiteRules, life: LifeRules): PathCac
       search: 0,
       heap: { prio: new Float64Array(1024), tile: new Int32Array(1024), size: 0 },
       expanded: 0,
-      changed: null,
+      stale: false,
+      version: active.layoutVersion,
     };
     caches.set(active, cache);
-  } else if (cache.changed) {
-    // Rebuild the cost grid and drop only the routes the change can have broken.
-    const changed = new Set(cache.changed);
-    cache.cost = buildCost(active.map, active.buildings.values(), rules, life);
-    cache.changed = null;
-    for (const [key, route] of cache.routes) {
-      if (route === null || route.some((k) => changed.has(k))) cache.routes.delete(key);
-    }
+  } else if (cache.stale || cache.version !== active.layoutVersion) {
+    cache.cost = buildCost(active, rules, life);
+    cache.stale = false;
+    cache.version = active.layoutVersion;
   }
   return cache;
 }
@@ -244,7 +263,8 @@ export function findRoute(
   const width = active.map.width;
   const height = active.map.height;
   const key = from * c.cost.length + to;
-  const cached = c.routes.get(key);
+  const routes = routesOf(active);
+  const cached = routes.get(key);
   if (cached !== undefined) return cached;
   if (c.cost[to] === BLOCKED) return null;
   c.search += 1;
@@ -295,12 +315,12 @@ export function findRoute(
     for (let k = to; k !== from; k = c.from[k]!) route.push(k);
     route.reverse();
   }
-  if (c.routes.size >= life.pathCache) c.routes.clear();
-  c.routes.set(key, route);
+  if (routes.size >= life.pathCache) routes.clear();
+  routes.set(key, route);
   // The way back is the same road: people go out and return along it (work and home, shrine and home).
   const back = to * c.cost.length + from;
-  if (route && !c.routes.has(back)) {
-    c.routes.set(back, [...route.slice(0, -1).reverse(), from]);
+  if (route && !routes.has(back)) {
+    routes.set(back, [...route.slice(0, -1).reverse(), from]);
   }
   return route;
 }

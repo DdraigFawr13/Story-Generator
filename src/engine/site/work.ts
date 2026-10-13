@@ -37,7 +37,7 @@ import { farmBlock, fieldsNeedingWork } from './crops';
 import { bandOfAge, buildingDef, siteCodes, type Band, type SiteContent } from './defs';
 import { rollAccident } from './health';
 import { findSpot } from './layout';
-import { pathCosts, tileCost } from './path';
+import { pathCosts, tileCost, treesAtVersion } from './path';
 import { beginWall } from './threats';
 import {
   addItem,
@@ -287,11 +287,6 @@ interface WorkSite {
   leadBest: Float64Array;
   leadSecond: Float64Array;
   leadId: Int32Array;
-  /** The last day plan's fingerprint (see `runSteward`). */
-  signature: string;
-  /** Today's field tile for each farmer, and the field (building id) each worked last (see `runSteward`). */
-  farmTile: Map<Id, number>;
-  farmField: Map<Id, Id>;
   /** Items held by residents, in item id order; null until needed. */
   resident: (HeldItem & { holder: Id })[] | null;
 }
@@ -347,7 +342,9 @@ function rebuildLists(ws: WorkSite, content: SiteContent, active: ActiveSite): v
       queue.push(next);
     }
   }
-  ws.trees = nearFeature(active, reach, (k) => map.tree[k] !== 0);
+  // The woods as of this layout version (felling moves the layout weekly; see `treesAtVersion`).
+  const trees = treesAtVersion(active);
+  ws.trees = nearFeature(active, reach, (k) => trees[k] !== 0);
   ws.water = nearFeature(active, reach, (k) => map.water[k] !== 0);
   ws.stone = nearFeature(active, reach, (k) => map.mineral[k] === code.stone);
   ws.ore = nearFeature(active, reach, (k) => map.mineral[k] === code.ore);
@@ -453,9 +450,6 @@ function workSiteSlow(content: SiteContent, active: ActiveSite): WorkSite {
       leadBest: new Float64Array(0),
       leadSecond: new Float64Array(0),
       leadId: new Int32Array(0),
-      signature: '',
-      farmTile: new Map(),
-      farmField: new Map(),
       resident: null,
     };
     sites.set(active, ws);
@@ -595,7 +589,7 @@ export function workTile(
   job: JobDef,
 ): number {
   const ws = workSite(content, active);
-  if (job.workplace === 'field') return ws.farmTile.get(who.id) ?? who.field;
+  if (job.workplace === 'field') return active.stewardPlan?.farmTile.get(who.id) ?? who.field;
   if (!ws.workplaces.has(job.workplace)) return -1;
   const fromList = (list: number[]) =>
     list.length === 0
@@ -948,8 +942,14 @@ export function runSteward(
     spare.map((j) => j.id).join('|'),
     lowStores ? 1 : -1,
   ].join('#');
-  if (signature !== ws.signature) {
-    ws.signature = signature;
+  // The plan's memo lives on the site (saved), so a loaded site carries on with the same plan.
+  const plan = (active.stewardPlan ??= {
+    signature: '',
+    farmField: new Map(),
+    farmTile: new Map(),
+  });
+  if (signature !== plan.signature) {
+    plan.signature = signature;
     for (const w of workers) {
       const detail = w.person.detail;
       if (detail?.jobId !== undefined) prev.set(w.id, detail.jobId);
@@ -961,7 +961,7 @@ export function runSteward(
   for (const w of workers) if (w.person.detail?.abed) w.person.detail.jobId = undefined;
   // Each farmer works one field: yesterday's while it still needs hands, else the first that does
   // (ripe fields first, then those to sow, then to tend), so routes stay the same from day to day.
-  ws.farmTile.clear();
+  plan.farmTile.clear();
   if (farm) {
     const fields = [...season.ripe, ...season.sow, ...season.tend];
     const room = new Map<Id, number>();
@@ -974,7 +974,7 @@ export function runSteward(
     const placed = new Map<Id, Building>();
     const byId = new Map(fields.map((b) => [b.id, b]));
     for (const w of farming) {
-      const before = ws.farmField.get(w.id);
+      const before = plan.farmField.get(w.id);
       if (before !== undefined && (room.get(before) ?? 0) > 0) {
         placed.set(w.id, byId.get(before)!);
         room.set(before, room.get(before)! - 1);
@@ -988,8 +988,8 @@ export function runSteward(
       placed.set(w.id, field);
       room.set(field.id, (room.get(field.id) ?? 0) - 1);
     });
-    ws.farmField = new Map([...placed].map(([id, b]) => [id, b.id]));
-    for (const [id, b] of placed) ws.farmTile.set(id, b.cells[mix(id, 14) % b.cells.length]!);
+    plan.farmField = new Map([...placed].map(([id, b]) => [id, b.id]));
+    for (const [id, b] of placed) plan.farmTile.set(id, b.cells[mix(id, 14) % b.cells.length]!);
   }
 
   function assignJobs() {
