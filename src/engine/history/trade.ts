@@ -4,6 +4,7 @@
 import { GOODS, type GoodId, type Id, type Site } from '../core/types';
 import { goodNeed } from './goods';
 import { siteNeed } from './pop';
+import { cultureValue } from './values';
 import {
   atWar,
   causesOf,
@@ -91,6 +92,7 @@ export function runTrade(run: HistoryRun): void {
   const sites = liveSites(run);
   for (const site of sites) site.wealth *= 1 - rules.wealthDecay;
   const relieved = new Set<Id>();
+  const partners = new Map<string, [Id, Id]>();
   for (const a of sites) {
     for (const id of links.get(a.id) ?? []) {
       const b = world.sites.get(id);
@@ -99,6 +101,7 @@ export function runTrade(run: HistoryRun): void {
       if (!tradePair(run, a, b, relieved)) continue;
       if (a.civId === null || b.civId === null || a.civId === b.civId) continue;
       const key = pairKey(a.civId, b.civId);
+      partners.set(key, a.civId < b.civId ? [a.civId, b.civId] : [b.civId, a.civId]);
       if (run.tradeOpened.has(key)) continue;
       const event = run.emit({
         type: 'trade_opened',
@@ -107,6 +110,25 @@ export function runTrade(run: HistoryRun): void {
         data: { civ: civName(run, a), other: civName(run, b), site: a.name, partner: b.name },
       });
       run.tradeOpened.set(key, event.id);
+    }
+  }
+  tradeGoodwill(run, partners);
+}
+
+/** Civs that traded this decade forgive each other a little; merchant peoples more. */
+function tradeGoodwill(run: HistoryRun, partners: Map<string, [Id, Id]>): void {
+  const keys = [...partners.keys()].sort();
+  for (const key of keys) {
+    const [idA, idB] = partners.get(key)!;
+    for (const [from, to] of [
+      [idA, idB],
+      [idB, idA],
+    ] as const) {
+      const civ = run.world.civs.get(from);
+      const grievance = civ?.grievances.get(to);
+      if (!civ || grievance === undefined) continue;
+      const share = (run.rules.cultureValues.tradeGoodwill * cultureValue(run, civ, 'wealth')) / 10;
+      civ.grievances.set(to, grievance * (1 - Math.min(1, share)));
     }
   }
 }

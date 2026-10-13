@@ -100,6 +100,28 @@ export const HISTORY: HistoryRules = {
   borderClashChance: 0.6,
   insultChance: 0.2,
   grievanceDecay: 0.97,
+  // Culture values between peoples (engine/history/values.ts).
+  cultureValues: {
+    // Gwerin and Skarn differ by about 2; two human cultures count half as strange.
+    typicalStrangeness: 1.5,
+    sameRaceStrangeness: 0.5,
+    // Honour 9 keeps a grudge at 0.986 a year (half-life about 50 years), honour 2 at 0.958.
+    honourMemory: 0.004,
+    envyWealth: 5,
+    // A merchant people (wealth 7) forgives a trading partner 35% of its grievance each decade.
+    tradeGoodwill: 0.25,
+    kinNeutral: 4,
+    // Tarqai (freedom 9, order 3) dispute 1.5x as often; Ushani (2, 9) at 0.44x.
+    disputeSlope: 0.08,
+    slightSlope: 0.1,
+    slights: {
+      faith: ['by mocking {faith}', 'by scorning the rites of {faith}'],
+      kin: ['by shaming a kinswoman of their ruler', 'by refusing a kinsman hospitality'],
+      order: ['by flouting their laws', 'by ignoring the precedence of their court'],
+      freedom: ['by demanding tribute', 'by treating their envoys as subjects'],
+      honour: ['by calling their warriors cowards', 'by breaking a sworn word'],
+    },
+  },
   soldierBase: 30,
   levyShare: 0.2,
   maxStrengthRatio: 3,
