@@ -25,6 +25,7 @@ export const NEEDS: NeedDef[] = [
     restore: {
       eat: 40,
       work: 15,
+      errand: 15,
       play: 15,
       socialise: 15,
       despair: 25,
@@ -94,6 +95,7 @@ export const NEEDS: NeedDef[] = [
       play: 8,
       worship: 6,
       work: 3,
+      errand: 3,
       fight: 3,
       defend: 3,
       shelter: 8,
@@ -110,7 +112,7 @@ export const NEEDS: NeedDef[] = [
     name: 'Purpose',
     decayPerDay: 8,
     // Elders work one block and pass the afternoon in company, which also keeps them useful.
-    restore: { work: 6, play: 6, socialise: 6, fight: 6, defend: 6 },
+    restore: { work: 6, errand: 4, play: 6, socialise: 6, fight: 6, defend: 6 },
     awayShare: 1,
     lowAt: 30,
     moodAtZero: -12,
@@ -260,6 +262,82 @@ export const MEMORIES: MemoryDef[] = [
 ];
 
 export const LIFE: LifeRules = {
+  // Village life: a free block is drawn from a weighted table, so people differ and habits repeat.
+  routines: {
+    tables: {
+      // Under 7: close to home, now and then the green.
+      childSmall: { nearHome: 7, green: 2, doorstep: 1 },
+      // 7 and over: the green, an errand to the well, or along with a parent to work.
+      childOlder: { nearHome: 4, green: 3, doorstep: 1, well: 1.5, along: 1.5 },
+      // Elders' afternoon: mostly their own doorstep.
+      elder: { doorstep: 5, visit: 2, alehouse: 1.5, shrine: 1.5, green: 1.5, home: 1 },
+      // Rest-day afternoon: the faithful all but always worship (a week of faith costs 35; one worship gives 70).
+      rest: { home: 3, visit: 2.5, alehouse: 2.5, doorstep: 2, green: 1.5, shrine: 1000 },
+      // What an adult likes on any free day; only their favourite place is drawn from it.
+      habit: { home: 3, visit: 2.5, alehouse: 2.5, doorstep: 2, green: 1.5, shrine: 1.5 },
+      // A dark winter afternoon: indoors and warm.
+      dark: { home: 3, visit: 2, alehouse: 3, doorstep: 1, green: 0.5, shrine: 1.5 },
+      // A holy day: the people gather on the green on purpose.
+      holy: { green: 8, shrine: 5, alehouse: 1.5, visit: 1, doorstep: 0.5, home: 0.5 },
+    },
+    smallChildUnder: 7,
+    // The favourite place is drawn from the table of the person's age band.
+    favouriteTable: { child: 'childOlder', adult: 'habit', elder: 'elder' },
+    // A favourite place counts three times: the habit repeats day to day.
+    favouriteMul: 3,
+    traitMul: {
+      sociable: { alehouse: 2, green: 2, visit: 2 },
+      solitary: { home: 2, doorstep: 2, alehouse: 0.4, green: 0.5, visit: 0.6 },
+      devout: { shrine: 2 },
+    },
+    nearHomeRange: 3,
+    nearHomeSpots: 3,
+    // Strolls and visits take looser routes than errands: it halves the tiles searched again.
+    strollWeight: 3,
+    // Light, safe work a child may watch and help with.
+    alongJobs: ['farm', 'forage', 'fish', 'cook', 'craft-tools', 'craft-wares', 'heal'],
+    eveningAlehouse: { trait: 'sociable', peopleIn: 4, nightsIn: 3 },
+    market: {
+      // Day 2 of 7 (the rest day is day 6), so the two never meet.
+      every: 7,
+      offset: 2,
+      stallJobs: ['craft-tools', 'craft-wares', 'cook'],
+      foodJobs: ['farm', 'forage', 'fish', 'hunt', 'cook'],
+      // Stalls on the square's edge, shoppers a ring inside.
+      stallRing: 3,
+      shopRing: 2,
+    },
+    leave: {
+      // Share of the block that passes before setting off: farmers and cooks early, crafts later.
+      jobBase: {
+        cook: 0,
+        farm: 0,
+        hunt: 0,
+        fish: 0,
+        'craft-tools': 0.25,
+        'craft-wares': 0.25,
+        build: 0.25,
+      },
+      defaultBase: 0.1,
+      child: 0.15,
+      elder: 0.3,
+      // Up to this much more, drawn per person and block; the sum stays under `max`.
+      jitter: 0.2,
+      max: 0.6,
+    },
+    where: {
+      doorstep: 'on their doorstep',
+      home: '',
+      visit: 'visiting {name}',
+      alehouse: 'at the alehouse',
+      green: 'on the green',
+      shrine: 'at the shrine',
+      nearHome: 'playing near home',
+      well: 'fetching water',
+      along: 'helping {name}',
+      market: 'at market',
+    },
+  },
   // §6A: night sleep, two work blocks, evening meal. Children play; elders work the morning only.
   schedule: {
     child: { night: 'sleep', morning: 'play', afternoon: 'play', evening: 'eat' },
@@ -326,7 +404,7 @@ export const LIFE: LifeRules = {
   walkPerBlock: 240,
   // Enough for every resident's routes in a block with room to spare; past it routes are straight.
   pathBudget: 60000,
-  pathCache: 4096,
+  pathCache: 16384,
   // Routes may run up to half as long again as the best, which halves the tiles searched.
   pathWeight: 1.5,
   // People keep to paths and floors where they can.

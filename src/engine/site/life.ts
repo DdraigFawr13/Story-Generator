@@ -19,6 +19,9 @@ import {
   type JobDef,
   type MemoryDef,
   type RaceDef,
+  ROUTINE_PLACES,
+  type RoutinePlace,
+  type RoutineWeights,
   type TraitDef,
 } from '../core/content-types';
 import { streamFor } from '../core/rng';
@@ -45,7 +48,7 @@ import type {
   WorldState,
   Animal,
 } from '../core/types';
-import { bandOfAge, type Band, type SiteContent } from './defs';
+import { bandOfAge, doorstep, type Band, type SiteContent } from './defs';
 import { runEnvironmentDay, voiceOf } from './environment';
 import { rollFireAccident, runHealthDay } from './health';
 import { fightFire, fightingSpots, settleFire, spreadFire } from './fire';
@@ -96,6 +99,13 @@ interface Profile {
   shrine: number;
   stockpile: number;
   wander: number;
+  /** Village life: the tile outside their own door (the green with no home), and the places free blocks go to; -1 where the site has none. */
+  step: number;
+  alehouse: number;
+  well: number;
+  /** Their favourite place for free blocks, drawn for the age band it was drawn at. */
+  favourite: RoutinePlace | undefined;
+  favouriteBand: Band | undefined;
   /** This block: the job they were given today, and the tile they work it at (-1: none). */
   job: JobDef | undefined;
   workTile: number;
@@ -113,6 +123,41 @@ interface Profile {
   /** Whole years old this block. */
   age: number;
   ate: boolean;
+}
+
+/** Each place's weight for this person: the table's, times their traits' multipliers; 0 if closed. */
+function placeWeights(
+  p: Profile,
+  table: RoutineWeights,
+  traitMul: Record<string, RoutineWeights>,
+  open: (p: Profile, place: RoutinePlace) => boolean,
+): number[] {
+  return ROUTINE_PLACES.map((place) => {
+    let w = table[place] ?? 0;
+    if (w <= 0 || !open(p, place)) return 0;
+    for (const t of p.traits) w *= traitMul[t.id]?.[place] ?? 1;
+    return w;
+  });
+}
+
+/** The place a draw `u` in [0, 1) lands on, by weight; undefined when every weight is 0. */
+function drawPlace(weights: number[], u: number): RoutinePlace | undefined {
+  let left = u * weights.reduce((a, b) => a + b, 0);
+  let last: RoutinePlace | undefined;
+  for (let i = 0; i < weights.length; i += 1) {
+    if (weights[i]! <= 0) continue;
+    last = ROUTINE_PLACES[i];
+    left -= weights[i]!;
+    if (left < 0) return last;
+  }
+  return last;
+}
+
+/** Where a person stands for a free block, and what they are doing there. */
+interface Stop {
+  activity: Activity;
+  to: number;
+  where: string | undefined;
 }
 
 /** Lookups derived once per watched site; never saved (they rebuild from the state). */
@@ -138,6 +183,9 @@ interface SiteCache {
   outdoors: Int32Array;
   /** Meals one average resident eats at a meal. */
   meal: number;
+  /** Village life: walkable tiles on the square's edge where stalls stand, and a ring inside for shoppers. */
+  stalls: number[];
+  shops: number[];
 }
 
 const caches = new WeakMap<ActiveSite, SiteCache>();
@@ -149,7 +197,7 @@ const GREEN_SPREAD = 3;
 /** Days a hunter keeps going to the same hunting ground (animals wander slowly; routes are cached). */
 const HUNT_REFRESH_DAYS = 7;
 /** What someone in bed gives up for sleep. */
-const BED_REST = new Set<Activity>(['work', 'play', 'socialise', 'worship']);
+const BED_REST = new Set<Activity>(['work', 'play', 'socialise', 'worship', 'errand']);
 /** Blocks in a day. */
 const BLOCKS = DAY_BLOCKS.length;
 /** Stress and mood limits. */
@@ -162,6 +210,20 @@ function mix(id: number, salt: number): number {
 }
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
+const round2 = (x: number) => Math.round(x * 100) / 100;
+
+/** A well-mixed 32-bit hash of three integers (`mix` is too regular when a day or block is one input). */
+function hash3(a: number, b: number, c: number): number {
+  let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13) ^ b, 0xc2b2ae35);
+  h = Math.imul(h ^ (h >>> 16) ^ c, 0x27d4eb2f);
+  return (h ^ (h >>> 15)) >>> 0;
+}
+
+/** A stable draw in [0, 1) for a person, a salt, and a day and block. */
+function roll(id: number, salt: number, day: number, block: number): number {
+  return (hash3(id, salt, day * BLOCKS + block) % 10000) / 10000;
+}
 
 /** The home a household lives in: its own, or the one that took it in while its own is burnt. */
 function livingHome(active: ActiveSite, h: Household): Building | undefined {
@@ -190,6 +252,32 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
   const stockpile = buildings.find((b) => b.defId === 'stockpile');
   const shrine = buildings.find((b) => b.defId === 'shrine');
   const hall = buildings.find((b) => b.defId === 'hall');
+  const alehouse = buildings.find((b) => b.defId === 'alehouse');
+  const wellB = buildings.find((b) => b.defId === 'well');
+  const walkable = (k: number) => tileCost(active, rules, life, k) > 0 && map.building[k] === 0;
+  // Tiles around the well on which to stand (it is solid), and the square's stall and shopper rings.
+  const wellSides: number[] = [];
+  if (wellB) {
+    for (let y = wellB.y - 1; y <= wellB.y + wellB.h; y += 1) {
+      for (let x = wellB.x - 1; x <= wellB.x + wellB.w; x += 1) {
+        const inside =
+          x >= wellB.x && x < wellB.x + wellB.w && y >= wellB.y && y < wellB.y + wellB.h;
+        if (!inside && x >= 0 && y >= 0 && x < width && y < map.height && walkable(y * width + x))
+          wellSides.push(y * width + x);
+      }
+    }
+  }
+  const edgeTiles = (r: number): number[] => {
+    const tiles: number[] = [];
+    for (let y = active.origin[1] - r; y <= active.origin[1] + r; y += 1) {
+      for (let x = active.origin[0] - r; x <= active.origin[0] + r; x += 1) {
+        const edge = Math.max(Math.abs(x - active.origin[0]), Math.abs(y - active.origin[1])) === r;
+        if (edge && x >= 0 && y >= 0 && x < width && y < map.height && walkable(y * width + x))
+          tiles.push(y * width + x);
+      }
+    }
+    return tiles;
+  };
   const centreOf = (b: Building): [number, number] => [b.x + (b.w >> 1), b.y + (b.h >> 1)];
   const cellOf = (b: Building | undefined, id: number, salt: number) =>
     b ? b.cells[mix(id, salt) % b.cells.length]! : -1;
@@ -242,6 +330,7 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
         neighbour = f;
       }
     }
+    const step = home ? doorstep(home, width) : -1;
     // A wanderer heads for a map-edge tile found by walking the perimeter from a spot set by id.
     const ring = 4 * (width - 1);
     let wander = -1;
@@ -284,6 +373,11 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
       shrine: shrine ? cellOf(shrine, id, 6) : green,
       stockpile: stockpile ? cellOf(stockpile, id, 7) : green,
       wander: wander < 0 ? green : wander,
+      step: step >= 0 && tileCost(active, rules, life, step) ? step : green,
+      alehouse: alehouse ? interiorSpot(alehouse, mix(id, 30), width) : -1,
+      well: wellSides.length > 0 ? wellSides[mix(id, 31) % wellSides.length]! : -1,
+      favourite: undefined,
+      favouriteBand: undefined,
       job: undefined,
       workTile: -1,
       tileJob: undefined,
@@ -317,6 +411,8 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
     ateIn: new Int32Array(Math.max(0, ...active.buildings.keys()) + 1),
     outdoors: new Int32Array(map.width * map.height),
     meal: profiles.length > 0 ? meal / profiles.length : 0,
+    stalls: edgeTiles(life.routines.market.stallRing),
+    shops: edgeTiles(life.routines.market.shopRing),
   };
 }
 
@@ -634,6 +730,173 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   const dark = block === 2 && active.weather.outdoorDark;
   const indoor = new Set<string>(env.weather.daylight.indoor);
   const carried: Profile[] = [];
+  const routines = life.routines;
+  const market = routines.market;
+
+  // Village life: a free block is drawn from the person's table, stable for the day and block.
+  const alongParent = (p: Profile): Profile | undefined => {
+    for (const id of p.person.family.parents) {
+      const q = cache.byId.get(id);
+      const job = q?.person.detail!.jobId;
+      if (
+        q &&
+        q.person.sex === p.person.sex &&
+        job !== undefined &&
+        routines.alongJobs.includes(job)
+      )
+        return q;
+    }
+    return undefined;
+  };
+  const open = (p: Profile, place: RoutinePlace): boolean =>
+    place === 'alehouse'
+      ? p.alehouse >= 0 && p.band !== 'child'
+      : place === 'shrine'
+        ? p.faithful
+        : place === 'nearHome'
+          ? p.band === 'child'
+          : place === 'well'
+            ? p.well >= 0 && p.band === 'child'
+            : place === 'along'
+              ? p.band === 'child' && alongParent(p) !== undefined
+              : true;
+  const favouriteOf = (p: Profile): RoutinePlace | undefined => {
+    if (p.favouriteBand !== p.band) {
+      p.favouriteBand = p.band;
+      const table = routines.tables[routines.favouriteTable[p.band]]!;
+      p.favourite = drawPlace(
+        placeWeights(p, table, routines.traitMul, open),
+        roll(p.id, 50, 0, 0),
+      );
+    }
+    return p.favourite;
+  };
+  const placeFor = (p: Profile, key: string): RoutinePlace => {
+    const weights = placeWeights(p, routines.tables[key]!, routines.traitMul, open);
+    const fav = favouriteOf(p);
+    if (fav !== undefined) weights[ROUTINE_PLACES.indexOf(fav)]! *= routines.favouriteMul;
+    return drawPlace(weights, roll(p.id, 51, day, block)) ?? 'home';
+  };
+  /** The living resident they visit: the friend they think best of, else kin in another home. */
+  const hostOf = (p: Profile): Profile | undefined => {
+    const hosts = (q: Profile | undefined): q is Profile =>
+      q !== undefined && q.homeId !== null && q.homeId !== p.homeId;
+    let best: Profile | undefined;
+    let bestOpinion = 0;
+    for (const [id, rel] of p.person.detail!.relationships) {
+      const q = cache.byId.get(id);
+      if (!hosts(q) || rel.opinion <= 0) continue;
+      if (!best || rel.opinion > bestOpinion || (rel.opinion === bestOpinion && id < best.id)) {
+        best = q;
+        bestOpinion = rel.opinion;
+      }
+    }
+    if (best) return best;
+    const kin = p.person.family;
+    for (const id of [...kin.spouses, ...kin.parents, ...kin.children]) {
+      const q = cache.byId.get(id);
+      if (hosts(q)) return q;
+    }
+    return undefined;
+  };
+  /** One of a few walkable tiles near their own door (routes between them repeat, so they are cached). */
+  const nearHome = (p: Profile): number => {
+    const range = routines.nearHomeRange;
+    const sx = p.step % width;
+    const sy = Math.floor(p.step / width);
+    const pick = Math.floor(roll(p.id, 79, day, block) * routines.nearHomeSpots);
+    for (let i = 0; i < 6; i += 1) {
+      const m = hash3(p.id, 80 + pick, i);
+      const x = sx + (m % (2 * range + 1)) - range;
+      const y = sy + (Math.floor(m / 64) % (2 * range + 1)) - range;
+      if (x < 0 || y < 0 || x >= width || y >= active.map.height) continue;
+      const k = y * width + x;
+      if (active.map.building[k] === 0 && tileCost(active, rules, life, k) > 0) return k;
+    }
+    return p.step;
+  };
+  const phrase = (place: RoutinePlace | 'market', name?: string): string | undefined =>
+    routines.where[place].replace('{name}', name ?? '') || undefined;
+  const stopAt = (p: Profile, place: RoutinePlace): Stop => {
+    const kid = p.band === 'child';
+    const idle: Activity = kid ? 'play' : 'socialise';
+    switch (place) {
+      case 'doorstep':
+        return { activity: idle, to: p.step, where: phrase(place) };
+      case 'visit': {
+        const host = hostOf(p);
+        return host
+          ? { activity: idle, to: host.home, where: phrase(place, host.person.name) }
+          : { activity: idle, to: p.step, where: phrase('doorstep') };
+      }
+      case 'alehouse':
+        return { activity: idle, to: p.alehouse, where: phrase(place) };
+      case 'green':
+        return { activity: idle, to: p.green, where: phrase(place) };
+      case 'shrine':
+        return { activity: 'worship', to: p.shrine, where: phrase(place) };
+      case 'nearHome':
+        return { activity: idle, to: nearHome(p), where: phrase(place) };
+      case 'well':
+        return { activity: 'errand', to: p.well, where: phrase(place) };
+      case 'along':
+        // The parent's work tile is known once the grown-ups have moved: see `along` below.
+        return { activity: 'errand', to: p.step, where: phrase(place) };
+      default:
+        return { activity: idle, to: p.home, where: undefined };
+    }
+  };
+  const leaveAt = (p: Profile): number => {
+    const leave = routines.leave;
+    const jitter = roll(p.id, 95, day, block) * leave.jitter;
+    if (block === 0 || block === BLOCKS - 1) return round2(Math.min(leave.max, jitter));
+    const base = p.job ? (leave.jobBase[p.job.id] ?? leave.defaultBase) : leave.defaultBase;
+    const age = p.band === 'child' ? leave.child : p.band === 'elder' ? leave.elder : 0;
+    return round2(Math.min(leave.max, base + age + jitter));
+  };
+  // Market day: one adult in each household goes to market instead of working.
+  const marketMorning = block === 1 && day % market.every === market.offset && !festival;
+  const shoppers = new Set<Id>();
+  if (marketMorning) {
+    const picked = new Map<Household, { p: Profile; score: number }>();
+    for (const p of profiles) {
+      const detail = p.person.detail!;
+      const job = detail.jobId;
+      if (p.band !== 'adult' || !p.household || detail.breakdown || detail.abed) continue;
+      if (threatPlan.has(p.id) || fighting.has(p)) continue;
+      if (job !== undefined && market.stallJobs.includes(job)) continue;
+      const score =
+        (job !== undefined && market.foodJobs.includes(job) ? 1 : 0) + roll(p.id, 96, day, block);
+      const held = picked.get(p.household);
+      if (!held || score < held.score) picked.set(p.household, { p, score });
+    }
+    for (const { p } of picked.values()) shoppers.add(p.id);
+  }
+  /** Walks a person toward `to` for as far as a block allows, and settles where they stand. */
+  const move = (p: Profile, to: number, stroll = false) => {
+    const detail = p.person.detail!;
+    const from = tileOf(detail, width);
+    let tile = from;
+    if (to !== from) {
+      const route = findRoute(
+        active,
+        rules,
+        life,
+        from,
+        to,
+        budget,
+        stroll ? routines.strollWeight : life.pathWeight,
+      );
+      const reached = route ? walkAlong(active, rules, life, route, life.walkPerBlock) : -1;
+      if (reached >= 0) tile = reached;
+      if (tile !== from) detail.pos = [tile % width, Math.floor(tile / width)];
+    }
+    standAt(p, tile);
+  };
+  /** Children going along with a parent, settled once the grown-ups have a work tile. */
+  const along: Profile[] = [];
+  /** Who looks after a small child, so that they are not drawn away for the evening. */
+  let carers: Set<Profile> | undefined;
   for (const p of profiles) {
     const detail = p.person.detail!;
     p.job = detail.jobId === undefined ? undefined : cache.jobs.get(detail.jobId);
@@ -644,6 +907,10 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       continue;
     }
     detail.with = undefined;
+    detail.leaveAt = leaveAt(p);
+    detail.where = undefined;
+    let stop: Stop | undefined;
+    let table: string | undefined;
     const bd = detail.breakdown;
     const order = threatPlan.get(p.id);
     let activity: Activity;
@@ -653,16 +920,65 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     else if (bd?.kind === 'theft') activity = 'steal';
     else if (order) activity = order.activity;
     else if (fighting.has(p)) activity = 'fight';
-    else if (block === 2 && restDay) {
+    else if (shoppers.has(p.id)) {
+      activity = 'errand';
+      const shop =
+        cache.shops.length > 0 ? cache.shops[mix(p.id, 91) % cache.shops.length]! : p.green;
+      stop = { activity, to: shop, where: phrase('market') };
+    } else if (block === 2 && restDay) {
       activity = p.faithful ? life.restDayAfternoon.faithful : life.restDayAfternoon.others;
-    } else activity = life.schedule[p.band][DAY_BLOCKS[block]!];
+      // Children keep to their play unless they are faithful; the rest gather as their habits go.
+      table =
+        p.band !== 'child'
+          ? festival
+            ? 'holy'
+            : 'rest'
+          : p.faithful
+            ? 'rest'
+            : p.age < routines.smallChildUnder
+              ? 'childSmall'
+              : 'childOlder';
+    } else {
+      activity = life.schedule[p.band][DAY_BLOCKS[block]!];
+      if (p.band === 'child' && (block === 1 || block === 2))
+        table = p.age < routines.smallChildUnder ? 'childSmall' : 'childOlder';
+      else if (p.band === 'elder' && block === 2) table = 'elder';
+    }
     // Someone too ill or hurt to work stays in bed through the day (they still eat in the evening).
     if (detail.abed && BED_REST.has(activity)) activity = 'sleep';
     // Outdoor work stops at dusk: with under nine hours of daylight the afternoon is idle.
-    if (dark && activity === 'work' && p.job && !indoor.has(p.job.workplace))
+    if (dark && activity === 'work' && p.job && !indoor.has(p.job.workplace)) {
       activity = 'socialise';
+      table = 'dark';
+    }
     // A holy day stops work: the people gather instead.
-    if (festival && activity === 'work') activity = 'socialise';
+    if (festival && activity === 'work') {
+      activity = 'socialise';
+      table = 'holy';
+    }
+    if (table !== undefined && activity !== 'sleep') {
+      const place = placeFor(p, table);
+      if (place === 'along') {
+        // Settled below, once the grown-ups have a work tile.
+        stop = stopAt(p, place);
+        along.push(p);
+      } else stop = stopAt(p, place);
+      activity = stop.activity;
+    }
+    // Evening: some who like the alehouse eat there rather than at the household table.
+    if (activity === 'eat' && block === BLOCKS - 1 && p.alehouse >= 0 && p.band !== 'child') {
+      const habit = routines.eveningAlehouse;
+      if (
+        hash3(p.id, 61, 0) % habit.peopleIn === 0 &&
+        roll(p.id, 62, day, block) < 1 / habit.nightsIn &&
+        (p.traits.some((t) => t.id === habit.trait) || favouriteOf(p) === 'alehouse')
+      ) {
+        carers ??= new Set(
+          profiles.flatMap((q) => (q.age < life.carriedUnder ? (carerOf(q) ?? []) : [])),
+        );
+        if (!carers.has(p)) stop = { activity, to: p.alehouse, where: phrase('alehouse') };
+      }
+    }
     detail.activity = activity;
     if (activity === 'work' && p.job) {
       const job = p.job;
@@ -682,44 +998,65 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
         p.tileAt = workTile(content, active, { id: p.id, field: p.field, tileAt: kept }, job);
       }
       p.workTile = p.tileAt;
+      // Market day: the stallholders' trades set up on the square, and still count as work.
+      if (
+        marketMorning &&
+        p.workTile >= 0 &&
+        market.stallJobs.includes(job.id) &&
+        cache.stalls.length > 0
+      ) {
+        p.workTile = cache.stalls[mix(p.id, 90) % cache.stalls.length]!;
+        stop = { activity, to: p.workTile, where: phrase('market') };
+      }
     }
+    detail.where = stop?.where;
     const from = tileOf(detail, width);
     const to =
-      activity === 'tantrum'
-        ? from
-        : activity === 'defend'
-          ? order!.tile
-          : activity === 'shelter'
-            ? p.home
-            : activity === 'flee'
-              ? order!.tile >= 0
-                ? order!.tile
-                : p.home
-              : activity === 'fight'
-                ? fighting.get(p)!
-                : activity === 'eat'
-                  ? p.table
-                  : activity === 'sleep' || activity === 'despair'
-                    ? p.home
-                    : activity === 'work'
-                      ? p.workTile >= 0
-                        ? p.workTile
-                        : p.field
-                      : activity === 'worship'
-                        ? p.shrine
-                        : activity === 'wander'
-                          ? p.wander
-                          : activity === 'steal'
-                            ? p.stockpile
-                            : p.green;
-    let tile = from;
-    if (to !== from) {
-      const route = findRoute(active, rules, life, from, to, budget);
-      const reached = route ? walkAlong(active, rules, life, route, life.walkPerBlock) : -1;
-      if (reached >= 0) tile = reached;
-      if (tile !== from) detail.pos = [tile % width, Math.floor(tile / width)];
+      stop !== undefined
+        ? stop.to
+        : activity === 'tantrum'
+          ? from
+          : activity === 'defend'
+            ? order!.tile
+            : activity === 'shelter'
+              ? p.home
+              : activity === 'flee'
+                ? order!.tile >= 0
+                  ? order!.tile
+                  : p.home
+                : activity === 'fight'
+                  ? fighting.get(p)!
+                  : activity === 'eat'
+                    ? p.table
+                    : activity === 'sleep' || activity === 'despair'
+                      ? p.home
+                      : activity === 'work'
+                        ? p.workTile >= 0
+                          ? p.workTile
+                          : p.field
+                        : activity === 'worship'
+                          ? p.shrine
+                          : activity === 'wander'
+                            ? p.wander
+                            : activity === 'steal'
+                              ? p.stockpile
+                              : p.green;
+    // A child going along waits for the grown-ups' work tiles (below).
+    if (along.at(-1) === p) continue;
+    move(p, to, stop !== undefined);
+  }
+  // Children who went along with a parent: to the parent's work tile, else playing near home.
+  for (const p of along) {
+    const detail = p.person.detail!;
+    const parent = alongParent(p);
+    if (parent && parent.person.detail!.activity === 'work' && parent.workTile >= 0) {
+      detail.where = phrase('along', parent.person.name);
+      move(p, parent.workTile);
+    } else {
+      detail.activity = 'play';
+      detail.where = phrase('nearHome');
+      move(p, nearHome(p));
     }
-    standAt(p, tile);
   }
   for (const p of carried) {
     const detail = p.person.detail!;
@@ -733,6 +1070,8 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       theirs === 'fight' ||
       theirs === 'defend';
     detail.with = carer.id;
+    detail.leaveAt = carer.person.detail!.leaveAt ?? 0;
+    detail.where = undefined;
     detail.activity = away ? 'sleep' : theirs;
     const tile = away ? p.home : carer.tile;
     detail.pos = [tile % width, Math.floor(tile / width)];

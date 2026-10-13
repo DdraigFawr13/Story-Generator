@@ -214,7 +214,8 @@ function pop(heap: number[]): number {
 /**
  * The tiles to walk from `from` (excluded) to `to` (included). Null when `to` cannot be reached.
  * Cached routes cost nothing; a search spends `budget.left` per node expanded, and when that runs
- * out the route is a straight line (not cached, and not checked for walls).
+ * out the route is a straight line (not cached, and not checked for walls). A larger `weight` than
+ * `life.pathWeight` searches fewer tiles for a looser route (strolls, not errands).
  */
 export function findRoute(
   active: ActiveSite,
@@ -223,6 +224,7 @@ export function findRoute(
   from: number,
   to: number,
   budget: { left: number },
+  weight = life.pathWeight,
 ): number[] | null {
   if (from === to) return [];
   const c = cacheOf(active, rules, life);
@@ -234,7 +236,6 @@ export function findRoute(
   if (c.cost[to] === BLOCKED) return null;
   c.search += 1;
   const { search, heap, cost, g, seen, closed } = c;
-  const weight = life.pathWeight;
   const tx = to % width;
   const ty = (to - tx) / width;
   const h = (k: number) => {
@@ -272,7 +273,7 @@ export function findRoute(
       seen[n] = search;
       g[n] = next;
       c.from[n] = k;
-      push(heap, next + h(n), n);
+      push(heap, next + weight * (Math.abs(nx - tx) + Math.abs(ny - ty)), n);
     }
   }
   let route: number[] | null = null;
@@ -283,5 +284,10 @@ export function findRoute(
   }
   if (c.routes.size >= life.pathCache) c.routes.clear();
   c.routes.set(key, route);
+  // The way back is the same road: people go out and return along it (work and home, shrine and home).
+  const back = to * c.cost.length + from;
+  if (route && !c.routes.has(back)) {
+    c.routes.set(back, [...route.slice(0, -1).reverse(), from]);
+  }
   return route;
 }
