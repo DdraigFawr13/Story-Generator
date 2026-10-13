@@ -1194,6 +1194,11 @@
   text-align: center;
   line-height: 1.4;
 }
+/* The phone shows "Pause on…" to unfold the chips (below); wider screens show the chips. */
+.sv-root .banner .chipfold {
+  display: none;
+  font-size: 12px;
+}
 @media (max-width: 860px) {
   /* The link stays on one line; Copy takes the whole of it. */
   .sv-root .linkline {
@@ -1281,10 +1286,6 @@
   .sv-root .banner .chips.folded {
     display: none;
   }
-}
-.sv-root .banner .chipfold {
-  display: none;
-  font-size: 12px;
 }
 @media (prefers-reduced-motion: reduce) {
   .sv-root *,

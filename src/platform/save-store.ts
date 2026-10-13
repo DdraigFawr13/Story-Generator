@@ -89,13 +89,17 @@ export async function decompress(data: Uint8Array | string): Promise<string> {
   return new TextDecoder().decode(await pipe(data, new DecompressionStream('gzip')));
 }
 
-/** The summary fields a world gives: its seed, day and the site being watched, if any. */
+/**
+ * The summary fields a world gives: its seed, day and the site being watched, if any. A site's day
+ * is the one its date shows: after the evening block the clock has turned, but the evening belongs
+ * to the day before (as the site view's date and link say).
+ */
 export function headerOf(world: WorldState): SaveHeader {
   const active = world.activeSite;
   const site = active ? world.sites.get(active.siteId)?.name : undefined;
-  return site === undefined
-    ? { seed: world.seed, day: world.day }
-    : { seed: world.seed, day: world.day, site };
+  if (!active || site === undefined) return { seed: world.seed, day: world.day };
+  const turned = active.block === 0 && world.day !== active.enteredDay;
+  return { seed: world.seed, day: turned ? world.day - 1 : world.day, site };
 }
 
 function looksLikeWorld(world: unknown): world is WorldState {

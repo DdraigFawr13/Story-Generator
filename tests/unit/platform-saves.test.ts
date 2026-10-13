@@ -17,6 +17,7 @@ import {
   compress,
   createSaveStore,
   decompress,
+  headerOf,
   memoryBackend,
   type SaveBackend,
 } from '../../src/platform/save-store';
@@ -130,6 +131,11 @@ describe('named world saves', () => {
     stepBlock(world, DEFAULT_CONTENT);
     const saved = await store.save('site', world);
     expect(saved.site).toBe(world.sites.get(world.activeSite!.siteId)!.name);
+    // Mid-day the save is dated today; after the evening, the day the evening belonged to.
+    expect(saved.day).toBe(world.day);
+    expect(headerOf({ ...world, activeSite: { ...world.activeSite!, block: 0 } }).day).toBe(
+      world.day - 1,
+    );
     const loaded = await store.load('site');
     // Long enough for the steward to replan, the woods to refresh and the routes to be reused.
     for (let d = 0; d < 14; d += 1) {
