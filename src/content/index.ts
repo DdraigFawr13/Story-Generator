@@ -14,6 +14,7 @@ import { SOCIETY, SOCIETY_EVENTS, SOCIETY_MEMORIES } from './society';
 import { THREATS, THREAT_EVENTS, THREAT_MEMORIES } from './threats';
 import { LORE, LORE_EVENTS, LORE_MEMORIES } from './lore';
 import { AWAKENINGS } from './awakenings';
+import { POLITICS, POLITICS_EVENTS } from './politics';
 import { ITEMS } from './items';
 import { JOBS, STEWARD, WORK_EVENTS } from './jobs';
 import { TYPE_GROUPS } from './legends';
@@ -48,6 +49,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
     ...SOCIETY_EVENTS,
     ...THREAT_EVENTS,
     ...LORE_EVENTS,
+    ...POLITICS_EVENTS,
   ],
   typeGroups: TYPE_GROUPS,
   rules,
@@ -83,6 +85,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   threats: THREATS,
   lore: LORE,
   awakenings: AWAKENINGS,
+  politics: POLITICS,
 };
 
 export * from './biographies';
@@ -97,6 +100,7 @@ export * from './history';
 export * from './interactions';
 export * from './society';
 export * from './threats';
+export * from './politics';
 export * from './items';
 export * from './jobs';
 export * from './legends';

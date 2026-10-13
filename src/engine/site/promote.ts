@@ -24,6 +24,7 @@ import { blankLore, seedLore } from './lore';
 import { buildLocalMap } from './localmap';
 import { blankSociety } from './society';
 import { blankThreats } from './threats';
+import { blankPolitics, initPolitics } from './politics';
 import { goodAmount } from './stock';
 import { seedSkills } from './work';
 import { hash2 } from '../worldgen/noise';
@@ -493,6 +494,7 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
     threat: null,
     threats: blankThreats(),
     lore: blankLore(world.day),
+    politics: blankPolitics(),
     ...blankEnvironment(year),
   };
   for (const good of GOODS) active.stockAtEntry[good] = goodAmount(active, content, good);
@@ -500,5 +502,6 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
   initEnvironment(world, content, active);
   seedSkills(world, content, active);
   seedLore(world, content, active);
+  initPolitics(world, content, active);
   return active;
 }

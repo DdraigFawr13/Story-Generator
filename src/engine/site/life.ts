@@ -38,6 +38,7 @@ import type {
   SiteLore,
   SiteThreat,
   SiteThreats,
+  SitePolitics,
   SiteWeather,
   SiteWild,
   SiteWoods,
@@ -56,6 +57,7 @@ import { envOf, runSocial, witnessedWrong } from './social';
 import { festivalToday, reportCrime, runSocietyMorning, serveSentences } from './society';
 import { foodMeals, takeFood } from './stock';
 import { planThreat, resolveThreat, runThreatsDay } from './threats';
+import { keepLeader, runPoliticsDay } from './politics';
 import { stepAnimals } from './wild';
 import {
   residentItems,
@@ -429,6 +431,8 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     runThreatsDay(world, content, active, voice.emit, voice.label);
     // Magic (M3.9): mending, race dependencies and the monthly awakenings.
     runLoreDay(world, content, active, voice.emit, voice.label);
+    // Caravans (M3.10); the leader is kept at the end of every block, below.
+    runPoliticsDay(world, content, active, voice.emit, voice.label);
   }
   spreadFire(world, content, active, voice.emit, voice.label, fightersAt(world, active));
   stepAnimals(world, content, active);
@@ -927,6 +931,8 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     active.storesEmptyEvent = null;
   }
 
+  // M3.10: whoever died or left this block, the site ends it with a leader.
+  keepLeader(world, content, active, voice.emit, voice.label);
   if (block === BLOCKS - 1) {
     world.day += 1;
     active.block = 0;
@@ -1000,6 +1006,8 @@ export interface SiteSnapshot {
   /** M3.8: the threat at the site, if any, and the record of threats so far. */
   threat: SiteThreat | null;
   threats: SiteThreats;
+  /** M3.10: the leader and the caravans. */
+  politics: SitePolitics;
   /** Present only when `peopleVersion` differs from the version the caller last received. */
   roster?: SiteRoster;
   /** Present only when `layoutVersion` differs from the version the caller last received. */
@@ -1142,6 +1150,7 @@ export function siteSnapshot(
     peopleVersion: active.peopleVersion,
     threat: active.threat,
     threats: active.threats,
+    politics: active.politics,
   };
   snapshot.peopleVersion = active.peopleVersion;
   if (sentPeople !== active.peopleVersion) {
@@ -1252,6 +1261,7 @@ export function applySiteSnapshot(world: WorldState, snapshot: SiteSnapshot): vo
   active.firewood = snapshot.firewood;
   active.threat = snapshot.threat;
   active.threats = snapshot.threats;
+  active.politics = snapshot.politics;
   for (const [id, holder] of snapshot.items) {
     const item = world.items.get(id);
     if (item) item.holder = holder;

@@ -107,6 +107,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...societyProblems(content));
   problems.push(...threatsProblems(content));
   problems.push(...loreProblems(content));
+  problems.push(...politicsProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -966,6 +967,38 @@ export function loreProblems(content: ContentBundle): string[] {
     if (d.monthlyChance < 0 || d.monthlyChance > 1)
       problems.push(`Awakening ${d.id}: monthlyChance must be 0-1.`);
   }
+  return problems;
+}
+
+/** Politics rules (M3.10): known event types, items and goods; a title per government; sane ranges. */
+export function politicsProblems(content: ContentBundle): string[] {
+  const rules = content.politics;
+  if (!rules) return ['Content has no politics tables.'];
+  const problems: string[] = [];
+  const events = new Set(content.eventTypes.map((e) => e.id));
+  const items = new Map(content.items.map((i) => [i.id, i]));
+  for (const id of Object.values(rules.events))
+    if (!events.has(id)) problems.push(`Politics events: unknown event type "${id}".`);
+  for (const culture of content.cultures) {
+    if (!rules.leaderTitles[culture.government])
+      problems.push(`Politics: no leader title for government "${culture.government}".`);
+  }
+  for (const [good, ids] of Object.entries(rules.caravans.carry)) {
+    for (const id of ids) {
+      const item = items.get(id);
+      if (!item) problems.push(`Politics carry ${good}: unknown item "${id}".`);
+      else if (item.good !== good)
+        problems.push(`Politics carry ${good}: item "${id}" carries ${item.good}.`);
+    }
+  }
+  const { share, seasons } = rules.caravans;
+  if (!(share > 0 && share <= 1))
+    problems.push(`Politics caravans share must be in (0, 1], not ${share}.`);
+  if (seasons.length === 0 || seasons.some((x) => !(x >= 0 && x <= 3)))
+    problems.push('Politics caravans seasons must be 0-3, at least one.');
+  const chance = rules.succession.disputeChance;
+  if (!(chance >= 0 && chance <= 1))
+    problems.push(`Politics disputeChance must be 0-1, not ${chance}.`);
   return problems;
 }
 
