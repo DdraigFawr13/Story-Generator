@@ -37,6 +37,8 @@ const STREET_REACH = 34;
 const STREET_GAP = 10;
 /** ...and a row of homes is this many long before a gap. */
 const TERRACE = 5;
+/** Share of street plots (percent) left open as gardens. */
+const OPEN_PLOT_PERCENT = 12;
 /** Rings searched before giving up on a building. */
 const MAX_RING = 60;
 
@@ -95,6 +97,80 @@ export function findSpot(
     for (const [x, y] of ring) if (isFree(map, code, x, y, w, h, pad)) return [x, y];
   }
   return null;
+}
+
+/** A home's place in a row: its rectangle and door (a wall tile on the street side). */
+export interface RowSpot {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  door: number;
+}
+
+/**
+ * Village life: a spot for a new home at the end of an existing row, sharing the end home's wall
+ * and facing the same street; rows stop at TERRACE homes. Homes nearest `origin` are tried first.
+ */
+export function findRowSpot(
+  map: LocalMap,
+  rules: SiteRules,
+  buildings: Iterable<Building>,
+  origin: readonly [number, number],
+): RowSpot | null {
+  const code = siteCodes(rules);
+  const size = map.width;
+  const homes = [...buildings].filter((b) => b.defId === 'home' && b.door !== undefined);
+  const byCorner = new Map<number, Building>();
+  for (const b of homes) byCorner.set(b.y * size + b.x, b);
+  const [ox, oy] = origin;
+  const centre = (b: Building) => Math.abs(b.x + (b.w >> 1) - ox) + Math.abs(b.y + (b.h >> 1) - oy);
+  homes.sort((a, b) => centre(a) - centre(b) || a.id - b.id);
+  for (const b of homes) {
+    const door = b.door!;
+    const dy = Math.floor(door / size);
+    // A door in the top or bottom wall: the row runs along x.
+    const alongX = dy === b.y || dy === b.y + b.h - 1;
+    const pitch = (alongX ? b.w : b.h) - 1;
+    for (const dir of [1, -1]) {
+      const sx = alongX ? dir * pitch : 0;
+      const sy = alongX ? 0 : dir * pitch;
+      // The row's length counting back from b.
+      let length = 1;
+      for (let n = byCorner.get((b.y - sy) * size + b.x - sx); n; length += 1) {
+        n = byCorner.get((n.y - sy) * size + n.x - sx);
+      }
+      if (length >= TERRACE || byCorner.has((b.y + sy) * size + b.x + sx)) continue;
+      const spot: RowSpot = {
+        x: b.x + sx,
+        y: b.y + sy,
+        w: b.w,
+        h: b.h,
+        door: door + sy * size + sx,
+      };
+      if (!rowFree(map, code, spot, new Set(b.cells))) continue;
+      const step = doorstep(spot, size);
+      if (map.building[step] || map.water[step] === code.sea || map.water[step] === code.lake)
+        continue;
+      return spot;
+    }
+  }
+  return null;
+}
+
+/** Free for a home in a row, allowing the wall the neighbour already stands on. */
+function rowFree(map: LocalMap, code: SiteCodes, r: RowSpot, shared: Set<number>): boolean {
+  const size = map.width;
+  for (let yy = r.y; yy < r.y + r.h; yy += 1) {
+    for (let xx = r.x; xx < r.x + r.w; xx += 1) {
+      if (xx < 1 || yy < 1 || xx >= size - 1 || yy >= size - 1) return false;
+      const k = yy * size + xx;
+      if (shared.has(k)) continue;
+      if (map.building[k] || map.water[k] !== 0 || map.mineral[k]) return false;
+      if (map.terrain[k] !== code.grass && map.terrain[k] !== code.scrub) return false;
+    }
+  }
+  return true;
 }
 
 /** Writes a building into the map (terrain, building ids, trees cleared) and returns it. */
@@ -348,6 +424,8 @@ export function layoutSite(
     for (const side of [-1, 1]) {
       for (let i = -Math.ceil(STREET_REACH / pitch); i <= Math.ceil(STREET_REACH / pitch); i += 1) {
         if (((i % (TERRACE + 1)) + TERRACE + 1) % (TERRACE + 1) === TERRACE) continue;
+        // Some plots stay open (a garden, a paddock), so rows are not all one length.
+        if (hash2(seed + 91 + street, side, i) % 100 < OPEN_PLOT_PERCENT) continue;
         const u = i * pitch + (pitch >> 1);
         const v = street * STREET_GAP + side * (deep >> 1);
         // The main street fills first, then the lanes nearest it.

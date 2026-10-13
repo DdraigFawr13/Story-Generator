@@ -6,8 +6,8 @@ import { manhattan } from '../core/math';
 import type { EmitInput } from '../core/context';
 import type { StewardRules } from '../core/content-types';
 import type { ActiveSite, Building, Id, SimEvent } from '../core/types';
-import { buildingDef, siteCodes, type SiteContent } from './defs';
-import { carvePath, findSpot, stampBuilding } from './layout';
+import { buildingDef, doorstep, siteCodes, type SiteContent } from './defs';
+import { carvePath, findRowSpot, findSpot, stampBuilding } from './layout';
 import { invalidatePaths } from './path';
 
 type Emit = (input: EmitInput) => SimEvent;
@@ -93,14 +93,37 @@ export function beginBuilding(
   const failed = noRoom.get(active) ?? new Map<string, number>();
   noRoom.set(active, failed);
   if (failed.get(defId) === active.layoutVersion) return null;
-  const at = findSpot(active.map, rules, defId, active.origin, steward.buildRing, steward.buildPad);
+  // Village life: a new home joins the end of a row on a street; anything else, or a home when every
+  // row is full, takes the nearest free ground.
+  const row =
+    defId === 'home'
+      ? findRowSpot(active.map, rules, active.buildings.values(), active.origin)
+      : null;
+  const at =
+    row ?? findSpot(active.map, rules, defId, active.origin, steward.buildRing, steward.buildPad);
   if (!at) {
     failed.set(defId, active.layoutVersion);
     return null;
   }
   let id = 1;
   for (const key of active.buildings.keys()) id = Math.max(id, key + 1);
-  const b = stampBuilding(active.map, rules, id, defId, at[0], at[1]);
+  const x = Array.isArray(at) ? at[0] : at.x;
+  const y = Array.isArray(at) ? at[1] : at.y;
+  const b = stampBuilding(
+    active.map,
+    rules,
+    id,
+    defId,
+    x,
+    y,
+    true,
+    row ? [row.w, row.h] : undefined,
+  );
+  if (row) {
+    b.door = row.door;
+    const step = doorstep(b, active.map.width);
+    if (active.map.water[step] === 0) active.map.terrain[step] = siteCodes(rules).path;
+  }
   b.owner = owner;
   b.condition = 0;
   b.progress = 0;

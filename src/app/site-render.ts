@@ -460,6 +460,8 @@ export interface PersonMark {
   gifted: boolean;
   /** Tile index. */
   k: number;
+  /** Village life: share of the block's walk that passes before they set off (from the engine). */
+  leaveAt?: number;
 }
 
 /** First letters of a name: capitalised for adults, lower case for children. */
@@ -612,8 +614,10 @@ export function refreshLayout(scene: Scene, world: WorldState, rules: SiteRules)
 export function movePeople(scene: Scene, world: WorldState): void {
   scene.at.clear();
   for (const mark of scene.marks.values()) {
-    const pos = world.people.get(mark.id)?.detail?.pos;
+    const detail = world.people.get(mark.id)?.detail;
+    const pos = detail?.pos;
     if (pos) mark.k = pos[1] * scene.size + pos[0];
+    mark.leaveAt = detail?.leaveAt ?? 0;
     const list = scene.at.get(mark.k);
     if (list) list.push(mark.id);
     else scene.at.set(mark.k, [mark.id]);
@@ -936,7 +940,10 @@ export class SiteRenderer {
     if (prev === undefined) return [x, y];
     const px = prev % size;
     const py = (prev - px) / size;
-    return [px + (x - px) * progress, py + (y - py) * progress];
+    // Not everyone sets off at once: each waits their share of the walk, then catches up.
+    const wait = Math.min(0.9, Math.max(0, mark.leaveAt ?? 0));
+    const t = Math.max(0, (progress - wait) / (1 - wait));
+    return [px + (x - px) * t, py + (y - py) * t];
   }
 
   /** Sizes the canvas to its box; returns false while the box has no size. */

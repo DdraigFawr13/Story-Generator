@@ -16,7 +16,8 @@ import {
   type WorldState,
 } from '../engine';
 
-export type SiteSpeed = 0 | 1 | 4 | 16;
+/** Days a second; ½ is the default when play starts (village life: one block every half second). */
+export type SiteSpeed = 0 | 0.5 | 1 | 4 | 16;
 
 export type SiteRequest =
   | { type: 'embark'; world: WorldState; content: SiteContent; siteId: Id }
