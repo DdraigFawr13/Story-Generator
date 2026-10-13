@@ -164,7 +164,7 @@ export const LORE_EVENTS: EventTypeDef[] = [
     links: { site: 'site', item: 'item' },
     templates: [
       '{actor} of {site} woke to the magic {how}, and is {tier} now.',
-      '{actor} woke to more power than {actor} was born with {how}: {tier} now.',
+      '{actor} rose a tier {how}: {tier} now.',
       'At {site}, {actor} rose to {tier} {how}.',
     ],
   },
