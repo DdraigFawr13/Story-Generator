@@ -316,6 +316,8 @@ function takeRevenge(env: SocialEnv, rng: RngStream, avenger: Person, target: Pe
   }
 }
 
+const freeSets = new WeakMap<ActiveSite, { key: string; free: Set<Id> }>();
+
 /** The evening's interactions for everyone grown enough to talk, and revenge on grudges met. */
 export function runSocial(
   world: WorldState,
@@ -350,10 +352,21 @@ export function runSocial(
   const nearKids = new Map<Id, SocialView[]>();
   const byId = new Map(people.map((v) => [v.id, v]));
   const grudging = holdersOf(env);
-  env.free = freeToCourt(
-    env,
-    people.map((v) => v.person),
-  );
+  // Who is free to court changes with a birth, death, marriage or move (peopleVersion), new lovers
+  // (taken out as they pair) or the passing months (mourning ends, children grow up).
+  const freeKey = `${active.peopleVersion}.${Math.floor(day / DAYS_PER_MONTH)}`;
+  let kept = freeSets.get(active);
+  if (!kept || kept.key !== freeKey) {
+    kept = {
+      key: freeKey,
+      free: freeToCourt(
+        env,
+        views.map((v) => v.person),
+      ),
+    };
+    freeSets.set(active, kept);
+  }
+  env.free = kept.free;
   const suitors = people.filter((v) => env.free!.has(v.id));
 
   // Each resident is in a few interactions this evening, as the one who starts them or the one
