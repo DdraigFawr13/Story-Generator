@@ -980,6 +980,45 @@ export interface NotableRules {
   bookNames: string[];
   /** Book forms by school id; `mundane` is for scholars and for schools not listed. */
   bookForms: Record<string, string[]>;
+  /** What powerful figures do with their power: answer beasts, fight as champions, avenge, found. */
+  deeds: DeedRules;
+}
+
+/** Legend deeds: existing figures act, and their fame comes from what they did. */
+export interface DeedRules {
+  /** A hero, captain or Strong+ mage of the raided civ living within this many cells answers a beast raid. */
+  slayerRange: number;
+  /** Power at which a figure fights as their civ's named champion in battle. */
+  championPower: number;
+  /** Yearly chance an avenger leads a raid on their enemy's home, once in their life, within this many cells. */
+  vengeanceChance: number;
+  vengeanceRange: number;
+  /** A legend with no deed for this many years hunts the nearest living beast within `huntRange` (0: never). */
+  huntIdleYears: number;
+  huntRange: number;
+  /** After a failed hunt ({name}): coming home, or dying in the lair (`beastKill` odds). */
+  huntPhrases: { survived: string; died: string };
+  /** Chance a non-ruler legend at the mother site leads the settlers of a new site. */
+  legendFounds: number;
+  /** Fame a legend's founding adds. */
+  foundingFame: number;
+  /**
+   * Champion clauses ({civ}, {enemy}, {name}): how they stand (first in a war, stepping up for a
+   * fallen champion, again in the battle they fall in) and how it ends.
+   */
+  championPhrases: {
+    first: string;
+    replaced: string;
+    again: string;
+    won: string;
+    lost: string;
+    fellWon: string;
+    fellLost: string;
+  };
+  /** Outcome clauses: `{enemy}` is the sworn enemy. */
+  vengeancePhrases: { slain: string; escaped: string };
+  /** `{names}`: the kin who rode with the avenger. */
+  vengeanceKin: string;
 }
 
 /** A sickness (M2.4b). History uses the yearly fields; Phase 3 reads the per-day ones. */

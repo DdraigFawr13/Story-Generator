@@ -29,6 +29,10 @@ const ST = C.steward;
 let shared: WorldState | undefined;
 const base = () => (shared ??= generateWorld('SITE-A', { width: 64, height: 64 }, C));
 const copy = () => structuredClone(base());
+/** A world whose biggest site is not already at the food-worker ceiling when fed. */
+let shortBase: WorldState | undefined;
+const shortCopy = () =>
+  structuredClone((shortBase ??= generateWorld('SITE-B', { width: 64, height: 64 }, C)));
 const biggest = (world: WorldState): Site =>
   [...world.sites.values()]
     .filter((s) => s.ruinedYear === undefined && sitePopulation(s) > 0)
@@ -74,8 +78,8 @@ describe('work', () => {
   });
 
   it('puts more people on food when the stores run short', () => {
-    const fed = copy();
-    const short = copy();
+    const fed = shortCopy();
+    const short = shortCopy();
     const site = biggest(fed);
     const a = embark(fed, C, site.id);
     const b = embark(short, C, site.id);

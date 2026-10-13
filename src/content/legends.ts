@@ -16,6 +16,8 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'insult',
       'civ_raid',
       'oath_sworn',
+      'champion_fought',
+      'vengeance_raid',
     ],
   },
   {
@@ -82,6 +84,7 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'site_wildfire',
       'site_fire_out',
       'site_woods_thin',
+      'beast_hunt_failed',
     ],
   },
   {
@@ -89,6 +92,7 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
     label: 'Places',
     types: [
       'site_founded',
+      'legend_founded',
       'outpost_founded',
       'site_grew',
       'site_abandoned',

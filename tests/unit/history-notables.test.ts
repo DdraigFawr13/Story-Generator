@@ -23,6 +23,8 @@ const generate = (seed: string, years = YEARS, content: ContentBundle = DEFAULT_
 /** One 250-year world, built once for the invariant checks. */
 let shared: WorldState | undefined;
 const base = () => (shared ??= generate('NOT-A'));
+/** Seed whose default world has a razing death; its quarrelsome variant settles a dispute. */
+const RAZED_SEED = 'NOT-B';
 
 const yearOf = (event: SimEvent) => Math.floor(event.day / DAYS_PER_YEAR);
 
@@ -126,7 +128,7 @@ describe('notables', () => {
   });
 
   it('name a razing death after the kind of place burned', () => {
-    const world = base();
+    const world = generate(RAZED_SEED);
     const sites = [...world.sites.values()];
     const burnings = world.events.filter(
       (e) => e.type === 'notable_died' && String(e.data.cause).includes('burning'),
@@ -143,7 +145,7 @@ describe('notables', () => {
       ...DEFAULT_CONTENT,
       notables: { ...DEFAULT_CONTENT.notables, disputeChance: 1, disputeMargin: 100 },
     };
-    const world = generate('NOT-A', YEARS, quarrelsome);
+    const world = generate(RAZED_SEED, YEARS, quarrelsome);
     const byId = new Map(world.events.map((e) => [e.id, e]));
     const settled = world.events.filter((e) => e.type === 'ruler_succeeded');
     let disputed = 0;
@@ -200,5 +202,16 @@ describe('notables', () => {
       notables: { ...DEFAULT_CONTENT.notables, dynastyNames: {} },
     };
     expect(validateContent(broken).join('\n')).toMatch(/dynastyNames/);
+  });
+
+  it('is rejected by content checks when a deed chance is out of range', () => {
+    const broken: ContentBundle = {
+      ...DEFAULT_CONTENT,
+      notables: {
+        ...DEFAULT_CONTENT.notables,
+        deeds: { ...DEFAULT_CONTENT.notables.deeds, vengeanceChance: 2 },
+      },
+    };
+    expect(validateContent(broken).join('\n')).toMatch(/deeds\.vengeanceChance/);
   });
 });
