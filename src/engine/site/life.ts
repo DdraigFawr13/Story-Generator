@@ -104,19 +104,11 @@ interface Profile {
   step: number;
   alehouse: number;
   well: number;
-  /** Their favourite place for free blocks, drawn for the age band it was drawn at. */
-  favourite: RoutinePlace | undefined;
-  favouriteBand: Band | undefined;
   /** Their weights for each routine table, by age band and whether a parent's trade takes them along. */
   weights: Map<string, (Float64Array | undefined)[]>;
   /** This block: the job they were given today, and the tile they work it at (-1: none). */
   job: JobDef | undefined;
   workTile: number;
-  /** The work tile last looked up, and for which job, layout version and day (construction moves daily). */
-  tileJob: JobDef | undefined;
-  tileVersion: number;
-  tileDay: number;
-  tileAt: number;
   /** A theft breakdown that takes an item rather than food. */
   itemTheft: boolean;
   /** This block: where they stand after walking. */
@@ -395,15 +387,9 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
       step: step >= 0 && tileCost(active, rules, life, step) ? step : green,
       alehouse: alehouse ? interiorSpot(alehouse, mix(id, 30), width) : -1,
       well: wellSides.length > 0 ? wellSides[mix(id, 31) % wellSides.length]! : -1,
-      favourite: undefined,
       weights: new Map(),
-      favouriteBand: undefined,
       job: undefined,
       workTile: -1,
-      tileJob: undefined,
-      tileVersion: -1,
-      tileDay: -1,
-      tileAt: -1,
       itemTheft: false,
       tile: 0,
       placeId: null,
@@ -734,6 +720,9 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   // Pass 1: activity, destination, walking.
   const budget = { left: life.pathBudget };
   cache.inside.fill(0);
+  // Cleared whole each block: a person counted outdoors and then moved or gone left a phantom
+  // count behind, which gave company to nobody (and differed after a load, M3.12).
+  cache.outdoors.fill(0);
   /** Settles where a person stands this block and counts them there. */
   const standAt = (p: Profile, tile: number) => {
     const building = active.map.building[tile]!;
@@ -794,16 +783,18 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
             : place === 'along'
               ? p.band === 'child' && alongParent(p) !== undefined
               : true;
+  // Kept on the person (saved): the draw sees who could go along with a parent that day.
   const favouriteOf = (p: Profile): RoutinePlace | undefined => {
-    if (p.favouriteBand !== p.band) {
-      p.favouriteBand = p.band;
+    const detail = p.person.detail!;
+    if (detail.favourite?.band !== p.band) {
       const table = routines.tables[routines.favouriteTable[p.band]]!;
-      p.favourite = drawPlace(
+      const place = drawPlace(
         placeWeights(p, table, routines.traitMul, open),
         roll(p.id, 50, 0, 0),
       );
+      detail.favourite = { band: p.band, place };
     }
-    return p.favourite;
+    return detail.favourite.place;
   };
   const placeFor = (p: Profile, key: string): RoutinePlace => {
     // Weights only change with the age band (and the favourite drawn for it) and going along.
@@ -1091,20 +1082,24 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       const job = p.job;
       // Fields change with the season, building sites daily, and a hunter's quarry each block.
       const volatile = job.workplace === 'construction' || job.workplace === 'field';
+      // The spot is kept on the person (saved), so a loaded site sends them where the running one would.
+      const spot = detail.workSpot;
       if (
-        p.tileJob !== job ||
-        p.tileVersion !== active.layoutVersion ||
-        (volatile && p.tileDay !== day) ||
+        spot?.job !== job.id ||
+        spot.version !== active.layoutVersion ||
+        (volatile && spot.day !== day) ||
         (job.pool === 'game' &&
-          Math.floor(p.tileDay / HUNT_REFRESH_DAYS) !== Math.floor(day / HUNT_REFRESH_DAYS))
+          Math.floor(spot.day / HUNT_REFRESH_DAYS) !== Math.floor(day / HUNT_REFRESH_DAYS))
       ) {
-        const kept = p.tileJob === job ? p.tileAt : -1;
-        p.tileJob = job;
-        p.tileVersion = active.layoutVersion;
-        p.tileDay = day;
-        p.tileAt = workTile(content, active, { id: p.id, field: p.field, tileAt: kept }, job);
+        const kept = spot?.job === job.id ? spot.tile : -1;
+        detail.workSpot = {
+          job: job.id,
+          version: active.layoutVersion,
+          day,
+          tile: workTile(content, active, { id: p.id, field: p.field, tileAt: kept }, job),
+        };
       }
-      p.workTile = p.tileAt;
+      p.workTile = detail.workSpot!.tile;
       // Market day: the stallholders' trades set up on the square, and still count as work.
       if (
         marketMorning &&
@@ -1376,7 +1371,6 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       with: d.with,
       jobId: d.jobId,
     };
-    if (p.placeId === null) cache.outdoors[p.tile] = 0;
   }
   // Evening: the day's interactions and family business (births due, matches, households).
   if (block === BLOCKS - 1) {

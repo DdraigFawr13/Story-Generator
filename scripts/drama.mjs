@@ -1,14 +1,20 @@
 // World stats per seed: npm run drama -- --seeds 5 [--size 256] [--years 250] [--seed NAME]
 //   [--write-baseline FILE] [--baseline FILE [--tolerance 0.1]]
+// Site tier: npm run drama -- --seeds 3 --site --years 3 [--history-years 250] (years = site play)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { loadEngine, parseArgs } from './load-engine.mjs';
 import { baselineMetrics, countEvents, historyMetrics } from './history-metrics.mjs';
 import { diffBaseline, formatDiff } from './baseline-diff.mjs';
+import { domainMap, siteMetrics } from './site-metrics.mjs';
 
-const args = parseArgs(process.argv.slice(2));
+// --site is a bare flag: pull it out first so parseArgs never swallows the next flag as its value.
+const argv = process.argv.slice(2).filter((a) => a !== '--site');
+const siteMode = argv.length !== process.argv.length - 2;
+const args = parseArgs(argv);
 const size = Number(args.size || 256);
 const count = Number(args.seeds || 5);
-const years = Number(args.years || 250);
+const siteYears = Number(args.years || 3);
+const years = siteMode ? Number(args['history-years'] || 250) : Number(args.years || 250);
 const seeds = args.seed ? [args.seed] : Array.from({ length: count }, (_, i) => `S${i + 1}`);
 
 const {
@@ -25,7 +31,55 @@ const {
   DEFAULT_CONTENT,
   BIOMES,
   RESOURCES,
+  embark,
+  stepSite,
+  LIFE_EVENTS,
+  WORK_EVENTS,
+  HEALTH_EVENTS,
+  FAMILY_EVENTS,
+  SOCIAL_EVENTS,
+  SOCIETY_EVENTS,
+  THREAT_EVENTS,
+  LORE_EVENTS,
+  POLITICS_EVENTS,
+  WEATHER_EVENTS,
 } = await loadEngine();
+
+// Site-tier stats for one seed: embark on the most populous live site and step whole days.
+function siteStats(world) {
+  let site = null;
+  for (const s of world.sites.values()) {
+    if (s.ruinedYear !== undefined) continue;
+    if (!site || sitePopulation(s) > sitePopulation(site)) site = s;
+  }
+  if (!site) return null;
+  const active = embark(world, DEFAULT_CONTENT, site.id);
+  const startFollowed = active.residents.length;
+  const first = world.events.length;
+  const days = Math.round(siteYears * DAYS_PER_YEAR);
+  const t0 = performance.now();
+  for (let i = 0; i < days; i += 1) stepSite(world, DEFAULT_CONTENT);
+  const seconds = Math.max((performance.now() - t0) / 1000, 1e-6);
+  const domains = domainMap({
+    life: LIFE_EVENTS,
+    work: WORK_EVENTS,
+    health: HEALTH_EVENTS,
+    family: FAMILY_EVENTS,
+    social: SOCIAL_EVENTS,
+    society: SOCIETY_EVENTS,
+    threats: THREAT_EVENTS,
+    lore: LORE_EVENTS,
+    politics: POLITICS_EVENTS,
+    environment: WEATHER_EVENTS,
+  });
+  const months = days / (DAYS_PER_YEAR / 12);
+  const m = siteMetrics(world, active, world.events.slice(first), {
+    months,
+    domains,
+    startFollowed,
+  });
+  return { site, days, daysPerSecond: days / seconds, ...m };
+}
 
 function stats(seed) {
   const ms = {};
@@ -221,8 +275,11 @@ function stats(seed) {
     for (const d of deposits) resourceCells[d.resource] += 1;
   }
   highs.sort((a, b) => a - b);
+  // Last, because embarking and stepping the site changes the world.
+  const siteTier = siteMode ? siteStats(world) : undefined;
   return {
     seed,
+    siteTier,
     ms,
     total: Object.values(ms).reduce((a, b) => a + b, 0),
     land: pct(land, n),
@@ -438,6 +495,37 @@ for (const r of rows) {
       `${String(h.legends).padStart(2)} (${h.legendsMax}) | ${String(h.artifacts).padStart(3)} ${String(h.books).padStart(3)} | ` +
       `${String(h.itemsLost).padStart(3)} ${String(h.itemsStolen).padStart(3)}\n`,
   );
+}
+
+if (siteMode) {
+  process.stdout.write(
+    `\nsite tier (${siteYears} years of site play after ${years} of history):\n`,
+  );
+  for (const r of rows) {
+    const t = r.siteTier;
+    if (!t) {
+      process.stdout.write(`${r.seed}: no live site to embark on\n`);
+      continue;
+    }
+    const sorted = (o) => Object.entries(o).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+    const list = (o, fmt = String) =>
+      sorted(o)
+        .map(([k, v]) => `${k} ${fmt(v)}`)
+        .join(', ') || 'none';
+    const lines = [
+      `site: ${t.site.name} (id ${t.site.id})`,
+      `followed residents: ${t.followedStart} at start, ${t.followedEnd} at end`,
+      `events: ${t.totalEvents} in ${t.months.toFixed(0)} months`,
+      `events per month by domain: ${list(t.perMonth, (v) => v.toFixed(1))}`,
+      `longest cause chain: ${t.chain.length} events: ${t.chain.join(' > ') || 'none'}`,
+      `deaths: ${t.deaths}; by cause: ${list(t.deathsByCause)}`,
+      `breakdowns: tantrum ${t.tantrums}, despair ${t.despair}, wandered ${t.wandered}, theft ${t.thefts}`,
+      `marriages: ${t.marriages}`,
+      `births: ${t.births}`,
+      `speed: ${t.daysPerSecond.toFixed(0)} days/s`,
+    ];
+    process.stdout.write(`${r.seed}\n${lines.map((l) => `  ${l}`).join('\n')}\n`);
+  }
 }
 
 const baselineSeeds = () =>

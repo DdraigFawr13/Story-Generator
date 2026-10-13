@@ -2,6 +2,8 @@
 // CompressionStream (M2.5), plus a SHA-256 checksum of the stored bytes. Summary and data are
 // written in one transaction, so a save either commits completely or leaves the previous one
 // untouched. There is no cross-version migration (R-02): a save from an older build may fail to load.
+// M3.12: a save made while a site is watched holds the site too (`activeSite`), and loading it
+// carries on watching; the site worker compresses its own world so play never stalls the page.
 
 import { deserializeWorld, serializeWorld, type WorldState } from '../engine';
 
@@ -10,7 +12,23 @@ export interface SaveSummary {
   seed: string;
   day: number;
   savedAt: string;
+  /** M3.12: the watched site's name, when the save was made while watching one. */
+  site?: string;
+  /** M3.12: what the site view showed when saved (the link's selection, zoom, centre and tabs). */
+  view?: SaveView;
 }
+
+/** The site view's place in a save, in the link's terms; loading restores it. */
+export interface SaveView {
+  open: string | null;
+  zoom: number;
+  at: { x: number; y: number };
+  tab: string | null;
+  sec: string | null;
+}
+
+/** What a save says about its world, before the save name and time are added. */
+export type SaveHeader = Pick<SaveSummary, 'seed' | 'day' | 'site'>;
 
 export interface SaveRecord {
   name: string;
@@ -31,6 +49,13 @@ export interface SaveBackend {
 export interface SaveStore {
   list(): Promise<SaveSummary[]>;
   save(name: string, world: WorldState): Promise<SaveSummary>;
+  /** Stores a world already serialized and gzipped (the site worker does that off the page). */
+  saveCompressed(
+    name: string,
+    header: SaveHeader,
+    data: Uint8Array,
+    view?: SaveView,
+  ): Promise<SaveSummary>;
   load(name: string): Promise<WorldState>;
   remove(name: string): Promise<void>;
 }
@@ -64,6 +89,33 @@ export async function decompress(data: Uint8Array | string): Promise<string> {
   return new TextDecoder().decode(await pipe(data, new DecompressionStream('gzip')));
 }
 
+/**
+ * The summary fields a world gives: its seed, day and the site being watched, if any. A site's day
+ * is the one its date shows: after the evening block the clock has turned, but the evening belongs
+ * to the day before (as the site view's date and link say).
+ */
+export function headerOf(world: WorldState): SaveHeader {
+  const active = world.activeSite;
+  const site = active ? world.sites.get(active.siteId)?.name : undefined;
+  if (!active || site === undefined) return { seed: world.seed, day: world.day };
+  const turned = active.block === 0 && world.day !== active.enteredDay;
+  return { seed: world.seed, day: turned ? world.day - 1 : world.day, site };
+}
+
+function looksLikeWorld(world: unknown): world is WorldState {
+  const w = world as Partial<WorldState> | null;
+  return (
+    typeof w === 'object' &&
+    w !== null &&
+    typeof w.seed === 'string' &&
+    typeof w.day === 'number' &&
+    typeof w.params?.width === 'number' &&
+    typeof w.params?.height === 'number' &&
+    w.sites instanceof Map &&
+    Array.isArray(w.events)
+  );
+}
+
 export function createSaveStore(
   backend: SaveBackend,
   now: () => Date = () => new Date(),
@@ -74,14 +126,14 @@ export function createSaveStore(
       return saves.sort((a, b) => (a.savedAt < b.savedAt ? 1 : a.savedAt > b.savedAt ? -1 : 0));
     },
     async save(name, world) {
+      validateSaveName(name);
+      return this.saveCompressed(name, headerOf(world), await compress(serializeWorld(world)));
+    },
+    async saveCompressed(name, header, data, view) {
       const validName = validateSaveName(name);
-      const data = await compress(serializeWorld(world));
-      const summary: SaveSummary = {
-        name: validName,
-        seed: world.seed,
-        day: world.day,
-        savedAt: now().toISOString(),
-      };
+      const summary: SaveSummary = { name: validName, ...header, savedAt: now().toISOString() };
+      if (summary.site === undefined) delete summary.site;
+      if (view) summary.view = view;
       await backend.write(summary, { name: validName, checksum: await checksumOf(data), data });
       return summary;
     },
@@ -92,7 +144,11 @@ export function createSaveStore(
         throw new Error(`The save "${name}" is damaged and cannot be loaded.`);
       }
       try {
-        return deserializeWorld(await decompress(record.data));
+        const world = deserializeWorld(await decompress(record.data));
+        // Readable JSON that is not a world (another app's data, a hand-edited save) fails here,
+        // not later inside the map.
+        if (!looksLikeWorld(world)) throw new Error('not a world');
+        return world;
       } catch {
         throw new Error(`The save "${name}" could not be read by this version.`);
       }

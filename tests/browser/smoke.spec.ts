@@ -193,6 +193,50 @@ test('a site can be watched: embark, play, inspect a person and return to the ma
   await expect(date).not.toHaveText(start!, { timeout: 10_000 });
   await page.getByRole('button', { name: 'Pause' }).click();
 
+  // M3.12: save the site, play on, load the save: the clock and the view go back to the saved
+  // moment. The Site tab is open, so the save keeps it.
+  await page.getByRole('tab', { name: /^Site/ }).click();
+  await page.getByRole('button', { name: 'Saves' }).click();
+  const saves = page.getByRole('dialog', { name: 'Saves' });
+  await saves.getByLabel('Save as').fill('smoke site');
+  await saves.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(saves.getByRole('status')).toContainText('Saved “smoke site”');
+  // The same name again asks first; "Keep both" adds a number instead of replacing.
+  await saves.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(saves.getByRole('group', { name: 'Replace the save?' })).toBeVisible();
+  await saves.getByRole('button', { name: 'Keep both' }).click();
+  await expect(saves.getByRole('status')).toContainText('Saved “smoke site (2)”');
+  const savedDate = await date.textContent();
+  const savedPoint = /[?&]day=\d+(&b=\d)?/.exec(page.url())![0];
+  await page.getByRole('button', { name: 'Saves' }).click();
+  await page.getByRole('button', { name: '4×' }).click();
+  await expect(date).not.toHaveText(savedDate!, { timeout: 10_000 });
+  await page.getByRole('button', { name: 'Pause' }).click();
+  // The address bar follows the on-page link a moment later; reload only once it names the pause.
+  const pausedPoint = /[?&]day=\d+(&b=\d)?&/.exec(
+    (await page.getByTestId('site-link').textContent())!,
+  )![0];
+  await expect(page).toHaveURL(new RegExp(pausedPoint.replace('?', '\\?')));
+  // Reload (the link replays the site to where play stopped), then load the save and continue.
+  await page.reload();
+  await expect(canvas).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
+  await expect(date).not.toHaveText(savedDate!);
+  await page.getByRole('button', { name: 'Saves' }).click();
+  await page.getByRole('button', { name: 'Load smoke site', exact: true }).click();
+  await expect(canvas).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
+  await expect(date).toHaveText(savedDate!);
+  await expect(page.getByRole('tab', { name: /^Site/ })).toHaveAttribute('aria-selected', 'true');
+  // The link names the saved moment, so it replays to the same place.
+  await expect(page).toHaveURL(new RegExp(savedPoint.replace('?', '\\?')));
+  // "Next notable" runs on until something important happens, then pauses on it.
+  await page.getByRole('button', { name: 'Next notable', exact: true }).click();
+  await expect(date).not.toHaveText(savedDate!, { timeout: 20_000 });
+  await expect(page.getByRole('button', { name: 'Next notable', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+    { timeout: 60_000 },
+  );
+
   // People: the first person's name heads the Inspect page.
   await page.getByRole('tab', { name: /^People/ }).click();
   const first = page.locator('.sv-root .pane .pp').first();

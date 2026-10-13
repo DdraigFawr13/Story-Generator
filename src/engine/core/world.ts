@@ -77,7 +77,7 @@ export function createWorld(seed: string, params: Partial<WorldParams> = {}): Wo
   };
 }
 
-// Maps and typed arrays become tagged arrays so JSON round-trips exactly.
+// Maps, Sets and typed arrays become tagged values so JSON round-trips exactly.
 const TYPED_ARRAYS = {
   Int8Array,
   Uint8Array,
@@ -97,20 +97,75 @@ function typedName(value: unknown): TypedArrayName | null {
   return null;
 }
 
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const B64_INDEX = new Uint8Array(128);
+for (let i = 0; i < B64.length; i += 1) B64_INDEX[B64.charCodeAt(i)] = i;
+
+/** The array's bytes as base64 (M3.12): a 256x256 world saves and loads several times faster than as JSON numbers. */
+function toBase64(value: ArrayBufferView): string {
+  const bytes = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  const parts: string[] = [];
+  let chunk = '';
+  for (let i = 0; i < bytes.length; i += 3) {
+    const a = bytes[i]!;
+    const b = i + 1 < bytes.length ? bytes[i + 1]! : 0;
+    const c = i + 2 < bytes.length ? bytes[i + 2]! : 0;
+    chunk +=
+      B64[a >> 2]! +
+      B64[((a & 3) << 4) | (b >> 4)]! +
+      (i + 1 < bytes.length ? B64[((b & 15) << 2) | (c >> 6)]! : '=') +
+      (i + 2 < bytes.length ? B64[c & 63]! : '=');
+    if (chunk.length >= 8192) {
+      parts.push(chunk);
+      chunk = '';
+    }
+  }
+  parts.push(chunk);
+  return parts.join('');
+}
+
+function fromBase64(text: string): Uint8Array {
+  const pad = text.endsWith('==') ? 2 : text.endsWith('=') ? 1 : 0;
+  const bytes = new Uint8Array((text.length / 4) * 3 - pad);
+  let o = 0;
+  for (let i = 0; i < text.length; i += 4) {
+    const a = B64_INDEX[text.charCodeAt(i)]!;
+    const b = B64_INDEX[text.charCodeAt(i + 1)]!;
+    const c = B64_INDEX[text.charCodeAt(i + 2)]!;
+    const d = B64_INDEX[text.charCodeAt(i + 3)]!;
+    bytes[o++] = (a << 2) | (b >> 4);
+    if (o < bytes.length) bytes[o++] = ((b & 15) << 4) | (c >> 2);
+    if (o < bytes.length) bytes[o++] = ((c & 3) << 6) | d;
+  }
+  return bytes;
+}
+
 function replacer(_key: string, value: unknown): unknown {
   if (value instanceof Map) return { $map: [...value.entries()] };
+  if (value instanceof Set) return { $set: [...value] };
   const typed = typedName(value);
-  if (typed) return { $typed: typed, data: Array.from(value as ArrayLike<number>) };
+  if (typed) return { $typed: typed, b64: toBase64(value as ArrayBufferView) };
   return value;
 }
 function reviver(_key: string, value: unknown): unknown {
   if (value && typeof value === 'object') {
     if ('$map' in value) return new Map((value as { $map: [unknown, unknown][] }).$map);
+    if ('$set' in value) return new Set((value as { $set: unknown[] }).$set);
     if ('$typed' in value) {
-      const { $typed, data } = value as { $typed: TypedArrayName; data: number[] };
+      const { $typed, data, b64 } = value as {
+        $typed: TypedArrayName;
+        data?: number[];
+        b64?: string;
+      };
       const Constructor = TYPED_ARRAYS[$typed];
       if (!Constructor) throw new Error(`Unknown typed array "${$typed}" in save.`);
-      return Constructor.from(data);
+      if (b64 === undefined) return Constructor.from(data ?? []);
+      const bytes = fromBase64(b64);
+      return new Constructor(
+        bytes.buffer as ArrayBuffer,
+        0,
+        bytes.byteLength / Constructor.BYTES_PER_ELEMENT,
+      );
     }
   }
   return value;

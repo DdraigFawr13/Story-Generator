@@ -4,7 +4,7 @@
 // per-version compatibility layers (R-02, R-03).
 
 import type { RngState } from './rng';
-import type { Activity, BreakdownKind, CreatureTier } from './content-types';
+import type { Activity, BreakdownKind, CreatureTier, RoutinePlace } from './content-types';
 
 export type Id = number;
 
@@ -48,6 +48,10 @@ export interface Family {
 
 /** Site-tier-only detail (§6). Absent while a person lives only at world tier. */
 export interface PersonDetail {
+  /** M3.12: the work tile last looked up, for which job, layout version and day (construction moves daily); saved so a loaded site works the same spots. */
+  workSpot?: { job: string; version: number; day: number; tile: number } | undefined;
+  /** Village life: their favourite place for free blocks, drawn for the age band it was drawn at (saved, M3.12). */
+  favourite?: { band: string; place: RoutinePlace | undefined } | undefined;
   /** Need id → 0-100 (100 satisfied); only the needs this person has. */
   needs: Record<string, number>;
   mood: number;
@@ -870,6 +874,14 @@ export interface ActiveSite {
   itemsAtEntry: [Id, Id | null][];
   /** The steward's top priority last announced; null until the first day. */
   stewardFocus: string | null;
+  /** M3.12: the last day plan's fingerprint, each farmer's last field and today's tile in it, kept with the save so a loaded site works as the running one would. */
+  stewardPlan?: { signature: string; farmField: Map<Id, Id>; farmTile: Map<Id, number> };
+  /** M3.12: cached walking routes by `from * tiles + to` (null: unreachable), saved for the same reason. */
+  routes?: Map<number, number[] | null>;
+  /** M3.12: the tree layer as of `version` (see `treesAtVersion`); saved. */
+  treeView?: { version: number; tree: Uint8Array };
+  /** M3.12: who is free to court this month (drawn when the month or the people change, then thinned as pairs form); saved. */
+  courting?: { key: string; free: Set<Id> };
   /** M3.4: weather, crops, stores, fire and wild land. */
   weather: SiteWeather;
   harvest: SiteHarvest;
