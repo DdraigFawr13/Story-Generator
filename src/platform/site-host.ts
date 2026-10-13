@@ -36,6 +36,7 @@ export function siteContentOf(content: SiteContent): SiteContent {
   const { history, needs, traits, memories, life } = content;
   const { abilities, items, jobs, steward, environment } = content;
   const { health, conditions, ailments, diseases } = content;
+  const { interactions, social, family } = content;
   return {
     biomes,
     resources,
@@ -58,6 +59,9 @@ export function siteContentOf(content: SiteContent): SiteContent {
     conditions,
     ailments,
     diseases,
+    interactions,
+    social,
+    family,
   };
 }
 

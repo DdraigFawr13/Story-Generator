@@ -229,6 +229,10 @@ export interface ContentBundle {
   health: HealthRules;
   conditions: ConditionDef[];
   ailments: AilmentDef[];
+  /** Family and relationships (M3.6): the day's interactions, opinions and grudges; courtship, births, inheritance. */
+  interactions: InteractionDef[];
+  social: SocialRules;
+  family: FamilyRules;
 }
 
 /** What a condition is, for its harm and the words of its chronicle lines (M3.5). */
@@ -1621,4 +1625,157 @@ export interface HistoryRules {
   wearyShare: number;
   /** Years after peace before either side can declare again. */
   peaceYears: number;
+}
+
+/** One kind of evening interaction between two residents (M3.6). Numbers are tunables in content/interactions.ts. */
+export interface InteractionDef {
+  id: string;
+  name: string;
+  /** Base weight when picking a kind. */
+  weight: number;
+  /** Opinion change: [target's opinion of the actor, actor's opinion of the target]. */
+  opinion: [toTarget: number, toActor: number];
+  /** Only when the actor's opinion of the target is above / below this (no entry counts as 0). */
+  needsOpinionAbove?: number;
+  needsOpinionBelow?: number;
+  /** With `needsOpinionBelow`: a bad mood (below 0) also allows it. */
+  orBadMood?: boolean;
+  /** Weight multiplier by actor trait id. */
+  traitWeights?: Record<string, number>;
+  /** Weight multiplier when the actor's mood is below 0. */
+  moodWeight?: number;
+  /** Memories given: to the target and to the actor, about the other. */
+  memory?: { target?: string; actor?: string };
+  /** Grown people only. */
+  adultsOnly?: boolean;
+  /** Courtship: run by the family rules between eligible pairs, not by the plain opinion deltas. */
+  courtship?: boolean;
+  /** Begins a grudge in a target who already thinks this ill of the actor (opinion at or below it). */
+  grudgeIfOpinionBelow?: number;
+}
+
+/** A spiteful act taken in revenge; `phrase` fills the revenge event. */
+export interface SpiteDef {
+  id: string;
+  weight: number;
+  phrase: string;
+}
+
+/** Opinions, labels, grudges and the evening's partner pools (M3.6). */
+export interface SocialRules {
+  /** Interactions a resident starts each evening (min, max inclusive), and the shift by trait id. */
+  perDay: [number, number];
+  /** A resident starts interactions on one evening in this many (by id and day). */
+  startEvery: number;
+  traitShift: Record<string, number>;
+  /** Weight of each partner pool: same building, same job today, nearby children, anyone (the green). */
+  pools: { building: number; job: number; neighbour: number; green: number; suitor: number };
+  /** Candidates sampled from a pool before the weighted pick. */
+  sample: number;
+  /** Nearest homes that share a child's company. */
+  neighbourHomes: number;
+  /** Weight multiplier for a partner the actor counts a friend. */
+  friendWeight: number;
+  /** Weight multiplier for a partner the actor is free to court. */
+  suitorWeight: number;
+  /** Label thresholds: gained at `at`, lost past `drop` (hysteresis). */
+  labels: {
+    friend: { at: number; drop: number };
+    rival: { at: number; drop: number };
+    enemy: { at: number; drop: number };
+  };
+  /** Opinion change in a witness by the memory they gain (theft, rage seen). */
+  witnessed: Record<string, number>;
+  /** A month without meeting moves an opinion this far toward 0; entries under `forgetBelow` with no label or grudge are dropped. */
+  drift: { by: number; forgetBelow: number };
+  grudge: {
+    /** Chance per evening meeting of acting on a grudge, times honour / 5. */
+    revengeChance: number;
+    /** Multiplier for this trait. */
+    hotTrait: string;
+    hotMul: number;
+    acts: SpiteDef[];
+    /** Opinion change in the target of revenge, and the memories given: target, avenger. */
+    targetOpinion: number;
+    /** Opinion the avenger gains of the target on settling the score. */
+    satisfaction: number;
+    memoryOf: { humiliated: string; vengeance: string };
+    /** Days before a grudge may be forgiven; yearly chance base; the age (days) after which the chance doubles. */
+    forgiveAfterDays: number;
+    forgiveBase: number;
+    forgiveDoubleDays: number;
+    /** Traits that double the chance, and the multiplier for kin. */
+    forgiveTraits: string[];
+    kinMul: number;
+    /** Opinion left after forgiving. */
+    forgivenOpinion: number;
+  };
+  /** Event ids. */
+  events: { enmity: string; lovers: string; revenge: string; forgave: string };
+}
+
+/** Courtship, marriage, households, births and inheritance (M3.6). */
+export interface FamilyRules {
+  court: {
+    /** Largest age gap (years) between a couple at the history rules' reference lifespan; scaled by lifespan. */
+    ageGap: number;
+    /** Chance a flirt succeeds: (target's opinion + shift) / 100 clamped to [min, max]. */
+    successShift: number;
+    successMin: number;
+    successMax: number;
+    /** Opinion change in both on success; in the flirting one on failure. */
+    successOpinion: number;
+    failOpinion: number;
+    /** Both opinions at this make lovers. */
+    loversAt: number;
+    /** Days as lovers before marrying, and the monthly chance after. */
+    courtDays: number;
+    marryChance: number;
+    /** Days a widowed person waits before courting again. */
+    remarryAfterDays: number;
+    rejectedMemory: string;
+  };
+  arranged: {
+    /** Years past maturity before a household head arranges a match, and the monthly chance. */
+    afterYears: number;
+    chance: number;
+    /** The pair's opinions of each other must sum to at least this. */
+    minOpinionSum: number;
+  };
+  /** Most spouses a man may have where leaders take many. */
+  maxSpouses: number;
+  /** Who moves into whose household on marriage. */
+  residence: 'groom';
+  /** Text for the marriage event: the gift by culture custom, and how the match came about. */
+  gifts: Record<MarriageGift, string>;
+  how: { arranged: string; love: string };
+  births: {
+    /** A wife is fertile up to this share of her race's lifespan. */
+    fertileUntil: number;
+    pregnancyDays: number;
+    /** Yearly chance a fertile wife conceives is at most this. */
+    maxPerWife: number;
+  };
+  /** Text for the inheritance event, by rule. */
+  inheritance: Record<InheritanceRule, string>;
+  /** Memory ids the family rules give. */
+  memoryOf: {
+    married: string;
+    childBorn: string;
+    cameOfAge: string;
+    lostSpouse: string;
+    lostChild: string;
+    lostParent: string;
+    lostSibling: string;
+    lostFriend: string;
+    outlivedEnemy: string;
+  };
+  events: {
+    married: string;
+    birth: string;
+    cameOfAge: string;
+    householdFormed: string;
+    inherited: string;
+    orphanTakenIn: string;
+  };
 }

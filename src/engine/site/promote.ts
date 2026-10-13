@@ -4,7 +4,7 @@
 
 import { sortedById } from '../core/math';
 import { totalPop } from '../history/pop';
-import { streamFor } from '../core/rng';
+import { streamFor, type RngStream } from '../core/rng';
 import {
   GOODS,
   type ActiveSite,
@@ -44,6 +44,31 @@ interface Resident {
   notable: boolean;
   /** An elder who lives with this adult. */
   livesWith?: Id;
+}
+
+/** Full needs for a person whose culture weighs faith at `faith` (the faith need only above its line). */
+export function startingNeeds(content: SiteContent, faith: number): Record<string, number> {
+  const needs: Record<string, number> = {};
+  for (const need of content.needs) {
+    if (need.minCultureFaith === undefined || faith >= need.minCultureFaith) needs[need.id] = 100;
+  }
+  return needs;
+}
+
+/** Gives a person one trait, and often a second, that fit with each other (the same draws as promotion). */
+export function rollTraits(content: SiteContent, person: Person, rng: RngStream): void {
+  const traitDefs = new Map(content.traits.map((t) => [t.id, t]));
+  const want = rng.chance(SECOND_TRAIT_CHANCE) ? 2 : 1;
+  for (let n = 0; n < want; n += 1) {
+    const options = content.traits.filter(
+      (t) =>
+        !person.traits.includes(t.id) &&
+        !t.excludes.some((x) => person.traits.includes(x)) &&
+        !person.traits.some((x) => traitDefs.get(x)?.excludes.includes(t.id)),
+    );
+    if (options.length === 0) break;
+    person.traits.push(rng.weighted(options.map((t) => [t.id, t.weight] as const)));
+  }
 }
 
 export function embark(world: WorldState, content: SiteContent, siteId: Id): ActiveSite {
@@ -389,11 +414,7 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
             ];
       person.family.householdId = h.id;
       const faith = person.cultureId ? (cultures.get(person.cultureId)?.values.faith ?? -1) : -1;
-      const needs: Record<string, number> = {};
-      for (const need of content.needs) {
-        if (need.minCultureFaith === undefined || faith >= need.minCultureFaith)
-          needs[need.id] = 100;
-      }
+      const needs = startingNeeds(content, faith);
       person.detail = {
         needs,
         mood: 0,
@@ -414,21 +435,10 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
 
   // Traits: one, and often a second, for everyone who has none yet (notables keep what they gain after leaving).
   const traitRng = streamFor(world, 'site.traits');
-  const traitDefs = new Map(content.traits.map((t) => [t.id, t]));
   for (const id of [...residents.keys()].sort((a, b) => a - b)) {
     const person = residents.get(id)!.person;
     if (person.traits.length > 0) continue;
-    const want = traitRng.chance(SECOND_TRAIT_CHANCE) ? 2 : 1;
-    for (let n = 0; n < want; n += 1) {
-      const options = content.traits.filter(
-        (t) =>
-          !person.traits.includes(t.id) &&
-          !t.excludes.some((x) => person.traits.includes(x)) &&
-          !person.traits.some((x) => traitDefs.get(x)?.excludes.includes(t.id)),
-      );
-      if (options.length === 0) break;
-      person.traits.push(traitRng.weighted(options.map((t) => [t.id, t.weight] as const)));
-    }
+    rollTraits(content, person, traitRng);
   }
 
   // Stock: each good becomes its starting item, scaled by the followed share, in whole items.
@@ -473,6 +483,9 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
     layoutVersion: 0,
     itemsAtEntry,
     stewardFocus: null,
+    peopleVersion: 0,
+    popDelta: {},
+    interactions: 0,
     ...blankEnvironment(year),
   };
   for (const good of GOODS) active.stockAtEntry[good] = goodAmount(active, content, good);

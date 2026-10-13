@@ -70,6 +70,12 @@ export interface PersonDetail {
   with?: Id | undefined;
   /** A running breakdown: despair and wandering last days, tantrum and theft one block. */
   breakdown?: { kind: BreakdownKind; untilDay: number; eventId: Id } | undefined;
+  /** M3.6: carrying a child, with the father and the day it is born. */
+  pregnant?: { father: Id; dueDay: number } | undefined;
+  /** M3.6: the adult who took this orphaned child in. */
+  guardian?: Id | undefined;
+  /** M3.6: day a spouse died; they may court again after the culture's mourning time. */
+  widowedDay?: number | undefined;
   /** M3.5: wounds, illnesses and the like, newest last. */
   conditions: Condition[];
   /** Stays home: too ill or hurt to work (health below `abedBelow`, or a symptomatic disease). */
@@ -131,8 +137,18 @@ export interface Memory {
 }
 
 export interface Relationship {
+  /** This person's view of the other, -100 to 100. */
   opinion: number;
+  /** friend, rival, enemy, lover (one-sided except lover). */
   labels: string[];
+  /** M3.6: a grudge held against the other, with the event that caused it when there was one. */
+  grudge?: { since: number; eventId?: Id } | undefined;
+  /** Day a label last changed. */
+  since?: number | undefined;
+  /** Last day the two interacted. */
+  met?: number | undefined;
+  /** The event behind the last blow to the opinion (a theft or rage seen), or the one that made them lovers. */
+  cause?: Id | undefined;
 }
 
 export interface Person {
@@ -809,6 +825,12 @@ export interface ActiveSite {
   fire: SiteFire | null;
   /** Open ground that burnt in the last weeks, with the day it burnt. */
   burnt: { tile: number; day: number }[];
+  /** M3.6: bumped when people are born, move household or die, so the main thread's roster refreshes. */
+  peopleVersion: number;
+  /** M3.6: net change of followed people by `race|culture|band`, applied to the site's counts on leaving. */
+  popDelta: Record<string, number>;
+  /** M3.6: interactions run so far (for the tuner). */
+  interactions: number;
 }
 
 /** A climate epoch still running when history ended, for the watched site's weather (M3.4). */

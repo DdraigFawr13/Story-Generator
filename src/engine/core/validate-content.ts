@@ -97,6 +97,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...workProblems(content));
   problems.push(...environmentProblems(content));
   problems.push(...healthProblems(content));
+  problems.push(...familyProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -731,6 +732,77 @@ export function environmentProblems(content: ContentBundle): string[] {
     problems.push('Environment crop: need positive fieldYield and margin, otherFoodShare in 0-1.');
   if (!(env.meals.floor > 0 && env.meals.floor <= 1))
     problems.push('Environment meals: floor must be between 0 and 1.');
+  return problems;
+}
+
+const INHERITANCE_RULES = [
+  'all-children',
+  'eldest-son',
+  'eldest-child',
+  'youngest-keeps-hearth',
+  'sons-temple-tithe',
+  'best-apprentice',
+] as const;
+
+/** Interactions, opinions and family rules (M3.6): ids resolve, thresholds make hysteresis, every rule has its phrase. */
+export function familyProblems(content: ContentBundle): string[] {
+  const { interactions, social, family } = content;
+  if (!interactions || !social || !family) return ['Content has no family tables.'];
+  const problems: string[] = [];
+  const memoryIds = new Set(content.memories.map((m) => m.id));
+  const eventIds = new Set(content.eventTypes.map((e) => e.id));
+  const traitIds = new Set(content.traits.map((t) => t.id));
+  const memory = (where: string, id: string) => {
+    if (!memoryIds.has(id)) problems.push(`${where}: unknown memory "${id}".`);
+  };
+  const event = (where: string, id: string) => {
+    if (!eventIds.has(id)) problems.push(`${where}: unknown event type "${id}".`);
+  };
+  const trait = (where: string, id: string) => {
+    if (!traitIds.has(id)) problems.push(`${where}: unknown trait "${id}".`);
+  };
+  const seen = new Set<string>();
+  for (const def of interactions) {
+    const where = `Interaction ${def.id}`;
+    if (seen.has(def.id)) problems.push(`${where}: duplicate id.`);
+    seen.add(def.id);
+    if (!(def.weight > 0)) problems.push(`${where}: weight must be positive.`);
+    if (def.memory?.target) memory(where, def.memory.target);
+    if (def.memory?.actor) memory(where, def.memory.actor);
+    for (const id of Object.keys(def.traitWeights ?? {})) trait(where, id);
+  }
+  if (!interactions.some((d) => d.id === 'chat'))
+    problems.push('Interactions must include "chat".');
+  if (!(social.perDay[0] >= 0 && social.perDay[0] <= social.perDay[1]))
+    problems.push('Social perDay must be an ordered range from 0 up.');
+  for (const id of [
+    ...Object.keys(social.traitShift),
+    social.grudge.hotTrait,
+    ...social.grudge.forgiveTraits,
+  ])
+    trait('Social', id);
+  for (const id of Object.keys(social.witnessed)) memory('Social witnessed', id);
+  for (const id of Object.values(social.grudge.memoryOf)) memory('Social grudge', id);
+  for (const id of Object.values(social.events)) event('Social events', id);
+  const { friend, rival, enemy } = social.labels;
+  if (!(friend.drop < friend.at))
+    problems.push('Social labels: friend must be lost below where it is gained.');
+  if (!(rival.drop > rival.at && enemy.drop > enemy.at && enemy.at < rival.at))
+    problems.push(
+      'Social labels: rival and enemy need hysteresis and the enemy line below the rival line.',
+    );
+  if (social.grudge.acts.length === 0)
+    problems.push('Social grudge: needs at least one spiteful act.');
+  memory('Family court', family.court.rejectedMemory);
+  for (const id of Object.values(family.memoryOf)) memory('Family memoryOf', id);
+  for (const id of Object.values(family.events)) event('Family events', id);
+  for (const rule of INHERITANCE_RULES) {
+    if (!family.inheritance[rule]) problems.push(`Family inheritance: no phrase for "${rule}".`);
+  }
+  for (const gift of ['none', 'bride-price', 'dowry'] as const) {
+    if (!family.gifts[gift]) problems.push(`Family gifts: no phrase for "${gift}".`);
+  }
+  if (!(family.maxSpouses >= 1)) problems.push('Family maxSpouses must be at least 1.');
   return problems;
 }
 
