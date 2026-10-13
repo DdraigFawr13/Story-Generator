@@ -270,8 +270,13 @@ export function SiteView(props: Props) {
     const view = { z: props.restore.zoom ?? SELECT_ZOOM, cx: size / 2, cy: size / 2 };
     const hall = [...active.buildings.values()].find((b) => b.defId === 'hall');
     const quarter = base.scene.quarter;
-    view.cx = props.restore.at?.x ?? (hall ? hall.x + hall.w / 2 : quarter[0] + quarter[2] / 2);
-    view.cy = props.restore.at?.y ?? (hall ? hall.y + hall.h / 2 + 4 : quarter[1] + quarter[3] / 2);
+    // A link that opens a selection but names no centre shows the selection.
+    const opened = !props.restore.at && sel ? selectionRect(base.scene, sel, homeOf) : null;
+    const start = opened
+      ? { x: opened[0] + opened[2] / 2, y: opened[1] + opened[3] / 2 }
+      : props.restore.at;
+    view.cx = start?.x ?? (hall ? hall.x + hall.w / 2 : quarter[0] + quarter[2] / 2);
+    view.cy = start?.y ?? (hall ? hall.y + hall.h / 2 + 4 : quarter[1] + quarter[3] / 2);
     const r = new SiteRenderer(
       canvas,
       base.scene,

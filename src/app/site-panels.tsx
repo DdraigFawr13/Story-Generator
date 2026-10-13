@@ -942,7 +942,7 @@ function sourceWords(
     return `from ${her} ${parent?.sex === 'f' ? 'mother' : 'father'} ${name}`;
   }
   return from.teacher === m.active.lore.hedgeWitch
-    ? `from ${name}, the hedge-witch`
+    ? `from ${name} the hedge-witch`
     : `from ${name}`;
 }
 
@@ -964,7 +964,11 @@ function LoreSection({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) 
   );
   const reading = lore?.readBook === undefined ? undefined : m.world.items.get(lore.readBook);
   const awakening = p.awakening;
+  // A spark with no common cantrip of its school (mind, for now) has nothing to learn here.
+  const noCantrip =
+    p.magic.power > 0 && learnableCantrips(m.content, p).length === 0 && known.length === 0;
   if (
+    !noCantrip &&
     known.length === 0 &&
     !learning &&
     learnable.length === 0 &&
@@ -1013,7 +1017,7 @@ function LoreSection({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) 
               · {sourceWords(m, p, learning)} · {Math.floor(learning.lessons)} of{' '}
               {m.content.lore.lessons} lessons
             </span>
-            <span className="b" aria-hidden="true" style={{ display: 'block', marginTop: 4 }}>
+            <span className="lessons" aria-hidden="true">
               <i
                 style={{
                   width: `${Math.min(100, (learning.lessons / m.content.lore.lessons) * 100)}%`,
@@ -1032,6 +1036,14 @@ function LoreSection({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) 
             </span>
           </Fact>
         )}
+        {noCantrip && (
+          <Fact term="Cantrips">
+            <span className="empty">
+              none to learn: no common cantrip draws on{' '}
+              {affinityWords(m, p).replace(/ \d+/g, '').replace(' · ', '')}
+            </span>
+          </Fact>
+        )}
         {pupils.length > 0 && (
           <Fact term="Teaching">
             {pupils.map((id, k) => (
@@ -1042,7 +1054,7 @@ function LoreSection({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) 
             ))}
           </Fact>
         )}
-        {reading && lore && lore.readDays > 0 && (
+        {reading && lore && lore.readDays > 0 && learning?.book !== reading.id && (
           <Fact term="Reading">
             <LegendsLink a={a} to={{ kind: 'item', id: reading.id }}>
               {reading.name}
@@ -1898,7 +1910,8 @@ function LoreFacts({ m, a }: { m: SiteModel; a: PanelActions }) {
     st.frostsRead > 0 &&
       `${st.frostsRead} ${st.frostsRead === 1 ? 'frost' : 'frosts'} read in time`,
     st.soothed > 0 && `${count(st.soothed)} ${st.soothed === 1 ? 'hurt' : 'hurts'} soothed`,
-    st.mended >= 1 && `${count(st.mended)} points of wear mended`,
+    st.mended >= 1 &&
+      `about ${count(st.mended * content.steward.conditionLossDays)} days of wear mended`,
   ].filter((x): x is string => Boolean(x));
   const witch = lore.hedgeWitch;
   return (
