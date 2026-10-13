@@ -49,6 +49,7 @@ function moveGood(run: HistoryRun, from: Site, to: Site, good: GoodId): number {
 function tradePair(run: HistoryRun, a: Site, b: Site, relieved: Set<Id>): boolean {
   const { rules } = run;
   let traded = false;
+  let total = 0;
   for (const [from, to] of [
     [a, b],
     [b, a],
@@ -58,6 +59,7 @@ function tradePair(run: HistoryRun, a: Site, b: Site, relieved: Set<Id>): boolea
       if (amount <= 0) continue;
       traded = true;
       const value = amount * rules.goodValue[good];
+      total += value;
       from.wealth += value;
       to.wealth += value;
       if (good !== 'food') continue;
@@ -78,6 +80,8 @@ function tradePair(run: HistoryRun, a: Site, b: Site, relieved: Set<Id>): boolea
       }
     }
   }
+  // Display only: the playback draws each decade's trades as threads.
+  if (traded) run.tradeRows.push(run.year, a.id, b.id, Math.max(1, Math.round(total)));
   return traded;
 }
 

@@ -149,6 +149,8 @@ export interface HistoryRun {
   territory: Uint16Array;
   /** Set when a site changed hands or fell, so territory is recomputed at the end of the year. */
   territoryDirty: boolean;
+  /** Trades this run, as flat [year, siteA, siteB, value] rows for the playback. */
+  tradeRows: number[];
   wars: War[];
   /** Latest wrongs per `${aggrieved}>${offender}` civ pair (most recent three event ids). */
   grievanceEvents: Map<string, Id[]>;
@@ -288,6 +290,7 @@ export function createRun(
     siteAtCell: new Map(),
     territory: cells.territory,
     territoryDirty: false,
+    tradeRows: [],
     wars: [],
     grievanceEvents: new Map(),
     truce: new Map(),
