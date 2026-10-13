@@ -167,6 +167,11 @@ These are **examples of the kind of stories the systems should be able to produc
    - The only living legend, an old battle-mage, serves a small kingdom. One day of his power breaks a 1,000-strong invading army.
    - The neighbouring kings form a coalition and march with three times that number. He spends his strength on the first day and dies on the second.
    - His apprentice, only Exceptional, carries his notebooks into exile. Decades pass with no legend alive anywhere in the world.
+8. **The peasant's sword (world and site, Phases 4–5):**
+   - A farmhand joins a bounty party against the wyvern of the pass. The hero leading it dies in the lair.
+   - The farmhand drags a scaled hide and a strange ring out. The ring awakens a faint gift for fire in her, once, and she is noticed.
+   - The hedge-witch teaches her two cantrips. Her grandson is a court mage.
+   - Her neighbours envy the ring. One night it is stolen, and the thief's family carries the grudge.
 
 **Bad outcomes to avoid:**
 - Everyone dies in year one on most seeds.
@@ -280,7 +285,7 @@ These are **examples of the kind of stories the systems should be able to produc
   - the race baseline distribution, which gives the per-race magic rarity of R-13;
   - the parents' average with variance (inheritance), from which magical and physical bloodlines emerge;
   - birthplace effects, where high world `aura` slightly raises Power and Affinity odds.
-- Exposure events can **awaken or shift** aptitude, rarely and within caps. Examples are surviving a magical disaster or long residence at a legendary site.
+- Exposure events can **awaken or shift** aptitude, rarely and within caps. Examples are surviving a magical disaster or long residence at a legendary site. Awakenings are a content list (`content/awakenings.ts`, M3.9): finding or long holding an item, surviving a magical event, years at a high-aura place, a teacher's rite. Each happens at most once per person, lifts at most one tier, and is a chronicled event with a cause. Items obey the same ceiling: an item lifts its holder at most one tier and never past Legendary (decided 2026-10-12).
 
 ### 5.4 Races
 - Each race is content data:
@@ -336,8 +341,9 @@ These are **examples of the kind of stories the systems should be able to produc
   - *Physically strong race:* Strength and Endurance +3, magic odds ×0.3, prefers mountains or cold, needs more food (×1.5), fertility ×0.7.
 
 ### 5.5 Magic in the world
-- **Early (Phases 2–3):** rare notable mages and bloodlines in legends; legendary places and monsters; common cantrips at the live site (light, kindle, mend, soothe), taught by parents or a village hedge-witch; books as items.
-- **Phase 5:** full schools and affinities, apprenticeship lineages, spellbooks as valuable lore, magic in work, healing and war, environmental awakening, race dependencies with real effects, and the optional casting-cost fork.
+- **Early (Phases 2–3):** rare notable mages and bloodlines in legends; legendary places and monsters; common cantrips at the live site (light, kindle, mend, soothe), taught by parents or a village hedge-witch; books and effect items as items; awakenings.
+- **Phase 4:** perilous places (ruins, barrows, lairs, old mines, aura places), hoards and expeditions, so items and lore move through the world and commoners can find them (M4.7).
+- **Phase 5:** full schools and affinities (the flat list of six stays until the Phase 5 fork extends it, decided 2026-10-12), apprenticeship lineages, spellbooks as valuable lore, magic in work, healing and war, enchanting from beast parts and rare ore, magical beasts with abilities and aura-bound lairs, environmental awakening, race dependencies with real effects, dragons and great beasts as individuals, and the optional casting-cost fork.
 - **Phase 7:** institutions (guilds, temples, orders, academies) and society's attitudes to magic.
 
 ---
@@ -710,17 +716,25 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 - **M4.4 Politics and trade (medium):** allegiance, tribute and taxes, conscription in war, civ decisions affecting the site, routes and scarcity-driven prices.
 - **M4.5 Life deepening:** multi-generation feuds, inheritance disputes, customs and cultural drift, marriages between families from different sites, exile.
 - **M4.6 Story threads:** a derived view of unresolved situations, mentioned in recaps.
-- **Done when:** in some seeds an event elsewhere clearly changes life at the site, and the chronicle shows the link.
+- **M4.7 Perilous places, hoards and expeditions** (about 1,200 lines; added 2026-10-12):
+  - `content/places.ts` defines ruin, barrow, lair, old mine and aura place, each with danger, hoard and lore odds; the ruins and lairs that already exist become places with no new data.
+  - Hoards: great beasts and dragons gather items lost near their lair and what their raids carry off; slaying one releases the hoard to the slayers. Rulers are buried with one item by culture custom, which seeds barrows.
+  - A yearly expedition step: bounties from sites with a grievance against a beast or a ruin nearby; a notable leads a party drawn from the site's counts; outcomes roll against danger and party strength under R-24: death, loot, lore (a book) or fame, each a chronicled event with cause links. A commoner who returns with something becomes a notable.
+  - Beast parts (scales, hide, bone, horn) from a slain creature become luxury goods or a crafted item.
+  - A map layer and a Places page in the legends browser with each place's history.
+  - Site hooks: a passing expedition recruits a resident (M4.2 visiting notables), who returns changed or not at all.
+- **Done when:** in some seeds an event elsewhere clearly changes life at the site, and the chronicle shows the link; in some seeds a commoner finds an item in a perilous place and becomes a notable, with cause links.
 - **Forks:** whether to switch the watched site in this phase (default: wait for Phase 6).
 
 ### Phase 5 — Magic depth (4–6 PRs)
-- **M5.1 Schools and affinities:** full spell content per school, with stronger spells gated by Power and Affinity, all inside the R-24 caps.
+- **M5.1 Schools and affinities:** full spell content per school, with stronger spells gated by Power and Affinity, all inside the R-24 caps. The school fork also decides whether to grow the flat list of six (for example shadow and making) and whether a primary affinity can shift with training.
 - **M5.2 Learning lineages:** apprenticeship relationships, teacher lineages, spellbooks as valuable or stealable lore, knowledge lost when teachers die or books burn.
-- **M5.3 Magic in life:** healing, crops/weather-reading, crafting, defence and war. Ordinary mages are valuable specialists, not decisive alone. Only the rare legend can swing a battle, and only within the field-army ceiling.
-- **M5.4 Environment:** awakening near high-aura places, legendary-place effects, race dependencies with real consequences.
+- **M5.3 Magic in life:** healing, crops/weather-reading, crafting, defence and war. Ordinary mages are valuable specialists, not decisive alone. Only the rare legend can swing a battle, and only within the field-army ceiling. Enchanting: Strong-tier mages and master smiths make effect items from beast parts and rare ore, so knowledge loss (R-28) applies to items as well as spells.
+- **M5.4 Environment:** awakening near high-aura places, legendary-place effects, race dependencies with real consequences. Magical beasts proper: great and legendary lairs prefer high aura, each such creature carries one ability from the `AbilityDef` shape inside its tier caps (a wyvern's fire, an afanc's flood, a water horse's lure), and a blighted variant appears at extreme aura.
 - **M5.5 World tier:** notable mages and bloodlines influence history within the caps.
+- **M5.6 Dragons and great beasts as individuals** (about 600 lines; added 2026-10-12): a name, age, temper and hoard; settlement suppressed for some cells around the lair; a death event ranked with a legend's; the restless dead as a creature entry that a robbed barrow may wake. Dragons stay at most one per world and at danger 700 (R-24).
 - **Forks:**
-  - school names and flavour;
+  - school names and flavour, and whether to extend the flat list of six;
   - whether casting has a price (default mild fatigue).
 - **Done when:**
   - in some seeds a rare mage or a lost book changes events;
@@ -732,7 +746,7 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 - Governments (chiefdom, monarchy, council, theocracy), nobles and titles, legitimacy, factions and succession disputes.
 - Diplomacy, alliances, vassalage, marriages between houses, betrayals.
 - Armies, battles and sieges; occupations and rebellions.
-- **Legends in politics:** kingdoms court, fear, bribe or try to assassinate the 0–3 living legends. A legend can be a ruler, an ally or a deterrent, but a coalition or a larger host can still bring one down. Their deaths are world-shaking events.
+- **Legends in politics:** kingdoms court, fear, bribe or try to assassinate the 0–3 living legends. A legend can be a ruler, an ally or a deterrent, but a coalition or a larger host can still bring one down. Their deaths are world-shaking events. The same applies to the dragon (M5.6): kingdoms court it, fear it or put a bounty on it.
 - Deep trade, roads and inequality.
 - Switching the watched site, plus 2–3 detailed sites at once if performance allows.
 - A 512×512 world option.
@@ -770,8 +784,8 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 | 1 | World generation | 6–7 PRs | Topography, seasonal climate, rivers, biomes, resources, aura, fertility and wildness, world map, names, passes and harbours, routes |
 | 2 | Legends | 6–8 PRs | Races, cultures, inheritance, sites, demographics, families/dynasties, history, legends browser |
 | 3 | Live site (**Milestone A**) | 10–14 PRs | Full everyday life thinly: needs, mood, health, environment, family, relationships, work, threats, light magic; saves |
-| 4 | Living world | 5–7 PRs | Monthly world during play, world↔site links, medium politics/trade, deeper life |
-| 5 | Magic depth | 4–6 PRs | Schools, lineages, books, magic in life and war, race dependencies |
+| 4 | Living world | 6–8 PRs | Monthly world during play, world↔site links, medium politics/trade, deeper life, perilous places and expeditions |
+| 5 | Magic depth | 5–7 PRs | Schools, lineages, books, magic in life and war, enchanting, magical beasts, race dependencies, dragons as individuals |
 | 6 | Kingdoms | 6–8 PRs | Governments, diplomacy, armies, deep trade, multiple sites, bigger worlds |
 | 7 | Institutions | 5–8 PRs | Guilds, temples, orders, attitudes to magic |
 | 8 | Hybrid modes | 5–8 PRs | Steward mode, follow-a-character mode |
@@ -888,7 +902,7 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 - Race and culture sketches (Phase 2).
 - Local map size, glyph style, auto-pause defaults (Phase 3).
 - Switching the watched site (Phase 4 or 6).
-- Magic school flavour and the casting-cost fork (Phase 5).
+- Magic school flavour, whether to extend the flat list of six schools, and the casting-cost fork (Phase 5).
 - The institutions brief (Phase 7).
 - The order of Phases 7 and 8 (Phase 6 check-in).
 - Z-levels, the LLM narrator, more races, sliders, a beta save lock (Phase 9+).

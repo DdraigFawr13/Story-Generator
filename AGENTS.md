@@ -17,7 +17,7 @@ Shared rules come from AI-Master-Instructions and load through CLAUDE.md (`.clau
 - Plan per phase: spec in `docs/phases/PHASE_N.md` (at most two pages), user approval, then implement.
 - Merge at milestones when CI is green; ask the user on design forks. End each phase with the playtest check-in from REBOOT_PLAN §1E.
 - When the plan is silent, follow REBOOT_PLAN §1B: connect more systems, prefer data over code, make consequences visible.
-- Bulk coding goes to the synced `implementer` agent and long check runs to `test-runner` (DEL-01 to DEL-05); give them the AGENT_BRIEF rules that apply.
+- Bulk coding goes to the synced `implementer` agent (DEL-01 to DEL-05); give it the AGENT_BRIEF rules that apply. Run `npm run check` and `npm run test:browser` directly (DEL-02: each takes under 30 s); only multi-seed drama, sweep or baseline runs go to `test-runner`.
 
 ## Local checks (run before pushing)
 
