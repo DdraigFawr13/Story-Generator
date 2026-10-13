@@ -20,6 +20,7 @@ import { cultureGivenName } from '../people/names';
 import { ageBands, bandOfAge, type SiteContent } from './defs';
 import { blankEnvironment, initEnvironment } from './environment';
 import { layoutSite } from './layout';
+import { blankLore, seedLore } from './lore';
 import { buildLocalMap } from './localmap';
 import { blankSociety } from './society';
 import { blankThreats } from './threats';
@@ -491,11 +492,13 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
     society: blankSociety(),
     threat: null,
     threats: blankThreats(),
+    lore: blankLore(world.day),
     ...blankEnvironment(year),
   };
   for (const good of GOODS) active.stockAtEntry[good] = goodAmount(active, content, good);
   world.activeSite = active;
   initEnvironment(world, content, active);
   seedSkills(world, content, active);
+  seedLore(world, content, active);
   return active;
 }

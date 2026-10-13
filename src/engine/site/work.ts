@@ -1240,6 +1240,7 @@ export function runWork(
     const index = ws.info.get(job)!.index;
     const hands = ws.madeHands[index]!;
     if (hands === 0) continue;
+    if (content.lore.dependencies.ore.jobs.includes(job.id)) active.lore.lastOreWorkDay = world.day;
     const eff = ws.madeEff[index]!;
     if (job.action === 'build') buildBlock(content, active, eff, emit, label);
     else if (job.action === 'haul') haulBlock(content, active, eff);

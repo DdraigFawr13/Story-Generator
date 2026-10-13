@@ -20,6 +20,7 @@ import type { SiteLabel } from './build';
 import type { SiteContent } from './defs';
 import { dailyCrops, initCrops, newHarvest } from './crops';
 import { fadeBurnt, igniteDaily, type FireStart } from './fire';
+import { hasCasters, kindleHome } from './lore';
 import { planMeals, reportSpoilage, spoilStock, takeItem } from './stock';
 import { initWeather, rollWeather, siteYear } from './weather';
 import { dailyWild, initWild, initWoods } from './wild';
@@ -140,10 +141,24 @@ function burnFirewood(
   if (temp >= rules.burnBelowC) return;
   const need = ((rules.burnBelowC - temp) / rules.burnBelowC) * rules.logsPerHomeDay;
   let burned = 0;
+  // A home with a kindler in the household burns only part of the logs (one cast a cold day).
+  const kindlers = hasCasters(world, content, active, 'warmth');
+  const members = new Map<Id, Id[]>();
+  if (kindlers) {
+    for (const h of active.households.values()) {
+      const own = h.home === null ? undefined : active.buildings.get(h.home);
+      const living = own?.burnt && h.lodgingHome != null ? h.lodgingHome : h.home;
+      if (living === null || living === undefined) continue;
+      members.set(living, [...(members.get(living) ?? []), ...h.members]);
+    }
+  }
   for (const b of occupiedHomes(active)) {
-    const got = takeItem(active, rules.item, need);
+    const kept = kindlers && kindleHome(world, content, active, members.get(b.id) ?? []);
+    const want = kept ? need * content.lore.effects.warmthShare : need;
+    const got = takeItem(active, rules.item, want);
+    if (kept && got + 1e-9 >= want) active.lore.stats.logsSaved += need - want;
     burned += got;
-    if (got + 1e-9 < need) fw.coldHomes.push(b.id);
+    if (got + 1e-9 < want) fw.coldHomes.push(b.id);
     else fw.lit.push(b.id);
   }
   if (fw.counting && date.month >= winterFrom && date.month <= winterTo) fw.winterBurn += burned;

@@ -93,6 +93,28 @@ export interface PersonDetail {
   immune?: Record<string, number>;
   /** Need id → days in a row the need has sat at zero (what starts hunger, thirst, cold). */
   lows?: Record<string, number>;
+  /** M3.9: cantrips, lessons and reading. */
+  lore?: PersonLore;
+}
+
+/** A resident's magic at the site (M3.9). */
+export interface PersonLore {
+  /** The cantrip being learned and from whom: a teacher (person id) or a book (item id). */
+  learning?:
+    { abilityId: string; teacher: Id | null; book: Id | null; lessons: number } | undefined;
+  /** Ability id → how it was learned (none of these for cantrips known before watching began). */
+  learned: Record<string, { teacher?: Id; book?: Id; day: number; eventId: Id }>;
+  /** Casts per ability id on `castsDay` (the uses-per-day cap). */
+  castsDay: number;
+  casts: Record<string, number>;
+  /** Casts per ability id since watching began. */
+  castTotal: Record<string, number>;
+  /** Evenings spent reading a book of a magic school, and the last such book (awakenings). */
+  readDays: number;
+  readBook?: Id | undefined;
+  /** Days holding an item with a power effect, and that item (awakenings). */
+  heldDays: number;
+  heldItem?: Id | undefined;
 }
 
 /** One thing wrong with a person (M3.5). Health is 100 minus severity times the def's harm, summed. */
@@ -200,6 +222,8 @@ export interface Person {
   rivals?: Id[];
   /** People this person has sworn vengeance on (one-way). */
   enemies?: Id[];
+  /** M3.9: the one awakening of their life (an `AwakeningDef` id), the day and its event. */
+  awakening?: { id: string; day: number; eventId: Id };
 }
 
 /** Why a world-tier person is tracked individually (M2.5). */
@@ -849,6 +873,34 @@ export interface ActiveSite {
   /** M3.8: the threat coming to or at the site (one at a time), and the running record of threats. */
   threat: SiteThreat | null;
   threats: SiteThreats;
+  /** M3.9: the hedge-witch, books on loan and what the cantrips did. */
+  lore: SiteLore;
+}
+
+/** Light magic and lore at the watched site (M3.9). */
+export interface SiteLore {
+  /** The resident who teaches anyone gifted; null when no one qualifies. */
+  hedgeWitch: Id | null;
+  /** Books lent out: the owner stays the item's holder while the borrower reads it. */
+  loans: { item: Id; owner: Id; borrower: Id; since: number; eventId: Id }[];
+  /** Last day anyone worked an ore or stone job (the Dvergar dependency). */
+  lastOreWorkDay: number;
+  /** Last day the night's low threatened the fields with frost (a frost spell reads once). */
+  frostDay?: number | undefined;
+  stats: {
+    learned: number;
+    lent: number;
+    lost: number;
+    awakenings: number;
+    /** Logs a kindled hearth did not burn. */
+    logsSaved: number;
+    /** Condition points mended back onto buildings. */
+    mended: number;
+    /** Conditions soothed. */
+    soothed: number;
+    /** Frosts read in the sky before they fell. */
+    frostsRead: number;
+  };
 }
 
 /** M3.8: a threat coming to or at the watched site. One at a time. */

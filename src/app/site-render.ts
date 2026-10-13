@@ -331,6 +331,8 @@ export interface LiveLayers {
   animals: { x: number; y: number; glyph: string }[];
   /** M3.8: the attackers on the map (a few glyphs and a label) and where the fled gathered. */
   threat: ThreatMark | null;
+  /** M3.9: someone who woke to the magic today or yesterday: a still ring and a few words. */
+  marvel: { id: Id; label: string } | null;
 }
 
 /** The attackers as drawn: one glyph for a beast, up to `RAIDER_GLYPHS` for a band, and a few words. */
@@ -406,7 +408,18 @@ export function liveLayers(
       glyph: animalGlyphs.get(a.kind) ?? '?',
     })),
     threat: threatMark(active, siteName),
+    marvel: null,
   };
+}
+
+/** M3.9: the resident who woke to the magic most lately, if it was today or yesterday. */
+function marvelOf(world: WorldState, active: ActiveSite): LiveLayers['marvel'] {
+  let best: { id: Id; day: number } | null = null;
+  for (const id of active.residents) {
+    const day = world.people.get(id)?.awakening?.day;
+    if (day !== undefined && day >= world.day - 1 && (!best || day > best.day)) best = { id, day };
+  }
+  return best ? { id: best.id, label: 'woke to the magic' } : null;
 }
 
 /** Re-reads the moving parts after a snapshot, in place. */
@@ -417,6 +430,11 @@ export function refreshLive(scene: Scene, world: WorldState): void {
       scene.animalGlyphs,
       (id) => world.sites.get(id)?.name,
     );
+    scene.live.marvel = marvelOf(world, world.activeSite);
+    // An awakening can make someone gifted.
+    for (const mark of scene.marks.values()) {
+      mark.gifted = (world.people.get(mark.id)?.magic.power ?? 0) >= 3;
+    }
   }
 }
 
@@ -1243,6 +1261,29 @@ export class SiteRenderer {
     }
   }
 
+  /** M3.9: a still ring round someone who woke to the magic, and a few words beside them. */
+  private paintMarvel(ctx: CanvasRenderingContext2D, progress: number): void {
+    const marvel = this.scene.live.marvel;
+    const mark = marvel ? this.scene.marks.get(marvel.id) : undefined;
+    if (!marvel || !mark) return;
+    const { colors: C, state, vw, vh } = this;
+    const s = this.scale;
+    const [x, y] = this.placeOf(mark, progress);
+    const [sx, sy] = tileToScreen(x, y, state.view, s, vw, vh);
+    ctx.beginPath();
+    ctx.arc(sx + s / 2, sy + s / 2, Math.max(6, s * 0.95), 0, Math.PI * 2);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = C.legend;
+    ctx.stroke();
+    // The selected person's name already shows above them.
+    const text =
+      state.selected.personId === mark.id ? cap(marvel.label) : `${mark.name} · ${marvel.label}`;
+    ctx.font = '600 12px system-ui, sans-serif';
+    const half = ctx.measureText(text).width / 2 + 4;
+    const below = sy + s + Math.max(6, s * 0.5) + 12;
+    this.label(ctx, text, Math.min(Math.max(sx + s / 2, half), vw - half), below);
+  }
+
   private paint(): void {
     this.frame = 0;
     if (!this.vw) return;
@@ -1380,6 +1421,7 @@ export class SiteRenderer {
       this.draw();
     } else this.tween = null;
     this.paintThreat(ctx);
+    this.paintMarvel(ctx, progress);
     // Names for the selected and the hovered person.
     if (!whole) {
       const named = new Set<Id>();

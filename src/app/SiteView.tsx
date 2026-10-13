@@ -108,7 +108,7 @@ const SPEEDS: [SiteSpeed, string, string][] = [
   [4, '4×', '4 days a second (3)'],
   [16, '16×', '16 days a second (4)'],
 ];
-const PAUSE_CATEGORIES = ['deaths', 'breakdowns', 'fires', 'threats', 'arrivals'] as const;
+const PAUSE_CATEGORIES = ['deaths', 'breakdowns', 'fires', 'threats', 'magic', 'arrivals'] as const;
 type PauseCategory = (typeof PAUSE_CATEGORIES)[number];
 /** Zoom step a selection centres to, and the step "Show on map" raises to. */
 const SELECT_ZOOM = 2;
@@ -483,16 +483,17 @@ export function SiteView(props: Props) {
           setSel(next);
           setTab('inspect');
           const rect = selectionRect(model.scene, next, () => null);
-          if (rect) {
-            const r = renderer.current;
-            if (r) {
-              r.state.view.cx = rect[0] + rect[2] / 2;
-              r.state.view.cy = rect[1] + rect[3] / 2;
+          const r = renderer.current;
+          // After the banner has rendered: centre the person in the part of the map it leaves clear.
+          if (rect && r)
+            window.requestAnimationFrame(() => {
               if (r.state.view.z < SELECT_ZOOM) r.state.view.z = SELECT_ZOOM;
+              const below = (bannerRef.current?.offsetHeight ?? 0) / 2 / r.scale;
+              r.state.view.cx = rect[0] + rect[2] / 2;
+              r.state.view.cy = rect[1] + rect[3] / 2 - below;
               r.clamp();
               r.draw();
-            }
-          }
+            });
         } else if (category === 'threats') {
           // M3.8: a threat has no one to select: cut (no pan) to the attackers, or to where the
           // people gathered if they fled, centred in the part of the map the banner leaves clear.

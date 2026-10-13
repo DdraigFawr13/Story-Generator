@@ -10,6 +10,7 @@ import { streamFor } from '../core/rng';
 import type { ActiveSite, Building, Crop, Id, SimEvent, WorldState } from '../core/types';
 import type { SiteLabel } from './build';
 import type { SiteContent } from './defs';
+import { frostHarmShare } from './lore';
 import { siteYear } from './weather';
 import { addItem, itemCount, mealsPerDay, takeItem } from './stock';
 
@@ -346,6 +347,7 @@ export function dailyCrops(
   const storm = w.sky === 'storm';
   let frostHits = 0;
   let frostRuined = 0;
+  let frostShare: number | undefined;
   for (const b of fields) {
     const crop = b.crop!;
     if (crop.stage === 'sown' || crop.stage === 'growing') {
@@ -362,7 +364,9 @@ export function dailyCrops(
       }
       crop.growth += (tf * water) / rules.growthDays;
       if (w.lowC <= rules.frostC + crop.frostBias) {
-        crop.health -= rules.frostHealth;
+        // A weather-reader at the site softens the harm (the ruin threshold is unchanged).
+        frostShare ??= frostHarmShare(world, content, active, emit, label);
+        crop.health -= rules.frostHealth * frostShare;
         crop.frostBitten = true;
         frostHits += 1;
       }

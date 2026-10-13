@@ -84,6 +84,7 @@ export const SITE: SiteRules = {
       'site_beast_ravaged',
       'site_fell',
     ],
+    magic: ['site_awakened', 'site_book_lost', 'site_book_burned'],
     arrivals: ['outpost_founded'],
   },
 };

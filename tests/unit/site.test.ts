@@ -140,11 +140,12 @@ describe('leaving', () => {
     for (const [id, s] of before.sites) expect(world.sites.get(id)!.pop).toEqual(s.pop);
     for (const [id, s] of before.sites) expect(world.sites.get(id)!.goods).toEqual(s.goods);
     expect([...world.people.keys()]).toEqual([...before.people.keys()]);
-    // Notables keep the traits they gained at the site; everything else is as it was.
+    // Notables keep the traits and cantrips they gained at the site; everything else is as it was.
     for (const [id, person] of before.people) {
-      const { traits, skills, ...rest } = world.people.get(id)!;
-      const { traits: oldTraits, skills: oldSkills, ...oldRest } = person;
+      const { traits, skills, knownAbilities, ...rest } = world.people.get(id)!;
+      const { traits: oldTraits, skills: oldSkills, knownAbilities: oldKnown, ...oldRest } = person;
       expect(rest).toEqual(oldRest);
+      expect(knownAbilities).toEqual(expect.arrayContaining(oldKnown));
       if (notables.includes(id)) {
         // Notables keep the skills they were given too.
         for (const [k, v] of Object.entries(oldSkills)) expect(skills[k]).toBe(v);

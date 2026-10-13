@@ -141,7 +141,8 @@ export const abilities: AbilityDef[] = [
     learnFrom: ['teacher', 'book', 'practice'],
     effect: { kind: 'utility', tag: 'command_army' },
   },
-  // Faint-tier cantrips: what most magical people ever manage.
+  // Faint-tier cantrips: what most magical people ever manage. Taught by a parent, the site's
+  // hedge-witch or a book of the school (M3.9); the effect tag says what each does at the site.
   {
     id: 'kindle',
     name: 'Kindle',
@@ -150,7 +151,8 @@ export const abilities: AbilityDef[] = [
     requirements: { power: 1, 'affinity.fire': 1 },
     learnAttributes: ['willpower'],
     learnFrom: ['teacher', 'book'],
-    effect: { kind: 'utility', tag: 'light_fire', usesPerDay: 3 },
+    // Warmth: a hearth kept by a kindler burns fewer logs.
+    effect: { kind: 'utility', tag: 'warmth', usesPerDay: 3 },
   },
   {
     id: 'mend',
@@ -160,7 +162,41 @@ export const abilities: AbilityDef[] = [
     requirements: { power: 1, 'affinity.earth': 1 },
     learnAttributes: ['perception'],
     learnFrom: ['teacher', 'book'],
-    effect: { kind: 'utility', tag: 'repair_small', usesPerDay: 3 },
+    // Mending: worn timber and stone made good, so buildings need the builders less often.
+    effect: { kind: 'utility', tag: 'mending', usesPerDay: 3 },
+  },
+  {
+    id: 'soothe',
+    name: 'Soothe',
+    family: 'magic',
+    school: 'life',
+    requirements: { power: 1, 'affinity.life': 1 },
+    learnAttributes: ['willpower', 'perception'],
+    learnFrom: ['teacher', 'book'],
+    // Small healing: an untended hurt or illness at home is eased, as a healer without herbs would.
+    effect: { kind: 'heal', tag: 'soothe', usesPerDay: 2 },
+  },
+  {
+    id: 'read_sky',
+    name: 'Read the sky',
+    family: 'magic',
+    school: 'air',
+    requirements: { power: 1, 'affinity.air': 1 },
+    learnAttributes: ['perception'],
+    learnFrom: ['teacher', 'book'],
+    // Weather-reading: a frost seen coming, so the young crops are covered the night before.
+    effect: { kind: 'weather', tag: 'weather_read', usesPerDay: 1 },
+  },
+  {
+    id: 'read_rain',
+    name: 'Read the rain',
+    family: 'magic',
+    school: 'water',
+    requirements: { power: 1, 'affinity.water': 1 },
+    learnAttributes: ['perception', 'intellect'],
+    learnFrom: ['teacher', 'book'],
+    // Weather-reading by the water's signs: the same warning as reading the sky.
+    effect: { kind: 'weather', tag: 'weather_read', usesPerDay: 1 },
   },
   // Gifted: a village healer.
   {

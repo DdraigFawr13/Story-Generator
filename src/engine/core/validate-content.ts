@@ -11,7 +11,7 @@ import {
   PUNISHMENTS,
 } from './content-types';
 import { ATTRIBUTE_KEYS, GOODS, REGION_KINDS } from './types';
-import { BIRTH_TIER_IDS, TIERS, tierOfPower } from '../people/tiers';
+import { BIRTH_TIER_IDS, TIERS, TIER_IDS, tierOfPower } from '../people/tiers';
 
 /** Every event type needs this many template variants (§2B). */
 const MIN_TEMPLATES = 3;
@@ -106,6 +106,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...familyProblems(content));
   problems.push(...societyProblems(content));
   problems.push(...threatsProblems(content));
+  problems.push(...loreProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -929,6 +930,42 @@ export function threatsProblems(content: ContentBundle): string[] {
     known('Threats memoryOf', 'memory', memories.has(id), id);
   for (const id of Object.values(rules.events))
     known('Threats events', 'event type', events.has(id), id);
+  return problems;
+}
+
+/** Lore rules (M3.9): cantrips are known magic abilities; known event, memory and tier ids. */
+export function loreProblems(content: ContentBundle): string[] {
+  const rules = content.lore;
+  if (!rules || !content.awakenings) return ['Content has no lore tables.'];
+  const problems: string[] = [];
+  const abilities = new Map(content.abilities.map((a) => [a.id, a]));
+  const events = new Set(content.eventTypes.map((e) => e.id));
+  const memories = new Set(content.memories.map((m) => m.id));
+  const races = new Set(content.races.map((r) => r.id));
+  const jobs = new Set(content.jobs.map((j) => j.id));
+  for (const id of rules.cantrips) {
+    const a = abilities.get(id);
+    if (!a) problems.push(`Lore cantrips: unknown ability "${id}".`);
+    else if (a.family !== 'magic') problems.push(`Lore cantrips: "${id}" is not a magic ability.`);
+  }
+  for (const id of Object.values(rules.events))
+    if (!events.has(id)) problems.push(`Lore events: unknown event type "${id}".`);
+  const dep = rules.dependencies;
+  for (const id of [...Object.values(rules.memoryOf), dep.aura.memory, dep.ore.memory])
+    if (!memories.has(id)) problems.push(`Lore memories: unknown memory "${id}".`);
+  for (const id of [...dep.aura.races, ...dep.ore.races])
+    if (!races.has(id)) problems.push(`Lore dependencies: unknown race "${id}".`);
+  for (const id of dep.ore.jobs)
+    if (!jobs.has(id)) problems.push(`Lore dependencies: unknown job "${id}".`);
+  if (rules.knownAtEmbark < 0 || rules.knownAtEmbark > 1)
+    problems.push('Lore knownAtEmbark must be 0-1.');
+  for (const d of content.awakenings) {
+    const tier = TIER_IDS.indexOf(d.maxFromTier);
+    if (tier < 0 || tier >= TIER_IDS.indexOf('strong') + 1)
+      problems.push(`Awakening ${d.id}: maxFromTier "${d.maxFromTier}" must be none to strong.`);
+    if (d.monthlyChance < 0 || d.monthlyChance > 1)
+      problems.push(`Awakening ${d.id}: monthlyChance must be 0-1.`);
+  }
   return problems;
 }
 

@@ -28,6 +28,7 @@ import type {
 import type { SiteLabel } from './build';
 import { ageBands, bandOfAge, type Band, type SiteContent } from './defs';
 import { afterDeath, successorOf } from './family';
+import { soothePass } from './lore';
 import { addMemoryTo } from './memory';
 import { takeItem } from './stock';
 import { refreshWork, transferItem } from './work';
@@ -563,6 +564,12 @@ export function runHealthDay(
       }
     }
   }
+
+  // Soothers ease what no healer reached (M3.9).
+  soothePass(world, content, active, (c) => {
+    const kind = l.conditions.get(c.defId)?.kind;
+    return (kind === 'wound' || kind === 'disease') && tendable(l, rules, c);
+  });
 
   // 2. The course of what people already have. First, how long each need has sat at zero.
   const needNames = new Set(l.needs.map((c) => c.need!.need));
