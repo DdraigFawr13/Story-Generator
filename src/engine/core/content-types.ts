@@ -233,6 +233,8 @@ export interface ContentBundle {
   interactions: InteractionDef[];
   social: SocialRules;
   family: FamilyRules;
+  /** Society (M3.7): standing, crime and each culture's law, holy days and funerals. */
+  society: SocietyRules;
 }
 
 /** What a condition is, for its harm and the words of its chronicle lines (M3.5). */
@@ -1777,5 +1779,167 @@ export interface FamilyRules {
     householdFormed: string;
     inherited: string;
     orphanTakenIn: string;
+  };
+}
+
+/** A punishment, mildest first: the order the escalation steps walk (M3.7). */
+export const PUNISHMENTS = ['none', 'fine', 'labour', 'exile', 'execution'] as const;
+export type Punishment = (typeof PUNISHMENTS)[number];
+
+/** The crimes a site judges (M3.7). */
+export const CRIMES = ['theft', 'brawl', 'murder'] as const;
+export type Crime = (typeof CRIMES)[number];
+
+/** A culture's law: the punishment for each crime and the harshest it ever goes to (M3.7). */
+export interface JusticeDef {
+  cultureId: string;
+  punish: Record<Crime, Punishment>;
+  max: Punishment;
+  /** What the line says of the custom: "by the law of the Wells". */
+  phrase: string;
+}
+
+/** A holy day of a religion: no work, a shared meal and talk on the green (M3.7). */
+export interface FestivalDef {
+  id: string;
+  religionId: string;
+  name: string;
+  /** Month (0-11) and day of the month (1-28). */
+  month: number;
+  day: number;
+  /** "lit the beacons", for the line. */
+  rite: string;
+}
+
+/** How a religion lays its dead to rest, and what that costs from the stores (M3.7). */
+export interface FuneralRiteDef {
+  religionId: string;
+  /** "buried by the well", "burnt on a pyre". */
+  phrase: string;
+  /** Item id → count taken from the stores; skipped (and said so) when the stores lack them. */
+  cost?: Record<string, number>;
+}
+
+/** Status, crime and punishment, holy days and funerals at the watched site (M3.7). */
+export interface SocietyRules {
+  status: {
+    /** Points by job id; no job counts 0. */
+    jobs: Record<string, number>;
+    /** By notable title; a promoted ordinary person has none. */
+    titles: Record<string, number>;
+    head: number;
+    elder: number;
+    /** Per world item held, up to `itemsMax`. */
+    perItem: number;
+    itemsMax: number;
+    /** Fame / `fameDiv`, up to `fameMax`. */
+    fameDiv: number;
+    fameMax: number;
+    /** A living notable parent, spouse or child. */
+    notableKin: number;
+    /** A person stands high when in the top `highShare` of the site and at or above `high`; low below `low`. */
+    high: number;
+    highShare: number;
+    low: number;
+    /** Lost for each punishment (by kind); regained by `recoverPerMonth`. */
+    shame: Partial<Record<Punishment, number>>;
+    recoverPerMonth: number;
+  };
+  crime: {
+    /** Daily chance a hungry adult pilfers food or seed corn while meals are short or the stores bare. */
+    pilferChance: number;
+    /** Meals taken (times the race's daily need). */
+    pilferMeals: number;
+    /** The food need must be below this. */
+    pilferHungerBelow: number;
+    /** Trait id → multiplier. */
+    pilferTraits: Record<string, number>;
+    /** The culture's order value scales the chance by (1 - order / orderDiv). */
+    orderDiv: number;
+    /** Chance an unwitnessed crime comes to light anyway (and who did it is known). */
+    foundOut: number;
+    /** Share of revenges that turn into a brawl instead of spite; hot temper and a warlike culture raise it. */
+    brawlShare: number;
+    brawlHotMul: number;
+    /** A culture with war at or above this brawls twice as often. */
+    brawlWarAt: number;
+    /** Wound tiers a brawl gives (by the condition ids' shares). */
+    brawlWounds: string[];
+    /** A grudge at least this old, against someone this hated, may end in murder: chance per revenge. */
+    murderAfterDays: number;
+    murderBelow: number;
+    murderChance: number;
+    /** Trait that makes murder possible at all (nobody else kills over a grudge). */
+    murderTrait: string;
+    /** Rivals and enemies both at a festival brawl with this chance. */
+    festivalBrawl: number;
+    /** Opinion a known victim loses of the offender. */
+    wrongedOpinion: number;
+  };
+  justice: {
+    /** A second offence within this many days steps the punishment up once. */
+    repeatDays: number;
+    /** A high-standing offender in a culture with order below this steps down once (never to none). */
+    lenientOrderBelow: number;
+    /** Days of work owed (fine) or served (labour), by crime. */
+    fineDays: Record<Crime, number>;
+    labourDays: Record<Crime, number>;
+    /** The job a sentence is served at. */
+    labourJob: string;
+    /** Opinion the victim gains of the offender once amends are made. */
+    amends: number;
+    /** Children are never punished beyond this. */
+    childMax: Punishment;
+    /** "brawling", for lines. */
+    crimeWords: Record<Crime, string>;
+    /** "fine": "made amends to", for lines. */
+    words: Record<Punishment, string>;
+  };
+  laws: JusticeDef[];
+  festivals: FestivalDef[];
+  funerals: FuneralRiteDef[];
+  funeral: {
+    /** Days after the death. */
+    afterDays: number;
+    /**
+     * Meals eaten at the funeral feast per mourner (times the daily need), only when the stores hold
+     * `feastDaysAbove` days. Everyone attends for someone of high standing; else household, kin and friends.
+     */
+    feastMeals: number;
+    feastDaysAbove: number;
+    /** How the dead are laid to rest when their religion's rite costs more than the stores hold. */
+    plainRite: string;
+  };
+  /** What a killing or an execution is named in the death line: "died of {word}, after {span}". */
+  deaths: Record<'murder' | 'execution', { word: string; span: string }>;
+  festival: {
+    /** Extra meals per person at the feast (times the daily need), only when the stores hold this many days. */
+    feastMeals: number;
+    feastDaysAbove: number;
+    /** Interactions per person that evening are multiplied by this. */
+    talkMul: number;
+  };
+  memoryOf: {
+    sentenced: string;
+    shamed: string;
+    sawJustice: string;
+    feasted: string;
+    leanFeast: string;
+    mourned: string;
+    exiledKin: string;
+    executedKin: string;
+    wronged: string;
+  };
+  events: {
+    pilfered: string;
+    brawl: string;
+    murder: string;
+    unsolved: string;
+    judged: string;
+    amendsMade: string;
+    exiled: string;
+    executed: string;
+    festival: string;
+    funeral: string;
   };
 }

@@ -216,7 +216,7 @@ function dropHousehold(env: SocialEnv, h: Household): void {
 }
 
 /** Takes a person out of their household; a head is replaced by the eldest grown member, an empty household goes. */
-function leave(env: SocialEnv, p: Person): void {
+export function leave(env: SocialEnv, p: Person): void {
   const h = householdOf(env, p);
   delete p.family.householdId;
   if (!h) return;

@@ -61,7 +61,7 @@ export function goodAmount(
 }
 
 /** The grain item holds the seed corn (M3.4). */
-const SEED_ITEM = 'grain';
+export const SEED_ITEM = 'grain';
 
 /** Food items of a kind that may be eaten or cooked: grain less the seed kept back for sowing. */
 function eatable(active: ActiveSite, id: string): number {

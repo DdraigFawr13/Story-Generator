@@ -22,6 +22,7 @@ import type { Band, SiteContent } from './defs';
 import { flirt, freeToCourt, isKin, pairCanCourt } from './family';
 import { voiceOf } from './environment';
 import { addMemoryTo } from './memory';
+import { violentRevenge } from './society';
 
 /** What the social pass reads of a resident this block (life.ts profiles fit). */
 export interface SocialView {
@@ -191,7 +192,7 @@ export function witnessedWrong(
 }
 
 /** Starts a grudge in `holder` against `target` if none is held. */
-function startGrudge(env: SocialEnv, holder: Person, target: Person): void {
+export function startGrudge(env: SocialEnv, holder: Person, target: Person): void {
   const rel = ensure(holder, target.id);
   if (rel.grudge) return;
   rel.grudge = { since: env.day };
@@ -291,18 +292,23 @@ function interact(
   }
 }
 
-/** Revenge by `avenger` on `target`: a spiteful act, no violence (crime is M3.7). */
+/** Revenge by `avenger` on `target`: murder or a brawl (society.ts), else a spiteful act. */
 function takeRevenge(env: SocialEnv, rng: RngStream, avenger: Person, target: Person): void {
   const rules = env.content.social.grudge;
   const rel = relationOf(avenger, target.id)!;
-  const act = rng.weighted(rules.acts.map((s) => [s, s.weight] as const));
-  const event = env.emit({
-    type: env.content.social.events.revenge,
-    actors: [avenger.id, target.id],
-    place: env.label.cell,
-    causes: rel.grudge?.eventId === undefined ? [] : [rel.grudge.eventId],
-    data: { site: env.label.name, act: act.phrase },
-  });
+  const violence = violentRevenge(env, avenger, target, rel);
+  // A killing ends it: the dead have no feelings left to settle.
+  if (target.died !== undefined) return;
+  const act = violence ? undefined : rng.weighted(rules.acts.map((s) => [s, s.weight] as const));
+  const event =
+    violence ??
+    env.emit({
+      type: env.content.social.events.revenge,
+      actors: [avenger.id, target.id],
+      place: env.label.cell,
+      causes: rel.grudge?.eventId === undefined ? [] : [rel.grudge.eventId],
+      data: { site: env.label.name, act: act!.phrase },
+    });
   delete rel.grudge;
   remember(env, target, rules.memoryOf.humiliated, avenger.id, event.id);
   remember(env, avenger, rules.memoryOf.vengeance, target.id, event.id);
@@ -327,6 +333,7 @@ export function runSocial(
   emit: (input: EmitInput) => SimEvent,
   label: { name: string; cell: number },
   day: number,
+  talkMul = 1,
 ): void {
   const env: SocialEnv = { world, content, active, emit, label, day };
   const rng = streamFor(world, 'site.social');
@@ -376,7 +383,7 @@ export function runSocial(
   for (const v of people) {
     let n = rng.between(lo, Math.max(lo, rules.perDay[1]));
     for (const t of v.traits) n += rules.traitShift[t.id] ?? 0;
-    left.set(v.id, Math.max(0, n));
+    left.set(v.id, Math.max(0, Math.round(n * talkMul)));
   }
   // The day sets who starts first, so nobody always gets the first pick.
   const first = people.length > 0 ? day % people.length : 0;
@@ -429,7 +436,7 @@ export function runSocial(
       let found = 0;
       for (let s = 0; s < rules.sample; s += 1) {
         const c = pool[rng.int(pool.length)]!;
-        if (c === v) continue;
+        if (c === v || c.person.died !== undefined) continue;
         const friend = hasLabel(v.person, c.id, 'friend');
         // Someone free to marry seeks out others who are.
         const suitor = single && pairCanCourt(env, v.person, c.person);

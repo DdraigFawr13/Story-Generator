@@ -311,7 +311,10 @@ function deathWord(content: SiteContent, cond: Condition | undefined, def: Condi
 
 // ---- Death ----
 
-/** Records a death: events, the household, held items, grief, and the site's residents. */
+/**
+ * Records a death: events, the household, held items, grief, and the site's residents. `how` names
+ * a killing or an execution in the death line (and its causes) in place of the condition's.
+ */
 export function killPerson(
   world: WorldState,
   content: SiteContent,
@@ -321,11 +324,14 @@ export function killPerson(
   cond: Condition | undefined,
   emit: Emit,
   label: SiteLabel,
+  how?: { word: string; span: string; causes: Id[] },
 ): SimEvent {
   const l = lookupsOf(content);
   const def = cond ? l.conditions.get(cond.defId) : undefined;
-  const word = def ? deathWord(content, cond, def) : 'old age';
-  const causes = [cond?.eventId, cond?.cause].filter((x): x is Id => x !== undefined);
+  const word = how?.word ?? (def ? deathWord(content, cond, def) : 'old age');
+  const causes = how
+    ? how.causes
+    : [cond?.eventId, cond?.cause].filter((x): x is Id => x !== undefined);
   const event = emit({
     type: content.health.events.died,
     actors: [person.id],
@@ -335,7 +341,9 @@ export function killPerson(
       site: label.name,
       cause: word,
       // Old age has no onset day worth naming.
-      span: cond && def?.kind !== 'age' ? spanWord(world.day - cond.sinceDay) : 'a long life',
+      span:
+        how?.span ??
+        (cond && def?.kind !== 'age' ? spanWord(world.day - cond.sinceDay) : 'a long life'),
     },
   });
   person.died = world.params.historyYears + yearsIn(world, active);
@@ -405,6 +413,12 @@ export function killPerson(
   }
   // Family (M3.6): graded grief, widowhood, the new head's line, orphans taken in.
   afterDeath(world, content, active, person.id, event.id, wasHead);
+  // The funeral (M3.7) is held on the day set by the rites.
+  active.society.funerals.push({
+    dead: person.id,
+    day: world.day + content.society.funeral.afterDays,
+    deathEvent: event.id,
+  });
   return event;
 }
 
