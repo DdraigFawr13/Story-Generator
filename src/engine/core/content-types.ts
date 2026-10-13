@@ -535,8 +535,17 @@ export interface RoutineRules {
     jitter: number;
     max: number;
   };
+  /** Not everyone starts work at once (village life). */
+  shifts: {
+    /** These trades start one day in `lateEvery` after a free morning (drawn from the `late` table). */
+    lateJobs: string[];
+    lateEvery: number;
+    /** In a household with a child under `childUnder`, the child's carer keeps house one morning in `houseEvery`. */
+    childUnder: number;
+    houseEvery: number;
+  };
   /** Inspector phrases for `PersonDetail.where`; `{name}` is the person visited or helped. */
-  where: Record<RoutinePlace | 'market', string>;
+  where: Record<RoutinePlace | 'market' | 'house', string>;
 }
 
 export interface LifeRules {
@@ -628,6 +637,8 @@ export interface LifeRules {
     theft: string;
     returned: string;
     storesEmpty: string;
+    /** Village life: a market morning on the square. */
+    market: string;
   };
 }
 

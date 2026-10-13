@@ -815,7 +815,7 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     }
     return p.step;
   };
-  const phrase = (place: RoutinePlace | 'market', name?: string): string | undefined =>
+  const phrase = (place: RoutinePlace | 'market' | 'house', name?: string): string | undefined =>
     routines.where[place].replace('{name}', name ?? '') || undefined;
   const stopAt = (p: Profile, place: RoutinePlace): Stop => {
     const kid = p.band === 'child';
@@ -872,6 +872,28 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       if (!held || score < held.score) picked.set(p.household, { p, score });
     }
     for (const { p } of picked.values()) shoppers.add(p.id);
+    const stalls = profiles.filter(
+      (p) =>
+        p.person.detail!.jobId !== undefined && market.stallJobs.includes(p.person.detail!.jobId),
+    ).length;
+    if (shoppers.size > 0 || stalls > 0) {
+      cache.emit({
+        type: life.events.market,
+        place: cell,
+        data: { site: cache.siteName, stalls, shoppers: shoppers.size },
+      });
+    }
+  }
+  // Who keeps house this morning: the carer of a household's young child, one morning in `houseEvery`.
+  const keepers = new Set<Profile>();
+  if (block === 1) {
+    const shifts = routines.shifts;
+    for (const p of profiles) {
+      if (p.age >= shifts.childUnder || !p.household) continue;
+      if (hash3(p.household.id, 71, day) % shifts.houseEvery !== 0) continue;
+      const carer = carerOf(p);
+      if (carer && carer.band === 'adult') keepers.add(carer);
+    }
   }
   /** Walks a person toward `to` for as far as a block allows, and settles where they stand. */
   const move = (p: Profile, to: number, stroll = false) => {
@@ -946,6 +968,18 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       if (p.band === 'child' && (block === 1 || block === 2))
         table = p.age < routines.smallChildUnder ? 'childSmall' : 'childOlder';
       else if (p.band === 'elder' && block === 2) table = 'elder';
+      // Not everyone starts work at once: a tradesman's free morning, or keeping house.
+      if (block === 1 && activity === 'work') {
+        if (keepers.has(p)) {
+          activity = 'errand';
+          stop = { activity, to: p.home, where: phrase('house') };
+        } else if (
+          p.job &&
+          routines.shifts.lateJobs.includes(p.job.id) &&
+          hash3(p.id, 70, day) % routines.shifts.lateEvery === 0
+        )
+          table = 'late';
+      }
     }
     // Someone too ill or hurt to work stays in bed through the day (they still eat in the evening).
     if (detail.abed && BED_REST.has(activity)) activity = 'sleep';

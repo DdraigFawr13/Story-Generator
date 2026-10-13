@@ -272,6 +272,8 @@ interface WorkSite {
   kitchen: number[];
   /** Village life: the smithy, else the workshop. */
   forge: number[];
+  /** A finished smithy stands. */
+  smithy: boolean;
   /** Items by holder, and each holder's effective attributes; null/empty until needed. */
   held: Map<Id, HeldItem[]> | null;
   eff: Map<Id, Attributes>;
@@ -399,6 +401,7 @@ function rebuildLists(ws: WorkSite, content: SiteContent, active: ActiveSite): v
   ws.workshop = workshop ? interiorCells(workshop) : yard ? interiorCells(yard) : [];
   ws.kitchen = kitchen ? interiorCells(kitchen) : [];
   ws.forge = smithy ? interiorCells(smithy) : ws.workshop;
+  ws.smithy = smithy !== undefined;
   if (workshop || yard) has.add('workshop');
   if (ws.forge.length > 0) has.add('forge');
   if (kitchen) has.add('kitchen');
@@ -439,6 +442,7 @@ function workSiteSlow(content: SiteContent, active: ActiveSite): WorkSite {
       workplaces: new Set(),
       workshop: [],
       forge: [],
+      smithy: false,
       kitchen: [],
       held: null,
       eff: new Map(),
@@ -900,6 +904,10 @@ export function runSteward(
     const haveInputs = entries(craftTools.inputs).every(([i, n]) => itemCount(active, i) >= n);
     if (haveInputs) want('tools', craftTools, st.crafters);
     else if (mine) want('tools', mine, deficit > 20 ? st.miners : 1);
+  } else if (craftTools && ws.smithy && ore !== undefined) {
+    // Village life: a village with a smithy keeps a smith at the forge while there is iron to work.
+    if (entries(craftTools.inputs).every(([i, n]) => itemCount(active, i) >= n))
+      want('tools', craftTools, 1);
   }
   // Healers: one per `healersPer` mouths, and enough to see every sufferer (M3.5).
   const hr = content.health;

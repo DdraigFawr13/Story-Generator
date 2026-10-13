@@ -277,6 +277,8 @@ export const LIFE: LifeRules = {
       habit: { home: 3, visit: 2.5, alehouse: 2.5, doorstep: 2, green: 1.5, shrine: 1.5 },
       // A dark winter afternoon: indoors and warm.
       dark: { home: 3, visit: 2, alehouse: 3, doorstep: 1, green: 0.5, shrine: 1.5 },
+      // A tradesman's late morning: about the house and the street before work.
+      late: { home: 2, doorstep: 2, visit: 1.5, green: 1, shrine: 0.5 },
       // A holy day: the people gather on the green on purpose.
       holy: { green: 8, shrine: 5, alehouse: 1.5, visit: 1, doorstep: 0.5, home: 0.5 },
     },
@@ -322,10 +324,19 @@ export const LIFE: LifeRules = {
       child: 0.15,
       elder: 0.3,
       // Up to this much more, drawn per person and block; the sum stays under `max`.
-      jitter: 0.2,
-      max: 0.6,
+      jitter: 0.45,
+      max: 0.75,
+    },
+    shifts: {
+      // Craftsmen and builders keep their own hours: one morning in two is their own.
+      lateJobs: ['craft-tools', 'craft-wares', 'build', 'haul'],
+      lateEvery: 2,
+      // A mother (else the household adult who carries the little ones) keeps house one morning in two.
+      childUnder: 7,
+      houseEvery: 2,
     },
     where: {
+      house: 'keeping house',
       doorstep: 'on their doorstep',
       home: '',
       visit: 'visiting {name}',
@@ -426,6 +437,7 @@ export const LIFE: LifeRules = {
     theft: 'site_theft',
     returned: 'site_returned',
     storesEmpty: 'site_stores_empty',
+    market: 'site_market',
   },
 };
 
@@ -470,6 +482,20 @@ export const LIFE_EVENTS: EventTypeDef[] = [
       '{actor} walked out of {site} without a word to anyone.',
       'Restless past bearing, {actor} wandered off into the country around {site}.',
       '{actor} left their work and went walking, no one knew where.',
+    ],
+  },
+  {
+    id: 'site_market',
+    baseImportance: 1,
+    title: 'Market day at {site}',
+    causeWord: 'for',
+    category: 'social',
+    links: { site: 'site' },
+    rollup: ['market day', 'market days'],
+    templates: [
+      'Market day on the green at {site}: {stalls} stalls and {shoppers} households came.',
+      'The stalls went up on the green at {site}, and {shoppers} households came to market.',
+      '{site} held its market on the green, {stalls} stalls in all.',
     ],
   },
   {
