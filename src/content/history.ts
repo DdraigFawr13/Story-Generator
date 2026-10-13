@@ -89,6 +89,10 @@ export const HISTORY: HistoryRules = {
     'the Ninth',
     'the Tenth',
   ],
+  // A roamer shifts its haunt about once a decade.
+  beastRoamChance: 0.1,
+  // Wolf packs roam unremarked (their raids show where they went); greater beasts are news.
+  beastRoamNoticed: ['great', 'legendary'],
   tradeGoodsRange: 8,
   tradeKeepYears: 1,
   goodValue: { food: 0.01, ore: 1, timber: 0.5, salt: 2, luxury: 8 },

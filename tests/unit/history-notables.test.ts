@@ -110,6 +110,27 @@ describe('notables', () => {
       for (const d of beast.deeds) expect(ids).toContain(d);
   });
 
+  it('note a figure killed by a beast in both histories', () => {
+    // Playtest: every beast can kill heroes, and the death shows on the hero's and the beast's page.
+    let deaths = 0;
+    for (const seed of ['NOT-A', 'NOT-BEAST']) {
+      const world = seed === 'NOT-A' ? base() : generate(seed);
+      for (const beast of world.creatures.values()) {
+        for (const id of beast.kills ?? []) {
+          const death = world.events.find(
+            (e) => e.type === 'notable_died' && e.actors[0] === id && e.data.beast === beast.name,
+          );
+          expect(death, `${beast.name} killed #${id}`).toBeDefined();
+          expect(beast.deeds).toContain(death!.id);
+          expect(world.people.get(id)?.deeds).toContain(death!.id);
+          expect(String(death!.data.cause)).toContain(beast.name);
+          deaths += 1;
+        }
+      }
+    }
+    expect(deaths).toBeGreaterThan(0);
+  });
+
   it('keep at most three legends alive, even when legends come easily', () => {
     const easy: ContentBundle = {
       ...DEFAULT_CONTENT,

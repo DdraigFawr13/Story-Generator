@@ -14,6 +14,7 @@ export * from './people/tiers';
 export * from './narrative/render';
 export * from './narrative/biography';
 export * from './narrative/legends';
+export * from './narrative/playbyplay';
 export * from './systems';
 export * from './worldgen';
 export * from './worldgen/noise';

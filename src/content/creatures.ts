@@ -1,6 +1,7 @@
 // Beasts (M2.4): Welsh-tinged, to fit the Tylwyth and the Gwerin. Danger is in soldier
 // equivalents (R-24): a legendary beast is a war host, a wolf pack is a hunting party.
-// Wilder ground (forest, swamp, mountain) carries the bigger beasts.
+// Wilder ground (forest, swamp, mountain) carries the bigger beasts. Wolf packs, giants, wyverns
+// and dragons roam (`roam` cells from the lair); bears, boars and water beasts keep to their lairs.
 
 import type { CreatureDef } from '../engine';
 
@@ -17,6 +18,7 @@ export const creatures: CreatureDef[] = [
     lifespan: [15, 40],
     raidChance: 0.15,
     raidRange: 12,
+    roam: 12,
     names: [
       'the wolves of {near}',
       'the grey pack of {near}',
@@ -78,6 +80,7 @@ export const creatures: CreatureDef[] = [
     lifespan: [60, 140],
     raidChance: 0.1,
     raidRange: 18,
+    roam: 24,
     names: ['the wyvern of {near}', 'Gwiber Goch', 'the Red Gwiber of {near}'],
   },
   {
@@ -93,6 +96,7 @@ export const creatures: CreatureDef[] = [
     lifespan: [80, 200],
     raidChance: 0.1,
     raidRange: 18,
+    roam: 20,
     names: ['Cawr of {near}', 'the stone giant of {near}', 'Cawr Mawr'],
   },
   {
@@ -107,6 +111,7 @@ export const creatures: CreatureDef[] = [
     lifespan: [150, 400],
     raidChance: 0.08,
     raidRange: 30,
+    roam: 36,
     names: ['Draig Goch of {near}', 'the Draig of {near}', 'Ysgythr the Draig'],
   },
   {

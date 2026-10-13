@@ -109,6 +109,8 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'site_raid_looted',
       'site_fell',
       'beast_hunt_failed',
+      'beast_fought',
+      'beast_roamed',
     ],
   },
   {

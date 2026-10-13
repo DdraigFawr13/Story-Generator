@@ -167,6 +167,9 @@ export function validateContent(content: ContentBundle): string[] {
         problems.push(`Event type group ${group.id} names unknown event type "${type}".`);
     }
   }
+  for (const [beat, variants] of Object.entries(content.playByPlay?.beats ?? {})) {
+    if (variants.length === 0) problems.push(`Play-by-play beat "${beat}" has no variants.`);
+  }
   return problems;
 }
 
@@ -374,6 +377,8 @@ const HISTORY_EVENT_IDS = [
   'vengeance_raid',
   'legend_founded',
   'beast_hunt_failed',
+  'beast_fought',
+  'beast_roamed',
   'artifact_made',
   'book_written',
   'item_inherited',

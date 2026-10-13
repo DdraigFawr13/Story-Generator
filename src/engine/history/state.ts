@@ -11,7 +11,7 @@ import { nearestAuraSpot, type SettleContent, type SettleSearch } from './settle
 
 /** What the history stage reads from content. */
 export type HistoryContent = SettleContent &
-  Pick<ContentBundle, 'history' | 'creatures' | 'diseases' | 'notables'>;
+  Pick<ContentBundle, 'history' | 'creatures' | 'diseases' | 'notables' | 'threats'>;
 
 /** The latest events that touched one site, for linking causes. */
 export interface SiteLog {

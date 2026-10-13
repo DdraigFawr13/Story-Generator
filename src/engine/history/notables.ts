@@ -3,7 +3,7 @@
 // Yearly: deaths, marriages, births, mage births among commoners, legends. Succession follows each
 // culture's rule; a killing by a foreign notable becomes sworn vengeance, which can become war.
 
-import type { Civ, DeathCause, Dynasty, Id, Person, SimEvent, Site } from '../core/types';
+import type { Civ, Creature, DeathCause, Dynasty, Id, Person, SimEvent, Site } from '../core/types';
 import { cultureGivenName } from '../people/names';
 import { BIRTH_TIER_IDS, TIERS, legendSlotOpen, tierOfPower } from '../people/tiers';
 import { legendFactor, noticeFactor } from './colleges';
@@ -263,6 +263,10 @@ export interface DeathOptions {
   causes?: Id[];
   /** Where they died, when not at home (a battlefield). */
   at?: Site | undefined;
+  /** The beast that killed them: named in the death and added to its own history. */
+  beast?: Creature | undefined;
+  /** They faced the beast (a hunt or an answered raid), rather than fell in its raid. */
+  fought?: boolean;
 }
 
 /** A notable dies: the event, vengeance, their items and, for a ruler, the succession. */
@@ -276,7 +280,13 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
   run.notables.living.delete(person.id);
   const civ = civOfPerson(run, person);
   const where = options.at ?? siteOf(run, person);
-  const phrase = rules.deathPhrases[options.cause].replace('{kind}', where?.kind ?? 'town');
+  const { beast } = options;
+  const phrase = beast
+    ? (options.fought ? rules.beastDeathPhrase : rules.beastRaidDeathPhrase).replace(
+        '{beast}',
+        beast.name,
+      )
+    : rules.deathPhrases[options.cause].replace('{kind}', where?.kind ?? 'town');
   // The living spouse is an actor too, so the death shows on the widow's or widower's page.
   const spouses = person.family.spouses
     .map((id) => livingPerson(run, id))
@@ -287,6 +297,8 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
       : rules.widowedPhrase.replace('{names}', spouses.map((p) => p.name).join(' and '));
   const event = run.emit({
     type: 'notable_died',
+    // A figure a beast killed is never rolled into a year's count: it is part of the beast's story.
+    ...(beast ? { importanceBonus: run.content.notables.beastDeathImportance } : {}),
     actors: [person.id, ...(killer ? [killer.id] : []), ...spouses.map((p) => p.id)],
     place: where?.cell ?? placeOf(run, person),
     causes: options.causes && options.causes.length > 0 ? options.causes : person.deeds.slice(-1),
@@ -298,10 +310,15 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
       site: where?.name ?? 'the wilds',
       civ: civName(civ),
       widowed,
+      beast: beast?.name ?? '',
     },
   });
   addDeed(person, event.id);
   if (killer) addDeed(killer, event.id);
+  if (beast) {
+    beast.deeds.push(event.id);
+    (beast.kills ??= []).push(person.id);
+  }
   if (killer && killer.civId != null && person.civId != null && killer.civId !== person.civId) {
     swearVengeance(run, person, killer, event.id);
   }
@@ -331,12 +348,25 @@ function runDeaths(run: HistoryRun): void {
   }
 }
 
-/** A beast raid may kill one notable at the raided site. */
-export function beastRaidDeaths(run: HistoryRun, site: Site, raid: Id): void {
+/** Chance a beast of `danger` kills a figure it beat in a fight: stronger figures more often live. */
+export function beastKillChance(run: HistoryRun, person: Person, danger: number): number {
+  return (run.content.notables.beastKill * danger) / (danger + deedSoldiers(run, person));
+}
+
+/** A beast raid may kill one notable at the raided site, the weaker the likelier. */
+export function beastRaidDeaths(
+  run: HistoryRun,
+  site: Site,
+  raid: Id,
+  beast: Creature,
+  danger: number,
+): void {
   const rng = run.rng.notables;
   const here = livingAt(run, site.id);
-  if (here.length === 0 || !rng.chance(run.content.notables.beastKill)) return;
-  killNotable(run, rng.pick(here), { cause: 'beast', causes: [raid] });
+  if (here.length === 0) return;
+  const person = rng.pick(here);
+  if (!rng.chance(beastKillChance(run, person, danger))) return;
+  killNotable(run, person, { cause: 'beast', causes: [raid], beast });
 }
 
 /** A raider's party may kill one notable at the target. */

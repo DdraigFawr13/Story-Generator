@@ -264,6 +264,8 @@ export interface ContentBundle {
   politics: PoliticsRules;
   /** Chronicle, recaps and inspector (M3.11): rollups of small site lines and the historian's recaps. */
   chronicle: ChronicleRules;
+  /** Short play-by-plays for epic battles and beast fights, shown in Legends. */
+  playByPlay: PlayByPlayRules;
 }
 
 /** What a condition is, for its harm and the words of its chronicle lines (M3.5). */
@@ -1218,8 +1220,17 @@ export interface NotableRules {
   /** Extra yearly chance of dying in a famine or disease at the notable's site that year. */
   famineDeath: number;
   diseaseDeath: number;
-  /** Chance a beast raid kills one notable at the site. */
+  /**
+   * A beast that wins a fight kills a figure with `beastKill * danger / (danger + their soldiers)`:
+   * a raid's chance at one notable at the site, a hunt's or answered raid's at the one who rode out.
+   */
   beastKill: number;
+  /** Death clauses naming the beast ({beast}), in place of the `beast` death phrase: for one who
+   * fought it (a hunt or an answered raid), and for one who fell in its raid. */
+  beastDeathPhrase: string;
+  beastRaidDeathPhrase: string;
+  /** Importance added to a death a beast caused, so it is never rolled up and pruned. */
+  beastDeathImportance: number;
   /** Chance a civ raid kills one notable at the target, and takes one artifact held there. */
   raidKill: number;
   raidStealChance: number;
@@ -1291,6 +1302,8 @@ export interface DeedRules {
   huntRange: number;
   /** After a failed hunt ({name}): coming home, or dying in the lair (`beastKill` odds). */
   huntPhrases: { survived: string; died: string };
+  /** After a figure who answered a raid lost the fight: driven back, or killed. */
+  answerPhrases: { survived: string; died: string };
   /** Chance a non-ruler legend at the mother site leads the settlers of a new site. */
   legendFounds: number;
   /** Fame a legend's founding adds. */
@@ -1362,6 +1375,8 @@ export interface CreatureDef {
   raidRange: number;
   /** Name templates; `{near}` is the nearest live site at the time it appears. */
   names: string[];
+  /** Cells from its lair it wanders; it raids and is hunted where it roams (absent: it keeps to its lair). */
+  roam?: number;
 }
 
 /** Hard cap on a creature's danger, in soldier equivalents (R-24). */
@@ -1711,6 +1726,10 @@ export interface HistoryRules {
   slayTierFactor: Record<CreatureTier, number>;
   /** A beast whose name is taken (a dead one of the same name) takes the next of these after it. */
   beastNameOrdinals: string[];
+  /** Yearly chance a roaming beast moves to a new haunt within its `roam` of the lair. */
+  beastRoamChance: number;
+  /** Tiers whose move toward a new town is told (`beast_roamed`). */
+  beastRoamNoticed: CreatureTier[];
 
   // Trade (M2.4), once a decade.
   /** Resource deposits within this many cells (Chebyshev) of a site are its goods. */
@@ -2539,4 +2558,23 @@ export interface ChronicleRules {
     /** The names of the seasons, spring first. */
     seasons: string[];
   };
+}
+
+/** Play-by-play of epic battles and beast fights (Legends): which fights get one, and its beats. */
+export interface PlayByPlayRules {
+  /** A battle gets one when this many soldiers fell, or a champion fought or a notable died. */
+  battleLostAtLeast: number;
+  /** A beast fight gets one at this danger, or when a notable died in it. */
+  beastDangerAtLeast: number;
+  /** Walls (defence factor x100) at or above this earn a line of their own. */
+  wallsAtLeast: number;
+  /** Forces after luck within this percent of the bigger are "an even fight". */
+  evenWithinPercent: number;
+  /** Win chance (percent) below `longOdds` is long; above `favouredOdds` is favoured; between, even-ish. */
+  longOdds: number;
+  favouredOdds: number;
+  /** Most beats shown; Ground, then Leaders, are dropped first. */
+  maxBeats: number;
+  /** Wording variants per beat name; one is chosen by the event id's hash. */
+  beats: Record<string, string[]>;
 }

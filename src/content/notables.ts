@@ -107,7 +107,13 @@ export const NOTABLES: NotableRules = {
   childDeath: 0.015,
   famineDeath: 0.1,
   diseaseDeath: 0.12,
+  // Scaled by danger / (danger + the figure's soldiers): a nobody against a giant about 0.15, a
+  // legend (60 soldiers) against a wolf pack (6) about 0.014.
   beastKill: 0.15,
+  beastDeathPhrase: 'fighting {beast}',
+  beastRaidDeathPhrase: 'when {beast} attacked',
+  // Lifts a death to a beast over the yearly rollup (base 2, rollup below 3).
+  beastDeathImportance: 2,
   raidKill: 0.2,
   raidStealChance: 0.25,
   raiderChance: 0.5,
@@ -174,6 +180,10 @@ export const NOTABLES: NotableRules = {
     huntPhrases: {
       survived: 'and came home with nothing but scars',
       died: 'and never came home',
+    },
+    answerPhrases: {
+      survived: 'and was driven back, bloodied',
+      died: 'and was killed',
     },
     legendFounds: 0.5,
     foundingFame: 12,

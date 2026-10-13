@@ -35,6 +35,7 @@ export type WorldgenContent = Pick<
   | 'creatures'
   | 'diseases'
   | 'notables'
+  | 'threats'
 >;
 
 export type WorldgenStage =
