@@ -104,6 +104,7 @@ export * from './history';
 export * from './interactions';
 export * from './society';
 export * from './threats';
+export * from './lore';
 export * from './politics';
 export * from './items';
 export * from './jobs';

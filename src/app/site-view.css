@@ -1455,6 +1455,8 @@
 .sv-root .ppl .reason {
   flex-basis: 100%;
   font-size: 12px;
+}
+
 /* M3.12: the Saves popover hangs under the link line; "Next notable" sits beside the speeds. */
 .sv-root .linkline .saves {
   position: relative;

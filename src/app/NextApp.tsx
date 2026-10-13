@@ -477,7 +477,7 @@ export function NextApp() {
         siteId: active.siteId,
         name,
         key: watchKey.current,
-        restore: { events: [], open: null, zoom: null, at: null },
+        restore: { events: [], open: null, zoom: null, at: null, tab: null, sec: null },
       };
       watchingRef.current = next;
       window.history.pushState(

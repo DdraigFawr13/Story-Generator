@@ -456,7 +456,6 @@ export function SiteView(props: Props) {
   };
   /** M3.12: runs flat out until an event of `notable.minImportance` (or an auto-pause one), or a year. */
   const seek = () => {
-    window.clearTimeout(paneTimer.current);
     autoPaused.current = false;
     setBanner(null);
     setSeeking(true);

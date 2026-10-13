@@ -101,3 +101,266 @@ const gwerin: CultureDef = {
 ```
 
 Phase 1 replaces this global weather with per-cell climate.
+
+## Phase 3 content (the watched site)
+
+Each type below is one table the site engine reads. Add an entry; no engine change. Every entry here is copied from `src/content`.
+
+### Need
+
+A need drains each day, is restored by actions, and hurts mood when it hits zero.
+
+```ts
+// src/content/life.ts → NEEDS
+{
+  id: 'food',
+  name: 'Food',
+  decayPerDay: 35,
+  restore: { eat: 60, steal: 30 },
+  awayShare: 1,
+  lowAt: 30,
+  moodAtZero: -30,
+  lowWord: 'Hungry',
+  missing: 'no meal',
+}
+```
+
+### Trait
+
+A trait weights personality, can exclude another, and can set the breakdown a person has under stress.
+
+```ts
+// src/content/life.ts → TRAITS
+{
+  id: 'hot-tempered',
+  name: 'hot-tempered',
+  description: 'Quick to anger; breaks down in a rage.',
+  weight: 10,
+  excludes: ['steady'],
+  mood: 0,
+  breakdownAt: 0.85,
+  breakdown: 'tantrum',
+}
+```
+
+### Memory
+
+A memory is a mood shift that fades. `{about}` names the person it concerns.
+
+```ts
+// src/content/life.ts → MEMORIES
+{ id: 'went-hungry', mood: -8, decayDays: 4, text: 'Went to bed hungry' },
+{ id: 'saw-tantrum', mood: -6, decayDays: 10, text: 'Saw {about} fly into a rage' },
+```
+
+### Job
+
+A job names its worker, skill, workplace building and the need or good it serves.
+
+```ts
+// src/content/jobs.ts → JOBS
+{
+  id: 'farm',
+  name: 'Farming',
+  worker: 'farmer',
+  skill: 'farming',
+  requirements: {},
+  workplace: 'field',
+  action: 'farm',
+  serves: 'food',
+  tools: true,
+  perWorkplace: 4,
+  likedBy: ['steady'],
+}
+```
+
+### Item, with effects
+
+An artifact has forms, effects and downsides. Magic and might must cost something (R-29).
+
+```ts
+// src/content/items.ts → ITEMS
+{
+  id: 'blade',
+  name: 'blade',
+  good: 'luxury',
+  per: 1,
+  kind: 'artifact',
+  forms: ['sword', 'axe'],
+  effects: [{ kind: 'combat', value: 2 }],
+  downsides: ['envy', 'theftDraw'],
+}
+```
+
+### Building
+
+A building has a size, a map glyph and, if people raise it, a work and a cost.
+
+```ts
+// src/content/buildings.ts → BUILDINGS
+{
+  id: 'home',
+  name: 'home',
+  glyph: 'h',
+  w: 5,
+  h: 4,
+  walled: true,
+  work: 30,
+  cost: { logs: 250 },
+  buildable: true,
+}
+```
+
+### Interaction
+
+Interactions are what two people do together. `opinion` is the shift for the actor and the target.
+
+```ts
+// src/content/interactions.ts → INTERACTIONS
+{
+  id: 'argue',
+  name: 'argue',
+  weight: 3,
+  opinion: [-4, -4],
+  traitWeights: { 'hot-tempered': 2 },
+  moodWeight: 2,
+}
+```
+
+### Condition
+
+A condition has a severity that grows when its trigger holds. At 100 the person dies of `deathCause`.
+
+```ts
+// src/content/health.ts → CONDITIONS
+{
+  id: 'starving',
+  name: 'Starving',
+  kind: 'need',
+  harm: 1,
+  deathCause: 'famine',
+  words: { onset: 'hunger', death: 'hunger' },
+  need: {
+    need: 'food',
+    days: 2,
+    gain: 3,
+    ease: 10,
+    cause: 'stores',
+    vulnerable: { child: 1.5, elder: 1.5 },
+  },
+}
+```
+
+### Ailment
+
+An ailment is a catching illness that sets a condition going.
+
+```ts
+// src/content/health.ts → AILMENTS
+{
+  id: 'chill',
+  name: 'the chill',
+  conditionId: 'chill',
+  incubation: 1,
+  duration: [5, 10],
+  peak: [10, 35],
+  infectivity: 0.015,
+  ageRisk: { child: 2, adult: 1, elder: 3 },
+  immuneDays: 56,
+  grave: { chance: 0.05, mul: 3, cap: 150 },
+}
+```
+
+### Creature
+
+A creature lists where it lives, how dangerous it is and how it is named. `{near}` is the nearest place.
+
+```ts
+// src/content/creatures.ts → creatures
+{
+  id: 'cave-bear',
+  name: 'cave bear',
+  tier: 'beast',
+  biomes: ['temperate-forest', 'taiga', 'alpine'],
+  minWildness: 45,
+  danger: 4,
+  maxAlive: 4,
+  spawnChance: 0.25,
+  lifespan: [20, 45],
+  raidChance: 0.12,
+  raidRange: 10,
+  names: ['the bear of {near}', 'Arth of {near}', 'the cave bear of {near}'],
+}
+```
+
+### Awakening
+
+An awakening is a way a person finds magic late in life, after enough days with a book or an item.
+
+```ts
+// src/content/awakenings.ts → AWAKENINGS
+{
+  id: 'long-study',
+  source: 'book',
+  afterDays: 168,
+  monthlyChance: 0.08,
+  maxFromTier: 'faint',
+  how: 'after long study of {item}',
+}
+```
+
+### Routine table
+
+Free blocks of the day are drawn from a weighted table of places, so people differ and habits repeat.
+
+```ts
+// src/content/life.ts → LIFE.routines.tables
+elder: { doorstep: 5, visit: 2, alehouse: 1.5, shrine: 1.5, green: 1.5, home: 1 },
+holy: { green: 8, shrine: 5, alehouse: 1.5, visit: 1, doorstep: 0.5, home: 0.5 },
+```
+
+### Festival
+
+A festival belongs to a religion and falls on a fixed day.
+
+```ts
+// src/content/society.ts → SOCIETY.festivals
+{
+  id: 'wells-may',
+  religionId: 'wells',
+  name: 'May Eve',
+  month: 1,
+  day: 28,
+  rite: 'dressed the wells with flowers',
+}
+```
+
+### Law and punishment
+
+Each culture's law names a punishment per crime and the harshest it will use.
+
+```ts
+// src/content/society.ts → SOCIETY.laws
+{
+  cultureId: 'skarn',
+  punish: { theft: 'labour', brawl: 'none', murder: 'exile' },
+  max: 'execution',
+  phrase: 'by the judgement of the Skarn assembly',
+}
+```
+
+### Politics (succession and caravans)
+
+Politics rules set how a leader is chosen, when a choice is disputed and how caravans run.
+
+```ts
+// src/content/politics.ts → POLITICS
+succession: {
+  disputeMargin: 15,
+  disputeChance: 0.5,
+  disputeLuck: 20,
+  loserOpinion: -55,
+  peoplePhrase: 'by the choice of the people, with no kin to take the seat by custom',
+},
+caravans: { partners: 2, recentYears: 50, seasons: [0, 1, 2], stayDays: 3, waitDays: 7 },
+```
