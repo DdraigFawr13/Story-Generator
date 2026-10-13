@@ -46,6 +46,8 @@ export const JOBS: JobDef[] = [
   },
   {
     id: 'hunt',
+    // Chance per block worked that the worker is hurt.
+    risk: 0.002,
     name: 'Hunting',
     worker: 'hunter',
     skill: 'hunting',
@@ -59,6 +61,8 @@ export const JOBS: JobDef[] = [
   },
   {
     id: 'fell',
+    // Chance per block worked that the worker is hurt.
+    risk: 0.002,
     name: 'Felling',
     worker: 'woodcutter',
     skill: 'woodcutting',
@@ -72,6 +76,8 @@ export const JOBS: JobDef[] = [
   },
   {
     id: 'quarry',
+    // Chance per block worked that the worker is hurt.
+    risk: 0.002,
     name: 'Quarrying',
     worker: 'quarrier',
     skill: 'stoneworking',
@@ -84,6 +90,8 @@ export const JOBS: JobDef[] = [
   },
   {
     id: 'mine',
+    // Chance per block worked that the worker is hurt.
+    risk: 0.003,
     name: 'Mining',
     worker: 'miner',
     skill: 'mining',
@@ -108,6 +116,8 @@ export const JOBS: JobDef[] = [
   },
   {
     id: 'build',
+    // Chance per block worked that the worker is hurt.
+    risk: 0.001,
     name: 'Building',
     worker: 'builder',
     skill: 'building',
@@ -157,6 +167,8 @@ export const JOBS: JobDef[] = [
   {
     // Carries materials from the stockpile to the building site.
     id: 'haul',
+    // Chance per block worked that the worker is hurt.
+    risk: 0.0005,
     name: 'Hauling',
     worker: 'hauler',
     requirements: {},

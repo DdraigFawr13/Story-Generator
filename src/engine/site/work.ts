@@ -35,6 +35,7 @@ import {
 } from './build';
 import { farmBlock, fieldsNeedingWork } from './crops';
 import { bandOfAge, buildingDef, siteCodes, type Band, type SiteContent } from './defs';
+import { rollAccident } from './health';
 import { findSpot } from './layout';
 import { pathCosts, tileCost } from './path';
 import {
@@ -731,7 +732,9 @@ export function runSteward(
   const prev = new Map<Id, string>();
   const crew = workers.filter((w) => {
     const kind = w.person.detail?.breakdown?.kind;
-    return w.band !== 'child' && kind !== 'despair' && kind !== 'wandering';
+    return (
+      w.band !== 'child' && kind !== 'despair' && kind !== 'wandering' && !w.person.detail?.abed
+    );
   });
   const job = (role: keyof typeof st.roles) => ws.jobs.get(st.roles[role]);
   const toolItem = content.items.find((i) => i.kind === 'tool')?.id;
@@ -898,7 +901,17 @@ export function runSteward(
     if (haveInputs) want('tools', craftTools, st.crafters);
     else if (mine) want('tools', mine, deficit > 20 ? st.miners : 1);
   }
-  const healers = Math.floor(eaters / st.healersPer);
+  // Healers: one per `healersPer` mouths, and enough to see every sufferer (M3.5).
+  const hr = content.health;
+  const sufferers = workers.filter((w) =>
+    (w.person.detail?.conditions ?? []).some(
+      (c) => c.severity >= hr.sufferAt && (c.stage === undefined || c.stage === 'sick'),
+    ),
+  ).length;
+  const healers = Math.max(
+    Math.floor(eaters / st.healersPer),
+    Math.ceil(sufferers / hr.patientsPerHealer),
+  );
   const heal = job('heal');
   if (heal && crew.some((w) => able(w, heal))) want('health', heal, healers);
 
@@ -936,6 +949,8 @@ export function runSteward(
     }
     assignJobs();
   }
+  // Whoever is in bed has no job today.
+  for (const w of workers) if (w.person.detail?.abed) w.person.detail.jobId = undefined;
   // Each farmer works one field: yesterday's while it still needs hands, else the first that does
   // (ripe fields first, then those to sow, then to tend), so routes stay the same from day to day.
   ws.farmTile.clear();
@@ -1196,6 +1211,7 @@ export function runWork(
   const farmWork = new Map<Id, number>();
   for (const c of crew) {
     const { job, person } = c;
+    rollAccident(world, content, active, person, job, emit, label);
     const info = ws.info.get(job)!;
     const fit = Math.abs(fitAt(ws, world, content, person, info.index, job));
     const eff = scaled(
@@ -1304,6 +1320,15 @@ export function theftTarget(
   );
 }
 
+/** Forgets what work cached about who holds what and their effective attributes (after a death or a lasting harm). */
+export function refreshWork(content: SiteContent, active: ActiveSite): void {
+  const ws = workSite(content, active);
+  ws.held = null;
+  ws.eff.clear();
+  ws.fit.clear();
+  ws.resident = null;
+}
+
 /** Hands an item to a new holder and notes the event in its deeds. */
 export function transferItem(
   content: SiteContent,
@@ -1314,9 +1339,5 @@ export function transferItem(
 ): void {
   item.holder = to;
   item.deeds.push(eventId);
-  const ws = workSite(content, active);
-  ws.held = null;
-  ws.eff.clear();
-  ws.fit.clear();
-  ws.resident = null;
+  refreshWork(content, active);
 }

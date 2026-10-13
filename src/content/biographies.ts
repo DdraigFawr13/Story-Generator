@@ -26,6 +26,11 @@ export const BIOGRAPHIES: BiographyRules = {
     raid: 'in a raid',
     razing: 'when their home was razed',
     murder: 'by murder',
+    exposure: 'of the cold',
+    thirst: 'of thirst',
+    wound: 'of a wound',
+    illness: 'of a long illness',
+    childbirth: 'in childbirth',
   },
   sentences: {
     // Person

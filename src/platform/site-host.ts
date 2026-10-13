@@ -35,6 +35,7 @@ export function siteContentOf(content: SiteContent): SiteContent {
   const { biomes, resources, races, cultures, eventTypes, settlement, site } = content;
   const { history, needs, traits, memories, life } = content;
   const { abilities, items, jobs, steward, environment } = content;
+  const { health, conditions, ailments, diseases } = content;
   return {
     biomes,
     resources,
@@ -53,6 +54,10 @@ export function siteContentOf(content: SiteContent): SiteContent {
     jobs,
     steward,
     environment,
+    health,
+    conditions,
+    ailments,
+    diseases,
   };
 }
 

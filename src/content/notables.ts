@@ -51,6 +51,11 @@ export const NOTABLES: NotableRules = {
     raid: 'in a raid',
     razing: 'in the burning of the {kind}',
     murder: 'by murder',
+    exposure: 'of the cold',
+    thirst: 'of thirst',
+    wound: 'of a wound',
+    illness: 'of a long illness',
+    childbirth: 'in childbirth',
   },
   successionPhrases: {
     'kin-elected': 'by the choice of the kin',

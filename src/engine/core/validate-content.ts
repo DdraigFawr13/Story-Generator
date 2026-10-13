@@ -96,6 +96,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...lifeProblems(content));
   problems.push(...workProblems(content));
   problems.push(...environmentProblems(content));
+  problems.push(...healthProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -730,5 +731,56 @@ export function environmentProblems(content: ContentBundle): string[] {
     problems.push('Environment crop: need positive fieldYield and margin, otherFoodShare in 0-1.');
   if (!(env.meals.floor > 0 && env.meals.floor <= 1))
     problems.push('Environment meals: floor must be between 0 and 1.');
+  return problems;
+}
+
+/** Health rules (M3.5): known condition, ailment, job, event and memory ids; sane ranges. */
+export function healthProblems(content: ContentBundle): string[] {
+  const rules = content.health;
+  if (!rules || !content.conditions || !content.ailments) return ['Content has no health tables.'];
+  const problems: string[] = [];
+  const conditionIds = new Set<string>();
+  for (const c of content.conditions) {
+    if (conditionIds.has(c.id)) problems.push(`Condition ${c.id}: duplicate id.`);
+    conditionIds.add(c.id);
+    if (!(c.harm >= 0)) problems.push(`Condition ${c.id}: harm must be 0 or more.`);
+    if (c.need && !content.needs.some((n) => n.id === c.need!.need))
+      problems.push(`Condition ${c.id}: unknown need "${c.need.need}".`);
+  }
+  const known = (where: string, id: string) => {
+    if (!conditionIds.has(id)) problems.push(`${where}: unknown condition "${id}".`);
+  };
+  for (const a of content.ailments) {
+    known(`Ailment ${a.id}`, a.conditionId);
+    for (const id of Object.keys(a.sources.condition ?? {})) known(`Ailment ${a.id} source`, id);
+    if (a.duration[0] > a.duration[1] || a.peak[0] > a.peak[1])
+      problems.push(`Ailment ${a.id}: ranges must run low to high.`);
+  }
+  for (const id of rules.woundTiers) known('Health woundTiers', id);
+  for (const id of rules.chronic.conditions) known('Health chronic', id);
+  for (const id of [
+    rules.exhaustedCondition,
+    rules.festering.condition,
+    rules.frailty.condition,
+    rules.disease.condition,
+    rules.oldWound.condition,
+  ]) {
+    known('Health', id);
+  }
+  const eventIds = new Set(content.eventTypes.map((e) => e.id));
+  for (const [key, id] of Object.entries(rules.events)) {
+    if (!eventIds.has(id)) problems.push(`Health events.${key}: unknown event type "${id}".`);
+  }
+  if (!content.memories.some((m) => m.id === rules.griefMemory))
+    problems.push(`Health: unknown memory "${rules.griefMemory}".`);
+  if (!content.jobs.some((j) => j.id === content.steward.roles.heal))
+    problems.push('Health: the steward has no healer job.');
+  if (!(rules.patientsPerHealer >= 1))
+    problems.push('Health: patientsPerHealer must be 1 or more.');
+  const shares = rules.woundTiers.reduce(
+    (sum, id) => sum + (content.conditions.find((c) => c.id === id)?.wound?.share ?? 0),
+    0,
+  );
+  if (shares !== 100) problems.push(`Health: wound shares add to ${shares}, not 100.`);
   return problems;
 }

@@ -135,6 +135,42 @@ console.log(
     .join(', ')}`,
 );
 
+// Health (M3.5): deaths by cause and band, wounds, cases, beds, healers, herbs, lasting harms.
+const health = active.health;
+const dead = active.dead.map((id) => world.people.get(id));
+const bandOf = (p) =>
+  E.bandOfAge(
+    C.races.find((r) => r.id === p.raceId),
+    p.died - p.born,
+  );
+const byBand = {};
+for (const p of dead) byBand[bandOf(p)] = (byBand[bandOf(p)] ?? 0) + 1;
+const list = (o) =>
+  Object.entries(o ?? {})
+    .map(([k, n]) => `${k} ${n}`)
+    .join(', ') || 'none';
+const alive = active.residents.map((id) => world.people.get(id));
+console.log(
+  `Health: ${dead.length} died (${list(health?.stats.deaths)}; by band ${list(byBand)}); wounds ${list(health?.stats.wounds)}; cases ${list(health?.stats.cases)}`,
+);
+console.log(
+  `Care: peak abed ${health?.stats.abedPeak ?? 0}, healer-days ${health?.stats.healerDays ?? 0}, herbs used ${Math.round(health?.stats.herbsUsed ?? 0)}, lasting harms ${health?.stats.lasting ?? 0}; mean health at end ${mean(alive.map((p) => p.health)).toFixed(1)} of ${alive.length} living`,
+);
+const narrator = E.templateNarrator(C, (id) => world.people.get(id)?.name ?? `#${id}`);
+const healthTypes = new Set(Object.values(C.health.events));
+const lines = world.events
+  .slice(firstEvent)
+  .filter((e) => healthTypes.has(e.type))
+  .slice(0, Number(args.lines || 12));
+const byId = new Map(world.events.map((e) => [e.id, e]));
+console.log(`First ${lines.length} health lines (causes after ←):`);
+for (const e of lines) {
+  const causes = e.causes.flatMap((id) => byId.get(id) ?? []).map((c) => narrator.renderEvent(c));
+  console.log(
+    `  [${e.day}] ${narrator.renderEvent(e)}${causes.length ? ` ← ${causes.join(' / ')}` : ''}`,
+  );
+}
+
 // Picture: one pixel per tile.
 const rules = C.site;
 const idx = (list, id) => list.findIndex((e) => e.id === id);
@@ -190,21 +226,21 @@ await writeFile(png, encodePng(big.width, big.height, big.rgba));
 // Residents by household.
 const names = E.residentNames(world, active.residents);
 const tier = (p) => E.TIERS[E.tierOfPower(p.magic.power)].id;
-const lines = [
+const rows = [
   `${site.name} (${site.kind}), ${pop} people, ${active.residents.length} followed`,
   '',
 ];
 for (const h of active.households.values()) {
-  lines.push(`${E.householdLabel(world, h, names)}${h.home === null ? ' (no home)' : ''}`);
+  rows.push(`${E.householdLabel(world, h, names)}${h.home === null ? ' (no home)' : ''}`);
   for (const id of h.members) {
     const p = world.people.get(id);
-    lines.push(
+    rows.push(
       `  ${names.get(id)}${active.promoted.includes(id) ? '' : ' [notable]'}, ${p.sex}, ${C.races.find((r) => r.id === p.raceId).name}, age ${world.params.historyYears - p.born}, magic ${tier(p)}`,
     );
   }
 }
 const txt = path.join(out, `${seed}-site${siteId}.txt`);
-await writeFile(txt, lines.join('\n') + '\n');
+await writeFile(txt, rows.join('\n') + '\n');
 console.log(`Wrote ${png} and ${txt}`);
 
 E.leaveSite(world, C);

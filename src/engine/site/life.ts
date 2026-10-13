@@ -26,7 +26,7 @@ import type {
   Building,
   Household,
   Id,
-  Memory,
+  DeathCause,
   MoodPart,
   Person,
   PersonDetail,
@@ -42,7 +42,9 @@ import type {
 } from '../core/types';
 import { bandOfAge, type Band, type SiteContent } from './defs';
 import { runEnvironmentDay, voiceOf } from './environment';
+import { rollFireAccident, runHealthDay } from './health';
 import { fightFire, fightingSpots, settleFire, spreadFire } from './fire';
+import { addMemoryTo, memoryMood } from './memory';
 import { findRoute, tileCost, walkAlong } from './path';
 import { foodMeals, takeFood } from './stock';
 import { stepAnimals } from './wild';
@@ -55,6 +57,8 @@ import {
   workTile,
   type CrewMember,
 } from './work';
+
+export { memoryMood };
 
 /** Per-person facts that do not change while the site runs. */
 interface Profile {
@@ -131,6 +135,8 @@ const COMPANY_RANGE = 2;
 const GREEN_SPREAD = 3;
 /** Days a hunter keeps going to the same hunting ground (animals wander slowly; routes are cached). */
 const HUNT_REFRESH_DAYS = 7;
+/** What someone in bed gives up for sleep. */
+const BED_REST = new Set<Activity>(['work', 'play', 'socialise', 'worship']);
 /** Blocks in a day. */
 const BLOCKS = DAY_BLOCKS.length;
 /** Stress and mood limits. */
@@ -144,16 +150,6 @@ function mix(id: number, salt: number): number {
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
 const clamp = (x: number, lo: number, hi: number) => (x < lo ? lo : x > hi ? hi : x);
-
-/** A memory's mood on `day`: fades linearly from its full value to 0 over its decay days. */
-export function memoryMood(
-  memory: { moodDelta: number; createdDay: number; decayDays: number },
-  day: number,
-): number {
-  const age = day - memory.createdDay;
-  if (age >= memory.decayDays) return 0;
-  return memory.moodDelta * (1 - Math.max(0, age) / memory.decayDays);
-}
 
 /** The home a household lives in: its own, or the one that took it in while its own is burnt. */
 function livingHome(active: ActiveSite, h: Household): Building | undefined {
@@ -320,42 +316,7 @@ function addMemory(
   about?: Id,
   eventId?: Id,
 ) {
-  const def = cache.memoryDefs.get(type);
-  if (!def) throw new Error(`Unknown memory "${type}".`);
-  const memories = detail.memories;
-  // One memory per type: seeing a second tantrum refreshes the first (now about the newest one)
-  // rather than stacking, so a bad week cannot pile up past bearing. A few types stack to a cap
-  // (cold nights), the oldest copy being refreshed past it.
-  const copies = memories.filter((m) => m.type === type);
-  const same =
-    copies.length < (def.stacks ?? 1)
-      ? undefined
-      : copies.reduce((old, m) => (m.createdDay < old.createdDay ? m : old), copies[0]!);
-  const fresh: Memory = {
-    type,
-    moodDelta: def.mood,
-    createdDay: day,
-    decayDays: def.decayDays,
-  };
-  if (about !== undefined) fresh.about = about;
-  if (eventId !== undefined) fresh.eventId = eventId;
-  if (same) {
-    Object.assign(same, fresh);
-    if (about === undefined) delete same.about;
-    if (eventId === undefined) delete same.eventId;
-    return;
-  }
-  memories.push(fresh);
-  // Past the cap the weakest by current mood go first.
-  while (memories.length > cap) {
-    let weakest = 0;
-    for (let i = 1; i < memories.length; i += 1) {
-      if (Math.abs(memoryMood(memories[i]!, day)) < Math.abs(memoryMood(memories[weakest]!, day))) {
-        weakest = i;
-      }
-    }
-    memories.splice(weakest, 1);
-  }
+  addMemoryTo(cache.memoryDefs, cap, detail, type, day, about, eventId);
 }
 
 function tileOf(detail: PersonDetail, width: number): number {
@@ -429,6 +390,10 @@ function cacheFor(world: WorldState, content: SiteContent, active: ActiveSite): 
   if (!cache || cache.version !== active.layoutVersion) {
     cache = buildCache(world, content, active);
     caches.set(active, cache);
+  } else if (cache.profiles.length !== active.residents.length) {
+    // Someone died: drop them rather than rebuild every route and lookup (the layout is unchanged).
+    cache.profiles = cache.profiles.filter((p) => p.person.died === undefined);
+    cache.byId = new Map(cache.profiles.map((p) => [p.id, p]));
   }
   return cache;
 }
@@ -444,6 +409,9 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   // moves the layout version, and the profiles are rebuilt for it just below.
   const voice = voiceOf(world, content, active);
   const today = block === 0 ? runEnvironmentDay(world, content, active) : null;
+  // Health follows the environment: tending, illness, hunger and cold, and the dead (a death moves
+  // the layout version, which rebuilds the profiles just below).
+  if (block === 0) runHealthDay(world, content, active, voice.emit, voice.label);
   spreadFire(world, content, active, voice.emit, voice.label, fightersAt(world, active));
   stepAnimals(world, content, active);
   // Buildings or the map changed since the profiles were built (a home finished): rebuild them.
@@ -619,7 +587,7 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     const fx = active.fire.start % width;
     const fy = Math.floor(active.fire.start / width);
     const near = profiles
-      .filter((p) => p.band === 'adult' && !p.person.detail!.breakdown)
+      .filter((p) => p.band === 'adult' && !p.person.detail!.breakdown && !p.person.detail!.abed)
       .map((p) => {
         const [px, py] = p.person.detail!.pos!;
         return { p, d: Math.max(Math.abs(px - fx), Math.abs(py - fy)) };
@@ -651,6 +619,8 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     else if (block === 2 && restDay) {
       activity = p.faithful ? life.restDayAfternoon.faithful : life.restDayAfternoon.others;
     } else activity = life.schedule[p.band][DAY_BLOCKS[block]!];
+    // Someone too ill or hurt to work stays in bed through the day (they still eat in the evening).
+    if (detail.abed && BED_REST.has(activity)) activity = 'sleep';
     // Outdoor work stops at dusk: with under nine hours of daylight the afternoon is idle.
     if (dark && activity === 'work' && p.job && !indoor.has(p.job.workplace))
       activity = 'socialise';
@@ -741,7 +711,11 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   // Fighters beside the fire put out tiles; a fire with no tile left is over.
   if (active.fire) {
     const stood: number[] = [];
-    for (const p of profiles) if (p.person.detail!.activity === 'fight') stood.push(p.tile);
+    for (const p of profiles) {
+      if (p.person.detail!.activity !== 'fight') continue;
+      stood.push(p.tile);
+      rollFireAccident(world, content, active, p.person, voice.emit, voice.label);
+    }
     fightFire(world, content, active, stood);
     settleFire(world, content, active, voice.emit, voice.label);
   }
@@ -908,8 +882,14 @@ export interface SiteSnapshot {
   stock: [string, number][];
   storesEmptyEvent: Id | null;
   people: [Id, PersonDetail][];
+  /** M3.5: who still lives at the site, who died (with when and of what), and each household's members. */
+  residents: Id[];
+  dead: [Id, { died: number; diedDay: number; cause: DeathCause; eventId: Id }][];
+  households: [Id, Id[], Id][];
   /** M3.3: skills by person, the buildings and which home each household has. */
   skills: [Id, Record<string, number>][];
+  /** M3.5: each resident's health (0-100). */
+  health: [Id, number][];
   buildings: Building[];
   homes: [Id, Id | null][];
   layoutVersion: number;
@@ -1001,11 +981,13 @@ export function siteSnapshot(world: WorldState, sentVersion?: number): SiteSnaps
   if (!active) throw new Error('No watched site.');
   const people: [Id, PersonDetail][] = [];
   const skills: [Id, Record<string, number>][] = [];
+  const health: [Id, number][] = [];
   for (const id of active.residents) {
     const person = world.people.get(id);
     if (!person?.detail) continue;
     people.push([id, person.detail]);
     skills.push([id, person.skills]);
+    health.push([id, person.health]);
   }
   const snapshot: SiteSnapshot = {
     day: world.day,
@@ -1013,7 +995,21 @@ export function siteSnapshot(world: WorldState, sentVersion?: number): SiteSnaps
     stock: [...active.stock],
     storesEmptyEvent: active.storesEmptyEvent,
     people,
+    residents: [...active.residents],
+    dead: active.dead.flatMap((id) => {
+      const p = world.people.get(id);
+      return p?.died === undefined || p.diedDay === undefined || p.deathEvent === undefined
+        ? []
+        : [
+            [
+              id,
+              { died: p.died, diedDay: p.diedDay, cause: p.causeOfDeath!, eventId: p.deathEvent },
+            ],
+          ];
+    }),
+    households: [...active.households.values()].map((h) => [h.id, [...h.members], h.head]),
     skills,
+    health,
     buildings: [...active.buildings.values()],
     homes: [...active.households.values()].map((h) => [h.id, h.home]),
     layoutVersion: active.layoutVersion,
@@ -1061,6 +1057,28 @@ export function applySiteSnapshot(world: WorldState, snapshot: SiteSnapshot): vo
   for (const [id, detail] of snapshot.people) {
     const person = world.people.get(id);
     if (person) person.detail = detail;
+  }
+  active.residents = [...snapshot.residents];
+  active.dead = snapshot.dead.map(([id]) => id);
+  for (const [id, d] of snapshot.dead) {
+    const person = world.people.get(id);
+    if (!person) continue;
+    person.died = d.died;
+    person.diedDay = d.diedDay;
+    person.causeOfDeath = d.cause;
+    person.deathEvent = d.eventId;
+  }
+  const alive = new Set(snapshot.households.map(([id]) => id));
+  for (const id of [...active.households.keys()]) if (!alive.has(id)) active.households.delete(id);
+  for (const [id, members, head] of snapshot.households) {
+    const household = active.households.get(id);
+    if (!household) continue;
+    household.members = [...members];
+    household.head = head;
+  }
+  for (const [id, value] of snapshot.health) {
+    const person = world.people.get(id);
+    if (person) person.health = value;
   }
   for (const [id, skills] of snapshot.skills) {
     const person = world.people.get(id);
