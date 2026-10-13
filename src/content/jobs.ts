@@ -13,7 +13,7 @@ export const JOBS: JobDef[] = [
     skill: 'farming',
     requirements: {},
     workplace: 'field',
-    outputs: { grain: 2.6 },
+    outputs: { grain: 1.1 },
     serves: 'food',
     tools: true,
     perWorkplace: 4,
@@ -26,7 +26,7 @@ export const JOBS: JobDef[] = [
     skill: 'foraging',
     requirements: {},
     workplace: 'wild',
-    outputs: { berries: 1.6 },
+    outputs: { berries: 0.7 },
     serves: 'food',
     likedBy: ['restless'],
   },
@@ -37,7 +37,7 @@ export const JOBS: JobDef[] = [
     skill: 'fishing',
     requirements: {},
     workplace: 'water',
-    outputs: { fish: 2.2 },
+    outputs: { fish: 0.95 },
     serves: 'food',
     likedBy: ['solitary'],
   },
@@ -48,7 +48,7 @@ export const JOBS: JobDef[] = [
     skill: 'hunting',
     requirements: { agility: 8, perception: 8 },
     workplace: 'wild',
-    outputs: { game: 2 },
+    outputs: { game: 0.85 },
     serves: 'food',
     heavy: true,
     likedBy: ['restless'],
@@ -163,8 +163,8 @@ export const JOBS: JobDef[] = [
 export const STEWARD: StewardRules = {
   // Four months of meals in store before the steward eases off food.
   foodTargetDays: 120,
-  // 30% of workers on food at full stores, 80% at empty.
-  foodShare: [0.22, 0.8],
+  // Half the workers on food at full stores, 85% at empty.
+  foodShare: [0.5, 0.85],
   // One cook for every 25 mouths.
   cooksPer: 25,
   healersPer: 50,
