@@ -18,6 +18,7 @@ import {
   pairKey,
   type HistoryRun,
 } from './state';
+import { grievanceDecayOf, insultFactor, slightedValue, cultureValue } from './values';
 
 /** Grievance below this is forgotten. */
 const GRIEVANCE_FLOOR = 0.5;
@@ -31,7 +32,7 @@ function liveCiv(run: HistoryRun, id: Id | null): Civ | undefined {
 function decayGrievances(run: HistoryRun): void {
   for (const civ of run.world.civs.values()) {
     for (const [other, value] of [...civ.grievances.entries()]) {
-      const next = value * run.rules.grievanceDecay;
+      const next = value * grievanceDecayOf(run, civ);
       if (next < GRIEVANCE_FLOOR) {
         civ.grievances.delete(other);
         run.grievanceEvents.delete(`${civ.id}>${other}`);
@@ -301,12 +302,20 @@ function runInsults(run: HistoryRun): void {
     const civA = liveCiv(run, link.a);
     const civB = liveCiv(run, link.b);
     if (!civA || !civB || atWar(run, link.a, link.b)) continue;
-    if (!rng.war.chance(rules.insultChance)) continue;
+    // Unlike peoples give offence more often.
+    if (!rng.war.chance(Math.min(1, rules.insultChance * insultFactor(run, civA, civB)))) continue;
     const honourA = cultureOf(run, civA)?.values.honour ?? 0;
     const honourB = cultureOf(run, civB)?.values.honour ?? 0;
     // The prouder people takes the offence; ties go to the lower id.
     const [victim, offender, place, honour] =
       honourB > honourA ? [civB, civA, link.siteB, honourB] : [civA, civB, link.siteA, honourA];
+    // The slight touches what the victim holds dearest, and wounds more the dearer it is.
+    const victimCulture = cultureOf(run, victim);
+    const dearest = slightedValue(victimCulture);
+    const dearness = victimCulture?.values[dearest] ?? 5;
+    const why = rng.war
+      .pick(rules.cultureValues.slights[dearest as keyof typeof rules.cultureValues.slights])
+      .replace('{faith}', victimCulture?.religion.name ?? 'their gods');
     const opened = run.tradeOpened.get(pairKey(civA.id, civB.id));
     // The two rulers are the faces of the quarrel.
     const rulers = [rulerOf(run, civA), rulerOf(run, civB)];
@@ -315,10 +324,17 @@ function runInsults(run: HistoryRun): void {
       place: place.cell,
       actors: rulers.flatMap((r) => (r ? [r.id] : [])),
       causes: causesOf(opened),
-      data: { civ: offender.name, victim: victim.name },
+      data: { civ: offender.name, victim: victim.name, why },
     });
     if (rulers[0] && rulers[1]) makeRivals(rulers[0], rulers[1]);
-    addGrievance(run, victim.id, offender.id, (rules.grievance.insult * honour) / 10, event.id);
+    const wound = 1 + (dearness - 5) * rules.cultureValues.slightSlope;
+    addGrievance(
+      run,
+      victim.id,
+      offender.id,
+      (rules.grievance.insult * honour * wound) / 10,
+      event.id,
+    );
     // The poorer people envies the richer one.
     const [wealthV, wealthO] = [civWealth(run, victim), civWealth(run, offender)];
     const [poor, rich, richWealth, poorWealth] =
@@ -326,7 +342,9 @@ function runInsults(run: HistoryRun): void {
         ? [victim, offender, wealthO, wealthV]
         : [offender, victim, wealthV, wealthO];
     if (richWealth >= rules.envyMinWealth && richWealth > rules.envyRatio * poorWealth) {
-      addGrievance(run, poor.id, rich.id, rules.grievance.envy, event.id);
+      // Peoples who prize wealth covet more.
+      const greed = cultureValue(run, poor, 'wealth') / rules.cultureValues.envyWealth;
+      addGrievance(run, poor.id, rich.id, rules.grievance.envy * greed, event.id);
     }
   }
 }

@@ -784,7 +784,12 @@ function succeed(run: HistoryRun, civ: Civ, dead: Person, death: SimEvent): void
   const { heir: chosen, challenger } = chooseHeir(run, civ, dead);
   let heir = chosen;
   let phrase = culture ? rules.successionPhrases[culture.succession] : rules.noHeirPhrase;
-  if (heir && challenger && challenger.id !== heir.id && rng.chance(rules.disputeChance)) {
+  // Free peoples quarrel over a seat more readily; ordered ones keep to custom.
+  const unruly = culture
+    ? 1 + (culture.values.freedom - culture.values.order) * run.rules.cultureValues.disputeSlope
+    : 1;
+  const disputeChance = Math.min(1, Math.max(0, rules.disputeChance * unruly));
+  if (heir && challenger && challenger.id !== heir.id && rng.chance(disputeChance)) {
     const dispute = run.emit({
       type: 'succession_disputed',
       actors: [heir.id, challenger.id],
@@ -977,7 +982,9 @@ function runMarriages(run: HistoryRun): void {
     // A ruler's child in an arranged-marriage culture may be matched with a linked civ.
     const ruler = rulerOf(run, civ);
     if (culture?.marriage.arranged && ruler && person.family.parents.includes(ruler.id)) {
-      if (rng.chance(rules.allianceChance)) {
+      // Peoples who prize kinship seek marriage ties abroad more often.
+      const kin = (culture.values.kin ?? 5) / run.rules.cultureValues.kinNeutral;
+      if (rng.chance(Math.min(1, rules.allianceChance * kin))) {
         linked ??= new Map();
         if (!linked.has(civ.id)) linked.set(civ.id, linkedCivs(run, civ.id));
         const options: Person[] = [];

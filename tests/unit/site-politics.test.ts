@@ -7,6 +7,7 @@ import {
   leaderOf,
   runPoliticsDay,
   siteHeir,
+  sitePopulation,
   tradePartners,
   voiceOf,
   type Person,
@@ -28,7 +29,11 @@ function tradedWith(rows: Uint32Array, siteId: number): Set<number> {
 describe('politics', () => {
   it('sends caravans only along the trade routes history used, and none without them', () => {
     const world = copy();
-    const site = biggest(world);
+    // The most populous town with trade partners: since culture values reshaped history, SITE-A's
+    // biggest town (Khazgrund) has traded with no one in the last 50 years.
+    const site = [...world.sites.values()]
+      .filter((s) => s.ruinedYear === undefined && tradePartners(world, C, s, 250).length > 0)
+      .sort((a, b) => sitePopulation(b) - sitePopulation(a) || a.id - b.id)[0]!;
     const routes = tradedWith(world.playback!.trade, site.id);
     expect(routes.size).toBeGreaterThan(0);
     const active = embark(world, C, site.id);

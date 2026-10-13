@@ -1584,6 +1584,25 @@ export interface ImportanceRules {
   rollupBelow: number;
 }
 
+export interface CultureValueRules {
+  /** Mean value gap between two cultures that counts as ordinary (insult chance x1). */
+  typicalStrangeness: number;
+  /** Strangeness between two cultures of one race is multiplied by this. */
+  sameRaceStrangeness: number;
+  /** Yearly grievance decay rises by this per honour point above 5 (falls below 5). */
+  honourMemory: number;
+  /** Envy grievance is multiplied by the envious culture's wealth / this. */
+  envyWealth: number;
+  /** Alliance marriage chance is multiplied by kin / this. */
+  kinNeutral: number;
+  /** Dispute chance is multiplied by 1 + (freedom - order) x this. */
+  disputeSlope: number;
+  /** Insult grievance is multiplied by 1 + (slighted value - 5) x this. */
+  slightSlope: number;
+  /** The insult's reason, by the value the slighted people hold dearest. */
+  slights: Record<'faith' | 'kin' | 'order' | 'freedom' | 'honour', string[]>;
+}
+
 export interface HistoryRules {
   /** Harvest yield is 1 plus or minus this much, uniform. */
   harvestVariance: number;
@@ -1719,6 +1738,8 @@ export interface HistoryRules {
   insultChance: number;
   /** Grievance is multiplied by this each year and forgotten under 0.5. */
   grievanceDecay: number;
+  /** How culture values shape quarrels, grudges, trade goodwill, marriages abroad and disputes. */
+  cultureValues: CultureValueRules;
 
   // War (M2.4).
   /** Soldiers per adult = (strength + agility + endurance) / this * levyShare. */

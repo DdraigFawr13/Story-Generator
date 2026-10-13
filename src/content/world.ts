@@ -422,9 +422,9 @@ export const eventTypes: EventTypeDef[] = [
     precision: 'year',
     links: { civ: 'civ', victim: 'civ' },
     templates: [
-      'In {date} the {civ} gave offence to the {victim}, and the {victim} did not forget it.',
-      '{date}: an envoy of the {civ} slighted the {victim}, who took it ill.',
-      'The {victim} nursed a grievance against the {civ} after the insult of {date}.',
+      'In {date} the {civ} gave offence to the {victim} {why}, and the {victim} did not forget it.',
+      '{date}: an envoy of the {civ} slighted the {victim} {why}, and they took it ill.',
+      'The {victim} nursed a grievance against the {civ}, who had insulted them {why} in {date}.',
     ],
   },
   {
