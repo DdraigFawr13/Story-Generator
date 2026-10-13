@@ -146,7 +146,7 @@ export const SOCIAL_EVENTS: EventTypeDef[] = [
   {
     id: 'site_forgave',
     baseImportance: 2,
-    title: '{actor} forgave {actor2}',
+    title: '{actor} made peace with {actor2}',
     causeWord: 'after',
     category: 'social',
     links: { site: 'site' },

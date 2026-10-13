@@ -433,6 +433,7 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
         lastAte: world.day,
         lastMet: Object.fromEntries(Object.keys(needs).map((id) => [id, world.day])),
         conditions: [],
+        today: [],
       };
     });
   }
@@ -471,6 +472,12 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
   const active: ActiveSite = {
     siteId,
     enteredDay: world.day,
+    recap: {
+      season: total,
+      year: total,
+      firstEvent: world.nextId.event,
+      counted: total - residents.size,
+    },
     map,
     residents: [...residents.keys()].sort((a, b) => a - b),
     promoted,

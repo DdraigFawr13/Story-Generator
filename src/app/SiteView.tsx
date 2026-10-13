@@ -29,9 +29,8 @@ import {
 import type { SiteHost } from '../platform/site-host';
 import type { SiteSpeed } from '../platform/site-worker';
 import type { PageRef } from './legends-ctx';
-import { siteLinkPoint } from './map-view';
+import { siteLinkPoint, type PersonSection, type SiteTab } from './map-view';
 import {
-  ChroniclePane,
   InspectPane,
   PeoplePane,
   SitePane,
@@ -44,10 +43,10 @@ import {
   selectionName,
   tipText,
   usePaneUi,
-  type LiveLine,
   type PanelActions,
   type SiteModel,
 } from './site-panels';
+import { ChroniclePane, type LiveLine } from './site-chronicle';
 import {
   SiteRenderer,
   clampViewport,
@@ -70,6 +69,8 @@ export interface SiteLinkParts {
   open: string | null;
   zoom: number;
   at: { x: number; y: number };
+  tab: SiteTab;
+  sec: PersonSection;
 }
 
 export type TickListener = (
@@ -95,6 +96,8 @@ interface Props {
     open: string | null;
     zoom: number | null;
     at: { x: number; y: number } | null;
+    tab: SiteTab | null;
+    sec: PersonSection | null;
   };
   onLeave(): void;
   onOpenLegends(ref: PageRef): void;
@@ -121,8 +124,6 @@ const SHOW_ZOOM = 3;
 const DRAG_THRESHOLD = 4;
 /** Arrow keys with Shift pan this many tiles. */
 const PAN_STEP = 6;
-/** The phone shows the pane this long after a tap picked something. */
-const PHONE_PANE_DELAY_MS = 700;
 /** Live events reach the Legends index at most this often. */
 const INDEX_REBUILD_MS = 500;
 const TIP_HOLD_MS = 2200;
@@ -178,7 +179,7 @@ export function SiteView(props: Props) {
   const [index, setIndex] = useState<LegendIndex>(props.index);
   const m: SiteModel = useMemo(() => ({ ...base, index }), [base, index]);
   const digest = useMemo(() => localMapDigest(active.map), [active]);
-  const ui = usePaneUi();
+  const ui = usePaneUi(props.restore.sec ?? 'now');
   const narrow = useNarrow();
 
   const startLine = useMemo<LiveLine>(() => {
@@ -207,8 +208,12 @@ export function SiteView(props: Props) {
     if (found.kind === 'building' && !active.buildings.has(found.id)) return null;
     return found;
   });
-  const [tab, setTab] = useState<'inspect' | 'site' | 'people' | 'chron'>('inspect');
+  const [tab, setTab] = useState<SiteTab>(props.restore.tab ?? 'inspect');
   const [phoneTab, setPhoneTab] = useState<'map' | 'pane'>('map');
+  /** M3.11: on a phone the selection opens in a bottom sheet over the map, low or tall. */
+  const [sheet, setSheet] = useState<'peek' | 'full' | null>(() =>
+    props.restore.open ? 'peek' : null,
+  );
   const [banner, setBanner] = useState<Banner | null>(null);
   const [whyOpen, setWhyOpen] = useState(false);
   const [pauseOn, setPauseOn] = useState<ReadonlySet<PauseCategory>>(new Set(PAUSE_CATEGORIES));
@@ -234,7 +239,6 @@ export function SiteView(props: Props) {
   const picked = useRef(0);
   const toastTimer = useRef(0);
   const tipTimer = useRef(0);
-  const paneTimer = useRef(0);
   const indexTimer = useRef(0);
   /** Set when an event paused the clock, so ticks already on their way can't replace the banner. */
   const autoPaused = useRef(false);
@@ -243,7 +247,6 @@ export function SiteView(props: Props) {
     () => () => {
       window.clearTimeout(toastTimer.current);
       window.clearTimeout(tipTimer.current);
-      window.clearTimeout(paneTimer.current);
       window.clearTimeout(indexTimer.current);
     },
     [],
@@ -393,8 +396,10 @@ export function SiteView(props: Props) {
       setTab('inspect');
       const rect = rectOf(next);
       if (rect) centreOn(rect, SHOW_ZOOM);
-      window.clearTimeout(paneTimer.current);
-      if (isPhone()) setPhoneTab('map');
+      if (isPhone()) {
+        setPhoneTab('map');
+        setSheet('peek');
+      }
     },
     openLegends: props.onOpenLegends,
     hrefOf: props.hrefOf,
@@ -404,10 +409,29 @@ export function SiteView(props: Props) {
     },
   };
 
-  // ---- time ----
+  // M3.11: the phone's sheet covers the lower map, so the selection moves into the part left clear.
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+  const sheetOpen = narrow && phoneTab === 'map' && sheet !== null && sel !== null;
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const r = renderer.current;
+    const rect = rectOf(sel);
+    const h = sheetRef.current?.offsetHeight ?? 0;
+    if (!r || !rect || h === 0) return;
+    const cy = rect[1] + rect[3] / 2;
+    const cx = rect[0] + rect[2] / 2;
+    // Where the subject sits now, in pixels from the top of the map.
+    const y = (cy - r.state.view.cy) * r.scale + r.vh / 2;
+    const x = (cx - r.state.view.cx) * r.scale + r.vw / 2;
+    const clear = r.vh - h;
+    if (sheet === 'peek' && y > 32 && y < clear - 56 && x > 16 && x < r.vw - 16) return;
+    r.state.view.cx = cx;
+    r.state.view.cy = cy + h / 2 / r.scale;
+    r.clamp();
+    r.draw();
+  }, [sheetOpen, sheet, sel, rectOf]);
 
   const setSpeed = (next: SiteSpeed) => {
-    window.clearTimeout(paneTimer.current);
     if (next !== 0) autoPaused.current = false;
     setSpeedState(next);
     setRate(0);
@@ -563,10 +587,19 @@ export function SiteView(props: Props) {
 
   // Until the map first paints (a hidden phone tab may never size it), the link keeps the restored view.
   const painted = renderer.current && viewKey !== '' ? renderer.current.state.view : null;
-  const rounded = painted
-    ? { x: Math.round(painted.cx), y: Math.round(painted.cy) }
-    : (props.restore.at ?? { x: Math.round(size / 2), y: Math.round(size / 2) });
+  // While the phone's sheet shifts the view, the link keeps the subject's own tile as the centre.
+  const sheetRect = sheetOpen ? rectOf(sel) : null;
+  const rounded = sheetRect
+    ? {
+        x: Math.round(sheetRect[0] + sheetRect[2] / 2),
+        y: Math.round(sheetRect[1] + sheetRect[3] / 2),
+      }
+    : painted
+      ? { x: Math.round(painted.cx), y: Math.round(painted.cy) }
+      : (props.restore.at ?? { x: Math.round(size / 2), y: Math.round(size / 2) });
   const openText = sel ? formatSelection(sel, size) : null;
+  // The person page's section (Ties, Story, Skills) rides the link while a person is open.
+  const sec: PersonSection = sel?.kind === 'person' ? ui.personTab : 'now';
   const zoomIndex = painted ? painted.z : (props.restore.zoom ?? SELECT_ZOOM);
   // The day and block the chips show, so a reload replays to the same moment.
   const point = siteLinkPoint(day, active.enteredDay, active.block);
@@ -577,13 +610,23 @@ export function SiteView(props: Props) {
     if (linkBlock !== null) parts.push(`b=${linkBlock}`);
     if (openText) parts.push(`open=${openText}`);
     parts.push(`z=${zoomIndex + 1}`, `at=${rounded.x},${rounded.y}`);
+    if (tab !== 'inspect') parts.push(`tab=${tab}`);
+    if (sec !== 'now') parts.push(`sec=${sec}`);
     return `?${parts.join('&')}`;
     // viewKey stands for the zoom and centre, which live in the renderer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [world.seed, active, linkDay, linkBlock, openText, viewKey]);
+  }, [world.seed, active, linkDay, linkBlock, openText, viewKey, tab, sec, sheetOpen]);
   const { onLink } = props;
   useEffect(() => {
-    onLink({ day: linkDay, block: linkBlock, open: openText, zoom: zoomIndex, at: rounded });
+    onLink({
+      day: linkDay,
+      block: linkBlock,
+      open: openText,
+      zoom: zoomIndex,
+      at: rounded,
+      tab,
+      sec,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkText]);
 
@@ -701,6 +744,7 @@ export function SiteView(props: Props) {
     }
     if (event.key === 'Escape') {
       if (keyOpen) setKeyOpen(false);
+      else if (sheet === 'full') setSheet('peek');
       else if (sel) {
         setSel(null);
         setAnnounce('Selection cleared');
@@ -934,7 +978,6 @@ export function SiteView(props: Props) {
             type="button"
             aria-pressed={phoneTab === 'map'}
             onClick={() => {
-              window.clearTimeout(paneTimer.current);
               setPhoneTab('map');
             }}
           >
@@ -944,7 +987,6 @@ export function SiteView(props: Props) {
             type="button"
             aria-pressed={phoneTab === 'pane'}
             onClick={() => {
-              window.clearTimeout(paneTimer.current);
               setPhoneTab('pane');
             }}
           >
@@ -1053,16 +1095,45 @@ export function SiteView(props: Props) {
                 const k = hit.tile.y * size + hit.tile.x;
                 pickTile(k);
                 if (event.pointerType !== 'mouse') showTip(k, hit.px, hit.py, TIP_HOLD_MS);
+                // M3.11: a tap opens the bottom sheet; the map stays in view above it.
                 if (isPhone() && performance.now() - picked.current < 50) {
-                  window.clearTimeout(paneTimer.current);
-                  paneTimer.current = window.setTimeout(
-                    () => setPhoneTab('pane'),
-                    PHONE_PANE_DELAY_MS,
-                  );
+                  setSheet((open) => open ?? 'peek');
                 }
               }}
             />
             {bannerView(bannerRef, '')}
+            {sheetOpen && (
+              <div
+                className={`sheet ${sheet}`}
+                ref={sheetRef}
+                role="region"
+                aria-label={`Details of ${selectedName}`}
+                data-testid="sheet"
+              >
+                <div className="sheet-bar">
+                  <button
+                    type="button"
+                    className="grab"
+                    aria-expanded={sheet === 'full'}
+                    onClick={() => setSheet(sheet === 'full' ? 'peek' : 'full')}
+                  >
+                    {sheet === 'full' ? 'Show the map' : 'Show more'}
+                  </button>
+                  <span className="sp" />
+                  <button
+                    type="button"
+                    className="x"
+                    aria-label="Close the details"
+                    onClick={() => setSheet(null)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="sheet-body">
+                  <InspectPane m={model} sel={sel} a={actions} ui={ui} />
+                </div>
+              </div>
+            )}
             <div className="where">
               <b>{paint?.zoomLabel ?? 'Zoom'}</b>
               {paint?.whole ? ' · whole site' : ''} ·{' '}

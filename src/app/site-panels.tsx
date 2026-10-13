@@ -37,6 +37,7 @@ import {
   type ActiveSite,
   type BreakdownKind,
   type Building,
+  type BlockSpent,
   type Condition,
   type Civ,
   type HeldItem,
@@ -48,9 +49,10 @@ import {
   type Household,
   type Id,
   type LegendIndex,
-  type LegendRef,
   type Narrator,
   type Person,
+  type Relationship,
+  type SimEvent,
   type Site,
   type TierId,
   type WorldState,
@@ -182,12 +184,14 @@ export function dayText(day: number): string {
 export function monthName(day: number): string {
   return MONTH_NAMES[dateOf(day).month]!;
 }
-function shortDay(day: number): string {
+/** "12 Firstfrost", with the year only when it is not the year of `now`. */
+export function shortDay(day: number, now: number): string {
   const date = dateOf(day);
-  return `${date.dayOfMonth} ${MONTH_NAMES[date.month]!.slice(0, 4)} ${date.year - 1}`;
+  const text = `${date.dayOfMonth} ${MONTH_NAMES[date.month]!}`;
+  return dateOf(now).year === date.year ? text : `${text} ${date.year - 1}`;
 }
 
-function householdName(m: SiteModel, h: Household): string {
+export function householdName(m: SiteModel, h: Household): string {
   const label = m.labels.get(h.id) ?? 'A household';
   const hall = h.home !== null && m.active.buildings.get(h.home)?.defId === 'hall';
   return hall ? `${cap(m.ruleWord)}'s hall: ${label}` : label;
@@ -292,6 +296,38 @@ export interface PaneUi {
   /** "At the site" shows only this event category (from a link such as "9 learned"), or all. */
   liveOnly: string | null;
   setLiveOnly(category: string | null): void;
+  /** M3.11 (R-14): numbers in the inspector; off shows words. Remembered in this browser. */
+  numbers: boolean;
+  setNumbers(on: boolean): void;
+  /** M3.11: the person inspector's section. */
+  personTab: PersonTab;
+  setPersonTab(tab: PersonTab): void;
+  /** M3.11: "At the site" event categories switched off, and the importance floor. */
+  liveHidden: ReadonlySet<string>;
+  toggleLiveKind(category: string): void;
+  liveFloor: number;
+  setLiveFloor(n: number): void;
+  /** M3.11: unfolded rollup lines and other open toggles, by key. */
+  unfolded: ReadonlySet<string>;
+  toggleUnfold(key: string): void;
+}
+
+export type PersonTab = 'now' | 'ties' | 'story' | 'skills';
+
+const NUMBERS_KEY = 'sg.inspector.numbers';
+function readNumbers(): boolean {
+  try {
+    return window.localStorage.getItem(NUMBERS_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function writeNumbers(on: boolean): void {
+  try {
+    window.localStorage.setItem(NUMBERS_KEY, on ? '1' : '0');
+  } catch {
+    // Storage blocked: the choice lasts for this page only.
+  }
 }
 
 function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
@@ -301,9 +337,9 @@ function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
 }
 
 /** Items shown in a chronicle list before "Show more". */
-const CHRONICLE_WINDOW = 200;
+export const CHRONICLE_WINDOW = 200;
 
-export function usePaneUi(): PaneUi {
+export function usePaneUi(section: PersonTab = 'now'): PaneUi {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<PaneUi['sort']>('household');
   const [filters, setFilters] = useState<ReadonlySet<string>>(new Set());
@@ -313,6 +349,11 @@ export function usePaneUi(): PaneUi {
   const [why, setWhy] = useState<ReadonlySet<string>>(new Set());
   const [limit, setLimit] = useState(CHRONICLE_WINDOW);
   const [liveOnly, setLiveOnly] = useState<string | null>(null);
+  const [numbers, setNumbers] = useState(readNumbers);
+  const [personTab, setPersonTab] = useState<PersonTab>(section);
+  const [liveHidden, setLiveHidden] = useState<ReadonlySet<string>>(new Set());
+  const [liveFloor, setLiveFloor] = useState(0);
+  const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(new Set());
   return {
     q,
     setQ,
@@ -335,6 +376,19 @@ export function usePaneUi(): PaneUi {
     more: () => setLimit((n) => n + CHRONICLE_WINDOW),
     liveOnly,
     setLiveOnly,
+    numbers,
+    setNumbers: (on) => {
+      writeNumbers(on);
+      setNumbers(on);
+    },
+    personTab,
+    setPersonTab,
+    liveHidden,
+    toggleLiveKind: (category) => setLiveHidden((h) => toggled(h, category)),
+    liveFloor,
+    setLiveFloor,
+    unfolded,
+    toggleUnfold: (key) => setUnfolded((u) => toggled(u, key)),
   };
 }
 
@@ -350,7 +404,7 @@ export interface PanelActions {
   showChronicle(category: string): void;
 }
 
-interface PanelProps {
+export interface PanelProps {
   m: SiteModel;
   sel: Selection | null;
   a: PanelActions;
@@ -360,7 +414,7 @@ interface PanelProps {
 // ---- small pieces ----
 
 /** A link to a resident: selects them on the map. */
-function PersonLink({
+export function PersonLink({
   m,
   a,
   sel,
@@ -403,7 +457,15 @@ function PersonLink({
 }
 
 /** A link to a Legends page (leaves the site); a real anchor so copy-link works. */
-function LegendsLink({ a, to, children }: { a: PanelActions; to: PageRef; children: ReactNode }) {
+export function LegendsLink({
+  a,
+  to,
+  children,
+}: {
+  a: PanelActions;
+  to: PageRef;
+  children: ReactNode;
+}) {
   return (
     <a
       className="ln"
@@ -416,7 +478,15 @@ function LegendsLink({ a, to, children }: { a: PanelActions; to: PageRef; childr
   );
 }
 
-function SelectLink({ a, to, children }: { a: PanelActions; to: Selection; children: ReactNode }) {
+export function SelectLink({
+  a,
+  to,
+  children,
+}: {
+  a: PanelActions;
+  to: Selection;
+  children: ReactNode;
+}) {
   const go = () => a.select(to);
   return (
     <a
@@ -434,7 +504,7 @@ function SelectLink({ a, to, children }: { a: PanelActions; to: Selection; child
 }
 
 /** A link to the event a line follows from. */
-function EventLink({ a, id, children }: { a: PanelActions; id: Id; children: ReactNode }) {
+export function EventLink({ a, id, children }: { a: PanelActions; id: Id; children: ReactNode }) {
   return (
     <LegendsLink a={a} to={{ kind: 'event', id }}>
       {children}
@@ -443,12 +513,12 @@ function EventLink({ a, id, children }: { a: PanelActions; id: Id; children: Rea
 }
 
 /** The event as the pane has it (the index trails live events by half a second). */
-function eventOf(m: SiteModel, id: Id) {
+export function eventOf(m: SiteModel, id: Id) {
   return m.index.event(id) ?? m.world.events.find((e) => e.id === id);
 }
 
 /** An event's title in lower case, for "because of ...". */
-function causeTitle(m: SiteModel, id: Id): string {
+export function causeTitle(m: SiteModel, id: Id): string {
   const event = eventOf(m, id);
   if (!event) return 'earlier events';
   const title = eventTitle(event, m.typeDefs.get(event.type));
@@ -480,10 +550,10 @@ function burntText(m: SiteModel, b: Building): string | null {
   return `Burnt in ${when}; ${state}`;
 }
 
-function Facts({ children }: { children: ReactNode }) {
+export function Facts({ children }: { children: ReactNode }) {
   return <dl className="facts">{children}</dl>;
 }
-function Fact({ term, children }: { term: string; children: ReactNode }) {
+export function Fact({ term, children }: { term: string; children: ReactNode }) {
   return (
     <>
       <dt>{term}</dt>
@@ -520,7 +590,7 @@ const TIER_TEXT: Record<TierId, string> = {
 
 // ---- Chronicle lines ----
 
-function EventItem({
+export function EventItem({
   m,
   a,
   ui,
@@ -620,7 +690,48 @@ function EventItem({
   );
 }
 
-function LegendLines({
+/** The historian's recap: its own words, then the period's top events it is remembered for. */
+export function RecapCard({ m, a, id }: { m: SiteModel; a: PanelActions; id: Id }) {
+  const event = m.index.event(id);
+  if (!event) return null;
+  const rules = m.content.chronicle.recap;
+  // Cited as one line of dated links, newest first like the chronicle around it.
+  const causes = event.causes
+    .map((c) => eventOf(m, c))
+    .filter((c) => c !== undefined)
+    .sort((x, y) => y.id - x.id);
+  return (
+    <li className={event.type === rules.yearType ? 'recap year' : 'recap'}>
+      <b>{eventTitle(event, m.typeDefs.get(event.type))}</b>
+      <p>{m.narrator.renderEvent(event)}</p>
+      {causes.length > 0 && (
+        <p className="cites">
+          <span className="cw">Remembered for </span>
+          {causes.map((c, k) => (
+            <Fragment key={c.id}>
+              {k > 0 && ' · '}
+              <EventLink a={a} id={c.id}>
+                {briefDate(c.day)}: {namedTitle(m, c)}
+              </EventLink>
+            </Fragment>
+          ))}
+        </p>
+      )}
+    </li>
+  );
+}
+
+/** "Ketil took revenge on Bjorn": an event's title with its people named. */
+export function namedTitle(m: SiteModel, event: SimEvent): string {
+  const data: SimEvent['data'] = { ...event.data };
+  event.actors.forEach((id, k) => {
+    const name = m.names.get(id) ?? m.world.people.get(id)?.name;
+    if (name !== undefined) data[k === 0 ? 'actor' : `actor${k + 1}`] = name;
+  });
+  return eventTitle({ ...event, data }, m.typeDefs.get(event.type));
+}
+
+export function LegendLines({
   m,
   a,
   ui,
@@ -689,9 +800,8 @@ const BREAKDOWN_TEXT: Record<BreakdownKind, string> = {
 const signed = (n: number) => `${n < 0 ? '−' : '+'}${Math.abs(Math.round(n))}`;
 
 /** Where a block was spent, as a phrase: "in a field", "at home", "outdoors". */
-function placeText(m: SiteModel, p: Person, homeId: Id | null): string {
-  const detail = p.detail;
-  const building = detail?.placeId == null ? undefined : m.active.buildings.get(detail.placeId);
+function placeText(m: SiteModel, spent: BlockSpent, homeId: Id | null): string {
+  const building = spent.placeId == null ? undefined : m.active.buildings.get(spent.placeId);
   if (!building) return 'outdoors';
   if (building.defId === 'home')
     return building.id === homeId ? 'at home' : 'at a neighbour’s home';
@@ -702,7 +812,9 @@ function placeText(m: SiteModel, p: Person, homeId: Id | null): string {
 
 /** The job a person was given today, if any. */
 function jobOf(m: SiteModel, p: Person): JobDef | undefined {
-  const id = p.detail?.jobId;
+  return jobById(m, p.detail?.jobId);
+}
+function jobById(m: SiteModel, id: string | undefined): JobDef | undefined {
   return id === undefined ? undefined : m.content.jobs.find((j) => j.id === id);
 }
 
@@ -737,24 +849,37 @@ function siteWorkText(m: SiteModel, job: JobDef): string {
   return open ? `Hauling to the ${name(open.defId)}` : 'Hauling';
 }
 
-/** "Working in a field", "Sleeping at home": the activity and the place of the last block. */
-function doingText(m: SiteModel, p: Person, homeId: Id | null): string {
-  const detail = p.detail;
-  if (detail?.with !== undefined) return `With ${m.names.get(detail.with) ?? 'a carer'}`;
-  if (!detail?.activity) return 'Not yet known';
-  const verb = ACTIVITY_VERB[detail.activity];
-  if (detail.activity === 'wander') return verb;
+/** The last block run, as the current detail holds it. */
+function lastSpent(p: Person): BlockSpent {
+  const d = p.detail;
+  return {
+    activity: d?.activity,
+    placeId: d?.placeId ?? null,
+    where: d?.where,
+    with: d?.with,
+    jobId: d?.jobId,
+  };
+}
+
+/** "Working in a field", "Sleeping at home": the activity and the place of one block. */
+function doingText(m: SiteModel, spent: BlockSpent, homeId: Id | null): string {
+  if (spent.with !== undefined) return `With ${m.names.get(spent.with) ?? 'a carer'}`;
+  if (!spent.activity) return 'Not yet known';
+  const verb = ACTIVITY_VERB[spent.activity];
+  if (spent.activity === 'wander') return verb;
   // Village life: where a free block is spent ("At the alehouse", "Visiting Asa").
-  if (detail.where && detail.activity !== 'worship')
-    return detail.where.charAt(0).toUpperCase() + detail.where.slice(1);
-  const job = detail.activity === 'work' ? jobOf(m, p) : undefined;
+  if (spent.where && spent.activity !== 'worship')
+    return spent.where.charAt(0).toUpperCase() + spent.where.slice(1);
+  const job = spent.activity === 'work' ? jobById(m, spent.jobId) : undefined;
   if (job) {
     if (job.action) return siteWorkText(m, job);
     const listed = JOB_DOING[job.id];
     if (listed) return listed;
-    return `${job.name} ${placeText(m, p, homeId)}`;
+    return `${job.name} ${placeText(m, spent, homeId)}`;
   }
-  const place = placeText(m, p, homeId);
+  const place = placeText(m, spent, homeId);
+  // The schedule sends an adult with no job to the fields, where they have nothing set to do.
+  if (spent.activity === 'work') return `Out ${place}, with no trade to follow`;
   return `${verb} ${place}`;
 }
 
@@ -842,7 +967,7 @@ const DOWNSIDE_TEXT: Record<NonNullable<ItemDef['downsides']>[number], string> =
 };
 
 /** Skills above 0, best first, each a bar to 20 with the person's ceiling marked. */
-function SkillsSection({ m, p }: { m: SiteModel; p: Person }) {
+function SkillsSection({ m, p, numbers }: { m: SiteModel; p: Person; numbers: boolean }) {
   const { abilities, steward } = m.content;
   const rows = Object.entries(p.skills)
     .filter(([, value]) => value > 0)
@@ -867,7 +992,7 @@ function SkillsSection({ m, p }: { m: SiteModel; p: Person }) {
                 <i style={{ width: `${Math.min(100, value * 5)}%` }} />
                 <u style={{ left: `${Math.min(100, cap20 * 5)}%` }} />
               </span>
-              <span className="v">{value.toFixed(1)}</span>
+              <span className="v">{numbers ? value.toFixed(1) : ''}</span>
             </Fragment>
           );
         })}
@@ -1090,8 +1215,32 @@ function LoreSection({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) 
   );
 }
 
+// Presentation: mood and stress as words when numbers are off. The numbers stay the engine's.
+function moodWord(mood: number): string {
+  if (mood >= 40) return 'happy';
+  if (mood >= 10) return 'content';
+  if (mood > -10) return 'even';
+  if (mood > -30) return 'unhappy';
+  return 'miserable';
+}
+function stressWord(stress: number, threshold: number): string {
+  if (stress < threshold * 0.5) return 'calm';
+  if (stress < threshold * 0.8) return 'strained';
+  return 'near breaking';
+}
+
 /** Needs, mood, stress and traits (M3.2): what the engine stored, with its "why" parts. */
-function LifePage({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) {
+function LifePage({
+  m,
+  a,
+  p,
+  numbers,
+}: {
+  m: SiteModel;
+  a: PanelActions;
+  p: Person;
+  numbers: boolean;
+}) {
   const detail = p.detail;
   if (!detail) return null;
   const { content, world } = m;
@@ -1202,31 +1351,44 @@ function LifePage({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) {
               <span className="b">
                 <i style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
               </span>
-              <span className="v">{value}</span>
+              <span className="v">{numbers ? value : ''}</span>
             </Fragment>
           );
         })}
       </div>
+      {!numbers &&
+        needs.flatMap((n) =>
+          Math.round(detail.needs[n.id]!) < n.lowAt
+            ? [
+                <p key={n.id} className="quiet">
+                  {needWhy(n, detail.lastMet?.[n.id], now)}
+                </p>,
+              ]
+            : [],
+        )}
       {foodWhy && !shortMeals && <p className="quiet">{foodWhy}</p>}
       {notes.map((note) => (
         <p key={note.key} className="quiet">
           <b className="warnw">
-            {note.need} {note.value}
+            {note.need}
+            {numbers ? ` ${note.value}` : ''}
           </b>
           {' · '}
           {note.text}
         </p>
       ))}
       <div className="sect">
-        Mood <span className="r">{signed(detail.mood)}</span>
+        Mood <span className="r">{numbers ? signed(detail.mood) : moodWord(detail.mood)}</span>
       </div>
       {parts.length > 0 ? (
         <ul className="quiet" style={{ margin: 0, paddingLeft: 18 }}>
-          {parts.map((part) => (
+          {(numbers ? parts : parts.slice(0, 5)).map((part) => (
             <li key={part.key}>
-              {part.text} {signed(part.value)}
+              {part.text}
+              {numbers ? ` ${signed(part.value)}` : ''}
             </li>
           ))}
+          {!numbers && parts.length > 5 && <li>and {parts.length - 5} more</li>}
         </ul>
       ) : (
         <p className="quiet">Nothing weighs on the mood.</p>
@@ -1234,7 +1396,9 @@ function LifePage({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) {
       <div className="sect">
         Stress{' '}
         <span className="r">
-          {Math.round(detail.stress)} of {threshold}
+          {numbers
+            ? `${Math.round(detail.stress)} of ${threshold}`
+            : stressWord(detail.stress, threshold)}
         </span>
       </div>
       {breakdown && (
@@ -1279,8 +1443,365 @@ function conditionText(m: SiteModel, c: Condition, age: number): string {
   return `${name}${bits.length ? `, ${bits.join(', ')}` : ''}${harm > 0 ? ` −${harm}` : ''}`;
 }
 
+/** A person as a link when at the site, else their name with where they are (dead or elsewhere). */
+function PersonRef({
+  m,
+  a,
+  sel,
+  id,
+}: {
+  m: SiteModel;
+  a: PanelActions;
+  sel: Selection | null;
+  id: Id;
+}) {
+  if (m.scene.marks.has(id)) return <PersonLink m={m} a={a} sel={sel} id={id} />;
+  const other = m.world.people.get(id);
+  const gone = other?.died !== undefined || other?.diedDay !== undefined;
+  return (
+    <>
+      {other?.name ?? 'someone'}
+      <span className="empty">{gone ? ' (dead)' : ' (elsewhere)'}</span>
+    </>
+  );
+}
+
+function RefList({
+  m,
+  a,
+  sel,
+  ids,
+}: {
+  m: SiteModel;
+  a: PanelActions;
+  sel: Selection | null;
+  ids: readonly Id[];
+}) {
+  return (
+    <>
+      {ids.map((id, k) => (
+        <Fragment key={id}>
+          {k > 0 && ', '}
+          <PersonRef m={m} a={a} sel={sel} id={id} />
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+/** Grandparents, parents, siblings, spouse, children and grandchildren; empty rows are left out. */
+function FamilyBlock({
+  m,
+  a,
+  sel,
+  p,
+  children,
+}: {
+  m: SiteModel;
+  a: PanelActions;
+  sel: Selection | null;
+  p: Person;
+  /** Facts shown first in the same list (the household). */
+  children?: ReactNode;
+}) {
+  const kin = (id: Id) => m.world.people.get(id)?.family;
+  const unique = (ids: readonly Id[]) => [...new Set(ids)];
+  const rows: [string, Id[]][] = [
+    ['Grandparents', unique(p.family.parents.flatMap((x) => kin(x)?.parents ?? []))],
+    ['Parents', unique(p.family.parents)],
+    [
+      'Siblings',
+      unique(p.family.parents.flatMap((x) => kin(x)?.children ?? [])).filter((x) => x !== p.id),
+    ],
+    ['Spouse', unique(p.family.spouses)],
+    ['Children', unique(p.family.children)],
+    ['Grandchildren', unique(p.family.children.flatMap((x) => kin(x)?.children ?? []))],
+  ];
+  const shown = rows.filter(([, ids]) => ids.length > 0);
+  if (shown.length === 0 && !children) return null;
+  return (
+    <div data-testid="family">
+      <Facts>
+        {children}
+        {shown.map(([term, ids]) => (
+          <Fact key={term} term={term}>
+            <RefList m={m} a={a} sel={sel} ids={ids} />
+          </Fact>
+        ))}
+      </Facts>
+    </div>
+  );
+}
+
+/** "spouse", "parent", "child" or "sibling" when `other` is that to `p`. */
+function kinWord(m: SiteModel, p: Person, other: Id): string | null {
+  const them = m.world.people.get(other);
+  const f = them?.sex === 'f';
+  const word = p.family.spouses.includes(other)
+    ? f
+      ? 'wife'
+      : 'husband'
+    : p.family.parents.includes(other)
+      ? f
+        ? 'mother'
+        : 'father'
+      : p.family.children.includes(other)
+        ? f
+          ? 'daughter'
+          : 'son'
+        : (them?.family.parents ?? []).some((x) => p.family.parents.includes(x))
+          ? f
+            ? 'sister'
+            : 'brother'
+          : null;
+  return word && `${p.sex === 'f' ? 'her' : 'his'} ${word}`;
+}
+
+/** Why one person holds another as they do; only what the data records. */
+function TieReason({
+  m,
+  a,
+  p,
+  other,
+  rel,
+}: {
+  m: SiteModel;
+  a: PanelActions;
+  p: Person;
+  other: Id;
+  rel: Relationship;
+}) {
+  // The grudge's own day, then the earlier event that soured the pair, each with its own date.
+  const soured = (id: Id, lead: string) => {
+    const event = eventOf(m, id);
+    if (!event) return null;
+    return (
+      <>
+        {lead}
+        <EventLink a={a} id={id}>
+          {briefDate(event.day)}: {namedTitle(m, event)}
+        </EventLink>
+      </>
+    );
+  };
+  const eventId = rel.grudge?.eventId;
+  if (rel.grudge) {
+    return (
+      <>
+        grudge since {briefDate(rel.grudge.since)}
+        {eventId !== undefined && soured(eventId, ', soured by ')}
+      </>
+    );
+  }
+  if (rel.cause !== undefined) return soured(rel.cause, 'since ');
+  if (rel.met !== undefined && kinWord(m, p, other) === null) {
+    return <>last spoke {briefDate(rel.met)}</>;
+  }
+  return null;
+}
+
+const TIE_RANK = ['lover', 'enemy', 'friend', 'rival'];
+const TIE_SHOWN = 8;
+const tieLabel = (rel: Relationship) => TIE_RANK.find((l) => rel.labels.includes(l));
+
+/** "People they know" (M3.11): labelled or strongly felt pairs, from the engine's relationships. */
+function KnownPeople({
+  m,
+  a,
+  ui,
+  sel,
+  p,
+}: {
+  m: SiteModel;
+  a: PanelActions;
+  ui: PaneUi;
+  sel: Selection | null;
+  p: Person;
+}) {
+  const rows = [...(p.detail?.relationships ?? [])]
+    .filter(([, rel]) => tieLabel(rel) !== undefined || Math.abs(rel.opinion) >= 20)
+    .sort(([ia, ra], [ib, rb]) => {
+      const rank = (r: Relationship) => {
+        const l = tieLabel(r);
+        return l === undefined ? TIE_RANK.length : TIE_RANK.indexOf(l);
+      };
+      return rank(ra) - rank(rb) || Math.abs(rb.opinion) - Math.abs(ra.opinion) || ia - ib;
+    });
+  const met = p.detail?.relationships.size ?? 0;
+  const key = `ties:${p.id}`;
+  const all = ui.unfolded.has(key);
+  const shown = all ? rows : rows.slice(0, TIE_SHOWN);
+  return (
+    <>
+      <div className="sect">People they know</div>
+      {rows.length === 0 ? (
+        <p className="quiet">No strong feelings either way yet.</p>
+      ) : (
+        <ul className="list">
+          {shown.map(([other, rel]) => {
+            const label = tieLabel(rel);
+            const word = label ?? (rel.opinion > 0 ? 'thinks well of' : 'dislikes');
+            const kin = kinWord(m, p, other);
+            return (
+              <li key={other} className="ppl" style={{ padding: '3px 0' }}>
+                <PersonRef m={m} a={a} sel={sel} id={other} />{' '}
+                <span className="rel">
+                  {word}
+                  {kin && ` · ${kin}`}
+                  {ui.numbers ? ` · opinion ${signed(rel.opinion)}` : ''}
+                </span>
+                <div className="empty reason">
+                  <TieReason m={m} a={a} p={p} other={other} rel={rel} />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {rows.length > TIE_SHOWN && (
+        <button type="button" className="chip tg" onClick={() => ui.toggleUnfold(key)}>
+          {all ? 'Show fewer' : `Show all ${rows.length}`}
+        </button>
+      )}
+      {met > rows.length && (
+        <p className="quiet">
+          Has met {met - rows.length} {met - rows.length === 1 ? 'other' : 'others'} with no strong
+          feeling either way.
+        </p>
+      )}
+    </>
+  );
+}
+
+const STORY_SHOWN = 12;
+
+/** "At the site", Memories and the legends: what has happened to this person (M3.11). */
+function StorySection({
+  m,
+  a,
+  ui,
+  p,
+  bio,
+  notable,
+}: {
+  m: SiteModel;
+  a: PanelActions;
+  ui: PaneUi;
+  p: Person;
+  bio: ReturnType<typeof biography> | null;
+  notable: boolean;
+}) {
+  const id = p.id;
+  // Deeds since watching began are in "At the site" above.
+  const legendIds = (bio?.lines ?? [])
+    .map((line) => line.eventId)
+    .filter((e) => (m.index.event(e)?.day ?? 0) < m.active.enteredDay);
+  const events = m.index
+    .events({ kind: 'person', id })
+    .flatMap((eid) => {
+      const e = m.index.event(eid);
+      return e && e.day >= m.active.enteredDay ? [e] : [];
+    })
+    .reverse();
+  const key = `story:${id}`;
+  const all = ui.unfolded.has(key);
+  const memories = [...(p.detail?.memories ?? [])].sort((x, y) => y.createdDay - x.createdDay);
+  return (
+    <>
+      <div className="sect">At the site</div>
+      {events.length === 0 ? (
+        <p className="quiet">Nothing yet since you began watching.</p>
+      ) : (
+        <ul className="list">
+          {(all ? events : events.slice(0, STORY_SHOWN)).map((e) => (
+            <EventItem
+              key={e.id}
+              m={m}
+              a={a}
+              ui={ui}
+              id={e.id}
+              path={`s${id}>${e.id}`}
+              label={shortDay(e.day, m.world.day)}
+            />
+          ))}
+        </ul>
+      )}
+      {events.length > STORY_SHOWN && (
+        <button type="button" className="chip tg" onClick={() => ui.toggleUnfold(key)}>
+          {all ? 'Show fewer' : `Show all ${events.length}`}
+        </button>
+      )}
+      <div className="sect">Memories</div>
+      {memories.length === 0 ? (
+        <p className="quiet">Nothing weighs on their mind.</p>
+      ) : (
+        <ul className="quiet" style={{ margin: 0, paddingLeft: 18 }}>
+          {memories.map((mem, k) => {
+            const def = m.content.memories.find((d) => d.id === mem.type);
+            const about = mem.about === undefined ? undefined : m.world.people.get(mem.about)?.name;
+            return (
+              <li key={k}>
+                {def ? fillTemplate(def.text, { about: about ?? 'someone' }) : mem.type}
+                <span className="empty"> · {briefDate(mem.createdDay)}</span>
+                {mem.eventId !== undefined && (
+                  <>
+                    {' · '}
+                    <EventLink a={a} id={mem.eventId}>
+                      what happened
+                    </EventLink>
+                  </>
+                )}
+                {ui.numbers ? ` ${signed(mem.moodDelta)}` : ''}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {notable && (
+        <>
+          <div className="sect">
+            From the legends <span className="r">before you arrived</span>
+          </div>
+          {legendIds.length > 0 ? (
+            <LegendLines m={m} a={a} ui={ui} ids={legendIds} prefix={`p${id}>`} />
+          ) : (
+            <p className="quiet">No recorded deeds yet.</p>
+          )}
+        </>
+      )}
+      <div className="actions">
+        <button type="button" onClick={() => a.showOnMap({ kind: 'person', id })}>
+          Show on map
+        </button>
+        {notable && (
+          <button type="button" onClick={() => a.openLegends({ kind: 'person', id })}>
+            Open in Legends
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
+const PERSON_TABS: [PersonTab, string][] = [
+  ['now', 'Now'],
+  ['ties', 'Ties'],
+  ['story', 'Story'],
+  ['skills', 'Skills'],
+];
+
 /** M3.5: someone who died while the site was watched. */
-function DeadPage({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) {
+function DeadPage({
+  m,
+  a,
+  sel,
+  p,
+}: {
+  m: SiteModel;
+  a: PanelActions;
+  sel: Selection | null;
+  p: Person;
+}) {
   const event = p.deathEvent === undefined ? undefined : eventOf(m, p.deathEvent);
   return (
     <div className="page">
@@ -1300,6 +1821,7 @@ function DeadPage({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) {
           )}
         </Fact>
       </Facts>
+      <FamilyBlock m={m} a={a} sel={sel} p={p} />
     </div>
   );
 }
@@ -1307,15 +1829,12 @@ function DeadPage({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) {
 function PersonPage({ m, a, sel, ui, id }: PanelProps & { id: Id }) {
   const p = m.world.people.get(id);
   const mark = m.scene.marks.get(id);
-  if (p && p.diedDay !== undefined) return <DeadPage m={m} a={a} p={p} />;
+  if (p && p.diedDay !== undefined) return <DeadPage m={m} a={a} sel={sel} p={p} />;
   if (!p || !mark) return <p className="quiet">That person is no longer at the site.</p>;
   const h = m.active.households.get(p.family.householdId ?? -1);
   const home = h?.home == null ? undefined : m.active.buildings.get(h.home);
   const race = m.content.races.find((r) => r.id === p.raceId);
   const culture = m.content.cultures.find((c) => c.id === p.cultureId);
-  const here = (ids: readonly Id[]) => ids.filter((x) => m.scene.marks.has(x));
-  const spouses = here(p.family.spouses);
-  const away = p.family.spouses.length - spouses.length;
   const notable = mark.role === 'notable' || mark.role === 'jarl';
   const bio = notable
     ? biography(m.world, m.content, m.narrator, m.index, { kind: 'person', id })
@@ -1328,6 +1847,12 @@ function PersonPage({ m, a, sel, ui, id }: PanelProps & { id: Id }) {
   const powerItems = carried.filter((c) => c.def.effects?.some((e) => e.kind === 'power'));
   const work = workInfo(m, p, mark.band);
   const hallHome = home?.defId === 'hall';
+  const homeId = h?.home ?? null;
+  const today = (p.detail?.today ?? []).flatMap((spent, block) =>
+    spent.activity || spent.with !== undefined
+      ? [`${cap(DAY_BLOCKS[block] ?? '')}: ${doingText(m, spent, homeId)}`]
+      : [],
+  );
   const summary =
     bio && bio.summary.length > 0
       ? cap(bio.summary.join(' '))
@@ -1353,149 +1878,138 @@ function PersonPage({ m, a, sel, ui, id }: PanelProps & { id: Id }) {
         <h3>{mark.name}</h3>
       </div>
       <p className="summary">{summary}</p>
-      <Facts>
-        <Fact term="Age">
-          {mark.age} · {she ? 'female' : 'male'} · {race?.name}
-          {culture ? `, ${culture.name}` : ''}
-        </Fact>
-        {p.detail && (
-          <Fact term="Health">
-            {p.health}
-            {p.detail.abed ? ' · abed' : ''}
-            {(p.detail.conditions ?? []).map((c, k) => (
-              <div key={k} className="empty">
-                {conditionText(m, c, mark.age)}
-              </div>
-            ))}
-          </Fact>
-        )}
-        {notable && p.title && (
-          <Fact term="Known as">
-            {p.title === 'ruler' ? m.ruleWord : (TITLE_TEXT[p.title] ?? p.title)}
-            {p.fame ? ` · fame ${p.fame}` : ''}
-          </Fact>
-        )}
-        {h && (
-          <Fact term="Household">
-            <SelectLink a={a} to={{ kind: 'household', id: h.id }}>
-              {householdName(m, h)}
-            </SelectLink>{' '}
-            · {h.members.length === 1 ? 'lives alone' : `${h.members.length} people`} ·{' '}
-            {hallHome ? `the ${m.ruleWord}'s hall` : home ? `home ${home.id}` : 'no home'}
-            {lodgingText(m, h) && <span className="empty"> · {lodgingText(m, h)}</span>}
-          </Fact>
-        )}
-        {(spouses.length > 0 || away > 0) && (
-          <Fact term="Spouse">
-            {spouses.map((s, k) => (
-              <Fragment key={s}>
-                {k > 0 && ', '}
-                <PersonLink m={m} a={a} sel={sel} id={s} />
-              </Fragment>
-            ))}
-            {away > 0 && (
-              <span className="empty">
-                {spouses.length > 0 ? '; ' : ''}
-                {away} not living here
-              </span>
-            )}
-          </Fact>
-        )}
-        {here(p.family.parents).length > 0 && (
-          <Fact term="Parents">
-            {here(p.family.parents).map((s, k) => (
-              <Fragment key={s}>
-                {k > 0 && ', '}
-                <PersonLink m={m} a={a} sel={sel} id={s} />
-              </Fragment>
-            ))}
-          </Fact>
-        )}
-        {here(p.family.children).length > 0 && (
-          <Fact term="Children">
-            {here(p.family.children).map((s, k) => (
-              <Fragment key={s}>
-                {k > 0 && ', '}
-                <PersonLink m={m} a={a} sel={sel} id={s} />
-              </Fragment>
-            ))}
-          </Fact>
-        )}
-        <Fact term="Magic">
-          {p.magic.power > 0 || powerNow > 0 ? (
-            <>
-              {TIER_TEXT[tier]}{' '}
-              <span className="empty">
-                ({affinityWords(m, p)}power {p.magic.power}
-                {powerNow !== p.magic.power
-                  ? `, ${powerNow} with the ${powerItems.map((c) => c.def.name).join(' and the ')}`
-                  : ''}
-                )
-              </span>
-            </>
-          ) : (
-            <span className="empty">none</span>
-          )}
-        </Fact>
-        <Fact term="Work">
-          {work.text}
-          {work.why && <span className="empty"> · {work.why}</span>}
-        </Fact>
-        <Fact term="Doing">{doingText(m, p, h?.home ?? null)}</Fact>
-      </Facts>
-      <SkillsSection m={m} p={p} />
-      <LoreSection m={m} a={a} p={p} />
-      <CarriesSection m={m} a={a} p={p} />
-      <LifePage m={m} a={a} p={p} />
-      <div className="actions">
-        <button type="button" onClick={() => a.showOnMap({ kind: 'person', id })}>
-          Show on map
-        </button>
-        {notable && (
-          <button type="button" onClick={() => a.openLegends({ kind: 'person', id })}>
-            Open in Legends
-          </button>
-        )}
-      </div>
-      {notable && (
-        <>
-          <div className="sect">From the legends</div>
-          {bio && bio.lines.length > 0 ? (
-            <LegendLines
-              m={m}
-              a={a}
-              ui={ui}
-              ids={bio.lines.map((line) => line.eventId)}
-              prefix={`p${id}>`}
-            />
-          ) : (
-            <p className="quiet">No recorded deeds yet.</p>
-          )}
-        </>
-      )}
-      <details>
-        <summary>Attributes</summary>
-        <div className="attrs" style={{ marginTop: 8 }}>
-          {ATTRIBUTE_KEYS.map((key) => (
-            <Fragment key={key}>
-              <span>{cap(key)}</span>
-              <span className="b">
-                <i style={{ width: `${p.attributes[key] * 5}%` }} />
-              </span>
-              <span className="v">{p.attributes[key]}</span>
-            </Fragment>
+      <div className="toolrow">
+        <div className="seg" role="group" aria-label="Sections" data-testid="person-sections">
+          {PERSON_TABS.map(([tab, label]) => (
+            <button
+              key={tab}
+              type="button"
+              aria-pressed={ui.personTab === tab}
+              onClick={() => ui.setPersonTab(tab)}
+            >
+              {label}
+            </button>
           ))}
         </div>
-        <p className="quiet" style={{ marginTop: 6 }}>
-          1–20, rolled from the race at promotion
-          {notable ? ' (kept from history for notables)' : ''}.
-        </p>
-      </details>
+        <button
+          type="button"
+          className="chip tg"
+          aria-pressed={ui.numbers}
+          onClick={() => ui.setNumbers(!ui.numbers)}
+        >
+          Numbers
+        </button>
+      </div>
+      {ui.personTab === 'now' && (
+        <>
+          <Facts>
+            <Fact term="Age">
+              {mark.age} · {she ? 'female' : 'male'} · {race?.name}
+              {culture ? `, ${culture.name}` : ''}
+            </Fact>
+            {p.detail && (
+              <Fact term="Health">
+                {p.health}
+                {p.detail.abed ? ' · abed' : ''}
+                {(p.detail.conditions ?? []).map((c, k) => (
+                  <div key={k} className="empty">
+                    {conditionText(m, c, mark.age)}
+                  </div>
+                ))}
+              </Fact>
+            )}
+            {notable && p.title && (
+              <Fact term="Known as">
+                {p.title === 'ruler' ? m.ruleWord : (TITLE_TEXT[p.title] ?? p.title)}
+                {p.fame ? ` · fame ${p.fame}` : ''}
+              </Fact>
+            )}
+            <Fact term="Work">
+              {work.text}
+              {work.why && <span className="empty"> · {work.why}</span>}
+            </Fact>
+            <Fact term="Doing">{doingText(m, lastSpent(p), homeId)}</Fact>
+            {today.length > 0 && (
+              <Fact term="Today">
+                <div data-testid="today">
+                  {today.map((line) => (
+                    <div key={line}>{line}</div>
+                  ))}
+                </div>
+              </Fact>
+            )}
+          </Facts>
+          <LifePage m={m} a={a} p={p} numbers={ui.numbers} />
+        </>
+      )}
+      {ui.personTab === 'ties' && (
+        <div className="stack" data-testid="ties">
+          <FamilyBlock m={m} a={a} sel={sel} p={p}>
+            {h && (
+              <Fact term="Household">
+                <SelectLink a={a} to={{ kind: 'household', id: h.id }}>
+                  {householdName(m, h)}
+                </SelectLink>{' '}
+                · {h.members.length === 1 ? 'lives alone' : `${h.members.length} people`} ·{' '}
+                {hallHome ? `the ${m.ruleWord}'s hall` : home ? `home ${home.id}` : 'no home'}
+                {lodgingText(m, h) && <span className="empty"> · {lodgingText(m, h)}</span>}
+              </Fact>
+            )}
+          </FamilyBlock>
+          <KnownPeople m={m} a={a} ui={ui} sel={sel} p={p} />
+        </div>
+      )}
+      {ui.personTab === 'story' && (
+        <StorySection m={m} a={a} ui={ui} p={p} bio={bio} notable={notable} />
+      )}
+      {ui.personTab === 'skills' && (
+        <>
+          <Facts>
+            <Fact term="Magic">
+              {p.magic.power > 0 || powerNow > 0 ? (
+                <>
+                  {TIER_TEXT[tier]}{' '}
+                  <span className="empty">
+                    ({affinityWords(m, p)}power {p.magic.power}
+                    {powerNow !== p.magic.power
+                      ? `, ${powerNow} with the ${powerItems.map((c) => c.def.name).join(' and the ')}`
+                      : ''}
+                    )
+                  </span>
+                </>
+              ) : (
+                <span className="empty">none</span>
+              )}
+            </Fact>
+          </Facts>
+          <SkillsSection m={m} p={p} numbers={ui.numbers} />
+          <LoreSection m={m} a={a} p={p} />
+          <CarriesSection m={m} a={a} p={p} />
+          <details>
+            <summary>Attributes</summary>
+            <div className="attrs" style={{ marginTop: 8 }}>
+              {ATTRIBUTE_KEYS.map((key) => (
+                <Fragment key={key}>
+                  <span>{cap(key)}</span>
+                  <span className="b">
+                    <i style={{ width: `${p.attributes[key] * 5}%` }} />
+                  </span>
+                  <span className="v">{p.attributes[key]}</span>
+                </Fragment>
+              ))}
+            </div>
+            <p className="quiet" style={{ marginTop: 6 }}>
+              1–20, rolled from the race at promotion
+              {notable ? ' (kept from history for notables)' : ''}.
+            </p>
+          </details>
+        </>
+      )}
     </div>
   );
 }
 
-function HouseholdPage({ m, a, sel, h }: Omit<PanelProps, 'ui'> & { h: Household }) {
+function HouseholdPage({ m, a, sel, ui, h }: PanelProps & { h: Household }) {
   const head = m.world.people.get(h.head);
   const b = h.home === null ? undefined : m.active.buildings.get(h.home);
   const dynasties = [
@@ -1509,6 +2023,29 @@ function HouseholdPage({ m, a, sel, h }: Omit<PanelProps, 'ui'> & { h: Household
   const parentsOf = (id: Id) => m.world.people.get(id)?.family.parents ?? [];
   const alone = h.members.length === 1;
   const inHall = b?.defId === 'hall';
+  // Pairs inside the household where one holds the other as enemy or rival, or has a grudge.
+  const tensions = h.members.flatMap((from) => {
+    const holder = m.world.people.get(from);
+    return h.members.flatMap((to) => {
+      const rel = holder?.detail?.relationships.get(to);
+      if (!holder || !rel || from === to) return [];
+      const word = rel.labels.includes('enemy')
+        ? 'is an enemy of'
+        : rel.labels.includes('rival')
+          ? 'is a rival of'
+          : rel.grudge
+            ? 'holds a grudge against'
+            : null;
+      return word ? [{ from, to, word, holder, rel }] : [];
+    });
+  });
+  // The last six site events that name a member, newest first (events are in time order).
+  const lately: SimEvent[] = [];
+  for (let k = m.world.events.length - 1; k >= 0 && lately.length < 6; k--) {
+    const e = m.world.events[k]!;
+    if (e.day < m.active.enteredDay) break;
+    if (e.actors.some((x) => h.members.includes(x)) && m.index.event(e.id)) lately.push(e);
+  }
   return (
     <div className="page">
       <div>
@@ -1567,11 +2104,52 @@ function HouseholdPage({ m, a, sel, h }: Omit<PanelProps, 'ui'> & { h: Household
                       )
                     : ''}
                 </span>
+                {p?.detail?.activity && (
+                  <span className="empty">
+                    {' · '}
+                    {ACTIVITY_SHORT[p.detail.activity]}
+                    {!ui.numbers && ` · ${moodWord(p.detail.mood)}`}
+                  </span>
+                )}
               </div>
             </li>
           );
         })}
       </ul>
+      {tensions.length > 0 && (
+        <>
+          <div className="sect">Tensions</div>
+          <ul className="list">
+            {tensions.map((t) => (
+              <li key={`${t.from}:${t.to}`} className="ppl" style={{ padding: '3px 0' }}>
+                <PersonLink m={m} a={a} sel={sel} id={t.from} /> {t.word}{' '}
+                <PersonLink m={m} a={a} sel={sel} id={t.to} />
+                <div className="empty reason">
+                  <TieReason m={m} a={a} p={t.holder} other={t.to} rel={t.rel} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {lately.length > 0 && (
+        <>
+          <div className="sect">Lately</div>
+          <ul className="list">
+            {lately.map((e) => (
+              <EventItem
+                key={e.id}
+                m={m}
+                a={a}
+                ui={ui}
+                id={e.id}
+                path={`h${h.id}>${e.id}`}
+                label={shortDay(e.day, m.world.day)}
+              />
+            ))}
+          </ul>
+        </>
+      )}
       <div className="actions">
         <button type="button" onClick={() => a.showOnMap({ kind: 'household', id: h.id })}>
           Show on map
@@ -1649,7 +2227,7 @@ function BuildingPage({ m, a, sel, ui, b }: PanelProps & { b: Building }) {
   const unfinished = b.progress !== undefined;
   if (!unfinished && (b.defId === 'home' || b.defId === 'hall')) {
     const h = homeHousehold(m, b);
-    if (h) return <HouseholdPage m={m} a={a} sel={sel} h={h} />;
+    if (h) return <HouseholdPage m={m} a={a} sel={sel} ui={ui} h={h} />;
     if (!b.followed || b.defId === 'home') return <CountedHomePage m={m} />;
   }
   void ui;
@@ -1879,7 +2457,7 @@ export function InspectPane(props: PanelProps) {
   if (sel.kind === 'person') return <PersonPage {...props} id={sel.id} />;
   if (sel.kind === 'household') {
     const h = m.active.households.get(sel.id);
-    return h ? <HouseholdPage m={m} a={a} sel={sel} h={h} /> : null;
+    return h ? <HouseholdPage m={m} a={a} sel={sel} ui={props.ui} h={h} /> : null;
   }
   if (sel.kind === 'building') {
     const b = m.active.buildings.get(sel.id);
@@ -2026,6 +2604,17 @@ function LoreFacts({ m, a }: { m: SiteModel; a: PanelActions }) {
 
 export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
   const { site, active, scene, world, content } = m;
+  // M3.11: the newest season or year recap of the days watched.
+  const recapTypes = [content.chronicle.recap.seasonType, content.chronicle.recap.yearType];
+  let lastRecap: SimEvent | undefined;
+  for (let i = world.events.length - 1; i >= 0; i -= 1) {
+    const event = world.events[i]!;
+    if (event.day < active.enteredDay) break;
+    if (recapTypes.includes(event.type) && m.index.event(event.id)) {
+      lastRecap = event;
+      break;
+    }
+  }
   const followed = active.residents.length;
   const share = m.total > 0 ? followed / m.total : 1;
   const bio = biography(world, content, m.narrator, m.index, { kind: 'site', id: site.id });
@@ -2124,6 +2713,19 @@ export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
         <h3>{site.name}</h3>
       </div>
       {bio.summary.length > 0 && <p className="summary">{cap(bio.summary.join(' '))}</p>}
+      {lastRecap && (
+        <>
+          <div className="sect">
+            The historian&apos;s last word{' '}
+            <button type="button" className="why" onClick={() => a.showChronicle('recap')}>
+              all recaps
+            </button>
+          </div>
+          <ul className="chron">
+            <RecapCard m={m} a={a} id={lastRecap.id} />
+          </ul>
+        </>
+      )}
       <div className="split">
         <div className="sect">
           People <span className="r">{m.total}</span>
@@ -2524,159 +3126,3 @@ export function PeoplePane({ m, a, sel, ui }: PanelProps) {
 // ---- Chronicle ----
 
 /** A line from the watched days: the opening note, or an event the site emitted. */
-export interface LiveLine {
-  day: number;
-  /** An event id; absent for the opening note. */
-  eventId?: Id;
-  text?: string;
-}
-
-const FLOORS: [number, string][] = [
-  [0, 'All'],
-  [3, '★'],
-  [6, '★★'],
-  [9, '★★★'],
-];
-
-export function ChroniclePane({
-  m,
-  a,
-  ui,
-  live,
-}: Omit<PanelProps, 'sel'> & { live: readonly LiveLine[] }) {
-  const ref: LegendRef = { kind: 'site', id: m.site.id };
-  const every = m.index.events(ref);
-  const bio = biography(m.world, m.content, m.narrator, m.index, ref);
-  // Days watched have their own "At the site" list, so this one stops at arrival.
-  const arrived = m.active.enteredDay;
-  const ids = (ui.mode === 'highlights' ? bio.lines.map((l) => l.eventId) : [...every]).filter(
-    (id) => {
-      const event = m.index.event(id);
-      return event !== undefined && event.day <= arrived;
-    },
-  );
-  const groups = m.content.typeGroups ?? [];
-  const groupOf = new Map<string, string>();
-  for (const g of groups) for (const type of g.types) groupOf.set(type, g.id);
-  const present = groups.filter((g) =>
-    ids.some((id) => groupOf.get(m.index.event(id)!.type) === g.id),
-  );
-  const shown = ids
-    .filter((id) => {
-      const event = m.index.event(id)!;
-      return !ui.hidden.has(groupOf.get(event.type) ?? '') && event.importance >= ui.floor;
-    })
-    .reverse();
-  return (
-    <div className="page">
-      <div className="sect">
-        At the site <span className="r">newest first</span>
-      </div>
-      {ui.liveOnly !== null && (
-        <div className="chips" role="group" aria-label="Shown at the site">
-          <button
-            type="button"
-            className="chip tg"
-            aria-pressed={true}
-            title="Show every event again"
-            onClick={() => ui.setLiveOnly(null)}
-          >
-            {ui.liveOnly} only ×
-          </button>
-        </div>
-      )}
-      <ul className="chron">
-        {[...live]
-          .filter(
-            (line) =>
-              ui.liveOnly === null ||
-              (line.eventId !== undefined &&
-                m.typeDefs.get(m.index.event(line.eventId)?.type ?? '')?.category === ui.liveOnly),
-          )
-          .reverse()
-          .map((line, k) =>
-            line.eventId !== undefined ? (
-              <EventItem
-                key={`${line.eventId}:${k}`}
-                m={m}
-                a={a}
-                ui={ui}
-                id={line.eventId}
-                path={`l${line.eventId}`}
-                label={shortDay(line.day)}
-              />
-            ) : (
-              <li key={`n${k}`} className="ev now">
-                <span className="y">{shortDay(line.day)}</span>
-                <span className="txt">{line.text}</span>
-              </li>
-            ),
-          )}
-      </ul>
-      <div className="sect">
-        Before you arrived <span className="r">from the legends</span>
-      </div>
-      <div className="toolrow">
-        <div className="seg" role="group" aria-label="Which events">
-          {(
-            [
-              ['highlights', 'Highlights'],
-              ['all', 'Every event'],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={ui.mode === value}
-              onClick={() => ui.setMode(value)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="seg" role="group" aria-label="Importance at least">
-          {FLOORS.map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={ui.floor === value}
-              title={`Importance ${label}`}
-              onClick={() => ui.setFloor(value)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="chips" role="group" aria-label="Kinds of event">
-        {present.map((g) => (
-          <button
-            key={g.id}
-            type="button"
-            className="chip tg"
-            aria-pressed={!ui.hidden.has(g.id)}
-            onClick={() => ui.toggleGroup(g.id)}
-          >
-            {g.label.toLowerCase()}
-          </button>
-        ))}
-      </div>
-      <p className="quiet">
-        {shown.length} of {ids.length} events shown, newest first. &quot;why?&quot; unfolds the
-        causes one step at a time.
-      </p>
-      {shown.length === 0 ? (
-        <ul className="chron">
-          <li className="empty">No events match.</li>
-        </ul>
-      ) : (
-        <LegendLines m={m} a={a} ui={ui} ids={shown.slice(0, ui.limit)} prefix="c" />
-      )}
-      {shown.length > ui.limit && (
-        <button type="button" onClick={ui.more}>
-          Show {CHRONICLE_WINDOW} more ({ui.limit} of {shown.length})
-        </button>
-      )}
-    </div>
-  );
-}

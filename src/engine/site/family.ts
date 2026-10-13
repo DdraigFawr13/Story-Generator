@@ -519,6 +519,7 @@ function bear(env: SocialEnv, rng: RngStream, mother: Person, fatherId: Id): voi
       Object.keys(startingNeeds(content, culture.values.faith)).map((n) => [n, env.day]),
     ),
     conditions: [],
+    today: [],
   };
   world.people.set(id, child);
   active.promoted.push(id);

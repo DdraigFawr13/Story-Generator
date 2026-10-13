@@ -42,6 +42,7 @@ export type SiteContent = Pick<
   | 'lore'
   | 'awakenings'
   | 'politics'
+  | 'chronicle'
   | 'notables'
 >;
 

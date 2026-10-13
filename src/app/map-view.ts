@@ -126,7 +126,15 @@ export interface SiteLink {
   zoom: number | null;
   /** Tile at the centre of the view. */
   at: { x: number; y: number } | null;
+  /** M3.11: the pane tab open (`tab=chron`); null for Inspect. */
+  tab: SiteTab | null;
+  /** M3.11: the person page's section (`sec=ties`); null for Now. */
+  sec: PersonSection | null;
 }
+export const PERSON_SECTIONS = ['now', 'ties', 'story', 'skills'] as const;
+export type PersonSection = (typeof PERSON_SECTIONS)[number];
+export const SITE_TABS = ['inspect', 'site', 'people', 'chron'] as const;
+export type SiteTab = (typeof SITE_TABS)[number];
 /** Most zoom steps the site view has, for validating `z`. */
 const SITE_ZOOM_STEPS = 5;
 const SITE_OPEN = /^(?:(?:person|household|building):\d{1,9}|tile:\d{1,3},\d{1,3})$/;
@@ -166,6 +174,8 @@ function parseSiteLink(params: URLSearchParams): SiteLink | null {
   const open = params.get('open') ?? '';
   const z = Number(params.get('z'));
   const at = /^(\d{1,3}),(\d{1,3})$/.exec(params.get('at') ?? '');
+  const tab = SITE_TABS.find((t) => t === params.get('tab')) ?? null;
+  const sec = PERSON_SECTIONS.find((t) => t === params.get('sec')) ?? null;
   return {
     site: Number(site),
     day: day !== null && /^\d{1,6}$/.test(day) ? Math.min(Number(day), MAX_LINK_DAY) : 0,
@@ -173,6 +183,8 @@ function parseSiteLink(params: URLSearchParams): SiteLink | null {
     open: SITE_OPEN.test(open) ? open : null,
     zoom: Number.isInteger(z) && z >= 1 && z <= SITE_ZOOM_STEPS ? z - 1 : null,
     at: at ? { x: Number(at[1]), y: Number(at[2]) } : null,
+    tab: tab === 'inspect' ? null : tab,
+    sec: sec === 'now' ? null : sec,
   };
 }
 
@@ -203,6 +215,10 @@ export function buildSiteUrl(link: {
   open: string | null;
   zoom: number;
   at: { x: number; y: number };
+  /** The pane tab; Inspect (or none) is left out. */
+  tab?: SiteTab | null;
+  /** The person page's section; Now (or none) is left out. */
+  sec?: PersonSection | null;
 }): string {
   const parts = [
     `seed=${encodeURIComponent(link.seed)}`,
@@ -214,6 +230,8 @@ export function buildSiteUrl(link: {
   if (link.open)
     parts.push(`open=${encodeURIComponent(link.open).replace(/%3A/g, ':').replace(/%2C/g, ',')}`);
   parts.push(`z=${link.zoom + 1}`, `at=${link.at.x},${link.at.y}`);
+  if (link.tab && link.tab !== 'inspect') parts.push(`tab=${link.tab}`);
+  if (link.sec && link.sec !== 'now') parts.push(`sec=${link.sec}`);
   return `/?${parts.join('&')}`;
 }
 

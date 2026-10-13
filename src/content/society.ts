@@ -349,7 +349,7 @@ export const SOCIETY_EVENTS: EventTypeDef[] = [
   {
     id: 'site_judged',
     baseImportance: 4,
-    title: '{actor} {punishment}',
+    title: '{actor} judged for {crime} and {punishment}',
     causeWord: 'for',
     category: 'social',
     links: { site: 'site' },

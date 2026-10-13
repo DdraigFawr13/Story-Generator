@@ -243,6 +243,8 @@ export interface ContentBundle {
   awakenings: AwakeningDef[];
   /** Thin politics and trade (M3.10): the site's leader and succession, and caravans from trade partners. */
   politics: PoliticsRules;
+  /** Chronicle, recaps and inspector (M3.11): rollups of small site lines and the historian's recaps. */
+  chronicle: ChronicleRules;
 }
 
 /** What a condition is, for its harm and the words of its chronicle lines (M3.5). */
@@ -2338,5 +2340,41 @@ export interface PoliticsRules {
     caravanBought: string;
     caravanNothing: string;
     caravanWaits: string;
+  };
+}
+
+/** One entry of a recap's tally (M3.11): events of these types counted, worded for one and for many. */
+export interface RecapTally {
+  types: string[];
+  /** `{n}` is the count, spelled out up to ten. */
+  one: string;
+  many: string;
+  /** Ranks the entry: the most telling counts are named first, and the rest dropped past the cap. */
+  weight: number;
+  /** Also counts the largest `key` of these events, such as the sick in an outbreak. */
+  peak?: { type: string; key: string };
+}
+
+/** The watched site's chronicle (M3.11). */
+export interface ChronicleRules {
+  /** Site lines below this importance fold into one line a month in the live chronicle. */
+  rollupBelow: number;
+  recap: {
+    seasonType: string;
+    yearType: string;
+    /** The period's most important events, cited as the recap's causes, so "why?" shows them. */
+    causes: number;
+    /** Events below this importance are never cited. */
+    causeAtLeast: number;
+    /** A zero count is left out; the rest are ranked by weight, and at most `maxTally` are named. */
+    tally: RecapTally[];
+    maxTally: { season: number; year: number };
+    /** What a season was about, from its top event's type, else from that event's category. */
+    themes: Record<string, string>;
+    themeByCategory: Record<string, string>;
+    /** The tally when nothing on the list happened. */
+    quiet: string;
+    /** The names of the seasons, spring first. */
+    seasons: string[];
   };
 }
