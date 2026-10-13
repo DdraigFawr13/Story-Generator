@@ -7,7 +7,7 @@ import { cultureGivenName } from '../people/names';
 import { rollAptitude } from '../people/aptitude';
 import type { BirthTierId } from '../people/tiers';
 import type { Civ, Id, NotableRole, Person, Site } from '../core/types';
-import { liveSites, type HistoryRun } from './state';
+import type { HistoryRun } from './state';
 
 /** Share of a lifespan after which a person is an elder. */
 const ELDER_SHARE = 0.75;
@@ -236,9 +236,4 @@ export function mostFamous(run: HistoryRun, civId: Id, adultsOnly = false): Pers
     if (!best || person.fame > best.fame) best = person;
   }
   return best;
-}
-
-/** Live sites of a civ, in id order. */
-export function civLiveSites(run: HistoryRun, civ: Civ): Site[] {
-  return liveSites(run).filter((s) => s.civId === civ.id);
 }

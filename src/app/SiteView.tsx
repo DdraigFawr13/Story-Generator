@@ -37,6 +37,7 @@ import {
   createSiteModel,
   shownBlock,
   dayText,
+  monthName,
   joinList,
   selectionAnnouncement,
   selectionName,
@@ -722,7 +723,7 @@ export function SiteView(props: Props) {
   const blockDay = shown.day;
   const blockSeason = dateOf(blockDay).season;
   const date_ = narrow ? shortDate(blockDay) : dayText(blockDay);
-  const monthName = dayText(blockDay).split(' ')[1]!.replace(',', '');
+  const month = monthName(blockDay);
   const chip = weatherChip({ world, active, content }, narrow);
   // On a phone the time of day moves down beside the speed buttons, and the rate is rounded.
   const rateText = narrow
@@ -1065,7 +1066,7 @@ export function SiteView(props: Props) {
               <span className={`season ${blockSeason}`}>
                 {narrow
                   ? blockSeason
-                  : `${blockSeason} · ${monthName} · ${DAY_BLOCKS[lastBlock]}${shown.restDay ? ' · rest day' : ''}`}
+                  : `${blockSeason} · ${month} · ${DAY_BLOCKS[lastBlock]}${shown.restDay ? ' · rest day' : ''}`}
               </span>
               <span
                 className={`season wx${chip.warn ? ' warn' : ''}`}

@@ -4,6 +4,7 @@
 // epochs that were still running when it ended shift the odds of a bad year, as they did there.
 // All numbers are in content/weather.ts.
 
+import { clamp, epochCovers } from '../core/math';
 import type { EmitInput } from '../core/context';
 import { DAYS_PER_YEAR, MONTHS_PER_YEAR, dateOf } from '../core/clock';
 import { streamFor } from '../core/rng';
@@ -22,7 +23,6 @@ import type { SiteContent } from './defs';
 
 type Emit = (input: EmitInput) => SimEvent;
 
-const clamp = (x: number, lo: number, hi: number) => (x < lo ? lo : x > hi ? hi : x);
 const round1 = (x: number) => Math.round(x * 10) / 10;
 const within = (month: number, [from, to]: readonly [number, number]) =>
   month >= from && month <= to;
@@ -67,9 +67,7 @@ export function climateEpochAt(
   const y = (k - x) / cells.width;
   for (const epoch of world.climateEpochs ?? []) {
     if (epoch.kind !== kind || year < epoch.start || year > epoch.end) continue;
-    const dx = x - (epoch.cell % cells.width);
-    const dy = y - Math.floor(epoch.cell / cells.width);
-    if (dx * dx + dy * dy <= epoch.radius * epoch.radius) return epoch;
+    if (epochCovers(epoch, x, y, cells.width)) return epoch;
   }
   return undefined;
 }

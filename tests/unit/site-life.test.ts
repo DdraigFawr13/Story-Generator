@@ -4,18 +4,16 @@ import {
   embark,
   findRoute,
   foodDaysLeft,
-  generateWorld,
   memoryMood,
   nodesExpanded,
-  sitePopulation,
   stepBlock,
   stepSite,
   straightLine,
   type ActiveSite,
   type SimEvent,
-  type Site,
   type WorldState,
 } from '../../src/engine';
+import { biggest, copy } from './helpers/site-fixture';
 
 const C = DEFAULT_CONTENT;
 const LIFE = C.life;
@@ -25,14 +23,6 @@ const BREAKDOWNS = new Set([
   LIFE.events.wandering,
   LIFE.events.theft,
 ]);
-
-let shared: WorldState | undefined;
-const base = () => (shared ??= generateWorld('SITE-A', { width: 64, height: 64 }, C));
-const copy = () => structuredClone(base());
-const biggest = (world: WorldState): Site =>
-  [...world.sites.values()]
-    .filter((s) => s.ruinedYear === undefined && sitePopulation(s) > 0)
-    .sort((a, b) => sitePopulation(b) - sitePopulation(a) || a.id - b.id)[0]!;
 
 /** Days until the first breakdown event (or `days` if none), and the events seen. */
 function runUntilBreakdown(world: WorldState, days: number, content: typeof C = C) {

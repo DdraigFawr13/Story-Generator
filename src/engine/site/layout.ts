@@ -1,6 +1,7 @@
 // Starting layout (M3.1): stamps the hall, well, stockpile, shrine, homes, fields and dock into a
 // local map, and carves paths. Buildings are placed in rings around an origin near the map centre.
 
+import { ORTHO } from '../core/math';
 import type { SiteRules } from '../core/content-types';
 import type { Building, LocalMap } from '../core/types';
 import { hash2 } from '../worldgen/noise';
@@ -183,12 +184,6 @@ export function layoutSite(
       queue.push(k);
     }
   }
-  const ORTHO: [number, number][] = [
-    [1, 0],
-    [-1, 0],
-    [0, 1],
-    [0, -1],
-  ];
   for (let head = 0; head < queue.length; head += 1) {
     const k = queue[head]!;
     const x = k % size;

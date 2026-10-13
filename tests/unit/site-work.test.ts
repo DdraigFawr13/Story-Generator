@@ -12,31 +12,23 @@ import {
   leaveSite,
   applySiteSnapshot,
   siteSnapshot,
-  sitePopulation,
   siteWorkplaces,
   skillCap,
   stepBlock,
   stepSite,
   type HeldItem,
   type Person,
-  type Site,
   type WorldState,
 } from '../../src/engine';
+import { biggest, copy } from './helpers/site-fixture';
 
 const C = DEFAULT_CONTENT;
 const ST = C.steward;
 
-let shared: WorldState | undefined;
-const base = () => (shared ??= generateWorld('SITE-A', { width: 64, height: 64 }, C));
-const copy = () => structuredClone(base());
 /** A world whose biggest site is not already at the food-worker ceiling when fed. */
 let shortBase: WorldState | undefined;
 const shortCopy = () =>
   structuredClone((shortBase ??= generateWorld('SITE-B', { width: 64, height: 64 }, C)));
-const biggest = (world: WorldState): Site =>
-  [...world.sites.values()]
-    .filter((s) => s.ruinedYear === undefined && sitePopulation(s) > 0)
-    .sort((a, b) => sitePopulation(b) - sitePopulation(a) || a.id - b.id)[0]!;
 const bandOf = (world: WorldState, p: Person) => {
   const race = C.races.find((r) => r.id === p.raceId)!;
   const age = world.params.historyYears - p.born;

@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
-import {
-  applySiteSnapshot,
-  embark,
-  generateWorld,
-  siteSnapshot,
-  sitePopulation,
-  type Building,
-  type Site,
-  type WorldState,
-} from '../../src/engine';
+import { applySiteSnapshot, embark, siteSnapshot, type Building } from '../../src/engine';
 import { cropLook, liveLayers } from '../../src/app/site-render';
 import {
   fieldFacts,
@@ -20,14 +11,9 @@ import {
   stewardLine,
   weatherChip,
 } from '../../src/app/site-season';
+import { base, biggest } from './helpers/site-fixture';
 
 const C = DEFAULT_CONTENT;
-let shared: WorldState | undefined;
-const base = () => (shared ??= generateWorld('SITE-A', { width: 64, height: 64 }, C));
-const biggest = (world: WorldState): Site =>
-  [...world.sites.values()]
-    .filter((s) => s.ruinedYear === undefined && sitePopulation(s) > 0)
-    .sort((a, b) => sitePopulation(b) - sitePopulation(a) || a.id - b.id)[0]!;
 function fresh() {
   const world = structuredClone(base());
   const active = embark(world, C, biggest(world).id);

@@ -2,7 +2,7 @@
 // cooldowns, links and the latest event per site only matter while the years run.
 
 import { createEmitter, type EmitInput } from '../core/context';
-import type { ContentBundle, HistoryRules, RaceDef } from '../core/content-types';
+import type { ContentBundle, EventTypeDef, HistoryRules, RaceDef } from '../core/content-types';
 import { streamFor, type RngStream } from '../core/rng';
 import type { Civ, Goods, Id, SimEvent, Site, WorldCells, WorldState } from '../core/types';
 import type { SiteLinks, LinkSearch } from './links';
@@ -59,6 +59,8 @@ export interface DiseaseState {
 export interface ImportanceState {
   /** The plain emitter; `emitScored` adds the importance bonus on top. */
   base: (input: EmitInput) => SimEvent;
+  /** Content event types by id. */
+  types: ReadonlyMap<string, EventTypeDef>;
   /** Event types emitted so far in the run (novelty). */
   seen: Set<string>;
   /** Year of the latest event per `${type}@${place}` (repeat penalty). */
@@ -287,6 +289,7 @@ export function createRun(
     templeSpots: new Set(),
     importance: {
       base: createEmitter(world, content.eventTypes),
+      types: new Map(content.eventTypes.map((t) => [t.id, t])),
       seen: new Set(),
       lastAt: new Map(),
       trivial: new Set(),

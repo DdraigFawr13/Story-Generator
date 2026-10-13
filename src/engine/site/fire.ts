@@ -5,6 +5,7 @@
 // its tiles burnt is burnt down: its household is taken in by kin (or the hall) until the build job
 // raises the home again. Nobody is hurt (health comes in M3.5). Numbers: content/weather.ts.
 
+import { ORTHO, manhattan, sortByManhattan, sortedById } from '../core/math';
 import type { EmitInput } from '../core/context';
 import { dateOf } from '../core/clock';
 import { streamFor } from '../core/rng';
@@ -16,13 +17,6 @@ import { invalidatePaths } from './path';
 import { burnTree } from './wild';
 
 type Emit = (input: EmitInput) => SimEvent;
-
-const NEIGHBOURS: readonly (readonly [number, number])[] = [
-  [1, 0],
-  [-1, 0],
-  [0, 1],
-  [0, -1],
-];
 
 /** A fire that just began: the event and the tile, for witnesses to remember. */
 export interface FireStart {
@@ -266,7 +260,7 @@ function lodgingFor(world: WorldState, active: ActiveSite, burnt: Building, hous
       p.family.parents.some((x) => q.family.parents.includes(x))
     );
   };
-  for (const other of [...active.households.values()].sort((a, b) => a.id - b.id)) {
+  for (const other of sortedById(active.households.values())) {
     if (other.id === household.id || other.members.length === 0) continue;
     const home = other.home === null ? undefined : active.buildings.get(other.home);
     if (!standing(home)) continue;
@@ -278,7 +272,7 @@ function lodgingFor(world: WorldState, active: ActiveSite, burnt: Building, hous
   let bestD = Infinity;
   for (const b of [...active.buildings.values()].sort((a, c) => a.id - c.id)) {
     if (b.defId !== 'home' || !standing(b)) continue;
-    const d = Math.abs(b.x - burnt.x) + Math.abs(b.y - burnt.y);
+    const d = manhattan(b.x, b.y, burnt.x, burnt.y);
     if (d < bestD) {
       best = b;
       bestD = d;
@@ -378,7 +372,7 @@ export function spreadFire(
   for (const t of burning) {
     const x = t % map.width;
     const y = (t - x) / map.width;
-    for (const [dx, dy] of NEIGHBOURS) {
+    for (const [dx, dy] of ORTHO) {
       const nx = x + dx;
       const ny = y + dy;
       if (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) continue;
@@ -456,12 +450,7 @@ export function fightingSpots(active: ActiveSite, walkable: (tile: number) => bo
   }
   const sx = fire.start % map.width;
   const sy = Math.floor(fire.start / map.width);
-  return [...spots].sort(
-    (a, b) =>
-      Math.abs((a % map.width) - sx) +
-        Math.abs(Math.floor(a / map.width) - sy) -
-        (Math.abs((b % map.width) - sx) + Math.abs(Math.floor(b / map.width) - sy)) || a - b,
-  );
+  return sortByManhattan([...spots], map.width, sx, sy);
 }
 
 /**

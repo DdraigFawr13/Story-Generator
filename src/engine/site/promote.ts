@@ -2,6 +2,8 @@
 // records; everyone else becomes a new `Person` matching the site's race, culture and age bands,
 // grouped into households by the culture's marriage custom, and housed in a freshly laid-out map.
 
+import { sortedById } from '../core/math';
+import { totalPop } from '../history/pop';
 import { streamFor } from '../core/rng';
 import {
   GOODS,
@@ -64,7 +66,7 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
     if (!culture) throw new Error(`Unknown culture "${id}".`);
     return culture;
   };
-  const total = site.pop.reduce((n, b) => n + b.count, 0);
+  const total = totalPop(site);
   const share = total > rules.followCap ? rules.followCap / total : 1;
 
   const residents = new Map<Id, Resident>();
@@ -359,7 +361,7 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
   const hall = layout.buildings.find((b) => b.defId === 'hall');
   const homes = layout.buildings.filter((b) => b.defId === 'home');
   let nextHome = 0;
-  for (const h of [...households.values()].sort((a, b) => a.id - b.id)) {
+  for (const h of sortedById(households.values())) {
     const home = h === hallHousehold && hall ? hall : homes[nextHome++];
     if (!home) continue;
     home.owner = h.head;

@@ -22,19 +22,14 @@ import {
 } from '../../src/engine';
 
 import smokeMap from '../fixtures/smoke-localmap-digest.json';
+import { base, biggest, copy } from './helpers/site-fixture';
 
 const C = DEFAULT_CONTENT;
 /** A small cap makes the biggest 64x64 site a "big" one without a huge world. */
 const SMALL_CAP = { ...C, site: { ...C.site, followCap: 30 } };
 
-let shared: WorldState | undefined;
-const base = () => (shared ??= generateWorld('SITE-A', { width: 64, height: 64 }, C));
-const copy = () => structuredClone(base());
-
 const liveSites = (world: WorldState): Site[] =>
   [...world.sites.values()].filter((s) => s.ruinedYear === undefined && sitePopulation(s) > 0);
-const biggest = (world: WorldState) =>
-  liveSites(world).sort((a, b) => sitePopulation(b) - sitePopulation(a) || a.id - b.id)[0]!;
 const smallest = (world: WorldState) =>
   liveSites(world).sort((a, b) => sitePopulation(a) - sitePopulation(b) || a.id - b.id)[0]!;
 

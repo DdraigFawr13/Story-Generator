@@ -6,6 +6,7 @@
 // from the stores and the building site, and fills the slots with the best able worker. Each work
 // block `runWork` turns the crew standing at their workplaces into items, progress and skill.
 
+import { ORTHO, clamp, sortByManhattan, sortedById } from '../core/math';
 import type { EmitInput } from '../core/context';
 import { dateOf } from '../core/clock';
 import type { AbilityDef, ItemDef, JobDef, Workplace } from '../core/content-types';
@@ -21,7 +22,6 @@ import type {
   SimEvent,
   WorldState,
 } from '../core/types';
-import { meetsRequirements } from '../people/aptitude';
 import { TIERS, TIER_IDS, tierOfPower } from '../people/tiers';
 import {
   beginBuilding,
@@ -76,14 +76,7 @@ export interface HeldItem {
 const MAP_BOUND: readonly Workplace[] = ['trees', 'water', 'stone', 'ore', 'wild', 'herbs'];
 /** Fallback learning attributes for a job with no skill (hauling). */
 const LABOUR_ATTRIBUTES: AttributeKey[] = ['strength', 'endurance'];
-const ORTHO: [number, number][] = [
-  [1, 0],
-  [-1, 0],
-  [0, 1],
-  [0, -1],
-];
 
-const clamp = (x: number, lo: number, hi: number) => (x < lo ? lo : x > hi ? hi : x);
 const inMonths = (month: number, [from, to]: readonly [number, number]) =>
   month >= from && month <= to;
 /** Tiles per side of the grid a hunter's quarry is snapped to. */
@@ -175,29 +168,6 @@ export function effectivePower(person: Pick<Person, 'magic'>, held: readonly Hel
   const above = TIER_IDS[Math.min(TIER_IDS.indexOf(tierOfPower(base)) + 1, TIER_IDS.length - 1)]!;
   const cap = Math.min(20, TIERS[above].maxPower);
   return Math.max(base, Math.min(base + bonus, cap));
-}
-
-/** Abilities a held item lets its holder use, when they meet the ability's requirements. */
-export function knownWhileHeld(
-  person: Pick<Person, 'attributes' | 'magic'>,
-  held: readonly HeldItem[],
-  content: Pick<SiteContent, 'abilities'>,
-): AbilityDef[] {
-  const effective = {
-    attributes: effectiveAttributes(person, held),
-    magic: { power: effectivePower(person, held), affinities: person.magic.affinities },
-  };
-  const known: AbilityDef[] = [];
-  for (const { def } of held) {
-    for (const effect of def.effects ?? []) {
-      if (effect.kind !== 'ability') continue;
-      const ability = abilityOf(content.abilities, effect.abilityId);
-      if (ability && !known.includes(ability) && meetsRequirements(effective, ability)) {
-        known.push(ability);
-      }
-    }
-  }
-  return known;
 }
 
 /** The skill ceiling: the mean potential over the ability's learning attributes (1-20). */
@@ -344,9 +314,7 @@ function nearFeature(
       if (reach[ny * w + nx]) found.add(ny * w + nx);
     }
   }
-  const dist = (k: number) =>
-    Math.abs((k % w) - origin[0]) + Math.abs(Math.floor(k / w) - origin[1]);
-  return [...found].sort((a, b) => dist(a) - dist(b) || a - b);
+  return sortByManhattan([...found], w, origin[0], origin[1]);
 }
 
 function rebuildLists(ws: WorkSite, content: SiteContent, active: ActiveSite): void {
@@ -387,9 +355,7 @@ function rebuildLists(ws: WorkSite, content: SiteContent, active: ActiveSite): v
     if (Math.max(Math.abs(x - origin[0]), Math.abs(y - origin[1])) < steward.wildFrom) continue;
     wild.push(k);
   }
-  const dist = (k: number) =>
-    Math.abs((k % w) - origin[0]) + Math.abs(Math.floor(k / w) - origin[1]);
-  ws.wild = wild.sort((a, b) => dist(a) - dist(b) || a - b);
+  ws.wild = sortByManhattan(wild, w, origin[0], origin[1]);
   const has = new Set<Workplace>(['construction']);
   const built = [...active.buildings.values()];
   if (built.some((b) => b.defId === 'field' && b.followed)) has.add('field');
@@ -768,7 +734,7 @@ export function runSteward(
     );
   };
   if (!openConstruction(active)) {
-    const households = [...active.households.values()].sort((a, b) => a.id - b.id);
+    const households = sortedById(active.households.values());
     const homeless = households.find((h) => h.home === null && h.members.length > 0);
     const hasWorkshop = [...active.buildings.values()].some((b) => b.defId === st.workshopBuilding);
     // A home the steward raised already was the answer to a crowded household.

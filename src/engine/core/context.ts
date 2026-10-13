@@ -35,7 +35,13 @@ export function createEmitter(
   state: WorldState,
   eventTypes: readonly EventTypeDef[],
 ): (input: EmitInput) => SimEvent {
-  const types = new Map(eventTypes.map((def) => [def.id, def]));
+  return emitterFor(state, new Map(eventTypes.map((def) => [def.id, def])));
+}
+
+function emitterFor(
+  state: WorldState,
+  types: ReadonlyMap<string, EventTypeDef>,
+): (input: EmitInput) => SimEvent {
   return (input) => {
     const def = types.get(input.type);
     if (!def) throw new Error(`Event type "${input.type}" has no content definition.`);
@@ -57,7 +63,7 @@ export function createEmitter(
 
 export function createContext(state: WorldState, content: ContentBundle): SimContext {
   const types = new Map(content.eventTypes.map((def) => [def.id, def]));
-  const emit = createEmitter(state, content.eventTypes);
+  const emit = emitterFor(state, types);
   const ctx: SimContext = {
     state,
     content,

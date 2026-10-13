@@ -9,6 +9,7 @@ import { createEmitter } from '../core/context';
 import type { ContentBundle, CultureDef, RaceDef, SettlementRules } from '../core/content-types';
 import { streamFor, type RngStream } from '../core/rng';
 import { emptyGoods } from './goods';
+import { totalPop } from './pop';
 import type {
   Civ,
   Id,
@@ -319,9 +320,7 @@ export function popBands(
 }
 
 /** Total people at a site. */
-export function sitePopulation(site: Pick<Site, 'pop'>): number {
-  return site.pop.reduce((n, band) => n + band.count, 0);
-}
+export const sitePopulation = totalPop;
 
 export function sizeKind(pop: number, rules: SettlementRules): SiteKind {
   for (const [limit, kind] of rules.kindByPop) if (pop < limit) return kind;

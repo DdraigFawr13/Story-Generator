@@ -2,6 +2,7 @@
 // (see work.ts), and finishing it moves a household in. Buildings are stamped into the map when
 // begun so people can see them go up; `progress` marks one as unfinished.
 
+import { manhattan } from '../core/math';
 import type { EmitInput } from '../core/context';
 import type { StewardRules } from '../core/content-types';
 import type { ActiveSite, Building, Id, SimEvent } from '../core/types';
@@ -191,7 +192,7 @@ export function finishBuilding(
     if (map.terrain[k] !== code || map.water[k] !== 0) continue;
     const x = k % map.width;
     const y = (k - x) / map.width;
-    const d = Math.abs(x - dx) + Math.abs(y - dy);
+    const d = manhattan(x, y, dx, dy);
     if (d < bestD) {
       bestD = d;
       best = k;
