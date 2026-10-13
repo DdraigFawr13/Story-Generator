@@ -38,7 +38,7 @@ export function siteContentOf(content: SiteContent): SiteContent {
   const { abilities, items, jobs, steward, environment } = content;
   const { health, conditions, ailments, diseases } = content;
   const { interactions, social, family, society, creatures, threats, lore, awakenings } = content;
-  const { notables } = content;
+  const { notables, politics } = content;
   return {
     biomes,
     resources,
@@ -69,6 +69,7 @@ export function siteContentOf(content: SiteContent): SiteContent {
     threats,
     lore,
     awakenings,
+    politics,
     notables,
   };
 }

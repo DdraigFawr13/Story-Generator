@@ -140,7 +140,10 @@ function refreshStatus(world: WorldState, content: SiteContent, active: ActiveSi
     });
     const points =
       (rules.jobs[detail.jobId ?? ''] ?? 0) +
-      (rules.titles[p.title ?? ''] ?? 0) +
+      // M3.10: the site's leader counts as titled, unless their own title is worth more.
+      (active.politics?.leaderId === p.id
+        ? Math.max(rules.titles[p.title ?? ''] ?? 0, content.politics.standing)
+        : (rules.titles[p.title ?? ''] ?? 0)) +
       (heads.has(p.id) ? rules.head : 0) +
       (bandOfAge(race, ageOf(world, active, p)) === 'elder' ? rules.elder : 0) +
       Math.min(rules.itemsMax, rules.perItem * (held.get(p.id) ?? 0)) +

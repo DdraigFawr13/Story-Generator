@@ -241,6 +241,8 @@ export interface ContentBundle {
   lore: LoreRules;
   /** Awakenings (M3.9): what can raise a person one magic tier, once in a life. */
   awakenings: AwakeningDef[];
+  /** Thin politics and trade (M3.10): the site's leader and succession, and caravans from trade partners. */
+  politics: PoliticsRules;
 }
 
 /** What a condition is, for its harm and the words of its chronicle lines (M3.5). */
@@ -2190,4 +2192,64 @@ export interface AwakeningDef {
   maxFromTier: 'none' | 'faint' | 'gifted' | 'strong';
   /** Chronicle words for how it came about: `{item}` is the book or item. */
   how: string;
+}
+
+/** Thin politics and trade at the watched site (M3.10). */
+export interface PoliticsRules {
+  /** The local leader's title by culture `government`; a civ's ruler leads wherever they live. */
+  leaderTitles: Record<string, string>;
+  /** Fallback title when the culture's government has none. */
+  leaderTitle: string;
+  /** The ruler's title in chronicle lines. */
+  rulerTitle: string;
+  /** Standing points for leading the site (a title worth more counts instead). */
+  standing: number;
+  succession: {
+    /** Two kin within this many points (fame + 2 × charisma) make a contested choice. */
+    disputeMargin: number;
+    /** Chance a contested choice becomes an open dispute. */
+    disputeChance: number;
+    /** Luck added to each claimant's fame + charisma in a dispute. */
+    disputeLuck: number;
+    /** Opinion the loser of a dispute loses of the winner (and holds a grudge). */
+    loserOpinion: number;
+    /** When no kin can take the seat by custom, the people choose (the rules' own phrases are history's). */
+    peoplePhrase: string;
+  };
+  caravans: {
+    /** Most trade partners that send a caravan, strongest first. */
+    partners: number;
+    /** History trade within this many years of the end makes a partner. */
+    recentYears: number;
+    /** Season indexes (0 spring … 3 winter) a caravan may travel in. */
+    seasons: number[];
+    /** Days a caravan stays before it goes home. */
+    stayDays: number;
+    /** Days a caravan waits while a threat is at the site. */
+    waitDays: number;
+    /** Share of each gap (surplus against shortage) one caravan carries. */
+    share: number;
+    /** Years of need each side keeps before it calls the rest surplus (history's `tradeKeepYears`). */
+    keepYears: number;
+    /** The item a caravan brings and takes first for each world good, then the others carrying it. */
+    carry: Record<string, string[]>;
+    /** Smallest number of items worth carrying. */
+    minItems: number;
+    /** News: history events at the partner of at least this importance, within this many years. */
+    newsImportance: number;
+    newsYears: number;
+  };
+  events: {
+    leaderNamed: string;
+    succeeded: string;
+    disputed: string;
+    caravanArrived: string;
+    caravanQuiet: string;
+    caravanTraded: string;
+    /** Only the site gave goods, or only the caravan did. */
+    caravanSold: string;
+    caravanBought: string;
+    caravanNothing: string;
+    caravanWaits: string;
+  };
 }

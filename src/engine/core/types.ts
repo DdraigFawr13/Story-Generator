@@ -875,6 +875,35 @@ export interface ActiveSite {
   threats: SiteThreats;
   /** M3.9: the hedge-witch, books on loan and what the cantrips did. */
   lore: SiteLore;
+  /** M3.10: the site's leader and the caravans from its trade partners. */
+  politics: SitePolitics;
+}
+
+/** M3.10: who leads the watched site, and the caravans that come to it. */
+export interface SitePolitics {
+  /** The leader (a resident), null before the first morning. */
+  leaderId: Id | null;
+  /** Day the leader took the seat, and the event that says so. */
+  since: number;
+  leaderEvent: Id | null;
+  /** Trade partners (live sites that traded with this one late in history), strongest first. */
+  partners: Id[];
+  /** Caravans expected this year: [partner site id, day], soonest first. */
+  visits: [Id, number][];
+  /** Calendar year the visits were planned for. */
+  plannedYear: number;
+  /** The caravan at the site now. */
+  caravan: { from: Id; arrived: number; leaves: number; event: Id } | null;
+  /** History events already brought as news, so each visit tells something new. */
+  told: Id[];
+  stats: {
+    successions: number;
+    disputes: number;
+    caravans: number;
+    /** Items brought and taken away by caravans, by item id. */
+    itemsIn: Record<string, number>;
+    itemsOut: Record<string, number>;
+  };
 }
 
 /** Light magic and lore at the watched site (M3.9). */
