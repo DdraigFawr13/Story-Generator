@@ -294,6 +294,8 @@ export interface AilmentDef {
   ageRisk: { child: number; adult: number; elder: number };
   /** Days of immunity after recovering. */
   immuneDays: number;
+  /** A share of cases turns grave: the peak is multiplied and may pass the usual cap, so it can kill alone. */
+  grave?: { chance: number; mul: number; cap: number };
   /** Daily chance per person from each source. */
   sources: {
     /** Having this condition (def id). */

@@ -888,6 +888,8 @@ export interface SiteSnapshot {
   households: [Id, Id[], Id][];
   /** M3.3: skills by person, the buildings and which home each household has. */
   skills: [Id, Record<string, number>][];
+  /** M3.5: each resident's health (0-100). */
+  health: [Id, number][];
   buildings: Building[];
   homes: [Id, Id | null][];
   layoutVersion: number;
@@ -979,11 +981,13 @@ export function siteSnapshot(world: WorldState, sentVersion?: number): SiteSnaps
   if (!active) throw new Error('No watched site.');
   const people: [Id, PersonDetail][] = [];
   const skills: [Id, Record<string, number>][] = [];
+  const health: [Id, number][] = [];
   for (const id of active.residents) {
     const person = world.people.get(id);
     if (!person?.detail) continue;
     people.push([id, person.detail]);
     skills.push([id, person.skills]);
+    health.push([id, person.health]);
   }
   const snapshot: SiteSnapshot = {
     day: world.day,
@@ -1005,6 +1009,7 @@ export function siteSnapshot(world: WorldState, sentVersion?: number): SiteSnaps
     }),
     households: [...active.households.values()].map((h) => [h.id, [...h.members], h.head]),
     skills,
+    health,
     buildings: [...active.buildings.values()],
     homes: [...active.households.values()].map((h) => [h.id, h.home]),
     layoutVersion: active.layoutVersion,
@@ -1070,6 +1075,10 @@ export function applySiteSnapshot(world: WorldState, snapshot: SiteSnapshot): vo
     if (!household) continue;
     household.members = [...members];
     household.head = head;
+  }
+  for (const [id, value] of snapshot.health) {
+    const person = world.people.get(id);
+    if (person) person.health = value;
   }
   for (const [id, skills] of snapshot.skills) {
     const person = world.people.get(id);

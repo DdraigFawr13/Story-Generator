@@ -241,6 +241,7 @@ function infect(
   let incubation: number;
   let duration: number;
   let peak: number;
+  let graveCap = rules.disease.severityCap;
   if ('ailment' in kind) {
     const a = kind.ailment;
     id = a.id;
@@ -249,6 +250,10 @@ function infect(
     incubation = a.incubation;
     duration = rng.between(a.duration[0], a.duration[1]);
     peak = rng.between(a.peak[0], a.peak[1]) * a.ageRisk[band];
+    if (a.grave && rng.chance(a.grave.chance)) {
+      peak = Math.min(a.grave.cap, peak * a.grave.mul);
+      graveCap = a.grave.cap;
+    }
   } else {
     const d = kind.disease;
     id = d.id;
@@ -271,7 +276,7 @@ function infect(
     stage: 'incubating',
     onsetDay: day + incubation,
     untilDay: day + incubation + duration,
-    peak: Math.min(rules.disease.severityCap, Math.round(peak)),
+    peak: Math.min(graveCap, Math.round(peak)),
   };
   if (cause !== undefined) cond.cause = cause;
   const health = healthOf(active);

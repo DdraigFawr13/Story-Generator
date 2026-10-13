@@ -191,11 +191,13 @@ export const AILMENTS: AilmentDef[] = [
     conditionId: 'chill',
     incubation: 1,
     duration: [5, 10],
-    peak: [10, 30],
+    peak: [10, 35],
     infectivity: 0.015,
-    ageRisk: { child: 1.5, adult: 1, elder: 2.5 },
+    ageRisk: { child: 2, adult: 1, elder: 3 },
     // Two months' immunity.
     immuneDays: 56,
+    // One case in 20 turns grave: the peak triples (up to 150), enough to kill a child or elder even when tended.
+    grave: { chance: 0.05, mul: 3, cap: 150 },
     // 3% a chilled night, 1% a night in a home with no firewood.
     // Even in warm homes, 0.03% of people a day catch it from Firstfrost to Thawmonth.
     sources: {
@@ -210,11 +212,13 @@ export const AILMENTS: AilmentDef[] = [
     conditionId: 'flux',
     incubation: 1,
     duration: [4, 8],
-    peak: [20, 45],
+    peak: [25, 50],
     infectivity: 0.05,
     householdOnly: true,
-    ageRisk: { child: 2, adult: 1, elder: 2 },
+    ageRisk: { child: 2.5, adult: 1, elder: 2.5 },
     immuneDays: 56,
+    // One case in 20 turns grave: the peak triples (up to 150), enough to kill a child or elder even when tended.
+    grave: { chance: 0.05, mul: 3, cap: 150 },
     // 0.2% a day while the well is low, doubled in the hot months (Highsun to Harvestmonth: 3 to 5).
     // 0.015% a day in the hot months, from bad water even when the well is full.
     sources: { wellLow: 0.002, background: { chance: 0.00015, months: [3, 4, 5] } },

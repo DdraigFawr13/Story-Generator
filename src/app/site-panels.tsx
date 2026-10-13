@@ -34,6 +34,7 @@ import {
   type ActiveSite,
   type BreakdownKind,
   type Building,
+  type Condition,
   type Civ,
   type HeldItem,
   type ItemDef,
@@ -1035,9 +1036,55 @@ function LifePage({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) {
   );
 }
 
+/** M3.5: one condition as the inspector words it, with the health it costs. */
+function conditionText(m: SiteModel, c: Condition, age: number): string {
+  const def = m.content.conditions.find((d) => d.id === c.defId);
+  const ailment = c.ailment
+    ? (m.content.ailments.find((x) => x.id === c.ailment)?.name ??
+      m.content.diseases.find((x) => x.id === c.ailment)?.name)
+    : undefined;
+  let name = ailment ? cap(ailment) : (def?.name ?? c.defId);
+  if (c.lasting) return `${name}: ${c.lasting.attribute} −${c.lasting.amount}`;
+  if (def?.kind === 'age') name += ` (age ${age})`;
+  const bits: string[] = [];
+  if (c.stage === 'incubating') bits.push('not yet showing');
+  else if (def?.kind === 'disease' || def?.kind === 'wound' || def?.kind === 'need') {
+    bits.push(`day ${Math.max(1, m.world.day - (c.onsetDay ?? c.sinceDay) + 1)}`);
+  }
+  if (c.tended) bits.push('tended');
+  const harm = Math.round(c.severity * (def?.harm ?? 1));
+  return `${name}${bits.length ? `, ${bits.join(', ')}` : ''}${harm > 0 ? ` −${harm}` : ''}`;
+}
+
+/** M3.5: someone who died while the site was watched. */
+function DeadPage({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) {
+  const event = p.deathEvent === undefined ? undefined : eventOf(m, p.deathEvent);
+  return (
+    <div className="page">
+      <div>
+        <div className="kind">Person · dead</div>
+        <h3>{p.name}</h3>
+      </div>
+      <Facts>
+        <Fact term="Died">
+          {p.diedDay !== undefined ? `${dayText(p.diedDay)}. ` : ''}
+          {event ? (
+            <EventLink a={a} id={event.id}>
+              {m.narrator.renderEvent(event)}
+            </EventLink>
+          ) : (
+            (p.causeOfDeath ?? '')
+          )}
+        </Fact>
+      </Facts>
+    </div>
+  );
+}
+
 function PersonPage({ m, a, sel, ui, id }: PanelProps & { id: Id }) {
   const p = m.world.people.get(id);
   const mark = m.scene.marks.get(id);
+  if (p && p.diedDay !== undefined) return <DeadPage m={m} a={a} p={p} />;
   if (!p || !mark) return <p className="quiet">That person is no longer at the site.</p>;
   const h = m.active.households.get(p.family.householdId ?? -1);
   const home = h?.home == null ? undefined : m.active.buildings.get(h.home);
@@ -1088,6 +1135,17 @@ function PersonPage({ m, a, sel, ui, id }: PanelProps & { id: Id }) {
           {mark.age} · {she ? 'female' : 'male'} · {race?.name}
           {culture ? `, ${culture.name}` : ''}
         </Fact>
+        {p.detail && (
+          <Fact term="Health">
+            {p.health}
+            {p.detail.abed ? ' · abed' : ''}
+            {(p.detail.conditions ?? []).map((c, k) => (
+              <div key={k} className="empty">
+                {conditionText(m, c, mark.age)}
+              </div>
+            ))}
+          </Fact>
+        )}
         {notable && p.title && (
           <Fact term="Known as">
             {p.title === 'ruler' ? m.ruleWord : (TITLE_TEXT[p.title] ?? p.title)}
