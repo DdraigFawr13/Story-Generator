@@ -12,6 +12,14 @@ export const NOTABLES: NotableRules = {
     ushani: 'the House of {name}',
     tylwyth: 'the Line of {name}',
     dvergar: 'the {name}hold',
+    lissari: 'the {name} Company',
+    brennig: 'the Daughters of {name}',
+    gwyllion: 'the Kindred of {name}',
+    fomori: 'the Sons of {name}',
+    ghor: 'the Blood of {name}',
+    cewri: 'the Steading of {name}',
+    hollin: 'the {name}s of the Hill',
+    redcap: 'the {name} Gang',
   },
   fame: {
     ruler: 20,
@@ -40,6 +48,7 @@ export const NOTABLES: NotableRules = {
       dynasty_founded: 6,
       site_founded: 4,
       civ_raid: 4,
+      plunder_raid: 4,
       artifact_made: 8,
       book_written: 6,
     },
@@ -81,6 +90,10 @@ export const NOTABLES: NotableRules = {
     'eldest-son-temple': 'by the custom of the eldest son, blessed in the temple',
     'elder-council': 'by the choice of the council of elders',
     'eldest-child': 'by the custom of the eldest child',
+    'eldest-daughter': 'by the custom of the eldest daughter',
+    'trial-of-strength': 'by right of the strongest arm',
+    // The eldest son's rule (the engine's default), named by the shamans.
+    'shaman-blessed': 'as eldest son, marked in blood by the shamans',
   },
   // Appended to a notable's death when a spouse outlives them ({names}).
   widowedPhrase: ', leaving {names} widowed',

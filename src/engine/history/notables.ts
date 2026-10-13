@@ -765,6 +765,19 @@ function chooseHeir(
     if (brothers[0]) challenger = adults(sons)[0];
   } else if (rule === 'eldest-child') {
     heir = children[0] ?? kin[0];
+  } else if (rule === 'eldest-daughter') {
+    heir =
+      children.find((p) => p.sex === 'f') ??
+      kin.find((p) => p.sex === 'f') ??
+      children[0] ??
+      kin[0];
+  } else if (rule === 'trial-of-strength') {
+    // The strongest grown kin takes the seat; the next strongest always has a claim.
+    const byStrength = adults(kin.concat(children)).sort(
+      (a, b) => b.attributes.strength - a.attributes.strength || a.id - b.id,
+    );
+    heir = byStrength[0] ?? children[0] ?? kin[0];
+    challenger = byStrength[1];
   } else {
     heir = sons[0] ?? children[0] ?? kin[0];
   }

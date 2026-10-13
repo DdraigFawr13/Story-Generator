@@ -58,7 +58,8 @@ export type InheritanceRule =
   | 'eldest-child'
   | 'youngest-keeps-hearth'
   | 'sons-temple-tithe'
-  | 'best-apprentice';
+  | 'best-apprentice'
+  | 'eldest-daughter';
 /** How a ruler is chosen. */
 export type SuccessionRule =
   | 'kin-elected'
@@ -66,9 +67,25 @@ export type SuccessionRule =
   | 'brother-first-gathering'
   | 'eldest-son-temple'
   | 'elder-council'
-  | 'eldest-child';
+  | 'eldest-child'
+  | 'eldest-daughter'
+  | 'trial-of-strength'
+  | 'shaman-blessed';
 export type GovernmentKind =
-  'chieftaincy' | 'jarldom' | 'khanate' | 'priest-kingdom' | 'elder-council' | 'thanedom';
+  | 'chieftaincy'
+  | 'jarldom'
+  | 'khanate'
+  | 'priest-kingdom'
+  | 'elder-council'
+  | 'thanedom'
+  | 'merchant-republic'
+  | 'queendom'
+  | 'circle'
+  | 'warhost'
+  | 'horde'
+  | 'steading'
+  | 'shire'
+  | 'warren';
 export type MagicAttitude = 'sacred' | 'honoured' | 'respected' | 'wary' | 'licensed';
 export type SitePreference =
   'river' | 'coast' | 'aura' | 'plains' | 'deposit' | 'forest' | 'heights';
@@ -1466,6 +1483,11 @@ export interface MapLayer {
 export interface SettlementRules {
   /** Founding civs = clamp(min, max, floor(landCells / landCellsPerCiv) + a seeded draw of +-jitter). */
   civs: { min: number; max: number; landCellsPerCiv: number; jitter: number };
+  /**
+   * Which cultures a map draws its peoples from: a presence weight per culture id (default 1)
+   * times its home-ground share of the land, capped at `fitFull`; under `fitMin` it is left out.
+   */
+  peoples: { weight: Record<string, number>; fitFull: number; fitMin: number };
   /** Chance a civ also founds a second site, and how far from its capital (cells, Chebyshev). */
   secondSiteChance: number;
   secondSiteRange: [number, number];
@@ -1724,6 +1746,8 @@ export interface HistoryRules {
   raidWarValue: number;
   /** Chance per year = this * values.war / 10. */
   civRaidChance: number;
+  /** Peoples who raid in good years too: a yearly chance per culture id of a raid from the capital. */
+  raidHabit: Record<string, number>;
   /** Share of the target's food taken, at most one year of the raider's food; luxury is taken too when food falls short. */
   raidLootShare: number;
   /** Share of the target's people killed (min, max). */

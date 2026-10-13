@@ -398,6 +398,22 @@ export const eventTypes: EventTypeDef[] = [
     ],
   },
   {
+    id: 'plunder_raid',
+    baseImportance: 5,
+    title: '{civ} plundered {target}',
+    causeWord: 'because of',
+    category: 'politics',
+    precision: 'year',
+    links: { site: 'site', target: 'site', civ: 'civ', victim: 'civ' },
+    dataKeys: ['civ'],
+    templates: [
+      'In {date} the warriors of {site} rode out to plunder {target}, and {dead} of the {victim} died.',
+      '{date}: for loot and glory the warriors of the {civ} fell on {target}; {dead} of the {victim} were killed.',
+      'In {date} the {civ} raided {target} from {site}, though no hunger drove them, leaving {dead} of the {victim} dead.',
+    ],
+  },
+
+  {
     id: 'border_clash',
     baseImportance: 4,
     title: 'Border clash: {civ} and {other}',

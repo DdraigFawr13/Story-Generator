@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
 import { embark, stepBlock, type ActiveSite, type WorldState } from '../../src/engine';
-import { baseB, biggest, copy } from './helpers/site-fixture';
+import { baseC, biggest, copy } from './helpers/site-fixture';
 
 const C = DEFAULT_CONTENT;
 const R = C.life.routines;
@@ -27,8 +27,10 @@ function onSquare(world: WorldState, active: ActiveSite): number {
 
 describe('village routines', () => {
   it('keeps the square quiet on an ordinary afternoon and varies where people go', () => {
-    // SITE-B: SITE-A's village ends at 20.1% on the square after the 2026-10-13 history change (weddings, fame).
-    const world = structuredClone(baseB());
+    // SITE-C: SITE-A's village ended at 20.1% on the square after the 2026-10-13 weddings change, and
+    // SITE-B's biggest town is now a halfling shire whose many children (grown at 20) play on the green
+    // (22% at worst). The 20% limit is for a human village; SITE-C's Brennig town peaks at 16.7%.
+    const world = structuredClone(baseC());
     const active = embark(world, C, biggest(world).id);
     const places = new Set<string>();
     for (let week = 0; week < 4; week += 1) {

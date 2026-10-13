@@ -8,6 +8,7 @@ import type { EmitInput } from '../core/context';
 import { streamFor, type RngStream } from '../core/rng';
 import type { ActiveSite, Household, Id, Person, SimEvent, WorldState } from '../core/types';
 import { lifeRates } from '../history/demography';
+import { totalPop } from '../history/pop';
 import { rollAptitude } from '../people/aptitude';
 import { cultureGivenName } from '../people/names';
 import { bandOfAge, type SiteContent } from './defs';
@@ -418,10 +419,18 @@ function monthlyConceptions(env: SocialEnv, rng: RngStream): void {
   const { content, active, world } = env;
   const births = content.family.births;
   const site = world.sites.get(active.siteId);
-  // The followed stand for the whole site: crowding is the site's people (followed / share) over capacity.
+  // Crowding is the site's people over capacity. Followed / share stands for the whole site, but
+  // notables are always followed, so where they outnumber the share it would overcount (a Fomori
+  // town of 359 with 93 notables read as 477 and had no births); the counted site caps it.
   const crowding =
     site && site.capacity > 0
-      ? Math.min(1, active.residents.length / active.share / site.capacity)
+      ? Math.min(
+          1,
+          Math.min(
+            active.residents.length / active.share,
+            Math.max(totalPop(site), active.residents.length),
+          ) / site.capacity,
+        )
       : 1;
   const people = residentsHere(env);
   for (const race of content.races) {
@@ -607,6 +616,9 @@ export function successorOf(
       break;
     case 'youngest-keeps-hearth':
       heir = kids[kids.length - 1] ?? spouse ?? eldest;
+      break;
+    case 'eldest-daughter':
+      heir = kids.find((m) => m.sex === 'f') ?? kids[0] ?? spouse ?? eldest;
       break;
     case 'best-apprentice': {
       // Children come first, so ties go to them; anyone else needs strictly more intellect.

@@ -227,6 +227,8 @@ function heirOf(run: HistoryRun, dead: Person): Person | undefined {
       return children.find((p) => p.sex === 'm') ?? children[0];
     case 'youngest-keeps-hearth':
       return children[children.length - 1];
+    case 'eldest-daughter':
+      return children.find((p) => p.sex === 'f') ?? children[0];
     case 'best-apprentice': {
       const pool = [
         ...children,

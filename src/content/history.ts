@@ -93,6 +93,8 @@ export const HISTORY: HistoryRules = {
   envyMinWealth: 10,
   raidWarValue: 4,
   civRaidChance: 0.6,
+  // Orc hordes raid their richest neighbour about one year in seven, famine or not.
+  raidHabit: { ghor: 0.15 },
   raidLootShare: 0.4,
   civRaidDeaths: [0.01, 0.05],
   grievance: { raid: 1, border: 0.8, insult: 0.6, envy: 0.4, vengeance: 1.5 },

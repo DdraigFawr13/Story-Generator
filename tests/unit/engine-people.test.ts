@@ -159,4 +159,11 @@ describe('race balance (R-29)', () => {
     const free = { ...dvergar, fertility: 1, maturityYears: 10, foodNeed: 1, dependencies: [] };
     expect(raceBalanceProblems(free, human)).toHaveLength(1);
   });
+
+  it('flags a cewri copy that is strong with no downside', () => {
+    const cewri = DEFAULT_CONTENT.races.find((race) => race.id === 'cewri')!;
+    expect(raceBalanceProblems(cewri, human)).toEqual([]);
+    const free = { ...cewri, fertility: 1, maturityYears: 10, foodNeed: 1, dependencies: [] };
+    expect(raceBalanceProblems(free, human)).toHaveLength(1);
+  });
 });

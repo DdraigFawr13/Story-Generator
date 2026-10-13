@@ -347,6 +347,7 @@ const HISTORY_EVENT_IDS = [
   'trade_opened',
   'grain_relief',
   'civ_raid',
+  'plunder_raid',
   'border_clash',
   'insult',
   'war_declared',
@@ -808,6 +809,7 @@ const INHERITANCE_RULES = [
   'youngest-keeps-hearth',
   'sons-temple-tithe',
   'best-apprentice',
+  'eldest-daughter',
 ] as const;
 
 /** Interactions, opinions and family rules (M3.6): ids resolve, thresholds make hysteresis, every rule has its phrase. */

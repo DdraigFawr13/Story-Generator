@@ -51,6 +51,7 @@ export const FAMILY: FamilyRules = {
     'all-children': 'Among their people the hearth belongs to all the children.',
     'youngest-keeps-hearth': 'Among their people the youngest keeps the hearth.',
     'best-apprentice': 'Among their people the ablest takes up the work.',
+    'eldest-daughter': 'Among their people the eldest daughter keeps the hearth.',
   },
   memoryOf: {
     married: 'married',

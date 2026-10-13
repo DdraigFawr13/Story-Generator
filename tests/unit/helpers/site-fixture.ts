@@ -9,6 +9,10 @@ export const base = () =>
 let sharedB: WorldState | undefined;
 export const baseB = () =>
   (sharedB ??= generateWorld('SITE-B', { width: 64, height: 64 }, DEFAULT_CONTENT));
+/** A third 64x64 world, whose biggest town is human (SITE-B's is a halfling shire since the 2026-10-13 roster). */
+let sharedC: WorldState | undefined;
+export const baseC = () =>
+  (sharedC ??= generateWorld('SITE-C', { width: 64, height: 64 }, DEFAULT_CONTENT));
 /** A private copy a test may change. */
 export const copy = () => structuredClone(base());
 /** The most populous live site (lowest id breaks a tie). */

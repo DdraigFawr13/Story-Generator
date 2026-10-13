@@ -15,9 +15,9 @@ const withCultures = (cultures: ContentBundle['cultures']): ContentBundle => ({
 const first = DEFAULT_CONTENT.cultures[0]!;
 
 describe('default cultures', () => {
-  it('has six cultures, four of them human', () => {
-    expect(DEFAULT_CONTENT.cultures).toHaveLength(6);
-    expect(DEFAULT_CONTENT.cultures.filter((c) => c.raceId === 'human')).toHaveLength(4);
+  it('has thirteen cultures, six of them human', () => {
+    expect(DEFAULT_CONTENT.cultures).toHaveLength(14);
+    expect(DEFAULT_CONTENT.cultures.filter((c) => c.raceId === 'human')).toHaveLength(6);
     expect(validateContent(DEFAULT_CONTENT)).toEqual([]);
   });
 
@@ -27,8 +27,8 @@ describe('default cultures', () => {
   });
 
   it('rejects an unknown race', () => {
-    const broken = withCultures([{ ...first, raceId: 'goblin' }]);
-    expect(validateContent(broken).join('\n')).toMatch(/Culture gwerin: unknown race "goblin"/);
+    const broken = withCultures([{ ...first, raceId: 'kobold' }]);
+    expect(validateContent(broken).join('\n')).toMatch(/Culture gwerin: unknown race "kobold"/);
   });
 
   it('rejects a value above 10', () => {
