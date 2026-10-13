@@ -123,7 +123,17 @@ const generate = (seed: string, years = 100) =>
   );
 
 describe('war', () => {
-  it('is never declared without a grievance (raid, clash or insult) among its causes', () => {
+  it('is never declared without a grievance among its causes', () => {
+    // Every event that adds a grievance: raids, clashes, insults (and envy), oaths, break-aways, allies.
+    const GRIEVANCES = [
+      'civ_raid',
+      'vengeance_raid',
+      'border_clash',
+      'insult',
+      'oath_sworn',
+      'city_freed',
+      'ally_aided',
+    ];
     let wars = 0;
     for (const seed of ['WAR-A', 'WAR-B', 'WAR-C', 'WAR-D']) {
       const world = generate(seed);
@@ -132,7 +142,7 @@ describe('war', () => {
         wars += 1;
         expect(war.causes.length).toBeGreaterThan(0);
         for (const id of war.causes) {
-          expect(['civ_raid', 'border_clash', 'insult']).toContain(byId.get(id)?.type);
+          expect(GRIEVANCES).toContain(byId.get(id)?.type);
         }
       }
     }

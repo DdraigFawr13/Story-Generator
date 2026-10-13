@@ -34,6 +34,8 @@ describe('legend deeds', () => {
       'vengeance_raid',
       'legend_founded',
       'beast_hunt_failed',
+      'spell_cast',
+      'college_founded',
     ]) {
       expect(ofType(type).length, type).toBeGreaterThan(0);
     }

@@ -6,6 +6,7 @@
 import type { Civ, DeathCause, Dynasty, Id, Person, SimEvent, Site } from '../core/types';
 import { cultureGivenName } from '../people/names';
 import { BIRTH_TIER_IDS, TIERS, legendSlotOpen, tierOfPower } from '../people/tiers';
+import { legendFactor, noticeFactor } from './colleges';
 import { passItems, primarySchool, stealItem, itemsHeldBy } from './items';
 import {
   ELDER_AT,
@@ -1135,7 +1136,8 @@ function runCommonerMages(run: HistoryRun): void {
         rules.mageBirthRate *
         race.fertility *
         strongOdds(run, race.id, aura) *
-        rules.mageNotice;
+        rules.mageNotice *
+        noticeFactor(run, civ.id);
       for (let n = stochasticRound(rng, expected); n > 0; n -= 1) {
         const mage = createPerson(run, {
           raceId: race.id,
@@ -1163,7 +1165,7 @@ function runLegends(run: HistoryRun): void {
   for (const person of livingList(run)) {
     if (person.magic.power < LEGEND_FROM || person.magic.power >= LEGEND_POWER[0]) continue;
     if (!isAdult(run, person) || !legendSlotOpen(alive)) continue;
-    if (!rng.chance(rules.legendChance)) continue;
+    if (!rng.chance(rules.legendChance * legendFactor(run, person.civId))) continue;
     person.magic.power = rng.between(LEGEND_POWER[0], LEGEND_POWER[1]);
     const school = schoolOf(person);
     person.magic.affinities[school] = Math.max(

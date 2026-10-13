@@ -98,6 +98,31 @@ export interface War {
   champions?: Id[];
 }
 
+/** A college of magic at a site (colleges.ts); the events are the record. */
+export interface College {
+  name: string;
+  siteId: Id;
+  /** The civ that holds the site now. */
+  civId: Id;
+  school: string;
+  founded: number;
+  /** The college_founded event. */
+  event: Id;
+  /** Set when the college burned or was abandoned. */
+  closed?: number;
+}
+
+/** A pact of defence between two civs (city-states.ts). */
+export interface Pact {
+  a: Id;
+  b: Id;
+  since: number;
+  /** The pact_sworn event. */
+  event: Id;
+  /** Wars the ally already came to, so the aid line is written once per war. */
+  aided: number[];
+}
+
 /** Per-run notable bookkeeping (notables.ts); the people themselves live in `world.people`. */
 export interface NotableState {
   /** Living notables in id order. */
@@ -136,6 +161,8 @@ export interface HistoryRun {
     trade: RngStream;
     war: RngStream;
     notables: RngStream;
+    magic: RngStream;
+    cityStates: RngStream;
   };
   /** Current year, 1..historyYears. */
   year: number;
@@ -169,6 +196,10 @@ export interface HistoryRun {
   /** Cached deposit counts per good near each site. */
   deposits: Map<Id, Goods>;
   notables: NotableState;
+  /** Colleges of magic, open and closed, in founding order. */
+  colleges: College[];
+  /** Pacts of defence, live ones only. */
+  pacts: Pact[];
 }
 
 /** Key for an unordered pair of civs. */
@@ -279,6 +310,8 @@ export function createRun(
       trade: streamFor(world, 'history.trade'),
       war: streamFor(world, 'history.war'),
       notables: streamFor(world, 'history.notables'),
+      magic: streamFor(world, 'history.magic'),
+      cityStates: streamFor(world, 'history.cityStates'),
     },
     year: 0,
     logs: new Map(),
@@ -313,6 +346,8 @@ export function createRun(
       lastDeed: new Map(),
       mageOdds: new Map(),
     },
+    colleges: [],
+    pacts: [],
   };
   for (const site of world.sites.values()) {
     run.siteAtCell.set(site.cell, site.id);

@@ -2,6 +2,7 @@
 // Tune the numbers here; the settle stage in engine/history/settle.ts reads only this table.
 
 import type { SettlementRules } from '../engine';
+import { FREE_CITIES } from './realms';
 
 export const SETTLEMENT: SettlementRules = {
   // About one civ per 3,500 land cells: 6 on a default 256x256 map, 3 on 128x128; jitter adds or drops up to 2.
@@ -70,4 +71,5 @@ export const SETTLEMENT: SettlementRules = {
   // times as much for a border to reach, so some land stays unclaimed however long history runs.
   deepWild: 60,
   deepWildClaim: 4,
+  freeCities: FREE_CITIES,
 };

@@ -155,6 +155,7 @@ function runVengeance(run: HistoryRun): void {
     // Whoever already rode once stays home.
     const riders: Person[] = [];
     for (const kin of livingList(run)) {
+      // Kin who already rode on an earlier oath stay home.
       if (kin.civId !== civ.id || !kin.enemies?.includes(enemy.id)) continue;
       if (kin.id !== avenger.id && run.notables.avenged.has(kin.id)) continue;
       run.notables.avenged.add(kin.id);

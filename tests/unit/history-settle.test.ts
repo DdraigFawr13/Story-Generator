@@ -221,7 +221,9 @@ describe('generated settlement', () => {
 
   it('emits a founding event per civ, and the second site names it as its cause', () => {
     const founded = world.events.filter((e) => e.type === 'civ_founded');
-    expect(founded).toHaveLength(world.civs.size);
+    // A town that breaks away during history becomes a civ through city_freed instead.
+    const freed = world.events.filter((e) => e.type === 'city_freed');
+    expect(founded.length + freed.length).toBe(world.civs.size);
     // Settle-stage sites only (day 0); history's new sites name their own causes.
     for (const event of world.events.filter((e) => e.type === 'site_founded' && e.day === 0)) {
       expect(founded.map((e) => e.id)).toContain(event.causes[0]);

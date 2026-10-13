@@ -550,6 +550,8 @@ export interface Civ {
   fell?: number;
   rulerId?: Id;
   grievances: Map<Id, number>;
+  /** A free city: one city ruling itself, at the start or after breaking away. */
+  free?: boolean;
 }
 
 /** The goods a site stocks (M2.4): food plus four traded materials. */

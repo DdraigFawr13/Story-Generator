@@ -379,6 +379,13 @@ const HISTORY_EVENT_IDS = [
   'item_lost',
   'item_stolen',
   'item_found',
+  'college_founded',
+  'college_closed',
+  'spell_cast',
+  'city_freed',
+  'pact_sworn',
+  'pact_broken',
+  'ally_aided',
 ];
 
 /** Settlement rules: present, capitalKind keys are culture ids, a civ name template per government used. */

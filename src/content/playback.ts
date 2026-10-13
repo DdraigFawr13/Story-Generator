@@ -215,4 +215,6 @@ export const REALM_TITLES: readonly string[] = [
   'Clan',
   'Lordship',
   'Chiefdom',
+  'Free City',
+  'Commune',
 ];
