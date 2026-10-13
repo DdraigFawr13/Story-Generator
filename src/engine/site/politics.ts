@@ -187,6 +187,17 @@ export function siteHeir(
     };
   }
   if (rule === 'eldest-child') return { heir: children[0] ?? kin[0] };
+  if (rule === 'eldest-daughter') {
+    const daughter = children.find((p) => p.sex === 'f') ?? kin.find((p) => p.sex === 'f');
+    return { heir: daughter ?? children[0] ?? kin[0] };
+  }
+  if (rule === 'trial-of-strength') {
+    // The strongest grown kin takes the seat; the next strongest always has a claim.
+    const byStrength = [...new Set([...children, ...kin])].sort(
+      (a, b) => b.attributes.strength - a.attributes.strength || a.id - b.id,
+    );
+    return { heir: byStrength[0], challenger: byStrength[1] };
+  }
   return { heir: sons[0] ?? children[0] ?? kin[0] };
 }
 

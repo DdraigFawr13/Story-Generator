@@ -2,7 +2,7 @@
 // culture, each starting with one or two sites. Also computes each site's carrying capacity,
 // its starting population by age band, and the per-cell territory layer.
 //
-// Randomness: `history.settle` (shuffles and jitter) and `history.names` (site names) only, so
+// Randomness: `history.settle` (the culture draw and jitter) and `history.names` (site names) only, so
 // terrain, regions and routes of a seed never change. Everything iterates in cell or id order.
 
 import { createEmitter } from '../core/context';
@@ -384,13 +384,43 @@ export function computeTerritory(
   return out;
 }
 
-function shuffle<T>(items: readonly T[], rng: RngStream): T[] {
-  const out = [...items];
-  for (let i = out.length - 1; i > 0; i -= 1) {
-    const j = rng.int(i + 1);
-    [out[i], out[j]] = [out[j]!, out[i]!];
+/**
+ * The cultures a map's peoples come from, in founding order. Each culture's chance is its
+ * presence weight times its home-ground share (land candidates in its preferred biomes, up to
+ * `fitFull`); cultures under `fitMin` are left out unless none qualify.
+ */
+export function drawCultures(
+  content: Pick<ContentBundle, 'biomes' | 'cultures'>,
+  cells: Pick<WorldCells, 'biome'>,
+  candidates: readonly number[],
+  rules: Pick<SettlementRules, 'peoples'>,
+  rng: RngStream,
+): CultureDef[] {
+  const { weight, fitFull, fitMin } = rules.peoples;
+  const home = new Map<string, number>();
+  for (const cell of candidates) {
+    const id = content.biomes[cells.biome[cell]!]?.id ?? '';
+    home.set(id, (home.get(id) ?? 0) + 1);
   }
-  return out;
+  const total = Math.max(1, candidates.length);
+  const fitOf = (culture: CultureDef) =>
+    culture.preferredBiomes.reduce((sum, b) => sum + (home.get(b) ?? 0), 0) / total;
+  let pool = content.cultures.filter((c) => fitOf(c) >= fitMin);
+  if (pool.length === 0) pool = [...content.cultures];
+  const order: CultureDef[] = [];
+  while (pool.length > 0) {
+    const entries = pool.map(
+      (c) =>
+        [
+          c,
+          Math.max(1, Math.round(1000 * (weight[c.id] ?? 1) * Math.min(1, fitOf(c) / fitFull))),
+        ] as const,
+    );
+    const next = rng.weighted(entries);
+    order.push(next);
+    pool = pool.filter((c) => c !== next);
+  }
+  return order;
 }
 
 /** Dry candidate cells and what scoring them needs; built once and shared with the history stage. */
@@ -470,13 +500,10 @@ export function settleWorld(world: WorldState, content: SettleContent): void {
         rules.civs.jitter,
     ),
   );
-  // Every race founds a people before any race founds a second: the first culture of each race in
-  // the shuffled order goes first, the rest keep their shuffled order.
-  const shuffled = shuffle(content.cultures, rng);
-  const leads = shuffled.filter(
-    (culture, i) => shuffled.findIndex((c) => c.raceId === culture.raceId) === i,
-  );
-  const order = [...leads, ...shuffled.filter((culture) => !leads.includes(culture))];
+  // Which peoples this map holds: a draw without replacement, weighted by each culture's
+  // presence and by how much of the land is its home ground. A culture with almost no home
+  // ground here is left out, so a map holds a subset of the roster.
+  const order = drawCultures(content, cells, candidates, rules, rng);
   const raceOf = new Map(content.races.map((r) => [r.id, r]));
   const sites: Site[] = [];
   const capitals: number[] = [];
@@ -545,7 +572,7 @@ export function settleWorld(world: WorldState, content: SettleContent): void {
   };
 
   // 3-4. Civs in order: capital, then maybe a second site.
-  // Once every culture has a people, each further people goes to the race with the fewest so far.
+  // Once every drawn culture has a people, each further people goes to the race with the fewest so far.
   const peoples = new Map<string, number>();
   for (let n = 0; n < civCount; n += 1) {
     let culture = order[n % order.length]!;

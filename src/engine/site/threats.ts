@@ -90,7 +90,10 @@ function grievanceEvent(world: WorldState, from: Civ, to: Civ): Id | undefined {
     const e = world.events[i]!;
     const d = e.data;
     if (
-      ((e.type === 'civ_raid' || e.type === 'vengeance_raid' || e.type === 'insult') &&
+      ((e.type === 'civ_raid' ||
+        e.type === 'plunder_raid' ||
+        e.type === 'vengeance_raid' ||
+        e.type === 'insult') &&
         d['civ'] === to.name &&
         d['victim'] === from.name) ||
       (e.type === 'border_clash' &&

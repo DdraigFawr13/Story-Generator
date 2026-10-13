@@ -59,6 +59,59 @@ function richestTarget(run: HistoryRun, site: Site): Site | undefined {
   return best;
 }
 
+/** A raid from `site` on its richest linked neighbour: grain first, then luxuries, a few killed. */
+function raidNeighbour(
+  run: HistoryRun,
+  site: Site,
+  civ: Civ,
+  type: 'civ_raid' | 'plunder_raid',
+  causes: Id[],
+): void {
+  const { rules, rng } = run;
+  const target = richestTarget(run, site);
+  const victim = target ? liveCiv(run, target.civId) : undefined;
+  if (!target || !victim) return;
+  // A year of the raider's food is the most it can carry home.
+  const need = siteNeed(site, run.races);
+  const loot = Math.min(target.goods.food * rules.raidLootShare, need);
+  target.goods.food -= loot;
+  site.goods.food += loot;
+  // If the grain does not fill the need, they carry off luxuries too.
+  if (loot < need) {
+    const spoils = target.goods.luxury * rules.raidLootShare;
+    target.goods.luxury -= spoils;
+    site.goods.luxury += spoils;
+  }
+  const [lo, hi] = rules.civRaidDeaths;
+  const share = rng.war.between(Math.round(lo * 1000), Math.round(hi * 1000)) / 1000;
+  const dead = removePeople(target, stochasticRound(rng.war, totalPop(target) * share), [
+    'adult',
+    'child',
+    'elder',
+  ]);
+  const raider = raiderFor(run, civ, site);
+  const event = run.emit({
+    type,
+    place: target.cell,
+    actors: raider ? [raider.id] : [],
+    causes,
+    data: {
+      site: site.name,
+      target: target.name,
+      civ: civ.name,
+      victim: victim.name,
+      dead,
+      loot: Math.round(loot),
+    },
+  });
+  if (raider) {
+    addDeed(raider, event.id);
+    raidDeaths(run, raider, target, event.id);
+    raidSteal(run, raider, target, event.id);
+  }
+  addGrievance(run, victim.id, civ.id, rules.grievance.raid, event.id);
+}
+
 /** Famished sites of warlike cultures may raid a rich neighbour for grain. */
 function runFamineRaids(run: HistoryRun): void {
   const { rules, rng } = run;
@@ -69,52 +122,27 @@ function runFamineRaids(run: HistoryRun): void {
     const culture = civ ? cultureOf(run, civ) : undefined;
     if (!civ || !culture || culture.values.war < rules.raidWarValue) continue;
     if (!rng.war.chance((rules.civRaidChance * culture.values.war) / 10)) continue;
-    const target = richestTarget(run, site);
-    const victim = target ? liveCiv(run, target.civId) : undefined;
-    if (!target || !victim) continue;
-    // A year of the raider's food is the most it can carry home.
-    const need = siteNeed(site, run.races);
-    const loot = Math.min(target.goods.food * rules.raidLootShare, need);
-    target.goods.food -= loot;
-    site.goods.food += loot;
-    // If the grain does not fill the need, they carry off luxuries too.
-    if (loot < need) {
-      const spoils = target.goods.luxury * rules.raidLootShare;
-      target.goods.luxury -= spoils;
-      site.goods.luxury += spoils;
-    }
-    const [lo, hi] = rules.civRaidDeaths;
-    const share = rng.war.between(Math.round(lo * 1000), Math.round(hi * 1000)) / 1000;
-    const dead = removePeople(target, stochasticRound(rng.war, totalPop(target) * share), [
-      'adult',
-      'child',
-      'elder',
-    ]);
-    const raider = raiderFor(run, civ, site);
-    const event = run.emit({
-      type: 'civ_raid',
-      place: target.cell,
-      actors: raider ? [raider.id] : [],
-      causes: causesOf(famine.event),
-      data: {
-        site: site.name,
-        target: target.name,
-        civ: civ.name,
-        victim: victim.name,
-        dead,
-        loot: Math.round(loot),
-      },
-    });
-    if (raider) {
-      addDeed(raider, event.id);
-      raidDeaths(run, raider, target, event.id);
-      raidSteal(run, raider, target, event.id);
-    }
-    addGrievance(run, victim.id, civ.id, rules.grievance.raid, event.id);
+    raidNeighbour(run, site, civ, 'civ_raid', causesOf(famine.event));
   }
 }
 
-/** The avenger's oath against `enemy`: its event id and the name of the dead it was sworn for. */
+/** Raiding peoples (history.raidHabit) send a raid from the capital in good years too. */
+function runHabitRaids(run: HistoryRun): void {
+  const { rules, rng } = run;
+  for (const civ of run.world.civs.values()) {
+    const chance = rules.raidHabit[civ.cultureId] ?? 0;
+    if (chance <= 0 || !liveCiv(run, civ.id)) continue;
+    const capital = run.world.sites.get(civ.capital);
+    if (!capital || !isLive(capital) || capital.civId !== civ.id) continue;
+    if (logOf(run, capital.id).famine?.year === run.year) continue;
+    if (!rng.war.chance(chance)) continue;
+    const founded = run.world.events.find(
+      (e) => e.type === 'civ_founded' && e.data['civ'] === civ.name,
+    );
+    raidNeighbour(run, capital, civ, 'plunder_raid', founded ? [founded.id] : []);
+  }
+}
+
 function oathOf(run: HistoryRun, avenger: Person, enemy: Person): { id?: Id; dead: string } {
   for (let i = avenger.deeds.length - 1; i >= 0; i -= 1) {
     const event = run.world.events.find((e) => e.id === avenger.deeds[i]);
@@ -212,10 +240,11 @@ function runVengeance(run: HistoryRun): void {
   }
 }
 
-/** Yearly: grievances fade, then famine raids, then vengeance. */
+/** Yearly: grievances fade, then famine raids, habit raids, then vengeance. */
 export function runCivRaids(run: HistoryRun): void {
   decayGrievances(run);
   runFamineRaids(run);
+  runHabitRaids(run);
   runVengeance(run);
 }
 

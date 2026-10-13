@@ -608,6 +608,9 @@ export function successorOf(
     case 'youngest-keeps-hearth':
       heir = kids[kids.length - 1] ?? spouse ?? eldest;
       break;
+    case 'eldest-daughter':
+      heir = kids.find((m) => m.sex === 'f') ?? kids[0] ?? spouse ?? eldest;
+      break;
     case 'best-apprentice': {
       // Children come first, so ties go to them; anyone else needs strictly more intellect.
       let best: Person | undefined;
