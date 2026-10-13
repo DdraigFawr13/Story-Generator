@@ -106,6 +106,29 @@ describe('society', () => {
     expect(thief.siteId).toBe(destId);
   });
 
+  it('an exile with a victim takes a young child along without crashing', () => {
+    const content = thievingContent('exile');
+    const run = hungryThief(content);
+    const { world, active, thief } = run;
+    const people = active.residents.map((id) => world.people.get(id)!);
+    const child = people.find((p) => {
+      const race = content.races.find((r) => r.id === p.raceId)!;
+      return p.id !== thief.id && bandOfAge(race, world.params.historyYears - p.born) === 'child';
+    })!;
+    const victim = people.find((p) => p.id !== thief.id && p.id !== child.id)!;
+    child.family.parents = [thief.id];
+    thief.family.children = [...thief.family.children, child.id];
+    run.morning();
+    // The theft was from a neighbour, not the stores.
+    for (const c of active.society.cases) if (c.offender === thief.id) c.victim = victim.id;
+    thief.detail!.status = 0;
+    world.day += 1;
+    run.morning();
+    expect(active.residents).not.toContain(child.id);
+    expect(child.siteId).toBe(thief.siteId);
+    expect(child.detail).toBeUndefined();
+  });
+
   it('a death schedules a funeral the next day, mourned at least by the household', () => {
     const world = copy();
     const active = embark(world, C, biggest(world).id);

@@ -514,7 +514,10 @@ function judge(
       for (const q of kin) remember(env, q, rules.memoryOf.executedKin, offender.id, executed.id);
     }
     // Kin of the punished hold it against the one who brought the charge.
-    if (victim) for (const q of kin) if (q.id !== victim.id) startGrudge(env, q, victim);
+    // Only those still here: kin (or the victim) may have gone into exile with the offender.
+    if (here(victim)) {
+      for (const q of kin) if (here(q) && q.id !== victim.id) startGrudge(env, q, victim);
+    }
   }
 }
 
