@@ -476,8 +476,10 @@ function bear(env: SocialEnv, rng: RngStream, mother: Person, fatherId: Id): voi
     rng,
   );
   const names = new Set(residentsHere(env).map((p) => p.name));
-  let name = cultureGivenName(culture.names, rng);
-  for (let t = 0; t < 12 && names.has(name); t += 1) name = cultureGivenName(culture.names, rng);
+  const sex = rng.chance(0.5) ? 'f' : 'm';
+  let name = cultureGivenName(culture.names, rng, sex);
+  for (let t = 0; t < 12 && names.has(name); t += 1)
+    name = cultureGivenName(culture.names, rng, sex);
   const id = world.nextId.person;
   world.nextId.person += 1;
   const child: Person = {
@@ -485,7 +487,7 @@ function bear(env: SocialEnv, rng: RngStream, mother: Person, fatherId: Id): voi
     name,
     raceId: race.id,
     cultureId: culture.id,
-    sex: rng.chance(0.5) ? 'f' : 'm',
+    sex,
     born: world.params.historyYears + yearsIn(env),
     birthplaceCell: site.cell,
     family: { parents: parents.map((p) => p.id), spouses: [], children: [] },

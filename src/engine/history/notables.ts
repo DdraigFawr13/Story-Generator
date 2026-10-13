@@ -276,9 +276,17 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
   const civ = civOfPerson(run, person);
   const where = options.at ?? siteOf(run, person);
   const phrase = rules.deathPhrases[options.cause].replace('{kind}', where?.kind ?? 'town');
+  // The living spouse is an actor too, so the death shows on the widow's or widower's page.
+  const spouses = person.family.spouses
+    .map((id) => livingPerson(run, id))
+    .filter((p): p is Person => p !== undefined && p.id !== killer?.id);
+  const widowed =
+    spouses.length === 0
+      ? ''
+      : rules.widowedPhrase.replace('{names}', spouses.map((p) => p.name).join(' and '));
   const event = run.emit({
     type: 'notable_died',
-    actors: killer ? [person.id, killer.id] : [person.id],
+    actors: [person.id, ...(killer ? [killer.id] : []), ...spouses.map((p) => p.id)],
     place: where?.cell ?? placeOf(run, person),
     causes: options.causes && options.causes.length > 0 ? options.causes : person.deeds.slice(-1),
     data: {
@@ -288,6 +296,7 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
       cause: killer ? `${phrase}, slain by ${killer.name}` : phrase,
       site: where?.name ?? 'the wilds',
       civ: civName(civ),
+      widowed,
     },
   });
   addDeed(person, event.id);
@@ -919,9 +928,10 @@ function createSpouse(run: HistoryRun, of: Person): Person {
   // Never a second spouse with an earlier one's name (a few rerolls; the name lists are long).
   const culture = run.content.cultures.find((c) => c.id === of.cultureId)!;
   const taken = new Set(of.family.spouses.map((id) => run.world.people.get(id)?.name));
-  let name = cultureGivenName(culture.names, run.rng.notables);
+  const sex = of.sex === 'f' ? 'm' : 'f';
+  let name = cultureGivenName(culture.names, run.rng.notables, sex);
   for (let tries = 0; taken.has(name) && tries < NAME_REROLLS; tries += 1)
-    name = cultureGivenName(culture.names, run.rng.notables);
+    name = cultureGivenName(culture.names, run.rng.notables, sex);
   const spouse = createPerson(run, {
     name,
     raceId: of.raceId,
@@ -931,7 +941,7 @@ function createSpouse(run: HistoryRun, of: Person): Person {
     cell: placeOf(run, of),
     title: 'kin',
     age: spouseAge,
-    sex: of.sex === 'f' ? 'm' : 'f',
+    sex,
     fame: 0,
   });
   wed(of, spouse);
@@ -1019,6 +1029,7 @@ function runMarriages(run: HistoryRun): void {
     const ruler = rulerOf(run, civ);
     if (!ruler || cultureOf(run, civ)?.marriage.custom !== 'leaders-many-spouses') continue;
     if (!isMarried(run, ruler) || !isAdult(run, ruler) || isElder(run, ruler)) continue;
+    if (inMourning(run, ruler)) continue;
     if (run.notables.living.size >= cap || !rng.chance(rules.extraSpouseChance)) continue;
     marriageEvent(run, ruler, createSpouse(run, ruler), undefined);
   }

@@ -144,9 +144,9 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
       rng,
     );
     // Re-roll a name already used at the site, a few times, so residents rarely share one.
-    let name = cultureGivenName(culture.names, rng);
+    let name = cultureGivenName(culture.names, rng, sex);
     for (let t = 0; t < NAME_TRIES && names.has(name); t += 1) {
-      name = cultureGivenName(culture.names, rng);
+      name = cultureGivenName(culture.names, rng, sex);
     }
     names.add(name);
     const id = world.nextId.person;

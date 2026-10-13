@@ -12,9 +12,18 @@ function tidy(text: string): string {
   return collapsed.charAt(0).toUpperCase() + collapsed.slice(1);
 }
 
-/** A person's given name: a start plus an end ("Cad" + "oc"). */
-export function cultureGivenName(names: CultureNames, rng: RngStream): string {
-  return tidy(rng.pick(names.givenStarts) + rng.pick(names.givenEnds));
+/**
+ * A person's given name: a start plus an end ("Cad" + "oc"), or, when the culture lists whole names
+ * and the sex is known, one of those, each whole name as likely as each made-up one.
+ */
+export function cultureGivenName(names: CultureNames, rng: RngStream, sex?: 'f' | 'm'): string {
+  const whole = sex && names.givenNames ? names.givenNames[sex] : [];
+  if (whole.length === 0) return tidy(rng.pick(names.givenStarts) + rng.pick(names.givenEnds));
+  const ends = names.givenEnds.length;
+  const made = names.givenStarts.length * ends;
+  const i = rng.int(made + whole.length);
+  if (i >= made) return whole[i - made]!;
+  return tidy(names.givenStarts[Math.floor(i / ends)]! + names.givenEnds[i % ends]!);
 }
 
 /** A place name: a start, sometimes a middle, and an end. */

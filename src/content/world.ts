@@ -565,11 +565,11 @@ export const eventTypes: EventTypeDef[] = [
     links: { site: 'site', civ: 'civ' },
     rollup: ['notable death', 'notable deaths'],
     templates: [
-      'In {date} {name}, {role} of the {civ}, died at {site} aged {age}, {cause}.',
-      '{date}: {name} the {role} of {site} died {cause}, at the age of {age}.',
-      'The {civ} mourned {name}, {role}, who died {cause} at {site} in {date}, aged {age}.',
-      '{site} lost {name}, a {role} of the {civ}, aged {age}, who died {cause} in {date}.',
-      'Of the {civ}, {name} the {role} died {cause} at {site} in {date}, aged {age}.',
+      'In {date} {name}, {role} of the {civ}, died at {site} aged {age}, {cause}{widowed}.',
+      '{date}: {name} the {role} of {site} died {cause}, at the age of {age}{widowed}.',
+      'The {civ} mourned {name}, {role}, who died {cause} at {site} in {date}, aged {age}{widowed}.',
+      '{site} lost {name}, a {role} of the {civ}, aged {age}, who died {cause} in {date}{widowed}.',
+      'Of the {civ}, {name} the {role} died {cause} at {site} in {date}, aged {age}{widowed}.',
     ],
   },
   {

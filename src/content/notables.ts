@@ -82,6 +82,8 @@ export const NOTABLES: NotableRules = {
     'elder-council': 'by the choice of the council of elders',
     'eldest-child': 'by the custom of the eldest child',
   },
+  // Appended to a notable's death when a spouse outlives them ({names}).
+  widowedPhrase: ', leaving {names} widowed',
   noHeirPhrase: 'when no heir of the line was left',
   disputePhrases: {
     held: '{rule}, after winning the quarrel with {rival}',

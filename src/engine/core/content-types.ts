@@ -77,6 +77,8 @@ export interface CultureNames {
   /** Given names are a start plus an end: "Cad" + "oc". */
   givenStarts: string[];
   givenEnds: string[];
+  /** Whole given names by sex, drawn beside the made-up ones when the person's sex is known. */
+  givenNames?: { f: string[]; m: string[] };
   /** Place names: start, optional middle, end. */
   placeStarts: string[];
   placeMiddles: string[];
@@ -1187,6 +1189,8 @@ export interface NotableRules {
   deathPhrases: Record<DeathCause, string>;
   /** Succession clause per rule, for `ruler_succeeded`. */
   successionPhrases: Record<SuccessionRule, string>;
+  /** Clause on a death a spouse outlives ({names}); empty data when none does. */
+  widowedPhrase: string;
   /** Succession clause when no kin or notable of the civ was left to take the seat. */
   noHeirPhrase: string;
   /** Succession clause after a dispute: `held` when the heir by custom won, `seized` when the rival did ({rule}, {rival}). */
