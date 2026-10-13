@@ -13,7 +13,7 @@ import {
   type ActiveSite,
   type Building,
 } from '../../src/engine';
-import { base, baseB, biggest } from './helpers/site-fixture';
+import { base, baseC, biggest } from './helpers/site-fixture';
 
 const C = DEFAULT_CONTENT;
 const DAYS = 336;
@@ -143,9 +143,9 @@ describe('fire', () => {
 
 describe('a normal year at a site', () => {
   it('keeps the store, harvests near the target and cuts no meals; the run is repeatable', () => {
-    // SITE-B: SITE-A's village ends its year at 57% of its stores after the 2026-10-13 history change (weddings, fame).
+    // SITE-C: compact continents (2026-10-13) moved SITE-B's village off the target (0.67 vs 1); SITE-A's village moved earlier (weddings, fame).
     const run = () => {
-      const { world, active } = fresh(baseB);
+      const { world, active } = fresh(baseC);
       const start = foodMeals(active, C);
       for (let d = 0; d < DAYS; d += 1) stepSite(world, C);
       return {
