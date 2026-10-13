@@ -16,6 +16,7 @@ import type { CultureDef, RaceDef } from '../core/content-types';
 import { rollAptitude } from '../people/aptitude';
 import { cultureGivenName } from '../people/names';
 import { ageBands, bandOfAge, type SiteContent } from './defs';
+import { blankEnvironment, initEnvironment } from './environment';
 import { layoutSite } from './layout';
 import { buildLocalMap } from './localmap';
 import { goodAmount } from './stock';
@@ -468,9 +469,11 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
     layoutVersion: 0,
     itemsAtEntry,
     stewardFocus: null,
+    ...blankEnvironment(year),
   };
   for (const good of GOODS) active.stockAtEntry[good] = goodAmount(active, content, good);
   world.activeSite = active;
+  initEnvironment(world, content, active);
   seedSkills(world, content, active);
   return active;
 }

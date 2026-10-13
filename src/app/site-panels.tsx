@@ -566,6 +566,7 @@ const ACTIVITY_VERB: Record<Activity, string> = {
   despair: 'In despair',
   wander: 'Wandered off',
   steal: 'Stealing',
+  fight: 'Fighting the fire',
 };
 /** One word for the People list. */
 const ACTIVITY_SHORT: Record<Activity, string> = {
@@ -579,6 +580,7 @@ const ACTIVITY_SHORT: Record<Activity, string> = {
   despair: 'in despair',
   wander: 'wandering',
   steal: 'stealing',
+  fight: 'fighting fire',
 };
 const BREAKDOWN_TEXT: Record<BreakdownKind, string> = {
   tantrum: 'A tantrum',

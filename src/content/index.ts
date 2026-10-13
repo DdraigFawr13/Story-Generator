@@ -17,6 +17,7 @@ import { races } from './races';
 import { RESOURCES } from './resources';
 import { SETTLEMENT } from './settlement';
 import { SITE } from './site';
+import { ENVIRONMENT, WEATHER_EVENTS } from './weather';
 import { eventTypes, rules, weather } from './world';
 
 export const DEFAULT_CONTENT: ContentBundle = {
@@ -29,7 +30,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   schools,
   abilities,
   weather,
-  eventTypes: [...eventTypes, ...LIFE_EVENTS, ...WORK_EVENTS],
+  eventTypes: [...eventTypes, ...LIFE_EVENTS, ...WORK_EVENTS, ...WEATHER_EVENTS],
   typeGroups: TYPE_GROUPS,
   rules,
   settlement: SETTLEMENT,
@@ -46,6 +47,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   items: ITEMS,
   jobs: JOBS,
   steward: STEWARD,
+  environment: ENVIRONMENT,
 };
 
 export * from './biographies';
@@ -66,3 +68,4 @@ export * from './playback';
 export * from './resources';
 export * from './settlement';
 export * from './site';
+export * from './weather';

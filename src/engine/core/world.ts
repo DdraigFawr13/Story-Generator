@@ -69,6 +69,7 @@ export function createWorld(seed: string, params: Partial<WorldParams> = {}): Wo
     items: new Map(),
     snapshots: [],
     playback: null,
+    climateEpochs: [],
     events: [],
     commands: [],
     weather: { current: 'mild', sinceDay: 0, causeEvent: null },

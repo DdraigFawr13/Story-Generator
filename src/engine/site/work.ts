@@ -7,6 +7,7 @@
 // block `runWork` turns the crew standing at their workplaces into items, progress and skill.
 
 import type { EmitInput } from '../core/context';
+import { dateOf } from '../core/clock';
 import type { AbilityDef, ItemDef, JobDef, Workplace } from '../core/content-types';
 import { streamFor } from '../core/rng';
 import type {
@@ -24,16 +25,28 @@ import { meetsRequirements } from '../people/aptitude';
 import { TIERS, TIER_IDS, tierOfPower } from '../people/tiers';
 import {
   beginBuilding,
+  burntBuilding,
   finishBuilding,
   openConstruction,
   repairTarget,
+  restartBuilding,
   wearBuildings,
   type SiteLabel,
 } from './build';
+import { farmBlock, fieldsNeedingWork } from './crops';
 import { bandOfAge, buildingDef, siteCodes, type Band, type SiteContent } from './defs';
 import { findSpot } from './layout';
-import { pathCosts } from './path';
-import { addItem, foodDaysLeft, itemCount, rawFood, takeItem, takeRawFood } from './stock';
+import { pathCosts, tileCost } from './path';
+import {
+  addItem,
+  foodDaysLeft,
+  itemCount,
+  preserveFood,
+  rawFood,
+  takeItem,
+  takeRawFood,
+} from './stock';
+import { drawWild, fellAt, nearestAnimal, treeNear, wildYield } from './wild';
 
 type Emit = (input: EmitInput) => SimEvent;
 
@@ -48,6 +61,8 @@ export interface WorkerRef {
 /** A worker standing at their workplace this block. */
 export interface CrewMember extends WorkerRef {
   job: JobDef;
+  /** The tile they stand on this block (a field worker's field, a woodcutter's trees). */
+  tile: number;
 }
 
 /** A world item with its definition. */
@@ -68,6 +83,12 @@ const ORTHO: [number, number][] = [
 ];
 
 const clamp = (x: number, lo: number, hi: number) => (x < lo ? lo : x > hi ? hi : x);
+const inMonths = (month: number, [from, to]: readonly [number, number]) =>
+  month >= from && month <= to;
+/** Tiles per side of the grid a hunter's quarry is snapped to. */
+const HUNT_GRID = 4;
+/** A wild pool yielding under this share of full is not worth sending gatherers to. */
+const GATHER_MIN = 0.05;
 /** A stable pseudo-random number from an id and a salt, so a spot needs no storage. */
 const mix = (id: number, salt: number) => Math.imul(id * 31 + salt, 0x9e3779b1) >>> 7;
 
@@ -292,6 +313,9 @@ interface WorkSite {
   leadId: Int32Array;
   /** The last day plan's fingerprint (see `runSteward`). */
   signature: string;
+  /** Today's field tile for each farmer, and the field (building id) each worked last (see `runSteward`). */
+  farmTile: Map<Id, number>;
+  farmField: Map<Id, Id>;
   /** Items held by residents, in item id order; null until needed. */
   resident: (HeldItem & { holder: Id })[] | null;
 }
@@ -378,7 +402,7 @@ function rebuildLists(ws: WorkSite, content: SiteContent, active: ActiveSite): v
   }
   built.sort((a, b) => a.id - b.id);
   const workshop = built.find(
-    (b) => b.defId === steward.workshopBuilding && b.progress === undefined,
+    (b) => b.defId === steward.workshopBuilding && b.progress === undefined && !b.burnt,
   );
   const kitchen =
     built.find((b) => b.defId === 'hall') ?? built.find((b) => b.defId === 'stockpile');
@@ -441,6 +465,8 @@ function workSiteSlow(content: SiteContent, active: ActiveSite): WorkSite {
       leadSecond: new Float64Array(0),
       leadId: new Int32Array(0),
       signature: '',
+      farmTile: new Map(),
+      farmField: new Map(),
       resident: null,
     };
     sites.set(active, ws);
@@ -576,11 +602,11 @@ function interiorCells(b: Building): number[] {
 export function workTile(
   content: SiteContent,
   active: ActiveSite,
-  who: { id: Id; field: number },
+  who: { id: Id; field: number; tileAt?: number },
   job: JobDef,
 ): number {
   const ws = workSite(content, active);
-  if (job.workplace === 'field') return who.field;
+  if (job.workplace === 'field') return ws.farmTile.get(who.id) ?? who.field;
   if (!ws.workplaces.has(job.workplace)) return -1;
   const fromList = (list: number[]) =>
     list.length === 0
@@ -590,7 +616,10 @@ export function workTile(
     cells.length === 0 ? -1 : cells[mix(who.id, 12) % cells.length]!;
   switch (job.workplace) {
     case 'trees':
-      return fromList(ws.trees);
+      // A woodcutter stays at their spot while it still has trees.
+      return who.tileAt !== undefined && who.tileAt >= 0 && treeNear(active, who.tileAt)
+        ? who.tileAt
+        : fromList(ws.trees);
     case 'water':
       return fromList(ws.water);
     case 'stone':
@@ -598,8 +627,26 @@ export function workTile(
     case 'ore':
       return fromList(ws.ore);
     case 'wild':
-    case 'herbs':
+    case 'herbs': {
+      // A hunter walks to the animal nearest the village.
+      if (job.pool === 'game' && active.animals.length > 0) {
+        const a = nearestAnimal(
+          active,
+          active.origin[1] * active.map.width + active.origin[0],
+          mix(who.id, 15) % Math.min(3, active.animals.length),
+        );
+        if (a) {
+          // Snapped to a coarse grid so the walk repeats from day to day (and the route is cached).
+          const w = active.map.width;
+          const sx = Math.min(w - 1, a.x - (a.x % HUNT_GRID) + (HUNT_GRID >> 1));
+          const sy = Math.min(active.map.height - 1, a.y - (a.y % HUNT_GRID) + (HUNT_GRID >> 1));
+          return tileCost(active, content.site, content.life, sy * w + sx) > 0
+            ? sy * w + sx
+            : a.y * w + a.x;
+        }
+      }
       return fromList(ws.wild);
+    }
     case 'workshop':
       return inside(ws.workshop);
     case 'kitchen':
@@ -728,7 +775,11 @@ export function runSteward(
         h.members.length > st.crowdedHome && home !== undefined && home.begunEvent === undefined
       );
     });
-    if (homeless && affordable(st.homeBuilding)) {
+    // A building the fire took is raised again before anything new is begun.
+    const burnt = burntBuilding(active, (id) => buildingDef(rules, id).buildable === true);
+    if (burnt && affordable(burnt.defId)) {
+      restartBuilding(content, active, burnt, emit, label);
+    } else if (homeless && affordable(st.homeBuilding)) {
       beginBuilding(content, active, st.homeBuilding, homeless.head, emit, label);
     } else if (!hasWorkshop && affordable(st.workshopBuilding)) {
       beginBuilding(content, active, st.workshopBuilding, null, emit, label);
@@ -747,6 +798,13 @@ export function runSteward(
   const foodWorkers = Math.round(
     crew.length * (st.foodShare[0] + (st.foodShare[1] - st.foodShare[0]) * shortage),
   );
+  // The steward's stock target: logs also keep last winter's firewood and building.
+  const targetOf = (item: string): number | undefined => {
+    const base = st.materialTargets[item];
+    return item === env.firewood.item && base !== undefined
+      ? Math.max(base, active.firewood.target)
+      : base;
+  };
   const slots = new Map<string, JobDef[]>();
   const want = (label: string, j: JobDef | undefined, n: number) => {
     if (!j || n <= 0 || !ws.workplaces.has(j.workplace)) return;
@@ -756,25 +814,48 @@ export function runSteward(
   };
   const cook = job('cook');
   const farm = job('farm');
+  const env = content.environment;
+  const month = dateOf(world.day).month;
   const cooks =
     cook && rawFood(active, content) > 0
       ? Math.min(foodWorkers, Math.ceil(eaters / st.cooksPer))
       : 0;
-  const fieldCount = [...active.buildings.values()].filter(
-    (b) => b.defId === 'field' && b.followed,
-  ).length;
-  const farmers = Math.min(
-    Math.max(0, foodWorkers - cooks),
-    fieldCount * (farm?.perWorkplace ?? 0),
-  );
+  // Farm work is seasonal: sowing, a tender for each growing field, and cutting the ripe ones.
+  const season = fieldsNeedingWork(world, content, active);
+  const perField = farm?.perWorkplace ?? 0;
+  const farmNeed =
+    (season.sow.length + season.ripe.length) * perField +
+    season.tend.length * env.crop.tendersPerField;
+  const busy = inMonths(month, env.crop.harvestMonths) || inMonths(month, env.crop.sowMonths);
+  const farmers = farm
+    ? Math.min(farmNeed, Math.max(0, (busy ? crew.length : foodWorkers) - cooks))
+    : 0;
+  // Fishers, hunters and foragers, where there is something to take this season.
   const gatherers = (['fish', 'forage', 'hunt'] as const)
     .map(job)
-    .filter((j): j is JobDef => j !== undefined && ws.workplaces.has(j.workplace));
+    .filter(
+      (j): j is JobDef =>
+        j !== undefined &&
+        ws.workplaces.has(j.workplace) &&
+        (j.pool === undefined ||
+          j.pool === 'wood' ||
+          wildYield(content, active, j.pool, month) > GATHER_MIN),
+    );
   const rest = Math.max(0, foodWorkers - cooks - farmers);
+  const gathering = Math.min(
+    rest,
+    Math.round(
+      crew.length * (st.gatherShare[0] + (st.gatherShare[1] - st.gatherShare[0]) * shortage),
+    ),
+  );
   want('food', cook, cooks);
-  want('food', farm, farmers);
+  want('farm', farm, farmers);
   gatherers.forEach((j, i) => {
-    want('food', j, Math.floor(rest / gatherers.length) + (i < rest % gatherers.length ? 1 : 0));
+    want(
+      'food',
+      j,
+      Math.floor(gathering / gatherers.length) + (i < gathering % gatherers.length ? 1 : 0),
+    );
   });
   // Building site: builders need some of each material; haulers carry what stands in the stores.
   const build = job('build');
@@ -800,7 +881,7 @@ export function runSteward(
   for (const j of content.jobs) {
     if (j.serves !== 'materials' || j === mine) continue;
     const item = Object.keys(j.outputs ?? {})[0];
-    const target = item === undefined ? undefined : st.materialTargets[item];
+    const target = item === undefined ? undefined : targetOf(item);
     if (item === undefined || target === undefined) continue;
     const n = itemCount(active, item) < target || short(item) ? st.crafters : 0;
     want('materials', j, n);
@@ -821,19 +902,20 @@ export function runSteward(
   const heal = job('heal');
   if (heal && crew.some((w) => able(w, heal))) want('health', heal, healers);
 
-  // 3. Fill the slots, most urgent first.
+  // 3. Fill the slots, most urgent first; in the harvest months the fields come first.
   const order = foodFirst
-    ? ['food', 'shelter', 'repair', 'tools', 'materials', 'health']
-    : ['shelter', 'repair', 'food', 'tools', 'materials', 'health'];
+    ? ['farm', 'food', 'shelter', 'repair', 'tools', 'materials', 'health']
+    : inMonths(month, env.crop.harvestMonths)
+      ? ['farm', 'shelter', 'repair', 'food', 'tools', 'materials', 'health']
+      : ['shelter', 'repair', 'farm', 'food', 'tools', 'materials', 'health'];
   // Spare hands: wares (up to one craftsman per `waresPer` residents), else materials, else
-  // farming and foraging while the stores are below `spareFoodDays`.
+  // fishing, hunting and foraging while the stores are below `spareFoodDays`.
   const wares = job('craftWares');
   const spare = content.jobs.filter((j) => {
     const item = Object.keys(j.outputs ?? {})[0];
-    const target = item === undefined ? undefined : st.materialTargets[item];
+    const target = item === undefined ? undefined : targetOf(item);
     return j.serves === 'materials' && target !== undefined && itemCount(active, item!) < target;
   });
-  const farmRoom = farm ? fieldCount * (farm.perWorkplace ?? 0) : 0;
   const lowStores = daysLeft < st.spareFoodDays;
   // The same plan for the same crew gives the same jobs, so it is only drawn up again when
   // something it depends on changes, and at least every `replanDays` days.
@@ -843,7 +925,7 @@ export function runSteward(
     crew.map((w) => w.id).join(','),
     order.map((l) => `${l}:${(slots.get(l) ?? []).map((j) => j.id).join('|')}`).join(';'),
     spare.map((j) => j.id).join('|'),
-    lowStores ? farmRoom : -1,
+    lowStores ? 1 : -1,
   ].join('#');
   if (signature !== ws.signature) {
     ws.signature = signature;
@@ -853,6 +935,38 @@ export function runSteward(
       if (detail) detail.jobId = undefined;
     }
     assignJobs();
+  }
+  // Each farmer works one field: yesterday's while it still needs hands, else the first that does
+  // (ripe fields first, then those to sow, then to tend), so routes stay the same from day to day.
+  ws.farmTile.clear();
+  if (farm) {
+    const fields = [...season.ripe, ...season.sow, ...season.tend];
+    const room = new Map<Id, number>();
+    for (const b of season.ripe) room.set(b.id, perField);
+    for (const b of season.sow) room.set(b.id, perField);
+    for (const b of season.tend) room.set(b.id, env.crop.tendersPerField);
+    const farming = workers
+      .filter((w) => w.person.detail?.jobId === farm.id)
+      .sort((a, b) => a.id - b.id);
+    const placed = new Map<Id, Building>();
+    const byId = new Map(fields.map((b) => [b.id, b]));
+    for (const w of farming) {
+      const before = ws.farmField.get(w.id);
+      if (before !== undefined && (room.get(before) ?? 0) > 0) {
+        placed.set(w.id, byId.get(before)!);
+        room.set(before, room.get(before)! - 1);
+      }
+    }
+    farming.forEach((w, i) => {
+      if (placed.has(w.id)) return;
+      const open = fields.find((b) => (room.get(b.id) ?? 0) > 0);
+      const field = open ?? (fields.length === 0 ? undefined : fields[i % fields.length]);
+      if (!field) return;
+      placed.set(w.id, field);
+      room.set(field.id, (room.get(field.id) ?? 0) - 1);
+    });
+    ws.farmField = new Map([...placed].map(([id, b]) => [id, b.id]));
+    for (const [id, b] of placed) ws.farmTile.set(id, b.cells[mix(id, 14) % b.cells.length]!);
   }
 
   function assignJobs() {
@@ -898,20 +1012,29 @@ export function runSteward(
       }
     }
     // Everyone left has no job unless there is work for spare hands.
-    let farming = crew.filter((w) => farm && w.person.detail?.jobId === farm.id).length;
-    const forage = job('forage');
     let crafting = 0;
     const craftCap = Math.ceil(workers.length / st.waresPer);
+    // No more spare hands than the wares cap on any one materials job, so a winter with no field
+    // work does not send half the town to the woods.
+    const onJob = new Map<JobDef, number>();
+    for (const w of crew) {
+      const j =
+        w.person.detail?.jobId === undefined ? undefined : ws.jobs.get(w.person.detail.jobId);
+      if (j) onJob.set(j, (onJob.get(j) ?? 0) + 1);
+    }
     for (const w of crew) {
       if (assigned.has(w.id)) continue;
       const options: JobDef[] = [];
       if (wares && crafting < craftCap && able(w, wares)) options.push(wares);
       else {
-        for (const j of spare) if (ws.workplaces.has(j.workplace) && able(w, j)) options.push(j);
+        for (const j of spare) {
+          if (ws.workplaces.has(j.workplace) && able(w, j) && (onJob.get(j) ?? 0) < craftCap) {
+            options.push(j);
+          }
+        }
       }
       if (options.length === 0 && lowStores) {
-        if (farm && farming < farmRoom && able(w, farm)) options.push(farm);
-        if (forage && able(w, forage)) options.push(forage);
+        for (const j of gatherers) if (able(w, j)) options.push(j);
       }
       let pick: JobDef | undefined;
       let pickScore = -Infinity;
@@ -924,7 +1047,7 @@ export function runSteward(
       }
       if (!pick) continue;
       give(w, pick);
-      if (pick === farm) farming += 1;
+      onJob.set(pick, (onJob.get(pick) ?? 0) + 1);
       if (pick === wares) crafting += 1;
     }
   }
@@ -1007,10 +1130,21 @@ function haulBlock(content: SiteContent, active: ActiveSite, eff: number): void 
 }
 
 /** Uses inputs and makes outputs for one block, scaled to the inputs found. */
-function produceBlock(content: SiteContent, active: ActiveSite, job: JobDef, eff: number): void {
+function produceBlock(
+  content: SiteContent,
+  active: ActiveSite,
+  job: JobDef,
+  eff: number,
+  yieldMul = 1,
+): void {
   let share = 1;
   for (const [item, n] of entries(job.inputs)) {
-    const spare = itemCount(active, item) - (job.reserve?.[item] ?? 0);
+    // The firewood reserve outranks a job's own reserve of logs.
+    const keep =
+      item === content.environment.firewood.item
+        ? Math.max(job.reserve?.[item] ?? 0, active.firewood.reserve)
+        : (job.reserve?.[item] ?? 0);
+    const spare = itemCount(active, item) - keep;
     share = Math.min(share, spare / (n * eff));
   }
   if (job.rawFood) share = Math.min(share, rawFood(active, content) / (job.rawFood * eff));
@@ -1018,7 +1152,7 @@ function produceBlock(content: SiteContent, active: ActiveSite, job: JobDef, eff
   share = Math.min(1, share);
   for (const [item, n] of entries(job.inputs)) takeItem(active, item, n * eff * share);
   if (job.rawFood) takeRawFood(active, content, job.rawFood * eff * share);
-  for (const [item, n] of entries(job.outputs)) addItem(active, item, n * eff * share);
+  for (const [item, n] of entries(job.outputs)) addItem(active, item, n * eff * share * yieldMul);
 }
 
 /**
@@ -1058,6 +1192,8 @@ export function runWork(
   ws.madeHands.fill(0);
   const lowest = st.skillLevels[0]?.[0] ?? Infinity;
   const highest = st.skillLevels[st.skillLevels.length - 1]?.[0] ?? -Infinity;
+  // Farm work is summed per field and woodcutters fell the tree beside them.
+  const farmWork = new Map<Id, number>();
   for (const c of crew) {
     const { job, person } = c;
     const info = ws.info.get(job)!;
@@ -1074,6 +1210,18 @@ export function runWork(
     if (!(eff > 0)) continue;
     ws.madeEff[info.index]! += eff;
     ws.madeHands[info.index]! += 1;
+    if (job.action === 'farm') {
+      const field = active.map.building[c.tile] ?? 0;
+      if (field !== 0) farmWork.set(field, (farmWork.get(field) ?? 0) + eff);
+    } else if (job.pool === 'wood') {
+      fellAt(
+        world,
+        content,
+        active,
+        c.tile,
+        eff * (job.outputs?.[content.environment.firewood.item] ?? 0),
+      );
+    }
     if (job.likedBy && intersects(job.likedBy, c.traits)) liked.add(c.id);
     if (info.skill < 0 || !info.ability) continue;
     // Learning by doing, faster beside someone clearly better, slower near potential.
@@ -1100,6 +1248,8 @@ export function runWork(
       });
     }
   }
+  if (farmWork.size > 0) farmBlock(world, content, active, farmWork, emit, label);
+  const month = dateOf(world.day).month;
   for (const job of content.jobs) {
     const index = ws.info.get(job)!.index;
     const hands = ws.madeHands[index]!;
@@ -1107,7 +1257,15 @@ export function runWork(
     const eff = ws.madeEff[index]!;
     if (job.action === 'build') buildBlock(content, active, eff, emit, label);
     else if (job.action === 'haul') haulBlock(content, active, eff);
-    else produceBlock(content, active, job, eff);
+    else if (job.action === 'farm') {
+      // Done per field above.
+    } else {
+      const pool = job.pool === undefined || job.pool === 'wood' ? undefined : job.pool;
+      // A cook smokes or salts fish and game first, while salt lasts.
+      if (job.id === st.roles.cook) preserveFood(active, content, eff);
+      produceBlock(content, active, job, eff, pool ? wildYield(content, active, pool, month) : 1);
+      if (pool) drawWild(content, active, pool, hands);
+    }
     if (job.tools && toolItem !== undefined) takeItem(active, toolItem, st.toolWear * hands);
   }
   return liked;

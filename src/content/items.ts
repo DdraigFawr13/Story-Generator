@@ -10,11 +10,29 @@ const MEAL = 1 / 336;
 
 export const ITEMS: ItemDef[] = [
   // Raw food and the cooked meal (4 meals from 3 raw, see the cook job).
-  { id: 'grain', name: 'grain', good: 'food', per: MEAL, kind: 'food' },
-  { id: 'fish', name: 'fish', good: 'food', per: MEAL, kind: 'food' },
-  { id: 'game', name: 'game', good: 'food', per: MEAL, kind: 'food' },
-  { id: 'berries', name: 'berries', good: 'food', per: MEAL, kind: 'food' },
-  { id: 'meal', name: 'cooked meals', good: 'food', per: MEAL, kind: 'food', cooked: true },
+  // Spoilage (M3.4): grain loses 0.6% a month; fish, game and berries a quarter; smoked or salted
+  // food 1%; a cooked meal keeps two days (half is gone each day).
+  { id: 'grain', name: 'grain', good: 'food', per: MEAL, kind: 'food', spoilPerMonth: 0.006 },
+  { id: 'fish', name: 'fish', good: 'food', per: MEAL, kind: 'food', spoilPerMonth: 0.25 },
+  { id: 'game', name: 'game', good: 'food', per: MEAL, kind: 'food', spoilPerMonth: 0.25 },
+  { id: 'berries', name: 'berries', good: 'food', per: MEAL, kind: 'food', spoilPerMonth: 0.25 },
+  {
+    id: 'preserved',
+    name: 'preserved food',
+    good: 'food',
+    per: MEAL,
+    kind: 'food',
+    spoilPerMonth: 0.01,
+  },
+  {
+    id: 'meal',
+    name: 'cooked meals',
+    good: 'food',
+    per: MEAL,
+    kind: 'food',
+    cooked: true,
+    spoilPerDay: 0.5,
+  },
   // Non-food values are set so one block of work is worth a small, round share of a world good;
   // they keep a year of site work in the order of history's goodsPerWorker (content/history.ts).
   { id: 'logs', name: 'logs', good: 'timber', per: 0.01, kind: 'material' },

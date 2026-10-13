@@ -70,7 +70,7 @@ export const SITE: SiteRules = {
   autoPause: {
     deaths: [],
     breakdowns: ['site_tantrum', 'site_despair', 'site_wandered', 'site_theft', 'site_item_stolen'],
-    fires: [],
+    fires: ['site_fire', 'site_wildfire'],
     raids: [],
     arrivals: ['outpost_founded'],
   },

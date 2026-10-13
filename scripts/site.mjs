@@ -57,7 +57,18 @@ const foodStart = meals();
 const buildingsStart = new Set(active.buildings.keys());
 const begunEvents = () => world.events.slice(firstEvent);
 const t1 = performance.now();
-for (let i = 0; i < days; i += 1) E.stepSite(world, C);
+const harvests = [];
+let lastHarvest = null;
+let shortMonths = 0;
+for (let i = 0; i < days; i += 1) {
+  E.stepSite(world, C);
+  if (active.harvest !== lastHarvest) {
+    if (lastHarvest?.sown) harvests.push(lastHarvest);
+    lastHarvest = active.harvest;
+  }
+  if (world.day % 28 === 0 && active.mealShare < 1) shortMonths += 1;
+}
+if (lastHarvest?.sown) harvests.push(lastHarvest);
 const seconds = (performance.now() - t1) / 1000;
 console.log(
   `Daily life: ${days} days in ${(seconds * 1000).toFixed(1)} ms = ${(days / Math.max(seconds, 1e-6)).toFixed(0)} days/s (${active.residents.length} residents)`,
@@ -95,6 +106,13 @@ const topSkills = active.residents.flatMap((id) => {
 });
 console.log(
   `Skills: ${topSkills.length} skilled residents, mean top skill ${(topSkills.reduce((a, b) => a + b, 0) / Math.max(1, topSkills.length)).toFixed(1)}`,
+);
+// Environment (M3.4): harvests against what the fields should give, spoilage, fires, short meals.
+console.log(
+  `Harvests: ${harvests.map((h) => `${h.sown} fields cut ${Math.round(h.cut)} of ${Math.round(h.expected)} (${Math.round((100 * h.cut) / Math.max(1, h.expected))}%)`).join('; ') || 'none'}; spoiled ${Math.round(active.spoiled.total)} meals`,
+);
+console.log(
+  `Weather: ${active.weather.tempC} C, ${active.weather.sky}, daylight ${active.weather.daylightH} h; fires ${(counts.site_fire ?? 0) + (counts.site_wildfire ?? 0)}, burnt homes standing ${active.burnt.length}; short-meal months ${shortMonths}; woods ${Math.round((100 * active.woods.now) / Math.max(1, active.woods.atEmbark))}% of embark`,
 );
 const raised = [...active.buildings.values()].filter((b) => !buildingsStart.has(b.id));
 console.log(

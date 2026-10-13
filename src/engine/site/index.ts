@@ -11,3 +11,8 @@ export * from './life';
 export * from './path';
 export * from './stock';
 export * from './work';
+export * from './weather';
+export * from './crops';
+export * from './fire';
+export * from './wild';
+export * from './environment';

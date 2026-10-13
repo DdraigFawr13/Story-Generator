@@ -498,6 +498,38 @@ export interface Household {
   members: Id[];
   head: Id;
   home: Id | null;
+  /** M3.4: where the household sleeps while its own home is burnt (kin's home, else the hall); cleared when rebuilt. */
+  lodgingHome?: Id | undefined;
+}
+
+/** Where a field's crop stands in the year (M3.4). */
+export type CropStage = 'bare' | 'sown' | 'growing' | 'ripe' | 'cut' | 'ruined';
+
+/** The crop of a followed field: grown from sowing to harvest, with soil kept across years. */
+export interface Crop {
+  stage: CropStage;
+  /** 0 at sowing to 1 when ripe. */
+  growth: number;
+  health: number;
+  sownDay: number;
+  /** Share of the ripe grain still standing. */
+  left: number;
+  /** 0-100; starts at the cell's fertility and wears with each harvest. */
+  soil: number;
+  /** The soil the field started with: the most it recovers to. */
+  soilStart: number;
+  /** Sowing work done so far (effectiveness units) while bare in the sowing window. */
+  sowProgress: number;
+  /** Last day a farmer worked it. */
+  lastWorked: number;
+  /** A river, lake or sea tile lies within reach of the field. */
+  nearWater: boolean;
+  /** Degrees added to the frost thresholds: low ground (positive) freezes first, high ground last. */
+  frostBias: number;
+  /** Meals this year's crop should give at full health (set when sown). */
+  expected: number;
+  /** The field was sown this year (it is the harvest's share). */
+  sownThisYear: boolean;
 }
 
 export interface Building {
@@ -518,6 +550,141 @@ export interface Building {
   delivered?: Record<string, number>;
   /** The event that began its raising, for the "finished" cause link. */
   begunEvent?: Id;
+  /** M3.4: a followed field's crop. */
+  crop?: Crop;
+  /** M3.4: burnt down; a home is raised again by the build job, then this clears. */
+  burnt?: boolean;
+}
+
+/** Sky of the day at the watched site (M3.4). */
+export type Sky = 'clear' | 'rain' | 'storm' | 'snow';
+
+/** The watched site's weather, rolled once a day (M3.4). */
+export interface SiteWeather {
+  tempC: number;
+  lowC: number;
+  /** Slow swing (°C) added to the seasonal curve. */
+  anomaly: number;
+  sky: Sky;
+  dryDays: number;
+  /** Days of snow lying; 0 none. */
+  snowCover: number;
+  /** Hours of daylight today, and whether that is too little for outdoor work in the afternoon. */
+  daylightH: number;
+  outdoorDark: boolean;
+  /** The kind of year, rolled each Thawmonth. */
+  year: { drought: boolean; hardWinter: boolean; droughtCause?: Id; winterCause?: Id };
+  /** Last year was a hard winter (its cold runs into Thawmonth and Seedmonth). */
+  priorHardWinter: boolean;
+  wellLow: boolean;
+  rainDaysThisYear: number;
+  /** The open dry spell's event, while one lasts. */
+  spellEvent: Id | null;
+  /** Today's storm event, if the sky is stormy. */
+  stormEvent: Id | null;
+  /** Day of the last frost-on-crops event (-1 none). */
+  frostEventDay: number;
+  /** The year of the last first-snow event (-1 none). */
+  snowEventYear: number;
+  /** This winter (Firstfrost to Lastsnow): coldest night so far and days of snow. */
+  winterColdest: number;
+  winterSnowDays: number;
+}
+
+/** The harvest year (M3.4): what was sown, and what has been cut. */
+export interface SiteHarvest {
+  /** Calendar year (day / 336) it belongs to. */
+  year: number;
+  /** The sowing plan has been made. */
+  planned: boolean;
+  /** The sowing has been reported (all chosen fields sown, or the window closed). */
+  sownReported: boolean;
+  /** Field building ids picked for sowing, in sowing order. */
+  sowFields: Id[];
+  /** Fields sown, and the meals they should give at full health. */
+  sown: number;
+  expected: number;
+  /** Meals cut so far. */
+  cut: number;
+  /** The harvest has been summed up (fair or poor event). */
+  done: boolean;
+  /** Events that hurt the crop (dry spell, frosts), for the poor-harvest causes. */
+  causes: Id[];
+  /** The poor-harvest event, if the year had one; cause of short meals. */
+  poorEvent: Id | null;
+  /** Share of a normal year (0 until summed up). */
+  share: number;
+}
+
+/** Firewood and last winter's burn (M3.4). */
+export interface SiteFirewood {
+  /** Logs the steward keeps (and wares leave alone): last winter's burn plus building. */
+  reserve: number;
+  /** The steward's log target: the reserve plus headroom. */
+  target: number;
+  /** Last full winter's burn (Leaffall to Lastsnow), null until one has passed. */
+  lastWinter: number | null;
+  /** Burn so far this winter. */
+  winterBurn: number;
+  /** A winter's burn is being counted (Leaffall has been seen once). */
+  counting: boolean;
+  /** Followed homes with no logs today (building ids). */
+  coldHomes: Id[];
+  /** Homes that burned logs today: a lit hearth, and a chance of fire. */
+  lit: Id[];
+  /** Year the firewood-short event last fired (-1 none). */
+  shortEventYear: number;
+}
+
+/** Game, berries and fish in the wild land around the site, 0-1 of full (M3.4). */
+export interface SiteWild {
+  game: number;
+  berries: number;
+  fish: number;
+}
+
+/** A wild animal wandering the map (M3.4). */
+export interface Animal {
+  id: number;
+  kind: string;
+  x: number;
+  y: number;
+}
+
+/** The woods within reach of the stockpile, and the tiles felled (M3.4). */
+export interface SiteWoods {
+  atEmbark: number;
+  now: number;
+  /** Event when the woods thinned past the limit; null before. */
+  thinEvent: Id | null;
+  /** A tree was felled or grew back since the layout version last moved. */
+  dirty: boolean;
+  /** Wood left on trees being felled, by tile. */
+  wood: Map<number, number>;
+  /** Felled tiles and the day each grows back. */
+  felled: { tile: number; tree: number; regrow: number }[];
+}
+
+/** A fire at the site (M3.4): burning tiles with the blocks each has left. */
+export interface SiteFire {
+  tiles: Map<number, number>;
+  startedEvent: Id;
+  cause: string;
+  /** The home it began in, if any. */
+  home: Id | null;
+  /** Burnt tiles per building so far. */
+  hits: Map<Id, number>;
+  /** Tiles that burned, for the out-line. */
+  trees: number;
+  crops: number;
+  /** The tile that burned first. */
+  start: number;
+  /** Tiles that burned out or were put out; they do not light again. */
+  done: number[];
+  /** A well, river, lake or sea lies within reach to fight with. */
+  water: boolean;
+  /** The home that burned, if any, for the out-line. */
+  homes: Id[];
 }
 
 /** The live site (M3.1): its map, the people followed and what they own. */
@@ -550,6 +717,33 @@ export interface ActiveSite {
   itemsAtEntry: [Id, Id | null][];
   /** The steward's top priority last announced; null until the first day. */
   stewardFocus: string | null;
+  /** M3.4: weather, crops, stores, fire and wild land. */
+  weather: SiteWeather;
+  harvest: SiteHarvest;
+  firewood: SiteFirewood;
+  /** Share of a full meal eaten (1 normally; 0.67-1 when the steward cuts meals), and why/since when. */
+  mealShare: number;
+  shortMealsEvent: Id | null;
+  shortMealsSince: number;
+  /** Food spoiled this month, this year and in all (meals), for the monthly line and the tuner. */
+  spoiled: { month: number; year: number; total: number };
+  wild: SiteWild;
+  animals: Animal[];
+  woods: SiteWoods;
+  fire: SiteFire | null;
+  /** Open ground that burnt in the last weeks, with the day it burnt. */
+  burnt: { tile: number; day: number }[];
+}
+
+/** A climate epoch still running when history ended, for the watched site's weather (M3.4). */
+export interface ClimateEpoch {
+  kind: 'dry' | 'cold';
+  cell: number;
+  radius: number;
+  start: number;
+  end: number;
+  /** The opening event, a cause for the site's bad years. */
+  began: Id;
 }
 
 export interface WorldState {
@@ -580,6 +774,8 @@ export interface WorldState {
   snapshots: DecadeSnapshot[];
   /** Yearly borders, sites, capitals and trade for the playback; null until history runs. */
   playback: PlaybackLog | null;
+  /** Climate epochs still running when history ended (M3.4); the site's weather follows them. */
+  climateEpochs: ClimateEpoch[];
   events: SimEvent[];
   commands: Command[];
   /** Demo climate state for the scaffold; Phase 1 moves weather to per-cell climate. */

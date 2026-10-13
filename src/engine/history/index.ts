@@ -104,5 +104,16 @@ export function runHistory(
   }
   world.day = years * DAYS_PER_YEAR;
   finishPlayback(run);
+  // The spells still running now shape the watched site's weather (M3.4); the run is dropped.
+  world.climateEpochs = run.epochs
+    .filter((e) => !e.ended && e.end >= years)
+    .map(({ kind, cell, radius, start, end, began }) => ({
+      kind,
+      cell,
+      radius,
+      start,
+      end,
+      began,
+    }));
   pruneEvents(run);
 }
