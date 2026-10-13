@@ -213,8 +213,10 @@ describe('generated settlement', () => {
 
   it('passes the site checker: nothing in sea, lakes or rivers; 1-2 sites per civ', () => {
     expect(checkSites(world)).toEqual([]);
-    expect(world.civs.size).toBeGreaterThanOrEqual(3);
-    expect(world.civs.size).toBeLessThanOrEqual(8);
+    // Only the peoples settled at the start count: free cities and break-aways join world.civs later.
+    const founders = [...world.civs.values()].filter((c) => c.founded === 0 && !c.free);
+    expect(founders.length).toBeGreaterThanOrEqual(DEFAULT_CONTENT.settlement.civs.min);
+    expect(founders.length).toBeLessThanOrEqual(DEFAULT_CONTENT.settlement.civs.max);
     const cells = world.cells!;
     for (const site of world.sites.values()) expect(cells.water[site.cell]).toBe(0);
   });

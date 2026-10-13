@@ -104,7 +104,12 @@ describe('embark', () => {
     const site = biggest(world);
     const active = embark(world, SMALL_CAP, site.id);
     expect(sitePopulation(site)).toBeGreaterThan(30);
-    expect(Math.abs(active.residents.length - 30)).toBeLessThanOrEqual(5);
+    // Notables are always followed, so a town with more than 30 of them follows all of them
+    // (SITE-A's Fomori capital has 93 since the 2026-10-13 roster: Fomori breed fast).
+    const notables = [...world.people.values()].filter(
+      (p) => p.siteId === site.id && p.died === undefined,
+    ).length;
+    expect(Math.abs(active.residents.length - Math.max(30, notables))).toBeLessThanOrEqual(5);
     expect(active.share).toBeLessThan(1);
     checkInvariants(world, active);
   });

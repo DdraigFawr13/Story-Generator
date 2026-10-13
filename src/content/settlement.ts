@@ -11,7 +11,7 @@ export const SETTLEMENT: SettlementRules = {
   // A map draws its peoples from the roster: humans are common, giants rare. A culture's weight
   // also scales with its home-ground share of the land, full at 15%; under 2% it stays away.
   peoples: {
-    weight: { gwyllion: 0.6, fomori: 0.8, ghor: 0.8, hollin: 0.8, redcap: 0.8, cewri: 0.35 },
+    weight: { gwyllion: 0.6, fomori: 0.8, hollin: 0.8, cewri: 0.35 },
     fitFull: 0.15,
     fitMin: 0.02,
   },

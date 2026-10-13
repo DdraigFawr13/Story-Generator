@@ -126,20 +126,28 @@ function runFamineRaids(run: HistoryRun): void {
   }
 }
 
-/** Raiding peoples (history.raidHabit) send a raid from the capital in good years too. */
+/** Raiding peoples (history.raidHabit) raid in good years too, from whichever of their sites borders the richest prey. */
 function runHabitRaids(run: HistoryRun): void {
   const { rules, rng } = run;
   for (const civ of run.world.civs.values()) {
     const chance = rules.raidHabit[civ.cultureId] ?? 0;
-    if (chance <= 0 || !liveCiv(run, civ.id)) continue;
-    const capital = run.world.sites.get(civ.capital);
-    if (!capital || !isLive(capital) || capital.civId !== civ.id) continue;
-    if (logOf(run, capital.id).famine?.year === run.year) continue;
-    if (!rng.war.chance(chance)) continue;
+    if (chance <= 0 || !liveCiv(run, civ.id) || !rng.war.chance(chance)) continue;
+    let from: Site | undefined;
+    let best = -Infinity;
+    for (const site of liveSites(run)) {
+      if (site.civId !== civ.id || logOf(run, site.id).famine?.year === run.year) continue;
+      const target = richestTarget(run, site);
+      const wealth = target ? target.goods.food + target.wealth : -Infinity;
+      if (wealth > best) {
+        best = wealth;
+        from = site;
+      }
+    }
+    if (!from || best === -Infinity) continue;
     const founded = run.world.events.find(
       (e) => e.type === 'civ_founded' && e.data['civ'] === civ.name,
     );
-    raidNeighbour(run, capital, civ, 'plunder_raid', founded ? [founded.id] : []);
+    raidNeighbour(run, from, civ, 'plunder_raid', founded ? [founded.id] : []);
   }
 }
 

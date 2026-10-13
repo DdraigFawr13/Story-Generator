@@ -204,7 +204,7 @@ const ghor: CultureDef = {
   id: 'ghor',
   name: 'Ghor',
   raceId: 'orc',
-  summary: 'Orc hordes of the burning badlands, led by warlords and blood-shamans.',
+  summary: 'Orc hordes of the open steppe, led by warlords and blood-shamans.',
   values: { kin: 7, honour: 9, faith: 7, wealth: 3, learning: 2, war: 8, freedom: 4, order: 6 },
   marriage: { custom: 'one-spouse', gift: 'bride-price', arranged: true },
   inheritance: 'eldest-son',
@@ -212,7 +212,7 @@ const ghor: CultureDef = {
   succession: 'shaman-blessed',
   magic: 'honoured',
   religion: { id: 'blood-moon', name: 'The Blood Moon' },
-  preferredBiomes: ['desert', 'savanna', 'steppe'],
+  preferredBiomes: ['steppe', 'savanna', 'grassland'],
   sitePreferences: ['plains', 'deposit'],
   names: GHOR_NAMES,
 };

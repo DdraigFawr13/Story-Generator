@@ -124,9 +124,10 @@ const generate = (seed: string, years = 100) =>
 
 describe('war', () => {
   it('is never declared without a grievance among its causes', () => {
-    // Every event that adds a grievance: raids, clashes, insults (and envy), oaths, break-aways, allies.
+    // Every event that adds a grievance: raids (famine and plunder), clashes, insults (and envy), oaths, break-aways, allies.
     const GRIEVANCES = [
       'civ_raid',
+      'plunder_raid',
       'vengeance_raid',
       'border_clash',
       'insult',

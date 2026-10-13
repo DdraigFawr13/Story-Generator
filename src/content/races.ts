@@ -164,9 +164,9 @@ const halfling: RaceDef = {
   affinityWeights: { life: 3, earth: 2 },
   lifespanYears: 100,
   maturityYears: 20,
-  fertility: 1.1,
-  // Small folk: they eat less than a human.
-  foodNeed: 0.7,
+  fertility: 0.9,
+  // Small folk eat a fifth less than a human (0.7 let them outgrow every other people, playtest 2026-10-13).
+  foodNeed: 0.8,
   preferredBiomes: ['grassland', 'temperate-forest', 'savanna'],
   dependencies: [],
 };
@@ -197,7 +197,7 @@ const goblin: RaceDef = {
   dependencies: [],
 };
 
-// Orcs of the hot badlands: the strongest people, with blood-shamans, but slow to learn and
+// Orcs of the open steppe and dry grassland: the strongest people, with blood-shamans, but slow to learn and
 // always hungry. Unlike the Fomori they live a full span and fight as a disciplined horde.
 const orc: RaceDef = {
   id: 'orc',
@@ -220,7 +220,7 @@ const orc: RaceDef = {
   fertility: 1.1,
   // The downside: a fifth more food than a human, so lean years drive them to raid.
   foodNeed: 1.2,
-  preferredBiomes: ['savanna', 'steppe', 'desert'],
+  preferredBiomes: ['steppe', 'savanna', 'grassland'],
   dependencies: [],
 };
 
