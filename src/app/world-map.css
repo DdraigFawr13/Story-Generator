@@ -122,6 +122,11 @@ p {
   font: 600 1rem var(--display);
   margin-right: auto;
 }
+.wm-root .bar .play-history input {
+  width: auto;
+  padding: 0;
+  accent-color: var(--accent);
+}
 .bar label {
   display: flex;
   align-items: center;
@@ -643,15 +648,6 @@ dl.facts dd {
   font: 0.75rem var(--body);
   color: var(--muted);
   font-weight: 400;
-}
-.wm-root .lg-years .speed {
-  min-width: 2.6em;
-  padding: 6px 8px;
-  font-variant-numeric: tabular-nums;
-}
-.wm-root .lg-years .speed[aria-pressed='true'] {
-  background: var(--accent-soft);
-  border-color: var(--accent);
 }
 .wm-root .lg-years .lock {
   display: flex;

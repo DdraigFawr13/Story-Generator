@@ -62,6 +62,7 @@ export * from './life';
 export * from './map-layers';
 export * from './names';
 export * from './notables';
+export * from './playback';
 export * from './resources';
 export * from './settlement';
 export * from './site';

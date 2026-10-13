@@ -22,10 +22,27 @@ function collectErrors(page: Page): string[] {
   return errors;
 }
 
+/** A generated world plays its history first; skip to the present and return to the map there. */
+async function closePlayback(page: Page) {
+  const stage = page.getByTestId('playback-stage');
+  await expect(stage).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Skip to the present' }).click();
+  await page.getByRole('button', { name: 'Explore the map' }).click();
+  await expect(stage).toHaveCount(0);
+}
+
 test('the world map generates, inspects, saves, reloads and advances', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/?seed=SMOKE&size=128');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('world map');
+  // A new world plays its 250 years first; skip to the present, then explore the map.
+  const stage = page.getByTestId('playback-stage');
+  await expect(stage).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId('playback-year')).toHaveText(/^Year \d+$/);
+  await page.getByRole('button', { name: 'Skip to the present' }).click();
+  await expect(page.getByRole('dialog', { name: 'The present day' })).toBeVisible();
+  await page.getByRole('button', { name: 'Explore the map' }).click();
+  await expect(stage).toHaveCount(0);
   const map = page.getByTestId('world-map');
   await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
   await expect(map).toHaveAttribute('data-seed', 'SMOKE');
@@ -149,6 +166,7 @@ test('a site can be watched: embark, play, inspect a person and return to the ma
 }) => {
   const errors = collectErrors(page);
   await page.goto(`/?seed=${smokeMap.seed}&size=${smokeMap.size}`);
+  await closePlayback(page);
   const map = page.getByTestId('world-map');
   await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
 

@@ -37,6 +37,7 @@ import {
 import { openSaveStore, type SaveStore, type SaveSummary } from '../platform/save-store';
 import { createSiteHost, type SiteHost } from '../platform/site-host';
 import { generateInWorker, type WorldgenJob } from '../platform/worldgen-host';
+import { HistoryPlayback } from './HistoryPlayback';
 import { Legends } from './Legends';
 import {
   openOf,
@@ -82,6 +83,15 @@ const STAGE_LABELS: Record<WorldgenStage, string> = {
   settle: 'Peoples and sites',
   history: 'History',
 };
+/** The "Play history after generating" choice is kept in this localStorage key. */
+const PLAY_HISTORY_KEY = 'sg.playHistory';
+function readPlayHistory(): boolean {
+  try {
+    return window.localStorage.getItem(PLAY_HISTORY_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+}
 /** How long "Link copied" stays on the button. */
 const COPIED_MS = 2000;
 /** The site link reaches the address bar at most once in this many ms. */
@@ -184,6 +194,11 @@ export function NextApp() {
   const [sliderYear, setSliderYear] = useState<number | null>(null);
   /** With the year locked, chronicle lines after the slider year fade. */
   const [locked, setLocked] = useState(false);
+  /** The history playback replaces the map while set; `from` is the year it starts at. */
+  const [playback, setPlayback] = useState<{ from: number; key: number } | null>(null);
+  const playbackKey = useRef(0);
+  /** Play the history after a world is generated (a Generate click or a link with no year). */
+  const [playHistory, setPlayHistory] = useState(readPlayHistory);
   const [nav, setNav] = useState<LegendNav>(EMPTY_NAV);
   const [focus, setFocus] = useState<{ x: number; y: number; key: number } | null>(null);
   /** On narrow screens the map and the Legends pane are tabs. */
@@ -223,9 +238,9 @@ export function NextApp() {
   );
 
   // Handlers outlive renders (popstate, debounce), so they read the latest state through refs.
-  const latest = useRef({ view, sliderYear, nav, locked, legend, finalYear: 0 });
+  const latest = useRef({ view, sliderYear, nav, locked, legend, finalYear: 0, playHistory });
   const finalYear = finalHistoryYear(world.current);
-  latest.current = { view, sliderYear, nav, locked, legend, finalYear };
+  latest.current = { view, sliderYear, nav, locked, legend, finalYear, playHistory };
   /** The next URL write adds a history entry (a page or list change) instead of editing one. */
   const pushNext = useRef(false);
 
@@ -258,6 +273,8 @@ export function NextApp() {
     next: View,
     mode: 'push' | 'replace',
     restore?: Restore,
+    /** Play the history from year 0 when the world arrives, if the box is checked. */
+    autoPlay = false,
   ) => {
     let seed: string;
     try {
@@ -302,6 +319,10 @@ export function NextApp() {
         );
         setProgress(null);
         setRevision((n) => n + 1);
+        if (autoPlay && latest.current.playHistory && !place.site && generated.playback) {
+          playbackKey.current += 1;
+          setPlayback({ from: 0, key: playbackKey.current });
+        } else setPlayback(null);
         if (place.site) {
           // A link into a site: its view is the first history entry; the world URL waits behind it.
           void watchRef.current({ kind: 'site', id: place.site.site }, place.site, next, place);
@@ -392,6 +413,7 @@ export function NextApp() {
       if (link) window.history.replaceState({}, '', url);
       else window.history.pushState({}, '', url);
       setWatching(next);
+      setPlayback(null);
       setProgress(null);
       setRevision((n) => n + 1);
     } catch (problem) {
@@ -507,6 +529,8 @@ export function NextApp() {
       },
       'replace',
       { year: initial.year, nav: navFromUrl(initial, window.history.state, 0), site: initial.site },
+      // Links with a year, an open page or a watched site never auto-play.
+      initial.year === null && !initial.open && !initial.site,
     );
     const popstate = () => {
       const url = parseViewUrl(window.location.search, VIEWER_LAYER_IDS);
@@ -520,6 +544,7 @@ export function NextApp() {
         setSeedInput(seed);
         setSize(url.size);
         if (place.nav.open) setTab('legends');
+        setPlayback(null);
         if (shown.current?.seed === seed && shown.current.size === url.size) {
           setView(next);
           setSliderYear(place.year);
@@ -614,6 +639,7 @@ export function NextApp() {
     if (!moved || open === null || (cur.open && sameRef(open, cur.open))) return;
     // Opening a page: show it, and move the map and the slider to it.
     setTab('legends');
+    setPlayback(null);
     const { legend: index, locked: lock } = latest.current;
     if (open.kind === 'event') {
       const event = index.event(open.id);
@@ -727,7 +753,14 @@ export function NextApp() {
           className="bar"
           onSubmit={(event) => {
             event.preventDefault();
-            generate(seedInput, size, { ...INITIAL_VIEW, layer: view.layer }, 'push');
+            generate(
+              seedInput,
+              size,
+              { ...INITIAL_VIEW, layer: view.layer },
+              'push',
+              undefined,
+              true,
+            );
           }}
         >
           <span className="brand">New world</span>
@@ -753,6 +786,24 @@ export function NextApp() {
           <button type="submit" className="primary">
             Generate
           </button>
+          <label className="play-history">
+            <input
+              type="checkbox"
+              checked={playHistory}
+              onChange={(event) => {
+                setPlayHistory(event.target.checked);
+                try {
+                  window.localStorage.setItem(
+                    PLAY_HISTORY_KEY,
+                    event.target.checked ? 'on' : 'off',
+                  );
+                } catch {
+                  // The choice then lasts only until the page closes.
+                }
+              }}
+            />{' '}
+            Play history after generating
+          </label>
           <button type="button" onClick={() => void copyLink()}>
             {copy === 'ok' ? 'Link copied' : copy === 'failed' ? 'Copy failed' : 'Copy link'}
           </button>
@@ -787,43 +838,79 @@ export function NextApp() {
         </div>
         <div className="wm-main" data-tab={tab}>
           <div className="wm-mapcol">
-            <WorldMap
-              cells={state.cells}
-              regions={state.regions}
-              routes={state.routes}
-              sites={state.sites}
-              civs={state.civs}
-              creatures={state.creatures}
-              people={state.people}
-              dynasties={state.dynasties}
-              year={Math.floor(state.day / DAYS_PER_YEAR)}
-              siteBiography={(siteId) =>
-                biography(state, DEFAULT_CONTENT, narrator, legend, { kind: 'site', id: siteId })
-              }
-              cultures={DEFAULT_CONTENT.cultures}
-              seed={state.seed}
-              content={DEFAULT_CONTENT}
-              layer={view.layer}
-              at={view.at}
-              zoom={view.zoom}
-              busy={progress !== null}
-              onView={changeView}
-              history={yearShown < finalYear ? past : null}
-              focus={focus}
-              highlight={highlight}
-              onBackToLegends={fromLegends && tab === 'map' ? () => setTab('legends') : undefined}
-              siteActions={actions}
-            />
-            <YearSlider
-              world={state}
-              titleOf={titleOf}
-              revision={revision}
-              year={yearShown}
-              snapshotYear={past.snapshotYear}
-              locked={locked}
-              onLock={setLocked}
-              onYear={setSliderYear}
-            />
+            {playback ? (
+              <HistoryPlayback
+                key={playback.key}
+                world={state}
+                titleOf={titleOf}
+                startYear={playback.from}
+                onClose={(year) => {
+                  setPlayback(null);
+                  setSliderYear(year >= finalYear ? null : year);
+                }}
+                onLegends={() => {
+                  setPlayback(null);
+                  setSliderYear(null);
+                  setTab('legends');
+                }}
+              />
+            ) : (
+              <>
+                <WorldMap
+                  cells={state.cells}
+                  regions={state.regions}
+                  routes={state.routes}
+                  sites={state.sites}
+                  civs={state.civs}
+                  creatures={state.creatures}
+                  people={state.people}
+                  dynasties={state.dynasties}
+                  year={Math.floor(state.day / DAYS_PER_YEAR)}
+                  siteBiography={(siteId) =>
+                    biography(state, DEFAULT_CONTENT, narrator, legend, {
+                      kind: 'site',
+                      id: siteId,
+                    })
+                  }
+                  cultures={DEFAULT_CONTENT.cultures}
+                  seed={state.seed}
+                  content={DEFAULT_CONTENT}
+                  layer={view.layer}
+                  at={view.at}
+                  zoom={view.zoom}
+                  busy={progress !== null}
+                  onView={changeView}
+                  history={yearShown < finalYear ? past : null}
+                  focus={focus}
+                  highlight={highlight}
+                  onBackToLegends={
+                    fromLegends && tab === 'map' ? () => setTab('legends') : undefined
+                  }
+                  siteActions={actions}
+                />
+                <YearSlider
+                  world={state}
+                  titleOf={titleOf}
+                  revision={revision}
+                  year={yearShown}
+                  snapshotYear={past.snapshotYear}
+                  locked={locked}
+                  onLock={setLocked}
+                  onYear={setSliderYear}
+                  onPlay={
+                    state.playback
+                      ? () => {
+                          playbackKey.current += 1;
+                          setPlayback({
+                            from: yearShown >= finalYear ? 0 : yearShown,
+                            key: playbackKey.current,
+                          });
+                        }
+                      : null
+                  }
+                />
+              </>
+            )}
           </div>
           <Legends
             world={state}
@@ -839,11 +926,13 @@ export function NextApp() {
             hrefOf={hrefOf}
             siteActions={actions}
             onShow={(cell) => {
+              setPlayback(null);
               focusCell(cell);
               setFromLegends(true);
               setTab('map');
             }}
             onOpenOnMap={(cell, year) => {
+              setPlayback(null);
               setSliderYear(year);
               if (cell !== null) focusCell(cell);
               setFromLegends(true);
@@ -877,6 +966,7 @@ export function NextApp() {
             setSeedInput(loaded.seed);
             setSize(loadedSize);
             setProgress(null);
+            setPlayback(null);
             setView((v) => ({ ...v, at: null, zoom: 0 }));
             setSliderYear(null);
             setNav((n) => ({ ...EMPTY_NAV, rev: n.rev + 1 }));
