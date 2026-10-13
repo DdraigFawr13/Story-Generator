@@ -181,9 +181,10 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
       }
     }
   }
-  // Make sure someone is grown, so no household is ever without an adult.
+  // Make sure someone is grown, so no household is ever without an adult; elders still to come count.
   const isAdult = (r: Resident) => r.age >= raceOf(r.person.raceId).maturityYears;
-  if (![...residents.values()].some(isAdult)) {
+  const eldersToCome = groups.some((g) => g.band === 'elder' && g.count > 0);
+  if (!eldersToCome && ![...residents.values()].some(isAdult)) {
     const g = groups[0];
     if (g) make(g.raceId, g.cultureId, raceOf(g.raceId).maturityYears + 4, randomSex());
   }

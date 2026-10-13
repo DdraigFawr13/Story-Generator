@@ -536,7 +536,8 @@ function fitAt(
     for (const k of keys) sum += attributes[k];
     fit = sum / keys.length / 10;
     for (const [attribute, min] of entries(job.requirements)) {
-      if (attributes[attribute as AttributeKey] < min) fit = -fit;
+      // Negative marks a failed requirement; two failures must not flip it back.
+      if (attributes[attribute as AttributeKey] < min) fit = -Math.abs(fit);
     }
     row[index] = fit;
   }

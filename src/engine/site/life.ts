@@ -180,6 +180,14 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
   const centreOf = (b: Building): [number, number] => [b.x + (b.w >> 1), b.y + (b.h >> 1)];
   const cellOf = (b: Building | undefined, id: number, salt: number) =>
     b ? b.cells[mix(id, salt) % b.cells.length]! : -1;
+  // Homes of families, and how many live alone (see `table` below).
+  const familyHomes: Building[] = [];
+  let loners = 0;
+  for (const h of [...active.households.values()].sort((a, b) => a.id - b.id)) {
+    const home = h.home == null ? undefined : active.buildings.get(h.home);
+    if (h.members.length > 1 && home) familyHomes.push(home);
+    else if (h.members.length <= 1) loners += 1;
+  }
   const profiles: Profile[] = [];
   const index = new Map<Id, number>();
   for (const id of active.residents) {
@@ -210,6 +218,17 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
         field = f;
       }
     }
+    // The family home nearest theirs (or the green), for someone who would eat alone at the hall.
+    let neighbour: Building | undefined;
+    best = Infinity;
+    for (const f of familyHomes) {
+      const [fx, fy] = centreOf(f);
+      const d = Math.abs(fx - hx) + Math.abs(fy - hy);
+      if (d < best) {
+        best = d;
+        neighbour = f;
+      }
+    }
     // A wanderer heads for a map-edge tile found by walking the perimeter from a spot set by id.
     const ring = 4 * (width - 1);
     let wander = -1;
@@ -237,13 +256,16 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
       household,
       homeId: home?.id ?? null,
       home: home ? interiorSpot(home, slot, width) : green,
-      // Someone who lives alone eats at the hall's hearth (or on the green) for company.
+      // Someone who lives alone eats at the hall's hearth for company; with no hall, or nobody else
+      // living alone, at a neighbour's table (the green, spread wide, rarely puts two loners together).
       table:
         home && (household?.members.length ?? 0) > 1
           ? interiorSpot(home, slot, width)
-          : hall
-            ? interiorSpot(hall, mix(id, 8), width)
-            : green,
+          : (!hall || loners < 2) && neighbour
+            ? interiorSpot(neighbour, mix(id, 8), width)
+            : hall
+              ? interiorSpot(hall, mix(id, 8), width)
+              : green,
       green,
       field: field ? cellOf(field, id, 4) : cellOf(stockpile, id, 5),
       shrine: shrine ? cellOf(shrine, id, 6) : green,
