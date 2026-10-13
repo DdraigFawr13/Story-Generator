@@ -588,7 +588,7 @@ export function runHealthDay(
       const cond: Condition = { defId: def.id, severity: 0, sinceDay: day };
       if (cause !== undefined) cond.cause = cause;
       s.detail.conditions.push(cond);
-      bumpNeed(def, cond, s.band);
+      bumpNeed(def, cond, s.band, s.person.id);
     }
     // Chronic illness comes with years.
     if (
@@ -626,9 +626,12 @@ export function runHealthDay(
   for (const a of content.ailments) {
     const fromConditions = Object.entries(a.sources.condition ?? {});
     const dry = a.sources.wellLow !== undefined && wellLow;
+    const bg = a.sources.background;
+    const background = bg && bg.months.includes(month) ? bg.chance : 0;
     if (
       fromConditions.length === 0 &&
       !dry &&
+      background === 0 &&
       !(a.sources.coldHome !== undefined && coldHomes.size > 0)
     )
       continue;
@@ -645,6 +648,7 @@ export function runHealthDay(
       const cold = a.sources.coldHome !== undefined && home !== null && coldHomes.has(home);
       if (cold) p += a.sources.coldHome!;
       if (dry) p += a.sources.wellLow!;
+      p += background;
       if (p <= 0 || caught(s.detail, a.id, day)) continue;
       if (a.season && month >= a.season.months[0] && month <= a.season.months[1]) {
         p *= a.season.mul;
@@ -830,12 +834,17 @@ function caught(detail: PersonDetail, id: string, day: number): boolean {
   return (detail.immune?.[id] ?? -1) > day || detail.conditions.some((c) => c.ailment === id);
 }
 
+/** A person's own hardiness against want, 0.7-1.3, stable by id, so a famine does not take everyone on one day. */
+function hardiness(id: Id): number {
+  return 0.7 + (((Math.imul(id, 0x9e3779b1) >>> 0) % 1000) * 0.6) / 1000;
+}
+
 /** Adds a day's worth of a need condition's severity. */
-function bumpNeed(def: ConditionDef, cond: Condition, band: Band): void {
+function bumpNeed(def: ConditionDef, cond: Condition, band: Band, id: Id): void {
   const n = def.need!;
   cond.severity = Math.min(
     n.cap ?? MAX_SEVERITY,
-    cond.severity + n.gain * (n.vulnerable?.[band] ?? 1),
+    cond.severity + (n.gain * (n.vulnerable?.[band] ?? 1)) / hardiness(id),
   );
 }
 
@@ -866,7 +875,7 @@ function courseOf(
     let alive = true;
     if (def.need) {
       const driven = (s.detail.lows?.[def.need.need] ?? 0) >= def.need.days;
-      if (driven) bumpNeed(def, c, s.band);
+      if (driven) bumpNeed(def, c, s.band, s.person.id);
       else c.severity -= def.need.ease;
       alive = c.severity > 0;
     } else if (def.wound) {

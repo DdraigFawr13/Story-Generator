@@ -13,8 +13,16 @@ export const CONDITIONS: ConditionDef[] = [
     harm: 1,
     deathCause: 'famine',
     words: { onset: 'hunger', death: 'hunger' },
-    // After two whole days at zero food: +12 a day, eased 20 a day once eating (about 8 days to die).
-    need: { need: 'food', days: 2, gain: 12, ease: 20, cause: 'stores' },
+    // After two whole days at zero food: +3 a day (children and elders half as much again), eased 10
+    // a day once eating: about a month to die, three weeks for the young and old.
+    need: {
+      need: 'food',
+      days: 2,
+      gain: 3,
+      ease: 10,
+      cause: 'stores',
+      vulnerable: { child: 1.5, elder: 1.5 },
+    },
   },
   {
     id: 'parched',
@@ -23,8 +31,8 @@ export const CONDITIONS: ConditionDef[] = [
     harm: 1,
     deathCause: 'thirst',
     words: { onset: 'thirst', death: 'thirst' },
-    // Water at zero two days running: +20 a day, eased 40 once drinking (about 5 days to die).
-    need: { need: 'water', days: 2, gain: 20, ease: 40, cause: 'well' },
+    // Water at zero two days running: +12 a day, eased 40 once drinking (about 8 days to die).
+    need: { need: 'water', days: 2, gain: 12, ease: 40, cause: 'well' },
   },
   {
     id: 'chilled',
@@ -184,12 +192,17 @@ export const AILMENTS: AilmentDef[] = [
     incubation: 1,
     duration: [5, 10],
     peak: [10, 30],
-    infectivity: 0.04,
+    infectivity: 0.015,
     ageRisk: { child: 1.5, adult: 1, elder: 2.5 },
     // Two months' immunity.
     immuneDays: 56,
     // 3% a chilled night, 1% a night in a home with no firewood.
-    sources: { condition: { chilled: 0.03 }, coldHome: 0.01 },
+    // Even in warm homes, 0.03% of people a day catch it from Firstfrost to Thawmonth.
+    sources: {
+      condition: { chilled: 0.03 },
+      coldHome: 0.01,
+      background: { chance: 0.0003, months: [8, 9, 10, 11, 0] },
+    },
   },
   {
     id: 'flux',
@@ -202,8 +215,9 @@ export const AILMENTS: AilmentDef[] = [
     householdOnly: true,
     ageRisk: { child: 2, adult: 1, elder: 2 },
     immuneDays: 56,
-    // 0.2% a day while the well is low, doubled in the hot months (Sunmonth to Goldmonth: 3 to 5).
-    sources: { wellLow: 0.002 },
+    // 0.2% a day while the well is low, doubled in the hot months (Highsun to Harvestmonth: 3 to 5).
+    // 0.015% a day in the hot months, from bad water even when the well is full.
+    sources: { wellLow: 0.002, background: { chance: 0.00015, months: [3, 4, 5] } },
     season: { months: [3, 5], mul: 2 },
   },
 ];

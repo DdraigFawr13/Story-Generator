@@ -160,10 +160,16 @@ const narrator = E.templateNarrator(C, (id) => world.people.get(id)?.name ?? `#$
 const healthTypes = new Set(Object.values(C.health.events));
 const lines = world.events
   .slice(firstEvent)
-  .filter((e) => healthTypes.has(e.type) && e.type !== C.health.events.wounded)
-  .slice(0, 12);
-console.log(`First ${lines.length} death and illness lines:`);
-for (const e of lines) console.log(`  [${e.day}] ${narrator.renderEvent(e)}`);
+  .filter((e) => healthTypes.has(e.type))
+  .slice(0, Number(args.lines || 12));
+const byId = new Map(world.events.map((e) => [e.id, e]));
+console.log(`First ${lines.length} health lines (causes after ←):`);
+for (const e of lines) {
+  const causes = e.causes.flatMap((id) => byId.get(id) ?? []).map((c) => narrator.renderEvent(c));
+  console.log(
+    `  [${e.day}] ${narrator.renderEvent(e)}${causes.length ? ` ← ${causes.join(' / ')}` : ''}`,
+  );
+}
 
 // Picture: one pixel per tile.
 const rules = C.site;

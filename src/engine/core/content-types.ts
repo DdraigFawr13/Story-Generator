@@ -302,6 +302,8 @@ export interface AilmentDef {
     coldHome?: number;
     /** While the well is low. */
     wellLow?: number;
+    /** Anyone, any day of these months (0-11): the ordinary run of illness. */
+    background?: { chance: number; months: number[] };
   };
   /** Months (inclusive range) in which sources are multiplied. */
   season?: { months: [number, number]; mul: number };
