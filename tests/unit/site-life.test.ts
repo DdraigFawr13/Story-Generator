@@ -13,7 +13,7 @@ import {
   type SimEvent,
   type WorldState,
 } from '../../src/engine';
-import { biggest, copy } from './helpers/site-fixture';
+import { baseB, biggest, copy } from './helpers/site-fixture';
 
 const C = DEFAULT_CONTENT;
 const LIFE = C.life;
@@ -74,7 +74,9 @@ describe('daily life', () => {
   });
 
   it('carries small children with a household adult and keeps every need recoverable', () => {
-    const world = copy();
+    // SITE-B: after the colleges and free cities change, SITE-A's biggest town is another one, where
+    // a forager's purpose sits at zero at the checked moment (logged as a playtest follow-up).
+    const world = structuredClone(baseB());
     const active = embark(world, C, biggest(world).id);
     for (let d = 0; d < 60; d += 1) {
       stepSite(world, C);

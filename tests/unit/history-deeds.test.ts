@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
 import { generateWorld, type SimEvent, type WorldState } from '../../src/engine';
 
-/** Frequent deeds on a 64x64 world; the seed was picked because every deed type occurs in it. */
+/** Frequent deeds on a 64x64 world; the seed was picked because every deed type occurs in it (re-picked when history changes). */
 const rules = DEFAULT_CONTENT.notables.deeds;
 const FREQUENT = {
   ...DEFAULT_CONTENT,
@@ -22,7 +22,7 @@ const LEGEND_POWER = 17;
 
 let shared: WorldState | undefined;
 const world = () =>
-  (shared ??= generateWorld('DH-303', { width: 64, height: 64, historyYears: 250 }, FREQUENT));
+  (shared ??= generateWorld('DH-65', { width: 64, height: 64, historyYears: 250 }, FREQUENT));
 const ofType = (type: string) => world().events.filter((e) => e.type === type);
 const cause = (e: SimEvent, type: string) =>
   e.causes.map((id) => world().events.find((x) => x.id === id)).find((c) => c?.type === type);
