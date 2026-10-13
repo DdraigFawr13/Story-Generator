@@ -5,6 +5,7 @@
 import { Fragment, useState, type ReactNode } from 'react';
 import {
   ATTRIBUTE_KEYS,
+  DAYS_PER_YEAR,
   DAY_BLOCKS,
   buildingDef,
   biography,
@@ -25,7 +26,6 @@ import {
   linkSegments,
   MONTH_NAMES,
   residentNames,
-  siteTemperature,
   sitePopulation,
   tierOfPower,
   yearText,
@@ -52,6 +52,7 @@ import {
   type WorldState,
 } from '../engine';
 import { plainClick, refName, type PageRef } from './legends-ctx';
+import { briefDate, fieldFacts, seasonRows, stewardLine } from './site-season';
 import {
   buildPercent,
   buildScene,
@@ -105,7 +106,14 @@ export function createSiteModel(
   const labels = new Map<Id, string>();
   for (const h of active.households.values()) labels.set(h.id, householdLabel(world, h, names));
   const ruleWord = rulerWord(culture?.government);
-  const scene = buildScene(world, content.site, names, content.races, ruleWord === 'jarl');
+  const scene = buildScene(
+    world,
+    content.site,
+    names,
+    content.races,
+    ruleWord === 'jarl',
+    content.environment.wild.animals.kinds,
+  );
   return {
     world,
     content,
@@ -242,6 +250,15 @@ export function tipText(m: SiteModel, k: number): string {
   if (b?.defId === 'home' && b.progress === undefined) {
     const h = homeHousehold(m, b);
     return h ? `Home: ${m.labels.get(h.id) ?? ''}` : 'Home of a counted household';
+  }
+  const animal = m.active.animals.find((x) => x.y * m.scene.size + x.x === k);
+  if (animal) {
+    const kind = m.content.environment.wild.animals.kinds.find((d) => d.id === animal.kind);
+    return cap(kind?.name ?? animal.kind);
+  }
+  if (m.active.fire?.tiles.has(k)) return 'Burning';
+  if (b?.defId === 'field' && b.crop && b.crop.stage !== 'bare') {
+    return `Field · ${fieldFacts(b)!.stage}`;
   }
   return tileName(m.scene.look, k, 'the river', 'the sea');
 }
@@ -399,6 +416,53 @@ function SelectLink({ a, to, children }: { a: PanelActions; to: Selection; child
       {children}
     </a>
   );
+}
+
+/** A link to the event a line follows from. */
+function EventLink({ a, id, children }: { a: PanelActions; id: Id; children: ReactNode }) {
+  return (
+    <LegendsLink a={a} to={{ kind: 'event', id }}>
+      {children}
+    </LegendsLink>
+  );
+}
+
+/** The event as the pane has it (the index trails live events by half a second). */
+function eventOf(m: SiteModel, id: Id) {
+  return m.index.event(id) ?? m.world.events.find((e) => e.id === id);
+}
+
+/** An event's title in lower case, for "because of ...". */
+function causeTitle(m: SiteModel, id: Id): string {
+  const event = eventOf(m, id);
+  if (!event) return 'earlier events';
+  const title = eventTitle(event, m.typeDefs.get(event.type));
+  return title.charAt(0).toLowerCase() + title.slice(1);
+}
+
+/** "Lodging with Stenna and Orm's household since the fire", while a household's own home is burnt. */
+function lodgingText(m: SiteModel, h: Household): string | null {
+  if (h.lodgingHome == null) return null;
+  const host = m.active.buildings.get(h.lodgingHome);
+  const hostHold = host ? homeHousehold(m, host) : undefined;
+  const where =
+    host?.defId === 'hall'
+      ? `the ${m.ruleWord}'s hall`
+      : hostHold
+        ? (m.labels.get(hostHold.id) ?? 'a neighbour')
+        : 'a neighbour';
+  return `Lodging with ${where} since the fire`;
+}
+
+/** "Burnt in the fire of 4 Deepwinter; being rebuilt, 35%". */
+function burntText(m: SiteModel, b: Building): string | null {
+  if (!b.burnt) return null;
+  const when = b.burntDay === undefined ? 'the fire' : `the fire of ${briefDate(b.burntDay)}`;
+  const state =
+    b.progress === undefined
+      ? 'waiting to be rebuilt'
+      : `being rebuilt, ${buildPercent(m.content.site, b)}%`;
+  return `Burnt in ${when}; ${state}`;
 }
 
 function Facts({ children }: { children: ReactNode }) {
@@ -566,6 +630,7 @@ const ACTIVITY_VERB: Record<Activity, string> = {
   despair: 'In despair',
   wander: 'Wandered off',
   steal: 'Stealing',
+  fight: 'Fighting the fire',
 };
 /** One word for the People list. */
 const ACTIVITY_SHORT: Record<Activity, string> = {
@@ -579,6 +644,7 @@ const ACTIVITY_SHORT: Record<Activity, string> = {
   despair: 'in despair',
   wander: 'wandering',
   steal: 'stealing',
+  fight: 'fighting fire',
 };
 const BREAKDOWN_TEXT: Record<BreakdownKind, string> = {
   tantrum: 'A tantrum',
@@ -801,7 +867,7 @@ function CarriesSection({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person 
 }
 
 /** Needs, mood, stress and traits (M3.2): what the engine stored, with its "why" parts. */
-function LifePage({ m, p }: { m: SiteModel; p: Person }) {
+function LifePage({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) {
   const detail = p.detail;
   if (!detail) return null;
   const { content, world } = m;
@@ -849,6 +915,54 @@ function LifePage({ m, p }: { m: SiteModel; p: Person }) {
           ? 'Ate yesterday'
           : 'Ate today';
   const breakdown = detail.breakdown;
+  // M3.4: why a need is held down, from what the engine decided (short meals, a low well, a cold home).
+  const needValue = (id: string) => Math.round(detail.needs[id] ?? 0);
+  const needOf = (id: string) => content.needs.find((n) => n.id === id);
+  const active = m.active;
+  const steward = stewardLine({ world, active, content }, (id) => eventOf(m, id));
+  const foodHigh = (foodNeed ? needValue('food') >= foodNeed.lowAt : true) as boolean;
+  const shortMeals = active.mealShare < 1 && foodHigh && steward !== null;
+  const notes: { key: string; need: string; value: number; text: ReactNode }[] = [];
+  if (shortMeals && steward) {
+    notes.push({
+      key: 'food',
+      need: foodNeed?.name ?? 'Food',
+      value: needValue('food'),
+      text: (
+        <>
+          On short meals since {briefDate(active.shortMealsSince)}
+          {steward.because && (
+            <>
+              {', after '}
+              <EventLink a={a} id={steward.because.id}>
+                {steward.because.phrase ?? 'what came before'}
+              </EventLink>
+            </>
+          )}
+        </>
+      ),
+    });
+  }
+  const water = needOf('water');
+  if (water && active.weather.wellLow && detail.needs.water !== undefined) {
+    notes.push({
+      key: 'water',
+      need: water.name,
+      value: needValue('water'),
+      text: `${needValue('water') < water.lowAt ? `${water.lowWord}: the` : 'The'} well is low after ${active.weather.dryDays} dry days`,
+    });
+  }
+  const warmth = needOf('warmth');
+  if (warmth && detail.placeId != null && active.firewood.coldHomes.includes(detail.placeId)) {
+    const own = m.active.households.get(p.family.householdId ?? -1);
+    const home = detail.placeId === own?.home || detail.placeId === own?.lodgingHome;
+    notes.push({
+      key: 'warmth',
+      need: warmth.name,
+      value: needValue('warmth'),
+      text: `${warmth.lowWord}: no firewood ${home ? 'at home' : 'in this home'}`,
+    });
+  }
   return (
     <>
       <div className="sect">Needs</div>
@@ -869,7 +983,16 @@ function LifePage({ m, p }: { m: SiteModel; p: Person }) {
           );
         })}
       </div>
-      {foodWhy && <p className="quiet">{foodWhy}</p>}
+      {foodWhy && !shortMeals && <p className="quiet">{foodWhy}</p>}
+      {notes.map((note) => (
+        <p key={note.key} className="quiet">
+          <b className="warnw">
+            {note.need} {note.value}
+          </b>
+          {' · '}
+          {note.text}
+        </p>
+      ))}
       <div className="sect">
         Mood <span className="r">{signed(detail.mood)}</span>
       </div>
@@ -978,6 +1101,7 @@ function PersonPage({ m, a, sel, ui, id }: PanelProps & { id: Id }) {
             </SelectLink>{' '}
             · {h.members.length === 1 ? 'lives alone' : `${h.members.length} people`} ·{' '}
             {hallHome ? `the ${m.ruleWord}'s hall` : home ? `home ${home.id}` : 'no home'}
+            {lodgingText(m, h) && <span className="empty"> · {lodgingText(m, h)}</span>}
           </Fact>
         )}
         {(spouses.length > 0 || away > 0) && (
@@ -1040,7 +1164,7 @@ function PersonPage({ m, a, sel, ui, id }: PanelProps & { id: Id }) {
       </Facts>
       <SkillsSection m={m} p={p} />
       <CarriesSection m={m} a={a} p={p} />
-      <LifePage m={m} p={p} />
+      <LifePage m={m} a={a} p={p} />
       <div className="actions">
         <button type="button" onClick={() => a.showOnMap({ kind: 'person', id })}>
           Show on map
@@ -1125,6 +1249,8 @@ function HouseholdPage({ m, a, sel, h }: Omit<PanelProps, 'ui'> & { h: Household
         <Fact term="Members">
           {alone ? `1: ${m.names.get(h.head) ?? ''} lives alone` : h.members.length}
         </Fact>
+        {lodgingText(m, h) && <Fact term="Lodging">{lodgingText(m, h)}</Fact>}
+        {b && burntText(m, b) && <Fact term="Fire">{burntText(m, b)}</Fact>}
         {m.culture && <Fact term="Custom">{m.culture.name}</Fact>}
       </Facts>
       <ul className="list">
@@ -1189,7 +1315,8 @@ const BUILDING_BLURB: Record<string, string> = {
   hall: 'Where the ruler lives and the village gathers.',
   workshop:
     'Toolmakers and craftsmen turn logs and ore into tools and wares here. Tools make farming and heavy work faster.',
-  field: 'Sown land. Farmers work it; it never wears out.',
+  field:
+    'Farmland. Farmers sow it in Seedmonth and cut it in Goldmonth and Harvestmonth; each harvest wears the soil a little, and a field left bare for a year recovers.',
   wall: 'A wall segment. The steward does not order one yet.',
 };
 
@@ -1267,6 +1394,7 @@ function BuildingPage({ m, a, sel, ui, b }: PanelProps & { b: Building }) {
         <Fact term="Size">
           {b.w}×{b.h} tiles
         </Fact>
+        {burntText(m, b) && <Fact term="Fire">{burntText(m, b)}</Fact>}
         {unfinished ? (
           <>
             <Fact term="Progress">{buildPercent(m.content.site, b)}% built</Fact>
@@ -1359,6 +1487,19 @@ function TilePage({ m, k }: { m: SiteModel; k: number }) {
     : 0;
   const soil = cells ? cells.fertility[worldCell] : undefined;
   const treeName = map.tree[k] ? m.content.site.trees[map.tree[k]!]?.name : undefined;
+  // M3.4: a field's crop, fire and burnt ground, and the woods being felled and grown back.
+  const { active, content, world } = m;
+  const building = map.building[k] ? active.buildings.get(map.building[k]!) : undefined;
+  const field = building?.defId === 'field' ? fieldFacts(building) : null;
+  const burning = active.fire?.tiles.get(k);
+  const burnt = active.burnt.find((t) => t.tile === k);
+  const burntHome = building && !field ? burntText(m, building) : null;
+  const felled = active.woods.felled.find((f) => f.tile === k);
+  const wild = content.environment.wild;
+  const logsLeft = map.tree[k] ? Math.round(active.woods.wood.get(k) ?? wild.woodPerTree) : 0;
+  const yearsBack = felled
+    ? Math.max(1, Math.round((felled.regrow - world.day) / DAYS_PER_YEAR))
+    : 0;
   return (
     <div className="page">
       <div>
@@ -1369,8 +1510,38 @@ function TilePage({ m, k }: { m: SiteModel; k: number }) {
       </div>
       <Facts>
         <Fact term="Elevation">{map.elevation[k]} m</Fact>
-        {!wet && soil !== undefined && <Fact term="Soil">{soil} of 100</Fact>}
-        {treeName && <Fact term="Timber">one tree ({treeName.replace(/ trees$/, '')})</Fact>}
+        {field ? (
+          <Fact term="Field">
+            {[field.stage, field.growth, field.health].filter(Boolean).join(' · ')}
+          </Fact>
+        ) : (
+          !wet && soil !== undefined && <Fact term="Soil">{soil} of 100</Fact>
+        )}
+        {field && (
+          <Fact term="Soil">
+            {field.soil} · {field.water}
+          </Fact>
+        )}
+        {burning !== undefined && (
+          <Fact term="Fire">
+            <span className="warnw">Burning</span> · about {Math.max(1, burning)}{' '}
+            {burning === 1 ? 'block' : 'blocks'} of fuel left
+          </Fact>
+        )}
+        {burntHome && <Fact term="Fire">{burntHome}</Fact>}
+        {burnt && !building && (
+          <Fact term="Fire">Burnt on {briefDate(burnt.day)}; the ground is dark for a month</Fact>
+        )}
+        {treeName && (
+          <Fact term="Timber">
+            one tree ({treeName.replace(/ trees$/, '')}) · {logsLeft} logs of wood left
+          </Fact>
+        )}
+        {felled && (
+          <Fact term="Felled">
+            young trees grow back in about {yearsBack} {yearsBack === 1 ? 'year' : 'years'}
+          </Fact>
+        )}
         {map.mineral[k]! > 0 && (
           <Fact term="Stone">
             {map.mineral[k] === code.ore
@@ -1508,7 +1679,21 @@ export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
         : repairs > 0
           ? `Repairs: ${repairs} ${repairs === 1 ? 'building' : 'buildings'} below ${content.steward.repairBelow}`
           : 'Nothing pressing';
-  const today = Math.round(siteTemperature(world, content, world.day));
+  const weather = active.weather;
+  const dryLimit = weather.year.drought
+    ? content.environment.crop.droughtDryDays
+    : content.environment.crop.dryDays;
+  const skyText =
+    weather.dryDays > dryLimit
+      ? `dry, ${weather.dryDays} days without rain`
+      : weather.sky === 'snow' || weather.snowCover > 0
+        ? weather.sky === 'snow'
+          ? 'snow falling'
+          : 'snow lying'
+        : weather.sky;
+  const today = `${weather.tempC < 0 ? '−' : ''}${Math.abs(Math.round(weather.tempC))} °C`;
+  const season = seasonRows({ world, active, content });
+  const steward = stewardLine({ world, active, content }, (id) => eventOf(m, id));
   const rulerName = m.ruler ? m.scene.marks.get(m.ruler.id)?.name : undefined;
   return (
     <div className="page">
@@ -1585,8 +1770,53 @@ export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
           </Fact>
         )}
         <Fact term="Today">
-          {today} °C · {cap(DAY_BLOCKS[shownBlock(m).block] ?? 'morning')}
+          {today} · {skyText} · daylight {weather.daylightH} h
+          {weather.wellLow && <span className="warnw"> · the well is low</span>}
+          {weather.outdoorDark && <span className="empty"> · too dark for outdoor work</span>}
         </Fact>
+      </Facts>
+      <div className="sect" data-testid="season">
+        Season{' '}
+        <span className="r">
+          {dateOf(shownBlock(m).day).season} · {MONTH_NAMES[dateOf(shownBlock(m).day).month]}
+        </span>
+      </div>
+      <Facts>
+        {season.map((row) => (
+          <Fact key={row.term} term={row.term}>
+            <span className={row.warn ? 'warnw' : undefined}>{row.text}</span>
+            {row.cause && (
+              <>
+                {' · '}
+                <span className="empty">{row.cause.word} </span>
+                <EventLink a={a} id={row.cause.id}>
+                  {causeTitle(m, row.cause.id)}
+                </EventLink>
+              </>
+            )}
+          </Fact>
+        ))}
+        {steward && (
+          <Fact term="Steward">
+            <span className="warnw">
+              {steward.cut === null ? (
+                steward.text
+              ) : (
+                <EventLink a={a} id={steward.cut}>
+                  {steward.text}
+                </EventLink>
+              )}
+            </span>
+            {steward.because && (
+              <>
+                {', after '}
+                <EventLink a={a} id={steward.because.id}>
+                  {steward.because.phrase ?? 'what came before'}
+                </EventLink>
+              </>
+            )}
+          </Fact>
+        )}
       </Facts>
       <div className="sect">
         Stockpile{' '}

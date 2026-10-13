@@ -95,6 +95,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...siteProblems(content));
   problems.push(...lifeProblems(content));
   problems.push(...workProblems(content));
+  problems.push(...environmentProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -664,5 +665,48 @@ export function workProblems(content: ContentBundle): string[] {
   for (const [key, id] of Object.entries(steward.events)) {
     if (!eventIds.has(id)) problems.push(`Steward events.${key}: unknown event type "${id}".`);
   }
+  return problems;
+}
+
+/** Environment rules (M3.4): known event, item, memory and animal ids; food spoils at a sane rate. */
+export function environmentProblems(content: ContentBundle): string[] {
+  const env = content.environment;
+  if (!env) return ['Content has no environment rules.'];
+  const problems: string[] = [];
+  const eventIds = new Set(content.eventTypes.map((e) => e.id));
+  for (const [key, id] of Object.entries(env.events)) {
+    if (!eventIds.has(id)) problems.push(`Environment events.${key}: unknown event type "${id}".`);
+  }
+  const itemIds = new Set(content.items.map((i) => i.id));
+  const mustHave = [env.firewood.item, env.spoilage.preserve.salt, env.spoilage.preserve.to];
+  for (const id of [...mustHave, ...env.spoilage.preserve.from]) {
+    if (!itemIds.has(id)) problems.push(`Environment: unknown item "${id}".`);
+  }
+  for (const item of content.items) {
+    const rates = [item.spoilPerMonth, item.spoilPerDay];
+    if (rates.some((r) => r !== undefined && !(r >= 0 && r <= 1)))
+      problems.push(`Item ${item.id}: spoilage must be between 0 and 1.`);
+    if (
+      (item.spoilPerMonth !== undefined || item.spoilPerDay !== undefined) &&
+      item.kind !== 'food'
+    )
+      problems.push(`Item ${item.id}: only food spoils.`);
+  }
+  const memoryIds = new Set(content.memories.map((m) => m.id));
+  for (const id of [content.life.memoryOf.shortMeals, content.life.memoryOf.shortMealsHard]) {
+    if (!memoryIds.has(id)) problems.push(`Life memoryOf: unknown memory "${id}".`);
+  }
+  const kinds = new Set(env.wild.animals.kinds.map((k) => k.id));
+  for (const id of [
+    ...env.wild.animals.fallback,
+    ...Object.values(env.wild.animals.byBiome).flat(),
+  ]) {
+    if (!kinds.has(id)) problems.push(`Environment animals: unknown kind "${id}".`);
+  }
+  const { fieldYield, normalYearMargin, otherFoodShare } = env.crop;
+  if (!(fieldYield > 0) || !(normalYearMargin > 0) || !(otherFoodShare >= 0 && otherFoodShare < 1))
+    problems.push('Environment crop: need positive fieldYield and margin, otherFoodShare in 0-1.');
+  if (!(env.meals.floor > 0 && env.meals.floor <= 1))
+    problems.push('Environment meals: floor must be between 0 and 1.');
   return problems;
 }

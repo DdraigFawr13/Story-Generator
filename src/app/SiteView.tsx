@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type MutableRefObject,
   type RefObject,
 } from 'react';
@@ -51,11 +52,13 @@ import {
   formatSelection,
   movePeople,
   refreshLayout,
+  refreshLive,
   parseSelection,
   selectionRect,
   tileAtPoint,
   type Selection,
 } from './site-render';
+import { NARROW_PX, fireLine, shortDate, weatherChip } from './site-season';
 import './site-view.css';
 
 /** The part of a link the site view writes back. */
@@ -126,6 +129,20 @@ const PANE_MIN = 360;
 const COLUMN_GAP = 14;
 const PHONE_QUERY = '(max-width: 860px)';
 
+const NARROW_QUERY = `(max-width: ${NARROW_PX - 1}px)`;
+const watchNarrow = (notify: () => void) => {
+  const query = window.matchMedia(NARROW_QUERY);
+  query.addEventListener('change', notify);
+  return () => query.removeEventListener('change', notify);
+};
+/** True under 480 px: the time bar uses the short date and the short weather chip. */
+const useNarrow = () =>
+  useSyncExternalStore(
+    watchNarrow,
+    () => window.matchMedia(NARROW_QUERY).matches,
+    () => false,
+  );
+
 const isPhone = () => window.matchMedia(PHONE_QUERY).matches;
 const typing = (el: EventTarget | null) =>
   el instanceof HTMLElement && (el.matches('input,textarea,select') || el.isContentEditable);
@@ -133,6 +150,8 @@ const typing = (el: EventTarget | null) =>
 interface Banner {
   eventId: Id;
   text: string;
+  /** The event started a fire: the banner follows the fight. */
+  fire: boolean;
   causes: { word: string; text: string }[];
 }
 
@@ -153,6 +172,7 @@ export function SiteView(props: Props) {
   const m: SiteModel = useMemo(() => ({ ...base, index }), [base, index]);
   const digest = useMemo(() => localMapDigest(active.map), [active]);
   const ui = usePaneUi();
+  const narrow = useNarrow();
 
   const startLine = useMemo<LiveLine>(() => {
     const followed = active.residents.length;
@@ -399,6 +419,9 @@ export function SiteView(props: Props) {
         const before = new Map<Id, number>();
         for (const mark of model.scene.marks.values()) before.set(mark.id, mark.k);
         movePeople(model.scene, world);
+        // Crops, snow, fire and animals ride on every snapshot.
+        refreshLive(model.scene, world);
+        renderer.current?.refreshLive();
         renderer.current?.beginTween(before, TWEEN_MS[current] ?? 0);
         renderer.current?.refreshPeople();
         redrawOverview();
@@ -430,7 +453,12 @@ export function SiteView(props: Props) {
           const word = content.eventTypes.find((d) => d.id === event.type)?.causeWord ?? 'after';
           return [{ word, text: props.narrator.renderEvent(cause) }];
         });
-        setBanner({ eventId: event.id, text: props.narrator.renderEvent(event), causes });
+        setBanner({
+          eventId: event.id,
+          text: props.narrator.renderEvent(event),
+          fire: category === 'fires',
+          causes,
+        });
         setWhyOpen(false);
         const actor = event.actors.find((id) => model.scene.marks.has(id));
         if (actor !== undefined) {
@@ -693,10 +721,13 @@ export function SiteView(props: Props) {
   const lastBlock = shown.block;
   const blockDay = shown.day;
   const blockSeason = dateOf(blockDay).season;
-  const date_ = dayText(blockDay);
-  const monthName = date_.split(' ')[1]!.replace(',', '');
-  const rateText =
-    speed === 0
+  const date_ = narrow ? shortDate(blockDay) : dayText(blockDay);
+  const monthName = dayText(blockDay).split(' ')[1]!.replace(',', '');
+  const chip = weatherChip({ world, active, content }, narrow);
+  // On a phone the time of day moves down beside the speed buttons, and the rate is rounded.
+  const rateText = narrow
+    ? `${DAY_BLOCKS[lastBlock]} · ${speed === 0 ? 'paused' : `${Math.round(rate)} d/s`}`
+    : speed === 0
       ? 'paused'
       : rate <= 0
         ? `${speed}× · measuring`
@@ -707,6 +738,22 @@ export function SiteView(props: Props) {
     ['people', 'People', String(active.residents.length)],
     ['chron', 'Chronicle'],
   ];
+
+  // A fire banner says who is fighting it and with what water, read from the live state.
+  const fire = banner?.fire ? fireLine({ world, active, content }) : null;
+
+  // On a phone the Key sits beside the speed buttons, so the date and both chips share one row.
+  const keyButton = (
+    <button
+      type="button"
+      className="small keybtn"
+      aria-expanded={keyOpen}
+      aria-controls="sv-key"
+      onClick={() => setKeyOpen((o) => !o)}
+    >
+      Key
+    </button>
+  );
 
   /** The auto-pause banner; a second copy sits above the pane for the phone's pane tab (CSS shows one). */
   const bannerView = (ref: RefObject<HTMLDivElement | null> | undefined, cls: string) =>
@@ -735,6 +782,7 @@ export function SiteView(props: Props) {
             Resume (Space)
           </button>
         </div>
+        {fire && <div className="spread">{fire}</div>}
         {whyOpen && (
           <div className="why">
             {banner.causes.map((c, k) => (
@@ -1015,20 +1063,20 @@ export function SiteView(props: Props) {
             <div className="date" data-testid="site-date">
               <span>{date_}</span>
               <span className={`season ${blockSeason}`}>
-                {blockSeason} · {monthName} · {DAY_BLOCKS[lastBlock]}
-                {shown.restDay ? ' · rest day' : ''}
+                {narrow
+                  ? blockSeason
+                  : `${blockSeason} · ${monthName} · ${DAY_BLOCKS[lastBlock]}${shown.restDay ? ' · rest day' : ''}`}
+              </span>
+              <span
+                className={`season wx${chip.warn ? ' warn' : ''}`}
+                data-testid="site-weather"
+                title="Weather today at the site"
+              >
+                {chip.text}
               </span>
             </div>
-            <span className="sp" />
-            <button
-              type="button"
-              className="small keybtn"
-              aria-expanded={keyOpen}
-              aria-controls="sv-key"
-              onClick={() => setKeyOpen((o) => !o)}
-            >
-              Key
-            </button>
+            {!narrow && <span className="sp" />}
+            {!narrow && keyButton}
           </div>
           <div className="row">
             <div className="seg" role="group" aria-label="Speed">
@@ -1048,8 +1096,10 @@ export function SiteView(props: Props) {
             <span className="rate" data-testid="site-rate">
               {rateText}
             </span>
+            {narrow && <span className="sp" />}
+            {narrow && keyButton}
           </div>
-          {keyOpen && <KeyPopover id="sv-key" />}
+          {keyOpen && <KeyPopover id="sv-key" animals={content.environment.wild.animals.kinds} />}
         </div>
         {bannerView(undefined, ' above')}
         <aside className="pane" aria-label="Site pane">
@@ -1100,7 +1150,16 @@ const KEY_TILES: [string, string, string, string][] = [
   ['t-sea', '≈', 't-water-ink', 'sea'],
   ['t-rock', '^', 't-rock-ink', 'rock'],
   ['t-rock', '*', 't-ore', 'ore'],
-  ['t-field', '"', 't-field-ink', 'field'],
+  ['t-field', '"', 't-field-ink', 'field (bare)'],
+  ['t-field', ',', 't-field-ink', 'sown'],
+  ['t-crop-grow', '"', 't-crop-grow-ink', 'growing grain'],
+  ['t-crop-ripe', '"', 't-crop-ripe-ink', 'ripe grain'],
+  ['t-crop-cut', '.', 't-field-ink', 'cut stubble'],
+  ['t-crop-ruin', '×', 't-crop-ruin-ink', 'withered or ruined'],
+  ['t-crop-frost', '*', 't-crop-frost-ink', 'frost-bitten grain'],
+  ['t-snow', '', 't-grass-ink', 'snow on open ground'],
+  ['t-fire', '▲', 't-fire-ink', 'fire'],
+  ['t-burnt', '#', 't-burnt-ink', 'burnt ground'],
   ['t-path', '·', 't-path-ink', 'path'],
 ];
 const KEY_BUILDINGS: [string, string, string, string, string?][] = [
@@ -1123,7 +1182,13 @@ const KEY_PEOPLE: [string, string, string][] = [
   ['gifted', 'Ab', 'gifted or stronger in magic (✦)'],
 ];
 
-function KeyPopover({ id }: { id: string }) {
+function KeyPopover({
+  id,
+  animals,
+}: {
+  id: string;
+  animals: readonly { id: string; name: string; glyph: string }[];
+}) {
   const glyph = ([bg, text, ink, label, cls]: [string, string, string, string, string?]) => (
     <span key={label}>
       <i
@@ -1152,6 +1217,19 @@ function KeyPopover({ id }: { id: string }) {
             <span key={label}>
               <i className={`pd ${cls}`}>{text}</i>
               {label}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div>
+        <h4>Wild animals (letters, no ring)</h4>
+        <div className="key">
+          {animals.map((k) => (
+            <span key={k.id}>
+              <i className="g" style={{ background: 'var(--t-grass)', color: 'var(--t-animal)' }}>
+                {k.glyph}
+              </i>
+              {k.name}
             </span>
           ))}
         </div>

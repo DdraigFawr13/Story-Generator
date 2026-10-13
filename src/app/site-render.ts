@@ -7,7 +7,9 @@ import {
   bandOfAge,
   siteCodes,
   sitePopulation,
+  type ActiveSite,
   type Building,
+  type Crop,
   type Id,
   type LocalMap,
   type SiteCodes,
@@ -294,6 +296,76 @@ export function rulerWord(government: string | undefined): string {
   return government === 'jarldom' ? 'jarl' : 'ruler';
 }
 
+// ---- the moving parts: crops, snow, fire and animals (M3.4) ----
+
+/** What a field's crop looks like: tile tint, glyph and glyph ink (token names), or null for bare ground. */
+export function cropLook(crop: Pick<Crop, 'stage' | 'frostBitten'>): {
+  bg: string;
+  glyph: string;
+  ink: string;
+} | null {
+  const young = crop.stage === 'sown' || crop.stage === 'growing';
+  if (young && crop.frostBitten) return { bg: 't-crop-frost', glyph: '*', ink: 't-crop-frost-ink' };
+  switch (crop.stage) {
+    case 'sown':
+      return { bg: 't-field', glyph: ',', ink: 't-field-ink' };
+    case 'growing':
+      return { bg: 't-crop-grow', glyph: '"', ink: 't-crop-grow-ink' };
+    case 'ripe':
+      return { bg: 't-crop-ripe', glyph: '"', ink: 't-crop-ripe-ink' };
+    case 'cut':
+      return { bg: 't-crop-cut', glyph: '.', ink: 't-field-ink' };
+    case 'ruined':
+      return { bg: 't-crop-ruin', glyph: '×', ink: 't-crop-ruin-ink' };
+    default:
+      return null;
+  }
+}
+
+/** What changes tick to tick on the map; rebuilt from each snapshot, drawn over the cached terrain. */
+export interface LiveLayers {
+  /** Snow lies on open ground. */
+  snow: boolean;
+  /** Followed fields whose crop shows (anything but bare). */
+  fields: { b: Building; look: NonNullable<ReturnType<typeof cropLook>> }[];
+  /** Tiles drawn burnt: burnt buildings and ground that burnt lately. */
+  burnt: Set<number>;
+  fire: Set<number>;
+  animals: { x: number; y: number; glyph: string }[];
+}
+
+export function liveLayers(
+  active: ActiveSite,
+  animalGlyphs: ReadonlyMap<string, string>,
+): LiveLayers {
+  const fields: LiveLayers['fields'] = [];
+  const burnt = new Set<number>();
+  for (const b of active.buildings.values()) {
+    if (b.crop) {
+      const look = cropLook(b.crop);
+      if (look) fields.push({ b, look });
+    }
+    if (b.burnt) for (const k of b.cells) burnt.add(k);
+  }
+  for (const t of active.burnt) burnt.add(t.tile);
+  return {
+    snow: active.weather.snowCover > 0,
+    fields,
+    burnt,
+    fire: new Set(active.fire?.tiles.keys() ?? []),
+    animals: active.animals.map((a) => ({
+      x: a.x,
+      y: a.y,
+      glyph: animalGlyphs.get(a.kind) ?? '?',
+    })),
+  };
+}
+
+/** Re-reads the moving parts after a snapshot, in place. */
+export function refreshLive(scene: Scene, world: WorldState): void {
+  if (world.activeSite) scene.live = liveLayers(world.activeSite, scene.animalGlyphs);
+}
+
 // ---- people ----
 
 export type PersonRole = 'jarl' | 'notable' | 'elder' | 'child' | 'adult';
@@ -375,6 +447,9 @@ export interface Scene {
   jarl: boolean;
   /** Bounding box (x, y, w, h) of the followed homes and the hall: the "hall quarter". */
   quarter: [number, number, number, number];
+  live: LiveLayers;
+  /** Wild animal kind id to the letter it is drawn as. */
+  animalGlyphs: ReadonlyMap<string, string>;
 }
 
 export function buildScene(
@@ -383,6 +458,7 @@ export function buildScene(
   names: ReadonlyMap<Id, string>,
   races: readonly { id: string; maturityYears: number; lifespanYears: number }[],
   jarl: boolean,
+  animalKinds: readonly { id: string; glyph: string }[] = [],
 ): Scene {
   const active = world.activeSite;
   if (!active) throw new Error('No site is being watched.');
@@ -414,6 +490,7 @@ export function buildScene(
     if (list) list.push(id);
     else at.set(k, [id]);
   }
+  const glyphs = new Map(animalKinds.map((k) => [k.id, k.glyph]));
   const buildings = [...active.buildings.values()];
   const counted = buildings.filter((b) => b.defId === 'home' && !b.followed);
   const total = site ? sitePopulation(site) : active.residents.length;
@@ -435,6 +512,8 @@ export function buildScene(
     countedCentre: centre,
     jarl,
     quarter: quarterOf(buildings),
+    live: liveLayers(active, glyphs),
+    animalGlyphs: glyphs,
   };
 }
 
@@ -541,6 +620,22 @@ export const TOKENS = [
   't-ore',
   't-field',
   't-field-ink',
+  't-snow',
+  't-crop-grow',
+  't-crop-grow-ink',
+  't-crop-ripe',
+  't-crop-ripe-ink',
+  't-crop-cut',
+  't-crop-ruin',
+  't-crop-ruin-ink',
+  't-crop-frost',
+  't-crop-frost-ink',
+  't-fire',
+  't-fire-alt',
+  't-fire-ink',
+  't-burnt',
+  't-burnt-ink',
+  't-animal',
   't-path',
   't-path-ink',
   't-floor',
@@ -640,6 +735,20 @@ const RING: Record<string, [keyof Colors, number]> = {
   elder: ['ring-elder', 0.12],
   child: ['ring-child', 0.1],
 };
+/** Tile tints snow settles on. */
+const SNOWY: ReadonlySet<string> = new Set([
+  't-grass',
+  't-scrub',
+  't-sand',
+  't-marsh',
+  't-rock',
+  't-path',
+  't-field',
+]);
+/** Animals show from this many pixels per tile (every step but the whole-site one). */
+const ANIMALS_FROM = FIXED_ZOOMS[0]!;
+/** Fire flickers between its two tints this often (ms); everything else on the map stays still. */
+const FLICKER_MS = 450;
 /** Cap on the offscreen terrain layer, in pixels a side. */
 const TERRAIN_CACHE_PX = 3000;
 
@@ -665,6 +774,8 @@ export class SiteRenderer {
   private terrainScale = 1;
   private themeVersion = 0;
   private frame = 0;
+  private flicker = 0;
+  private flickerOn = false;
   /** Discs walking from where they were to where the last snapshot put them. */
   private tween: { from: Map<Id, number>; start: number; ms: number } | null = null;
   private readonly onPaint: (info: { zoomLabel: string; whole: boolean }) => void;
@@ -770,12 +881,36 @@ export class SiteRenderer {
   dispose(): void {
     if (this.frame) cancelAnimationFrame(this.frame);
     this.frame = 0;
+    window.clearTimeout(this.flicker);
+    this.flicker = 0;
+  }
+
+  /** Redraws after a snapshot changed the moving parts (crops, snow, fire, animals). */
+  refreshLive(): void {
+    this.draw();
+  }
+
+  /** Fire is the one thing that moves: it flickers while it burns, unless the reader prefers calm. */
+  private keepFlickering(): void {
+    const burning = this.scene.live.fire.size > 0;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (!burning || reduced) {
+      window.clearTimeout(this.flicker);
+      this.flicker = 0;
+      return;
+    }
+    if (this.flicker) return;
+    this.flicker = window.setTimeout(() => {
+      this.flicker = 0;
+      this.flickerOn = !this.flickerOn;
+      this.draw();
+    }, FLICKER_MS);
   }
 
   private terrainLayer(): number {
     const { scene } = this;
     const s = this.scale;
-    const key = `${s}|${this.themeVersion}|${this.dpr}`;
+    const key = `${s}|${this.themeVersion}|${this.dpr}|${scene.live.snow}`;
     if (this.terrainKey === key) return this.terrainScale;
     const f = Math.min(this.dpr, TERRAIN_CACHE_PX / (scene.size * s));
     const side = Math.ceil(scene.size * s * f);
@@ -803,6 +938,11 @@ export class SiteRenderer {
         t.fillStyle = l.band === 0 ? C['t-shade'] : C['t-lite'];
         t.fillRect(x * s, y * s, s + 0.5, s + 0.5);
         t.globalAlpha = 1;
+      }
+      // Snow pales open ground (fields too); buildings, water and woods stay clear.
+      if (scene.live.snow && SNOWY.has(l.bg) && !scene.look.bridges.has(k)) {
+        t.fillStyle = C['t-snow'];
+        t.fillRect(x * s, y * s, s + 0.5, s + 0.5);
       }
     }
     // Buildings being raised: the plan drawn faded, dashed round, with its glyph.
@@ -907,6 +1047,90 @@ export class SiteRenderer {
     ctx.fillText(text, sx, sy);
   }
 
+  /** Crops, burnt ground, fire and animals, over the cached terrain and under the people. */
+  private paintLive(
+    ctx: CanvasRenderingContext2D,
+    first: { x: number; y: number },
+    last: { x: number; y: number },
+  ): void {
+    const { scene, state, colors: C } = this;
+    const { live } = scene;
+    const size = scene.size;
+    const s = this.scale;
+    const { view } = state;
+    const { vw, vh } = this;
+    const bands = scene.look.bands;
+    const letters = s >= LETTERS_FROM;
+    const visible = (k: number) => {
+      const x = k % size;
+      const y = (k - x) / size;
+      return x >= first.x - 1 && x <= last.x + 1 && y >= first.y - 1 && y <= last.y + 1;
+    };
+    const tile = (k: number, bg: string, glyph: string, ink: string, snow: boolean) => {
+      const x = k % size;
+      const y = (k - x) / size;
+      const [sx, sy] = tileToScreen(x, y, view, s, vw, vh);
+      ctx.fillStyle = C[bg as keyof Colors];
+      ctx.fillRect(sx, sy, s + 0.5, s + 0.5);
+      const band = bands[k]!;
+      if (snow) {
+        ctx.fillStyle = C['t-snow'];
+        ctx.fillRect(sx, sy, s + 0.5, s + 0.5);
+      } else if (SHADE_ALPHA[band]) {
+        ctx.globalAlpha = SHADE_ALPHA[band]!;
+        ctx.fillStyle = band === 0 ? C['t-shade'] : C['t-lite'];
+        ctx.fillRect(sx, sy, s + 0.5, s + 0.5);
+        ctx.globalAlpha = 1;
+      }
+      if (letters && glyph) {
+        ctx.fillStyle = C[ink as keyof Colors];
+        ctx.fillText(glyph, sx + s / 2, sy + s / 2 + 1);
+      }
+    };
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `600 ${Math.round(s * 0.78)}px ui-monospace, Menlo, Consolas, monospace`;
+    // Fields by stage: tint and glyph (every other tile, as the bare field's own).
+    for (const { b, look } of live.fields) {
+      if (
+        b.x > last.x + 1 ||
+        b.x + b.w < first.x - 1 ||
+        b.y > last.y + 1 ||
+        b.y + b.h < first.y - 1
+      ) {
+        continue;
+      }
+      for (const k of b.cells) {
+        const x = k % size;
+        const y = (k - x) / size;
+        tile(k, look.bg, (x + y) % 2 ? look.glyph : '', look.ink, live.snow);
+      }
+    }
+    // Burnt ground stays dark, with its own glyph in the burnt ink.
+    for (const k of live.burnt) {
+      if (!visible(k) || live.fire.has(k)) continue;
+      tile(k, 't-burnt', tileLook(scene.look, k).glyph, 't-burnt-ink', false);
+    }
+    // Fire: a tile that burns, flickering between two tints.
+    if (live.fire.size > 0) {
+      for (const k of live.fire) {
+        if (visible(k)) tile(k, this.flickerOn ? 't-fire-alt' : 't-fire', '▲', 't-fire-ink', false);
+      }
+    }
+    this.keepFlickering();
+    // Wild animals: plain letters, no disc.
+    if (s >= ANIMALS_FROM) {
+      ctx.font = `700 ${Math.round(s * 0.8)}px ui-monospace, Menlo, Consolas, monospace`;
+      ctx.fillStyle = C['t-animal'];
+      for (const a of live.animals) {
+        if (a.x < first.x - 1 || a.x > last.x + 1 || a.y < first.y - 1 || a.y > last.y + 1)
+          continue;
+        const [sx, sy] = tileToScreen(a.x, a.y, view, s, vw, vh);
+        ctx.fillText(a.glyph, sx + s / 2, sy + s / 2 + 1);
+      }
+    }
+  }
+
   private paint(): void {
     this.frame = 0;
     if (!this.vw) return;
@@ -939,6 +1163,7 @@ export class SiteRenderer {
     );
     const first = tileAtPoint(0, 0, view, s, vw, vh, 1e6) ?? { x: 0, y: 0 };
     const last = tileAtPoint(vw, vh, view, s, vw, vh, 1e6) ?? { x: size, y: size };
+    this.paintLive(ctx, first, last);
     // The counted quarter, summed up in one marker.
     if (view.z >= 1 && scene.countedPeople > 0) {
       const [px, py] = tileToScreen(

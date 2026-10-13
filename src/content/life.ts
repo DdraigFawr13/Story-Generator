@@ -19,7 +19,7 @@ export const NEEDS: NeedDef[] = [
   {
     id: 'water',
     name: 'Water',
-    // Wells and the river make water easy until droughts arrive (M3.4).
+    // Wells and the river make water easy; a dry spell sinks a well with no river near (M3.4).
     decayPerDay: 50,
     // People in a breakdown still drink, so a breakdown does not feed the next one.
     restore: {
@@ -31,6 +31,8 @@ export const NEEDS: NeedDef[] = [
       wander: 25,
       tantrum: 10,
       steal: 10,
+      // Fighters at the well or river drink as they go.
+      fight: 15,
     },
     awayShare: 1,
     lowAt: 30,
@@ -80,7 +82,7 @@ export const NEEDS: NeedDef[] = [
     name: 'Company',
     decayPerDay: 10,
     // The evening meal together is most people's company; a working day adds a little.
-    restore: { eat: 12, socialise: 12, play: 8, worship: 6, work: 3 },
+    restore: { eat: 12, socialise: 12, play: 8, worship: 6, work: 3, fight: 3 },
     awayShare: 1,
     needsCompany: true,
     lowAt: 30,
@@ -93,7 +95,7 @@ export const NEEDS: NeedDef[] = [
     name: 'Purpose',
     decayPerDay: 8,
     // Elders work one block and pass the afternoon in company, which also keeps them useful.
-    restore: { work: 6, play: 6, socialise: 6 },
+    restore: { work: 6, play: 6, socialise: 6, fight: 6 },
     awayShare: 1,
     lowAt: 30,
     moodAtZero: -12,
@@ -233,6 +235,13 @@ export const MEMORIES: MemoryDef[] = [
   { id: 'ate-well', mood: 3, decayDays: 2, text: 'Ate a cooked meal' },
   { id: 'cursed-item', mood: -6, decayDays: 3, text: 'Troubled by a cursed heirloom' },
   { id: 'envied', mood: -3, decayDays: 5, text: "Envied {about}'s treasure" },
+  // M3.4: short meals (refreshed daily while they last), a cold night at home (up to three stack:
+  // -15 over three nights), a home seen burning and a harvest brought in.
+  { id: 'short-meals', mood: -6, decayDays: 3, text: 'On short meals' },
+  { id: 'short-meals-hard', mood: -12, decayDays: 3, text: 'On very short meals' },
+  { id: 'cold-night', mood: -5, decayDays: 5, stacks: 3, text: 'A cold night at home' },
+  { id: 'saw-fire', mood: -8, decayDays: 10, text: 'Saw a home burn' },
+  { id: 'harvested', mood: 4, decayDays: 12, text: 'Brought in the harvest' },
 ];
 
 export const LIFE: LifeRules = {
@@ -292,6 +301,11 @@ export const LIFE: LifeRules = {
     ateWell: 'ate-well',
     cursed: 'cursed-item',
     envied: 'envied',
+    shortMeals: 'short-meals',
+    shortMealsHard: 'short-meals-hard',
+    coldNight: 'cold-night',
+    sawFire: 'saw-fire',
+    harvested: 'harvested',
   },
   // A block is six hours: 240 cost (about 120 grass tiles) crosses the map; only rough routes stop short.
   walkPerBlock: 240,

@@ -8,7 +8,7 @@
 // activity, destination and walking; (2) work, needs, meals, memories, mood and stress. Once a
 // day, at the first block, the steward (work.ts) hands out the day's jobs.
 
-import { DAYS_PER_YEAR, MONTHS_PER_YEAR, dateOf } from '../core/clock';
+import { DAYS_PER_YEAR } from '../core/clock';
 import { createEmitter, type EmitInput } from '../core/context';
 import {
   ACTIVITIES,
@@ -31,11 +31,21 @@ import type {
   Person,
   PersonDetail,
   SimEvent,
+  SiteFire,
+  SiteFirewood,
+  SiteHarvest,
+  SiteWeather,
+  SiteWild,
+  SiteWoods,
   WorldState,
+  Animal,
 } from '../core/types';
 import { bandOfAge, type Band, type SiteContent } from './defs';
+import { runEnvironmentDay, voiceOf } from './environment';
+import { fightFire, fightingSpots, settleFire, spreadFire } from './fire';
 import { findRoute, tileCost, walkAlong } from './path';
 import { foodMeals, takeFood } from './stock';
+import { stepAnimals } from './wild';
 import {
   residentItems,
   runSteward,
@@ -119,6 +129,8 @@ const caches = new WeakMap<ActiveSite, SiteCache>();
 const COMPANY_RANGE = 2;
 /** The greens' spread: a person's spot is within this many tiles of the origin. */
 const GREEN_SPREAD = 3;
+/** Days a hunter keeps going to the same hunting ground (animals wander slowly; routes are cached). */
+const HUNT_REFRESH_DAYS = 7;
 /** Blocks in a day. */
 const BLOCKS = DAY_BLOCKS.length;
 /** Stress and mood limits. */
@@ -143,18 +155,11 @@ export function memoryMood(
   return memory.moodDelta * (1 - Math.max(0, age) / memory.decayDays);
 }
 
-/** The day's temperature (°C) at the watched site's cell, from its summer high and winter low. */
-export function siteTemperature(world: WorldState, content: SiteContent, day: number): number {
-  const active = world.activeSite;
-  const cells = world.cells;
-  if (!active || !cells) throw new Error('No watched site.');
-  const k = active.map.cellY * cells.width + active.map.cellX;
-  const summer = cells.tempSummer[k]!;
-  const winter = cells.tempWinter[k]!;
-  const half = MONTHS_PER_YEAR / 2;
-  const gap = Math.abs(dateOf(day).month - content.life.warmth.coldestMonth);
-  const w = 1 - Math.min(gap, MONTHS_PER_YEAR - gap) / half;
-  return summer + (winter - summer) * w;
+/** The home a household lives in: its own, or the one that took it in while its own is burnt. */
+function livingHome(active: ActiveSite, h: Household): Building | undefined {
+  const own = h.home == null ? undefined : active.buildings.get(h.home);
+  if (own?.burnt && h.lodgingHome != null) return active.buildings.get(h.lodgingHome) ?? own;
+  return own;
 }
 
 function interiorSpot(b: Building, index: number, width: number): number {
@@ -184,7 +189,7 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
   const familyHomes: Building[] = [];
   let loners = 0;
   for (const h of [...active.households.values()].sort((a, b) => a.id - b.id)) {
-    const home = h.home == null ? undefined : active.buildings.get(h.home);
+    const home = livingHome(active, h);
     if (h.members.length > 1 && home) familyHomes.push(home);
     else if (h.members.length <= 1) loners += 1;
   }
@@ -194,7 +199,7 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
     const person = world.people.get(id);
     if (!person) continue;
     const household = active.households.get(person.family.householdId ?? -1);
-    const home = household?.home == null ? undefined : active.buildings.get(household.home);
+    const home = household ? livingHome(active, household) : undefined;
     const traits = person.traits.flatMap((t) => traitDefs.get(t) ?? []);
     const rates = content.needs.map((need) =>
       traits.reduce((r, t) => r * (t.needRates?.[need.id] ?? 1), 1),
@@ -319,8 +324,13 @@ function addMemory(
   if (!def) throw new Error(`Unknown memory "${type}".`);
   const memories = detail.memories;
   // One memory per type: seeing a second tantrum refreshes the first (now about the newest one)
-  // rather than stacking, so a bad week cannot pile up past bearing.
-  const same = memories.find((m) => m.type === type);
+  // rather than stacking, so a bad week cannot pile up past bearing. A few types stack to a cap
+  // (cold nights), the oldest copy being refreshed past it.
+  const copies = memories.filter((m) => m.type === type);
+  const same =
+    copies.length < (def.stacks ?? 1)
+      ? undefined
+      : copies.reduce((old, m) => (m.createdDay < old.createdDay ? m : old), copies[0]!);
   const fresh: Memory = {
     type,
     moodDelta: def.mood,
@@ -400,6 +410,19 @@ function settleMood(p: Profile, content: SiteContent, day: number): void {
   if (bd && (bd.kind === 'tantrum' || bd.kind === 'theft')) detail.breakdown = undefined;
 }
 
+/** Where the fighters stood last block (they still have last block's activity and position). */
+function fightersAt(world: WorldState, active: ActiveSite): number[] {
+  if (!active.fire) return [];
+  const tiles: number[] = [];
+  for (const id of active.residents) {
+    const detail = world.people.get(id)?.detail;
+    if (detail?.activity === 'fight' && detail.pos) {
+      tiles.push(detail.pos[1] * active.map.width + detail.pos[0]);
+    }
+  }
+  return tiles;
+}
+
 /** The lookups for the site as it stands: rebuilt when buildings or the map changed. */
 function cacheFor(world: WorldState, content: SiteContent, active: ActiveSite): SiteCache {
   let cache = caches.get(active);
@@ -414,12 +437,19 @@ function cacheFor(world: WorldState, content: SiteContent, active: ActiveSite): 
 export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   const active = world.activeSite;
   if (!active) throw new Error('No watched site.');
-  // Buildings or the map changed since the profiles were built (a home finished): rebuild them.
-  const cache = cacheFor(world, content, active);
-  const { life, site: rules, steward } = content;
   const first = world.events.length;
   const day = world.day;
   const block = active.block;
+  // The day's environment and the fire come before the profiles: a burnt home or a felled wood
+  // moves the layout version, and the profiles are rebuilt for it just below.
+  const voice = voiceOf(world, content, active);
+  const today = block === 0 ? runEnvironmentDay(world, content, active) : null;
+  spreadFire(world, content, active, voice.emit, voice.label, fightersAt(world, active));
+  stepAnimals(world, content, active);
+  // Buildings or the map changed since the profiles were built (a home finished): rebuild them.
+  const cache = cacheFor(world, content, active);
+  const { life, site: rules, steward } = content;
+  const env = content.environment;
   const width = active.map.width;
   const cell = cache.siteCell;
   const profiles = cache.profiles;
@@ -437,6 +467,24 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     });
   const add = (p: Profile, type: string, about?: Id, eventId?: Id) =>
     addMemory(cache, life.memoryCap, p.person.detail!, type, day, about, eventId);
+
+  // A fire that began today: everyone near it remembers it.
+  if (today?.fire) {
+    const fx = today.fire.tile % width;
+    const fy = Math.floor(today.fire.tile / width);
+    for (const q of profiles) {
+      const [qx, qy] = q.person.detail!.pos!;
+      if (Math.max(Math.abs(qx - fx), Math.abs(qy - fy)) <= life.witnessRange * 2) {
+        add(q, life.memoryOf.sawFire, undefined, today.fire.event.id);
+      }
+    }
+  }
+  // A harvest brought in cheers the farmers.
+  if (today?.harvested) {
+    for (const q of profiles) {
+      if (q.person.detail!.jobId === steward.roles.farm) add(q, life.memoryOf.harvested);
+    }
+  }
 
   const startBreakdown = (p: Profile) => {
     const detail = p.person.detail!;
@@ -562,6 +610,26 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     if (p.placeId === null) cache.outdoors[tile]! += 1;
     else cache.inside[p.placeId]! += 1;
   };
+  // Fighters: the adults nearest a fire who are not breaking down walk to its edge.
+  const spots = active.fire
+    ? fightingSpots(active, (tile) => tileCost(active, rules, life, tile) > 0)
+    : [];
+  const fighting = new Map<Profile, number>();
+  if (active.fire && spots.length > 0) {
+    const fx = active.fire.start % width;
+    const fy = Math.floor(active.fire.start / width);
+    const near = profiles
+      .filter((p) => p.band === 'adult' && !p.person.detail!.breakdown)
+      .map((p) => {
+        const [px, py] = p.person.detail!.pos!;
+        return { p, d: Math.max(Math.abs(px - fx), Math.abs(py - fy)) };
+      })
+      .sort((a, b) => a.d - b.d || a.p.id - b.p.id)
+      .slice(0, env.fire.fighters);
+    near.forEach(({ p }, i) => fighting.set(p, spots[i % spots.length]!));
+  }
+  const dark = block === 2 && active.weather.outdoorDark;
+  const indoor = new Set<string>(env.weather.daylight.indoor);
   const carried: Profile[] = [];
   for (const p of profiles) {
     const detail = p.person.detail!;
@@ -579,21 +647,30 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     else if (bd?.kind === 'wandering') activity = 'wander';
     else if (bd?.kind === 'tantrum') activity = 'tantrum';
     else if (bd?.kind === 'theft') activity = 'steal';
+    else if (fighting.has(p)) activity = 'fight';
     else if (block === 2 && restDay) {
       activity = p.faithful ? life.restDayAfternoon.faithful : life.restDayAfternoon.others;
     } else activity = life.schedule[p.band][DAY_BLOCKS[block]!];
+    // Outdoor work stops at dusk: with under nine hours of daylight the afternoon is idle.
+    if (dark && activity === 'work' && p.job && !indoor.has(p.job.workplace))
+      activity = 'socialise';
     detail.activity = activity;
     if (activity === 'work' && p.job) {
       const job = p.job;
+      // Fields change with the season, building sites daily, and a hunter's quarry each block.
+      const volatile = job.workplace === 'construction' || job.workplace === 'field';
       if (
         p.tileJob !== job ||
         p.tileVersion !== active.layoutVersion ||
-        (job.workplace === 'construction' && p.tileDay !== day)
+        (volatile && p.tileDay !== day) ||
+        (job.pool === 'game' &&
+          Math.floor(p.tileDay / HUNT_REFRESH_DAYS) !== Math.floor(day / HUNT_REFRESH_DAYS))
       ) {
+        const kept = p.tileJob === job ? p.tileAt : -1;
         p.tileJob = job;
         p.tileVersion = active.layoutVersion;
         p.tileDay = day;
-        p.tileAt = workTile(content, active, p, job);
+        p.tileAt = workTile(content, active, { id: p.id, field: p.field, tileAt: kept }, job);
       }
       p.workTile = p.tileAt;
     }
@@ -601,21 +678,23 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     const to =
       activity === 'tantrum'
         ? from
-        : activity === 'eat'
-          ? p.table
-          : activity === 'sleep' || activity === 'despair'
-            ? p.home
-            : activity === 'work'
-              ? p.workTile >= 0
-                ? p.workTile
-                : p.field
-              : activity === 'worship'
-                ? p.shrine
-                : activity === 'wander'
-                  ? p.wander
-                  : activity === 'steal'
-                    ? p.stockpile
-                    : p.green;
+        : activity === 'fight'
+          ? fighting.get(p)!
+          : activity === 'eat'
+            ? p.table
+            : activity === 'sleep' || activity === 'despair'
+              ? p.home
+              : activity === 'work'
+                ? p.workTile >= 0
+                  ? p.workTile
+                  : p.field
+                : activity === 'worship'
+                  ? p.shrine
+                  : activity === 'wander'
+                    ? p.wander
+                    : activity === 'steal'
+                      ? p.stockpile
+                      : p.green;
     let tile = from;
     if (to !== from) {
       const route = findRoute(active, rules, life, from, to, budget);
@@ -630,7 +709,8 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     const carer = carerOf(p)!;
     const theirs = carer.person.detail!.activity!;
     // A carer who wandered off or broke down leaves the child asleep at home.
-    const away = theirs === 'wander' || theirs === 'tantrum' || theirs === 'steal';
+    const away =
+      theirs === 'wander' || theirs === 'tantrum' || theirs === 'steal' || theirs === 'fight';
     detail.with = carer.id;
     detail.activity = away ? 'sleep' : theirs;
     const tile = away ? p.home : carer.tile;
@@ -644,14 +724,28 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   const crew: CrewMember[] = [];
   for (const p of profiles) {
     if (p.job && p.person.detail!.activity === 'work' && p.workTile >= 0 && p.tile === p.workTile) {
-      crew.push({ id: p.id, person: p.person, band: p.band, traits: p.traits, job: p.job });
+      crew.push({
+        id: p.id,
+        person: p.person,
+        band: p.band,
+        traits: p.traits,
+        job: p.job,
+        tile: p.tile,
+      });
     }
   }
   const liked = runWork(world, content, active, crew, cache.emit, {
     name: cache.siteName,
     cell,
   });
-  const temperature = siteTemperature(world, content, day);
+  // Fighters beside the fire put out tiles; a fire with no tile left is over.
+  if (active.fire) {
+    const stood: number[] = [];
+    for (const p of profiles) if (p.person.detail!.activity === 'fight') stood.push(p.tile);
+    fightFire(world, content, active, stood);
+    settleFire(world, content, active, voice.emit, voice.label);
+  }
+  const temperature = active.weather.tempC;
   const coldLoss =
     clamp((life.warmth.comfortC - temperature) * life.warmth.perDegree, 0, life.warmth.maxPerDay) /
     BLOCKS;
@@ -659,6 +753,13 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   // Warmth is the one need whose decay follows the day's temperature.
   const nNeeds = content.needs.length;
   const decays = content.needs.map((n) => (n.id === 'warmth' ? coldLoss : n.decayPerDay / BLOCKS));
+  // Outdoors in snow or a storm costs more warmth; indoors with no firewood costs three times.
+  const wetCold = active.weather.sky === 'snow' || active.weather.sky === 'storm';
+  const coldHomes = new Set(active.firewood.coldHomes);
+  const wellLow = active.weather.wellLow;
+  const share = active.mealShare;
+  const shortMeals = share < 1;
+  const hardMeals = share < env.meals.hardBelow;
   const checkStores = () => {
     if (active.storesEmptyEvent === null && food() < cache.meal) {
       active.storesEmptyEvent = cache.emit({
@@ -689,8 +790,14 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
     const activity = detail.activity!;
     const atHome = p.placeId !== null && p.placeId === p.homeId;
     const needs = detail.needs;
-    const meal = p.race.foodNeed;
+    const meal = p.race.foodNeed * share;
     let fed = false;
+    const inColdHome = p.placeId !== null && coldHomes.has(p.placeId);
+    const warmthMul = inColdHome
+      ? env.firewood.coldHomeMul
+      : p.placeId === null && wetCold
+        ? 1 + env.weather.outdoorExtraLoss
+        : 1;
     if (activity === 'eat') {
       if (food() >= meal) {
         const { taken, cooked } = takeFood(active, content, meal, true);
@@ -718,11 +825,14 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       const need = content.needs[j]!;
       let value = needs[need.id];
       if (value === undefined) continue;
-      value -= decays[j]! * p.rates[j]!;
+      value -= decays[j]! * p.rates[j]! * (need.id === 'warmth' ? warmthMul : 1);
       const restore = restoreRow[j]!;
       if (restore === restore && (need.id !== 'food' || fed)) {
-        const gain =
+        let gain =
           !need.needsCompany || hasCompany(p) ? restore * (atHome ? 1 : need.awayShare) : 0;
+        // Short meals restore less of the food need; a low well halves the water.
+        if (need.id === 'food') gain *= share;
+        else if (need.id === 'water' && wellLow) gain *= 0.5;
         if (gain > 0) {
           value += gain;
           // For "why" lines: "Idle: no work for 3 days".
@@ -731,10 +841,22 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       }
       // Work at a job they like feeds the purpose need more.
       if (need.id === 'purpose' && liked.has(p.id)) value += steward.likedPurpose;
-      needs[need.id] = clamp(value, 0, 100);
+      // On short meals the food bar settles at the share of a full one.
+      needs[need.id] = clamp(value, 0, need.id === 'food' ? 100 * share : 100);
     }
     if (activity === 'sleep' && !atHome) add(p, life.memoryOf.sleptRough);
     if (activity === 'worship') add(p, life.memoryOf.worshipped);
+    // A night in a home with no firewood; short meals, refreshed each day they last.
+    if (block === 0 && activity === 'sleep' && inColdHome) add(p, life.memoryOf.coldNight);
+    if (block === 0 && shortMeals) {
+      const [on, off] = hardMeals
+        ? [life.memoryOf.shortMealsHard, life.memoryOf.shortMeals]
+        : [life.memoryOf.shortMeals, life.memoryOf.shortMealsHard];
+      const memories = detail.memories;
+      for (let i = memories.length - 1; i >= 0; i -= 1)
+        if (memories[i]!.type === off) memories.splice(i, 1);
+      add(p, on, undefined, active.shortMealsEvent ?? undefined);
+    }
   }
   // Evening: a cursed heirloom troubles its holder, a treasure is envied at the table.
   if (block === BLOCKS - 1) {
@@ -795,8 +917,79 @@ export interface SiteSnapshot {
   stewardFocus: string | null;
   /** World items at the site and who holds each now. */
   items: [Id, Id | null][];
+  /** M3.4: the households taken in while their home is burnt (household → lodging home). */
+  lodging: [Id, Id][];
+  /** M3.4: weather, meals, wild land, fire and the harvest, for the Today and Season panes. */
+  weather: SiteWeather;
+  /** Outdoor afternoon work has stopped for want of daylight. */
+  workStopped: boolean;
+  mealShare: number;
+  shortMealsEvent: Id | null;
+  /** Day short meals began (-1 when meals are full). */
+  shortMealsSince: number;
+  spoiled: { month: number; year: number; total: number };
+  wild: SiteWild;
+  animals: Animal[];
+  woods: {
+    atEmbark: number;
+    now: number;
+    thinEvent: Id | null;
+    /** Felled tiles with the day each grows back, and the wood left on trees being felled by tile. */
+    felled: SiteWoods['felled'];
+    wood: [number, number][];
+  };
+  fire: SiteFire | null;
+  burnt: { tile: number; day: number }[];
+  harvest: SiteHarvest;
+  firewood: SiteFirewood;
+  /** Fields in each state this year and the expected share of a normal year, so far. */
+  harvestSoFar: HarvestSoFar;
   /** Present only when `layoutVersion` differs from the version the caller last received. */
   map?: SiteMapSnapshot;
+}
+
+/** How the harvest stands (counts of followed fields, and the share of a normal year it is heading for). */
+export interface HarvestSoFar {
+  fields: number;
+  sown: number;
+  cut: number;
+  withered: number;
+  standing: number;
+  /** Meals cut so far and the meals the sown fields should give at full health. */
+  meals: number;
+  expected: number;
+  /** Expected share of a normal year: meals cut plus what stands (by health), over `expected`. */
+  share: number;
+}
+
+/** Counts the followed fields by state this year. */
+export function harvestSoFar(active: ActiveSite): HarvestSoFar {
+  const out: HarvestSoFar = {
+    fields: 0,
+    sown: 0,
+    cut: 0,
+    withered: 0,
+    standing: 0,
+    meals: active.harvest.cut,
+    expected: active.harvest.expected,
+    share: 0,
+  };
+  let heading = active.harvest.cut;
+  for (const b of active.buildings.values()) {
+    const crop = b.crop;
+    if (b.defId !== 'field' || !b.followed || !crop) continue;
+    out.fields += 1;
+    if (!crop.sownThisYear) continue;
+    out.sown += 1;
+    if (crop.stage === 'cut') out.cut += 1;
+    else if (crop.stage === 'ruined') out.withered += 1;
+    else {
+      out.standing += 1;
+      heading += crop.expected * crop.health * (crop.stage === 'ripe' ? crop.left : 1);
+    }
+  }
+  out.share = out.expected > 0 ? heading / out.expected : 0;
+  return out;
 }
 
 /**
@@ -826,6 +1019,29 @@ export function siteSnapshot(world: WorldState, sentVersion?: number): SiteSnaps
     layoutVersion: active.layoutVersion,
     stewardFocus: active.stewardFocus,
     items: active.itemsAtEntry.map(([id]) => [id, world.items.get(id)?.holder ?? null]),
+    lodging: [...active.households.values()].flatMap((h): [Id, Id][] =>
+      h.lodgingHome == null ? [] : [[h.id, h.lodgingHome]],
+    ),
+    weather: active.weather,
+    workStopped: active.weather.outdoorDark,
+    mealShare: active.mealShare,
+    shortMealsEvent: active.shortMealsEvent,
+    shortMealsSince: active.shortMealsSince,
+    spoiled: active.spoiled,
+    wild: active.wild,
+    animals: active.animals,
+    woods: {
+      atEmbark: active.woods.atEmbark,
+      now: active.woods.now,
+      thinEvent: active.woods.thinEvent,
+      felled: active.woods.felled,
+      wood: [...active.woods.wood],
+    },
+    fire: active.fire,
+    burnt: active.burnt,
+    harvest: active.harvest,
+    firewood: active.firewood,
+    harvestSoFar: harvestSoFar(active),
   };
   if (sentVersion !== active.layoutVersion) {
     const { terrain, tree, building, bridges } = active.map;
@@ -857,6 +1073,27 @@ export function applySiteSnapshot(world: WorldState, snapshot: SiteSnapshot): vo
   }
   active.layoutVersion = snapshot.layoutVersion;
   active.stewardFocus = snapshot.stewardFocus;
+  for (const household of active.households.values()) delete household.lodgingHome;
+  for (const [id, lodging] of snapshot.lodging) {
+    const household = active.households.get(id);
+    if (household) household.lodgingHome = lodging;
+  }
+  active.weather = snapshot.weather;
+  active.mealShare = snapshot.mealShare;
+  active.shortMealsEvent = snapshot.shortMealsEvent;
+  active.shortMealsSince = snapshot.shortMealsSince;
+  active.spoiled = snapshot.spoiled;
+  active.wild = snapshot.wild;
+  active.animals = snapshot.animals;
+  active.woods.atEmbark = snapshot.woods.atEmbark;
+  active.woods.now = snapshot.woods.now;
+  active.woods.thinEvent = snapshot.woods.thinEvent;
+  active.woods.felled = snapshot.woods.felled;
+  active.woods.wood = new Map(snapshot.woods.wood);
+  active.fire = snapshot.fire;
+  active.burnt = snapshot.burnt;
+  active.harvest = snapshot.harvest;
+  active.firewood = snapshot.firewood;
   for (const [id, holder] of snapshot.items) {
     const item = world.items.get(id);
     if (item) item.holder = holder;

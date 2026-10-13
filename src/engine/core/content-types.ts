@@ -223,6 +223,8 @@ export interface ContentBundle {
   items: ItemDef[];
   jobs: JobDef[];
   steward: StewardRules;
+  /** Weather, crops, stores, firewood, fire and wild land at the watched site (M3.4). */
+  environment: EnvironmentRules;
 }
 
 /** The four blocks of a site day (M3.2), in the order they run. */
@@ -241,6 +243,7 @@ export const ACTIVITIES = [
   'despair',
   'wander',
   'steal',
+  'fight',
 ] as const;
 export type Activity = (typeof ACTIVITIES)[number];
 
@@ -297,6 +300,8 @@ export interface MemoryDef {
   decayDays: number;
   /** Inspector line; `{about}` is the person it concerns. */
   text: string;
+  /** Most copies held at once (default 1: a repeat refreshes); a night's cold stacks up to 3. */
+  stacks?: number;
 }
 
 /** The day's rhythm and the stress rules (M3.2). Every number is a tunable in content/life.ts. */
@@ -361,6 +366,12 @@ export interface LifeRules {
     ateWell: string;
     cursed: string;
     envied: string;
+    /** M3.4: short meals (¾ and ⅔), a cold night in a home with no logs, a home seen burning, a harvest brought in. */
+    shortMeals: string;
+    shortMealsHard: string;
+    coldNight: string;
+    sawFire: string;
+    harvested: string;
   };
   /** Walking cost a person spends in one block; a longer route ends part way. */
   walkPerBlock: number;
@@ -418,6 +429,10 @@ export interface ItemDef {
   kind: 'food' | 'material' | 'tool' | 'goods' | 'artifact' | 'book';
   /** Food eaten as a cooked meal (the ate-well memory). */
   cooked?: boolean;
+  /** Share of the stock that spoils each month (spread over 28 days); food only. */
+  spoilPerMonth?: number;
+  /** Share that spoils each day, for food that keeps only days (cooked meals). */
+  spoilPerDay?: number;
   /** Artifacts and books: the world `Item.form` values this entry covers. */
   forms?: string[];
   effects?: ItemEffect[];
@@ -455,8 +470,10 @@ export interface JobDef {
   rawFood?: number;
   /** Items made per block at effectiveness 1. */
   outputs?: Record<string, number>;
-  /** Work at a building site: raise or repair a building, or carry materials to it. */
-  action?: 'build' | 'haul';
+  /** Work at a building site: raise or repair a building, or carry materials to it; or sow, tend and cut a field. */
+  action?: 'build' | 'haul' | 'farm';
+  /** The wild pool the job draws on (output scales with it); `wood` fells trees tile by tile. */
+  pool?: 'game' | 'berries' | 'fish' | 'wood';
   serves: 'food' | 'materials' | 'tools' | 'goods' | 'health' | 'shelter';
   /** Elders are never given it. */
   heavy?: boolean;
@@ -531,6 +548,8 @@ export interface StewardRules {
   waresPer: number;
   /** Spare hands gather food only below this many days of stores. */
   spareFoodDays: number;
+  /** Share of the crew gathering fish, game and berries at full stores and at empty stores. */
+  gatherShare: [full: number, empty: number];
   /** Most miners. */
   miners: number;
   /** The item each world good becomes when a site is entered (and counts back into on leaving). */
@@ -565,6 +584,242 @@ export interface StewardRules {
     skilled: string;
     foodShort: string;
     itemStolen: string;
+  };
+}
+
+/** Weather, crops, stores, firewood, fire and wild land at the watched site (M3.4). Tunables live in content/weather.ts. */
+export interface EnvironmentRules {
+  weather: {
+    /** The day's swing (°C) keeps this share of yesterday's, plus a new draw of this spread. */
+    anomalyKeep: number;
+    anomalySd: number;
+    /** The night's low is the day's temperature minus this. */
+    nightBelow: number;
+    /** A hard winter: offset (°C) over these months of its year (inclusive), and over the first months of the next. */
+    hardWinter: {
+      months: [number, number];
+      offsetC: number;
+      carryMonths: [number, number];
+      carryOffsetC: number;
+    };
+    /** A drought year is this much warmer over these months. */
+    drought: { months: [number, number]; offsetC: number };
+    /** Rain chance a day = rainfall (mm) × perMm, between min and max; droughtMul over the drought months. */
+    rain: {
+      perMm: number;
+      min: number;
+      max: number;
+      droughtMonths: [number, number];
+      droughtMul: number;
+    };
+    /** Wet days at or below this temperature (°C) bring snow. */
+    snowAtC: number;
+    /** Storm chance a day = the cell's storm risk (0-100) / 100 × this. */
+    stormPerRisk: number;
+    /** Snow or a storm adds this share to warmth lost outdoors. */
+    outdoorExtraLoss: number;
+    /** Daylight swings this many hours per degree of latitude from 12 h; outdoor work stops under `outdoorMinHours`. */
+    daylight: { swingPerDegree: number; outdoorMinHours: number; indoor: Workplace[] };
+    /** Dry days that mark a dry spell (only in these months), and that sink a well with no water near. */
+    drySpell: { days: number; months: [number, number] };
+    wellLowDays: number;
+    /** A frost on the crops is reported at most this often (days). */
+    frostEventGap: number;
+    /** The day a snowfall counts as the winter's first, from this month. */
+    winterFrom: number;
+    /** Days of lying snow counted at most (the melt budget; 3 melt a day above 2 °C). */
+    snowMeltCap: number;
+  };
+  crop: {
+    /** Sowing months (inclusive) and the day temperature (°C) it needs. */
+    sowMonths: [number, number];
+    sowMinC: number;
+    /** Harvest months (inclusive): farming goes first, meals are never cut. */
+    harvestMonths: [number, number];
+    /** Unripe crops wither from this month. */
+    witherMonth: number;
+    /** A normal year gives this many times the people's year of meals (a small surplus). */
+    normalYearMargin: number;
+    /** Share of a normal year's food that fish, game and berries are expected to give. */
+    otherFoodShare: number;
+    /** Meals a healthy field gives at full soil. */
+    fieldYield: number;
+    /** Soil factor on yield = this + (1 - this) × soil / 100. */
+    soilFloor: number;
+    /** Health the steward expects fields to have at the harvest. */
+    expectedHealth: number;
+    /** Farmers tending each growing field (one visit a block keeps it from going untended). */
+    tendersPerField: number;
+    /** Grain used as seed, as a share of the field's expected yield. */
+    seedShare: number;
+    /** Work (effectiveness-blocks) to sow a field and to cut it. */
+    sowWork: number;
+    cutWork: number;
+    /** Warm days to ripen; growth a day = temperature factor × water / this. */
+    growthDays: number;
+    /** No growth at this temperature (°C), full growth `growSpanC` above it, half above `heatAboveC`. */
+    growBelowC: number;
+    growSpanC: number;
+    heatAboveC: number;
+    /** Growth under this share of the way is still "sown". */
+    sproutAt: number;
+    /** Dry days after which water is short (in a normal year, and in a drought year). */
+    dryDays: number;
+    droughtDryDays: number;
+    /** A field this close (tiles, from its edge) to a river, lake or sea is "near water". */
+    nearWaterTiles: number;
+    /** Growth share kept and health lost a day in a dry spell, by distance to water. */
+    waterNear: { growth: number; healthLoss: number };
+    waterFar: { growth: number; healthLoss: number };
+    /** Frost thresholds shift by up to this many degrees by a field's height among the fields: low ground freezes first. */
+    frostSpread: number;
+    /** A night this cold (°C) hurts young grain by `frostHealth`; this cold ruins ripe grain still standing. */
+    frostC: number;
+    frostHealth: number;
+    ruinC: number;
+    /** Chance a storm day damages a field, and by how much health. */
+    stormChance: number;
+    stormHealth: number;
+    /** A growing field with no work for this many days loses this health a day. */
+    untendedDays: number;
+    untendedLoss: number;
+    /** Health lost a day by ripe grain left uncut. */
+    ripeLoss: number;
+    /** Soil lost by each harvest, and won back by a field left bare all year. */
+    soilPerHarvest: number;
+    soilRecover: number;
+    /** A harvest at or over this share of a normal year is fair. */
+    fairShare: number;
+  };
+  spoilage: {
+    /** Spoilage runs faster above `warmAboveC` and slower below `coldBelowC`. */
+    warmAboveC: number;
+    warmMul: number;
+    coldBelowC: number;
+    coldMul: number;
+    /** A month with more spoiled than this many meals (not counting cooked meals) is reported. */
+    reportAbove: number;
+    /** Cooks smoke or salt fish and game when salt is in store. */
+    preserve: {
+      salt: string;
+      itemsPerSalt: number;
+      perBlock: number;
+      from: string[];
+      to: string;
+    };
+  };
+  meals: {
+    /** The steward looks at the stores every this many days. */
+    planEveryDays: number;
+    /** The month the harvest begins. */
+    harvestMonth: number;
+    /** Smallest share of a meal. */
+    floor: number;
+    /** A projection above this share counts as full meals. */
+    roundUpAbove: number;
+    /** Under this share the short-meals memory is the harder one. */
+    hardBelow: number;
+  };
+  firewood: {
+    /** The item homes burn. */
+    item: string;
+    /** Homes burn logs on days colder than this (°C): (this - temperature) / this × logsPerHomeDay. */
+    burnBelowC: number;
+    logsPerHomeDay: number;
+    /** A home with no logs loses warmth indoors this many times faster. */
+    coldHomeMul: number;
+    /** Logs a followed home is expected to burn in a winter, until one has been counted. */
+    expectedWinterPerHome: number;
+    /** Winter (Leaffall to Lastsnow) months, inclusive; the steward resets the count on the first. */
+    winterMonths: [number, number];
+    /** Logs kept for building on top of last winter's burn, and the felling headroom above that. */
+    buildingLogs: number;
+    headroom: number;
+  };
+  fire: {
+    /** A home with a lit hearth on a day colder than this (°C) may catch fire, with this chance a home a day. */
+    hearthBelowC: number;
+    hearthFireChance: number;
+    /** Chance a storm day lightning starts a fire. */
+    lightningChance: number;
+    /** Each block a burning tile lights a burnable neighbour with this chance, times dryness and fuel. */
+    spreadBase: number;
+    dry: { days: number; mul: number };
+    rainMul: number;
+    snowMul: number;
+    /** A tile burns this many blocks (inclusive). */
+    burnBlocks: [number, number];
+    /** Most adults who fight a fire, the chance one puts out a tile a block (with and without water in reach), and the spread beside them. */
+    fighters: number;
+    putOutChance: number;
+    noWaterChance: number;
+    nearFighterMul: number;
+    /** Tiles within which a well, river or sea counts as water to fight with. */
+    waterReach: number;
+    /** A building with this share of its tiles burnt is burnt down. */
+    burntShare: number;
+    /** Days open ground shows as burnt. */
+    burntDays: number;
+    /** Fuel by building id (floors and walls); 0 or missing does not burn. */
+    buildingFuel: Record<string, number>;
+    treeFuel: number;
+    ripeFuel: number;
+    growingFuel: number;
+    scrubFuel: number;
+    grassFuel: number;
+    grassWinterFuel: number;
+    /** Months (inclusive) when grass is dry enough to burn well. */
+    grassMonths: [number, number];
+  };
+  wild: {
+    /** Pool lost per work block of hunting, foraging and fishing. */
+    drawPerBlock: { game: number; berries: number; fish: number };
+    /** Monthly regrowth toward 1: rate × max(pool, floor) × (1 - pool). */
+    regrow: { game: number; berries: number; fish: number };
+    regrowFloor: number;
+    /** Berries yield only in these months (inclusive); fish yield less in winter months. */
+    berryMonths: [number, number];
+    winterMonths: [number, number];
+    fishWinter: number;
+    /** Logs on a tree; a felled tree grows back in this many years (inclusive range). */
+    woodPerTree: number;
+    regrowYears: [number, number];
+    /** Trees within this many tiles of the stockpile are "woods in reach"; the woods are thin under this share of their size at embark. */
+    woodsReach: number;
+    woodsThinBelow: number;
+    animals: {
+      kinds: { id: string; name: string; glyph: string }[];
+      /** Kind ids by biome id; `fallback` where a biome is not listed. */
+      byBiome: Record<string, string[]>;
+      fallback: string[];
+      /** Animals on the map = base + perPool × game pool (rounded). */
+      base: number;
+      perPool: number;
+      /** Tiles an animal may move in a block (0 to this). */
+      step: number;
+    };
+  };
+  /** Event type ids the site emits. */
+  events: {
+    drySpell: string;
+    wellLow: string;
+    frostCrops: string;
+    frostField: string;
+    firstSnow: string;
+    hardWinter: string;
+    storm: string;
+    fieldsSown: string;
+    harvest: string;
+    harvestPoor: string;
+    spoiled: string;
+    firewoodShort: string;
+    mealsCut: string;
+    mealsRestored: string;
+    fire: string;
+    fireWild: string;
+    fireOut: string;
+    takenIn: string;
+    woodsThin: string;
   };
 }
 

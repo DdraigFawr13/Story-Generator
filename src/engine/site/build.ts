@@ -30,7 +30,12 @@ export function openConstruction(active: ActiveSite): Building | undefined {
 export function repairTarget(active: ActiveSite, steward: StewardRules): Building | undefined {
   let worst: Building | undefined;
   for (const b of active.buildings.values()) {
-    if (b.progress !== undefined || b.defId === 'field' || b.condition >= steward.repairBelow) {
+    if (
+      b.progress !== undefined ||
+      b.defId === 'field' ||
+      b.burnt ||
+      b.condition >= steward.repairBelow
+    ) {
       continue;
     }
     if (
@@ -48,7 +53,12 @@ export function repairTarget(active: ActiveSite, steward: StewardRules): Buildin
 export function repairsDue(active: ActiveSite, steward: StewardRules): number {
   let n = 0;
   for (const b of active.buildings.values()) {
-    if (b.progress === undefined && b.defId !== 'field' && b.condition < steward.repairBelow)
+    if (
+      b.progress === undefined &&
+      b.defId !== 'field' &&
+      !b.burnt &&
+      b.condition < steward.repairBelow
+    )
       n += 1;
   }
   return n;
@@ -57,7 +67,7 @@ export function repairsDue(active: ActiveSite, steward: StewardRules): number {
 /** Finished buildings (not fields) lose 1 condition every `conditionLossDays` days. */
 export function wearBuildings(active: ActiveSite, steward: StewardRules): void {
   for (const b of active.buildings.values()) {
-    if (b.progress !== undefined || b.defId === 'field') continue;
+    if (b.progress !== undefined || b.defId === 'field' || b.burnt) continue;
     b.condition = Math.max(0, b.condition - 1 / steward.conditionLossDays);
   }
 }
@@ -107,6 +117,37 @@ export function beginBuilding(
   return b;
 }
 
+/** The first burnt building not yet being raised again, by id: a home, workshop or other buildable. */
+export function burntBuilding(active: ActiveSite, buildable: (defId: string) => boolean) {
+  let found: Building | undefined;
+  for (const b of active.buildings.values()) {
+    if (!b.burnt || b.progress !== undefined || !buildable(b.defId)) continue;
+    if (!found || b.id < found.id) found = b;
+  }
+  return found;
+}
+
+/** Begins raising a burnt building again where it stood (M3.4); the owner's household stays housed meanwhile. */
+export function restartBuilding(
+  content: SiteContent,
+  active: ActiveSite,
+  b: Building,
+  emit: Emit,
+  label: SiteLabel,
+): void {
+  b.condition = 0;
+  b.progress = 0;
+  b.delivered = {};
+  const event = emit({
+    type: content.steward.events.buildBegun,
+    actors: b.owner === null ? [] : [b.owner],
+    place: label.cell,
+    data: { site: label.name, building: buildingDef(content.site, b.defId).name },
+  });
+  b.begunEvent = event.id;
+  active.layoutVersion += 1;
+}
+
 /** Marks a building done: full condition, a path to its door, and its household moved in. */
 export function finishBuilding(
   content: SiteContent,
@@ -118,6 +159,10 @@ export function finishBuilding(
   const { site: rules, steward } = content;
   delete b.progress;
   delete b.delivered;
+  // A burnt building raised again: its household moves back from wherever it was taken in.
+  const rebuilt = b.burnt === true;
+  delete b.burnt;
+  delete b.burntDay;
   b.condition = 100;
   emit({
     type: steward.events.built,
@@ -130,8 +175,9 @@ export function finishBuilding(
     for (const household of active.households.values()) {
       if (household.head !== b.owner) continue;
       const old = household.home === null ? undefined : active.buildings.get(household.home);
-      if (old) old.owner = null;
+      if (old && old !== b) old.owner = null;
       household.home = b.id;
+      if (rebuilt) delete household.lodgingHome;
     }
   }
   // A path from the door to the nearest path tile.

@@ -5,6 +5,7 @@ import type { EventTypeDef, JobDef, StewardRules } from '../engine';
 
 // Outputs are items per block at effectiveness 1 (a fully skilled, attribute-10 worker with a
 // good morning); real effectiveness is usually 0.6 to 1.2. A person works about 1.9 blocks a day.
+// Farming makes no output per block (M3.4): a farmer's block sows, tends or cuts a field (crops.ts).
 export const JOBS: JobDef[] = [
   {
     id: 'farm',
@@ -13,7 +14,7 @@ export const JOBS: JobDef[] = [
     skill: 'farming',
     requirements: {},
     workplace: 'field',
-    outputs: { grain: 1.1 },
+    action: 'farm',
     serves: 'food',
     tools: true,
     perWorkplace: 4,
@@ -27,6 +28,7 @@ export const JOBS: JobDef[] = [
     requirements: {},
     workplace: 'wild',
     outputs: { berries: 0.7 },
+    pool: 'berries',
     serves: 'food',
     likedBy: ['restless'],
   },
@@ -38,6 +40,7 @@ export const JOBS: JobDef[] = [
     requirements: {},
     workplace: 'water',
     outputs: { fish: 0.95 },
+    pool: 'fish',
     serves: 'food',
     likedBy: ['solitary'],
   },
@@ -49,6 +52,7 @@ export const JOBS: JobDef[] = [
     requirements: { agility: 8, perception: 8 },
     workplace: 'wild',
     outputs: { game: 0.85 },
+    pool: 'game',
     serves: 'food',
     heavy: true,
     likedBy: ['restless'],
@@ -61,6 +65,7 @@ export const JOBS: JobDef[] = [
     requirements: { strength: 8 },
     workplace: 'trees',
     outputs: { logs: 1.2 },
+    pool: 'wood',
     serves: 'materials',
     heavy: true,
     tools: true,
@@ -131,8 +136,10 @@ export const JOBS: JobDef[] = [
     skill: 'crafting',
     requirements: { agility: 9 },
     workplace: 'workshop',
-    inputs: { logs: 2 },
-    // Half the logs target stays in store for building and repairs.
+    // A quarter log a ware (M3.4): at 2 logs, ten craftsmen felled the woods in reach within two years.
+    inputs: { logs: 0.25 },
+    // At least 300 logs stay in store for building and repairs; from M3.4 the steward keeps last
+    // winter's firewood burn on top (ActiveSite.firewood.reserve).
     reserve: { logs: 300 },
     outputs: { wares: 1 },
     serves: 'goods',
@@ -173,6 +180,7 @@ export const STEWARD: StewardRules = {
   toolBonus: 1.25,
   // ...and wear out: one tool in 500 tool-using blocks.
   toolWear: 0.002,
+  // Logs: at least 600; from M3.4 the target is last winter's firewood burn plus 600 (firewood.target).
   materialTargets: { logs: 600, stone: 400 },
   // Repair a building below 60% condition; one condition point is lost every 30 days.
   repairBelow: 60,
@@ -209,8 +217,10 @@ export const STEWARD: StewardRules = {
   crafters: 2,
   // One craftsman on wares for every 15 residents; more spare hands go to food and materials.
   waresPer: 15,
-  // Spare hands farm or forage only while the stores hold less than this many days of food.
+  // Spare hands fish, hunt or forage only while the stores hold less than this many days of food.
   spareFoodDays: 240,
+  // Fishers, hunters and foragers: 14% of the crew at full stores, 35% at empty stores.
+  gatherShare: [0.14, 0.35],
   miners: 2,
   startItems: { food: 'grain', ore: 'ore', timber: 'logs', salt: 'salt', luxury: 'wares' },
   // New buildings start 4 tiles out, as homes do, with a tile of space around them.
