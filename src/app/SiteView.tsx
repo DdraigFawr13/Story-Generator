@@ -29,6 +29,7 @@ import {
 import type { SiteHost } from '../platform/site-host';
 import type { SiteSpeed } from '../platform/site-worker';
 import type { PageRef } from './legends-ctx';
+import { siteLinkPoint } from './map-view';
 import {
   ChroniclePane,
   InspectPane,
@@ -65,6 +66,7 @@ import './site-view.css';
 /** The part of a link the site view writes back. */
 export interface SiteLinkParts {
   day: number;
+  block: number | null;
   open: string | null;
   zoom: number;
   at: { x: number; y: number };
@@ -100,14 +102,16 @@ interface Props {
   onLink(parts: SiteLinkParts): void;
 }
 
-/** Speeds the keys 0-4 choose. */
-const KEY_SPEEDS: SiteSpeed[] = [0, 0, 1, 4, 16];
+/** Speeds the keys 0-5 choose. */
+const KEY_SPEEDS: SiteSpeed[] = [0, 0, 0.5, 1, 4, 16];
 const SPEEDS: [SiteSpeed, string, string][] = [
   [0, '❚❚', 'Pause (Space or 1)'],
-  [1, '1×', '1 day a second (2)'],
-  [4, '4×', '4 days a second (3)'],
-  [16, '16×', '16 days a second (4)'],
+  [0.5, '½×', 'Half a day a second (2)'],
+  [1, '1×', '1 day a second (3)'],
+  [4, '4×', '4 days a second (4)'],
+  [16, '16×', '16 days a second (5)'],
 ];
+const SPEED_WORD = (speed: SiteSpeed) => (speed === 0.5 ? '½' : String(speed));
 const PAUSE_CATEGORIES = ['deaths', 'breakdowns', 'fires', 'threats', 'magic', 'arrivals'] as const;
 type PauseCategory = (typeof PAUSE_CATEGORIES)[number];
 /** Zoom step a selection centres to, and the step "Show on map" raises to. */
@@ -159,7 +163,7 @@ interface Banner {
 }
 
 /** How long a disc takes to walk to its new tile, by speed: about one block of wall-clock time. */
-const TWEEN_MS: Partial<Record<SiteSpeed, number>> = { 1: 250, 4: 60 };
+const TWEEN_MS: Partial<Record<SiteSpeed, number>> = { 0.5: 500, 1: 250, 4: 60 };
 
 export function SiteView(props: Props) {
   const { world, content, host, onLeave } = props;
@@ -226,7 +230,7 @@ export function SiteView(props: Props) {
   const overviewRef = useRef<HTMLCanvasElement>(null);
   const renderer = useRef<SiteRenderer | null>(null);
   const cursor = useRef({ x: 0, y: 0 });
-  const resumeSpeed = useRef<SiteSpeed>(1);
+  const resumeSpeed = useRef<SiteSpeed>(0.5);
   const picked = useRef(0);
   const toastTimer = useRef(0);
   const tipTimer = useRef(0);
@@ -418,7 +422,7 @@ export function SiteView(props: Props) {
       PAUSE_CATEGORIES.filter((c) => on.has(c)).flatMap((c) => content.site.autoPause[c]),
     );
   };
-  const resume = () => setSpeed(resumeSpeed.current || 1);
+  const resume = () => setSpeed(resumeSpeed.current || 0.5);
   const latest = useRef({ speed, pauseOn, m, setSpeed });
   latest.current = { speed, pauseOn, m, setSpeed };
 
@@ -564,20 +568,22 @@ export function SiteView(props: Props) {
     : (props.restore.at ?? { x: Math.round(size / 2), y: Math.round(size / 2) });
   const openText = sel ? formatSelection(sel, size) : null;
   const zoomIndex = painted ? painted.z : (props.restore.zoom ?? SELECT_ZOOM);
-  // Whole days to run so a reload shows the same date: a pause part-way through a day links to
-  // the end of that day, not to the night before it.
-  const linkDay = day - active.enteredDay + (active.block === 0 ? 0 : 1);
+  // The day and block the chips show, so a reload replays to the same moment.
+  const point = siteLinkPoint(day, active.enteredDay, active.block);
+  const linkDay = point.day;
+  const linkBlock = point.block;
   const linkText = useMemo(() => {
     const parts = [`seed=${world.seed}`, `site=${active.siteId}`, `day=${linkDay}`];
+    if (linkBlock !== null) parts.push(`b=${linkBlock}`);
     if (openText) parts.push(`open=${openText}`);
     parts.push(`z=${zoomIndex + 1}`, `at=${rounded.x},${rounded.y}`);
     return `?${parts.join('&')}`;
     // viewKey stands for the zoom and centre, which live in the renderer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [world.seed, active, linkDay, openText, viewKey]);
+  }, [world.seed, active, linkDay, linkBlock, openText, viewKey]);
   const { onLink } = props;
   useEffect(() => {
-    onLink({ day: linkDay, open: openText, zoom: zoomIndex, at: rounded });
+    onLink({ day: linkDay, block: linkBlock, open: openText, zoom: zoomIndex, at: rounded });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkText]);
 
@@ -683,7 +689,7 @@ export function SiteView(props: Props) {
     ) {
       return;
     }
-    if (event.key >= '0' && event.key <= '4') {
+    if (event.key >= '0' && event.key <= '5') {
       setSpeed(KEY_SPEEDS[Number(event.key)]!);
       return;
     }
@@ -772,12 +778,12 @@ export function SiteView(props: Props) {
   const chip = weatherChip({ world, active, content }, narrow);
   // On a phone the time of day moves down beside the speed buttons, and the rate is rounded.
   const rateText = narrow
-    ? `${DAY_BLOCKS[lastBlock]} · ${speed === 0 ? 'paused' : `${Math.round(rate)} d/s`}`
+    ? `${DAY_BLOCKS[lastBlock]} · ${speed === 0 ? 'paused' : `${rate < 1 ? rate.toFixed(1) : Math.round(rate)} d/s`}`
     : speed === 0
       ? 'paused'
       : rate <= 0
-        ? `${speed}× · measuring`
-        : `${speed}× · ${rate.toFixed(1)} days/s`;
+        ? `${SPEED_WORD(speed)}× · measuring`
+        : `${SPEED_WORD(speed)}× · ${rate.toFixed(1)} days/s`;
   const tabs: [typeof tab, string, string?][] = [
     ['inspect', 'Inspect'],
     ['site', 'Site'],

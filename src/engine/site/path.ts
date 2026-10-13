@@ -6,6 +6,7 @@
 
 import type { ActiveSite, Building, LocalMap } from '../core/types';
 import type { LifeRules, SiteRules } from '../core/content-types';
+import { doorOf } from './defs';
 
 /** Cost of a blocked tile in the grid. */
 const BLOCKED = 0;
@@ -16,16 +17,14 @@ interface PathCache {
   /** Cost to enter each tile; 0 blocks. */
   cost: Uint8Array;
   routes: Map<number, number[] | null>;
-  /** Running walking cost along a route, kept so a walk is found by binary search. */
-  sums: WeakMap<number[], Int32Array>;
   /** Scratch per search; `seen` and `closed` mark tiles by search number so nothing is cleared. */
   g: Float64Array;
   from: Int32Array;
   seen: Int32Array;
   closed: Int32Array;
   search: number;
-  /** Binary min-heap of (priority, tile) pairs, flat. */
-  heap: number[];
+  /** Open set of the running search. */
+  heap: Heap;
   /** Nodes expanded since the site started (for tests and tuning). */
   expanded: number;
   /** Tiles changed since the grid was built; null when it is current. */
@@ -46,11 +45,6 @@ export function invalidatePaths(active: ActiveSite, changed?: readonly number[])
   else caches.delete(active);
 }
 
-/** The door tile of a home or hall: the middle of its bottom edge (layout.ts carves paths from it). */
-export function doorOf(b: Pick<Building, 'x' | 'y' | 'w' | 'h'>): [number, number] {
-  return [b.x + (b.w >> 1), b.y + b.h - 1];
-}
-
 function buildCost(
   map: LocalMap,
   buildings: Iterable<Building>,
@@ -66,11 +60,8 @@ function buildCost(
     cost[k] = Math.min(MAX_COST, base + (map.tree[k] ? life.treeCost : 0));
   }
   const floor = life.walkCost['floor'] ?? 1;
-  for (const b of buildings) {
-    if (b.defId !== 'home' && b.defId !== 'hall') continue;
-    const [dx, dy] = doorOf(b);
-    cost[dy * map.width + dx] = floor;
-  }
+  const walled = new Set(rules.buildings.filter((d) => d.walled).map((d) => d.id));
+  for (const b of buildings) if (walled.has(b.defId)) cost[doorOf(b, map.width)] = floor;
   return cost;
 }
 
@@ -81,13 +72,12 @@ function cacheOf(active: ActiveSite, rules: SiteRules, life: LifeRules): PathCac
     cache = {
       cost: buildCost(active.map, active.buildings.values(), rules, life),
       routes: new Map(),
-      sums: new WeakMap(),
       g: new Float64Array(n),
       from: new Int32Array(n),
       seen: new Int32Array(n),
       closed: new Int32Array(n),
       search: 0,
-      heap: [],
+      heap: { prio: new Float64Array(1024), tile: new Int32Array(1024), size: 0 },
       expanded: 0,
       changed: null,
     };
@@ -97,7 +87,6 @@ function cacheOf(active: ActiveSite, rules: SiteRules, life: LifeRules): PathCac
     const changed = new Set(cache.changed);
     cache.cost = buildCost(active.map, active.buildings.values(), rules, life);
     cache.changed = null;
-    cache.sums = new WeakMap();
     for (const [key, route] of cache.routes) {
       if (route === null || route.some((k) => changed.has(k))) cache.routes.delete(key);
     }
@@ -117,26 +106,26 @@ export function walkAlong(
   route: number[],
   limit: number,
 ): number {
-  const c = cacheOf(active, rules, life);
-  let sums = c.sums.get(route);
-  if (!sums) {
-    sums = new Int32Array(route.length);
-    let total = 0;
-    for (let i = 0; i < route.length; i += 1) {
-      total += Math.max(1, c.cost[route[i]!]!);
-      sums[i] = total;
-    }
-    c.sums.set(route, sums);
+  const steps = walkSteps(active, rules, life, route, limit);
+  return steps === 0 ? -1 : route[steps - 1]!;
+}
+
+/** How many tiles of `route` are reachable within `limit` walking cost (see `walkAlong`). */
+export function walkSteps(
+  active: ActiveSite,
+  rules: SiteRules,
+  life: LifeRules,
+  route: number[],
+  limit: number,
+): number {
+  const cost = cacheOf(active, rules, life).cost;
+  // A block's walk is short against the route cache, so a scan beats keeping running sums.
+  let total = 0;
+  for (let i = 0; i < route.length; i += 1) {
+    total += Math.max(1, cost[route[i]!]!);
+    if (total > limit) return i;
   }
-  let lo = 0;
-  let hi = route.length;
-  // The first index whose running cost passes the limit.
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (sums[mid]! > limit) hi = mid;
-    else lo = mid + 1;
-  }
-  return lo === 0 ? -1 : route[lo - 1]!;
+  return route.length;
 }
 
 /** The whole cost grid (0 blocks); read it, do not write it. */
@@ -180,40 +169,57 @@ export function straightLine(width: number, from: number, to: number): number[] 
   return line;
 }
 
-function push(heap: number[], priority: number, tile: number) {
-  let i = heap.length / 2;
-  heap.push(priority, tile);
+/** Binary min-heap of (priority, tile) pairs in typed arrays (grown by doubling, never shrunk). */
+interface Heap {
+  prio: Float64Array;
+  tile: Int32Array;
+  size: number;
+}
+
+function push(heap: Heap, priority: number, tile: number) {
+  if (heap.size === heap.prio.length) {
+    const prio = new Float64Array(heap.size * 2);
+    const tiles = new Int32Array(heap.size * 2);
+    prio.set(heap.prio);
+    tiles.set(heap.tile);
+    heap.prio = prio;
+    heap.tile = tiles;
+  }
+  const { prio, tile: tiles } = heap;
+  let i = heap.size;
+  heap.size += 1;
   while (i > 0) {
     const parent = (i - 1) >> 1;
-    if (heap[parent * 2]! <= priority) break;
-    heap[i * 2] = heap[parent * 2]!;
-    heap[i * 2 + 1] = heap[parent * 2 + 1]!;
+    if (prio[parent]! <= priority) break;
+    prio[i] = prio[parent]!;
+    tiles[i] = tiles[parent]!;
     i = parent;
   }
-  heap[i * 2] = priority;
-  heap[i * 2 + 1] = tile;
+  prio[i] = priority;
+  tiles[i] = tile;
 }
 
 /** Removes the lowest priority entry and returns its tile. */
-function pop(heap: number[]): number {
-  const top = heap[1]!;
-  const priority = heap[heap.length - 2]!;
-  const tile = heap[heap.length - 1]!;
-  heap.length -= 2;
-  const n = heap.length / 2;
+function pop(heap: Heap): number {
+  const { prio, tile: tiles } = heap;
+  const top = tiles[0]!;
+  heap.size -= 1;
+  const n = heap.size;
   if (n > 0) {
+    const priority = prio[n]!;
+    const tile = tiles[n]!;
     let i = 0;
     for (;;) {
       let child = i * 2 + 1;
       if (child >= n) break;
-      if (child + 1 < n && heap[(child + 1) * 2]! < heap[child * 2]!) child += 1;
-      if (heap[child * 2]! >= priority) break;
-      heap[i * 2] = heap[child * 2]!;
-      heap[i * 2 + 1] = heap[child * 2 + 1]!;
+      if (child + 1 < n && prio[child + 1]! < prio[child]!) child += 1;
+      if (prio[child]! >= priority) break;
+      prio[i] = prio[child]!;
+      tiles[i] = tiles[child]!;
       i = child;
     }
-    heap[i * 2] = priority;
-    heap[i * 2 + 1] = tile;
+    prio[i] = priority;
+    tiles[i] = tile;
   }
   return top;
 }
@@ -221,7 +227,8 @@ function pop(heap: number[]): number {
 /**
  * The tiles to walk from `from` (excluded) to `to` (included). Null when `to` cannot be reached.
  * Cached routes cost nothing; a search spends `budget.left` per node expanded, and when that runs
- * out the route is a straight line (not cached, and not checked for walls).
+ * out the route is a straight line (not cached, and not checked for walls). A larger `weight` than
+ * `life.pathWeight` searches fewer tiles for a looser route (strolls, not errands).
  */
 export function findRoute(
   active: ActiveSite,
@@ -230,6 +237,7 @@ export function findRoute(
   from: number,
   to: number,
   budget: { left: number },
+  weight = life.pathWeight,
 ): number[] | null {
   if (from === to) return [];
   const c = cacheOf(active, rules, life);
@@ -241,20 +249,19 @@ export function findRoute(
   if (c.cost[to] === BLOCKED) return null;
   c.search += 1;
   const { search, heap, cost, g, seen, closed } = c;
-  const weight = life.pathWeight;
   const tx = to % width;
   const ty = (to - tx) / width;
   const h = (k: number) => {
     const x = k % width;
     return weight * (Math.abs(x - tx) + Math.abs((k - x) / width - ty));
   };
-  heap.length = 0;
+  heap.size = 0;
   g[from] = 0;
   seen[from] = search;
   c.from[from] = -1;
   push(heap, h(from), from);
   let found = false;
-  while (heap.length > 0) {
+  while (heap.size > 0) {
     const k = pop(heap);
     if (closed[k] === search) continue;
     if (k === to) {
@@ -279,7 +286,7 @@ export function findRoute(
       seen[n] = search;
       g[n] = next;
       c.from[n] = k;
-      push(heap, next + h(n), n);
+      push(heap, next + weight * (Math.abs(nx - tx) + Math.abs(ny - ty)), n);
     }
   }
   let route: number[] | null = null;
@@ -290,5 +297,10 @@ export function findRoute(
   }
   if (c.routes.size >= life.pathCache) c.routes.clear();
   c.routes.set(key, route);
+  // The way back is the same road: people go out and return along it (work and home, shrine and home).
+  const back = to * c.cost.length + from;
+  if (route && !c.routes.has(back)) {
+    c.routes.set(back, [...route.slice(0, -1).reverse(), from]);
+  }
   return route;
 }

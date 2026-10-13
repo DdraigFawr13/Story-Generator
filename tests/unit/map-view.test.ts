@@ -4,6 +4,7 @@ import {
   buildSiteUrl,
   buildViewUrl,
   MAX_LINK_DAY,
+  siteLinkPoint,
   cellAt,
   cellScale,
   clampZoom,
@@ -123,10 +124,32 @@ describe('site view URL (M3.1)', () => {
     expect(parseViewUrl(url.slice(2), IDS).site).toEqual({
       site: 6,
       day: 43,
+      block: null,
       open: 'person:776',
       zoom: 2,
       at: { x: 65, y: 47 },
     });
+  });
+
+  it('carries the last block run, and names the moment a clock shows', () => {
+    const url = buildSiteUrl({
+      seed: 'S1',
+      size: 256,
+      site: 6,
+      day: 10,
+      block: 2,
+      open: null,
+      zoom: 2,
+      at: { x: 60, y: 46 },
+    });
+    expect(url).toBe('/?seed=S1&size=256&site=6&day=10&b=2&z=3&at=60,46');
+    expect(parseViewUrl(url.slice(2), IDS).site?.block).toBe(2);
+    expect(parseViewUrl('?seed=S1&site=6&day=10&b=4', IDS).site?.block).toBeNull();
+    // Entered on day 5: nothing run; after the evening the clock has turned to the next day.
+    expect(siteLinkPoint(5, 5, 0)).toEqual({ day: 0, block: null });
+    expect(siteLinkPoint(5, 5, 1)).toEqual({ day: 0, block: 0 });
+    expect(siteLinkPoint(15, 5, 3)).toEqual({ day: 10, block: 2 });
+    expect(siteLinkPoint(16, 5, 0)).toEqual({ day: 10, block: 3 });
   });
 
   it('keeps tile selections, and leaves the world-map fields at their defaults', () => {
@@ -148,7 +171,7 @@ describe('site view URL (M3.1)', () => {
   it('ignores bad site values and links without a site', () => {
     expect(parseViewUrl('?seed=S1&site=x', IDS).site).toBeNull();
     const view = parseViewUrl('?seed=S1&site=4&day=-1&open=civ:3&z=9&at=oops', IDS).site;
-    expect(view).toEqual({ site: 4, day: 0, open: null, zoom: null, at: null });
+    expect(view).toEqual({ site: 4, day: 0, block: null, open: null, zoom: null, at: null });
     expect(parseViewUrl('?seed=S1&site=4&day=999999', IDS).site?.day).toBe(MAX_LINK_DAY);
     // Old links are untouched.
     const old = parseViewUrl('?seed=S1&open=civ:3&z=2&at=10,20', IDS);

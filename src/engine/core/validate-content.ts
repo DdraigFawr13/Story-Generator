@@ -5,6 +5,7 @@
 import type { ContentBundle, RaceDef } from './content-types';
 import {
   ACTIVITIES,
+  ROUTINE_PLACES,
   CULTURE_VALUES,
   DAY_BLOCKS,
   MAX_CREATURE_DANGER,
@@ -627,6 +628,51 @@ export function lifeProblems(content: ContentBundle): string[] {
     if (!valid(activity))
       problems.push(`Life restDayAfternoon.${key}: unknown activity "${activity}".`);
   }
+  const routines = life.routines;
+  const jobIds = new Set((content.jobs ?? []).map((j) => j.id));
+  const places = ROUTINE_PLACES as readonly string[];
+  for (const [name, weights] of Object.entries(routines.tables)) {
+    for (const [place, w] of Object.entries(weights)) {
+      if (!places.includes(place))
+        problems.push(`Life routines.tables.${name}: unknown place "${place}".`);
+      if (!(w >= 0))
+        problems.push(`Life routines.tables.${name}.${place}: weight must be 0 or more.`);
+    }
+  }
+  for (const key of ['smallChildUnder'] as const) {
+    if (!(routines[key] > 0)) problems.push(`Life routines.${key} must be positive.`);
+  }
+  for (const key of ['childSmall', 'childOlder']) {
+    if (!routines.tables[key]) problems.push(`Life routines.tables must include "${key}".`);
+  }
+  for (const [band, name] of Object.entries(routines.favouriteTable)) {
+    if (!routines.tables[name])
+      problems.push(`Life routines.favouriteTable.${band}: unknown table "${name}".`);
+  }
+  for (const [trait, weights] of Object.entries(routines.traitMul)) {
+    if (!traitIds.has(trait)) problems.push(`Life routines.traitMul: unknown trait "${trait}".`);
+    for (const place of Object.keys(weights)) {
+      if (!places.includes(place))
+        problems.push(`Life routines.traitMul.${trait}: unknown place "${place}".`);
+    }
+  }
+  if (!traitIds.has(routines.eveningAlehouse.trait))
+    problems.push(
+      `Life routines.eveningAlehouse: unknown trait "${routines.eveningAlehouse.trait}".`,
+    );
+  const jobLists: [string, string[]][] = [
+    ['alongJobs', routines.alongJobs],
+    ['market.stallJobs', routines.market.stallJobs],
+    ['market.foodJobs', routines.market.foodJobs],
+    ['leave.jobBase', Object.keys(routines.leave.jobBase)],
+  ];
+  for (const [key, ids] of jobLists) {
+    for (const id of ids) {
+      if (!jobIds.has(id)) problems.push(`Life routines.${key}: unknown job "${id}".`);
+    }
+  }
+  if (routines.market.every <= routines.market.offset)
+    problems.push('Life routines.market: offset must be less than every.');
   return problems;
 }
 

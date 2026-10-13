@@ -60,6 +60,13 @@ export interface PersonDetail {
   /** M3.2: what they did in the last block run, and where (a building id, or null outdoors). */
   activity?: Activity;
   placeId?: Id | null;
+  /** Village life: share of the block (0-1) that passes before they set off; the map's walk waits. */
+  leaveAt?: number;
+  /** Village life: the route walked this block (shared, read only), of which the first `walkTo` tiles were walked; absent when they stayed put. */
+  walk?: readonly number[] | undefined;
+  walkTo?: number | undefined;
+  /** Village life: where they spend a free block, for the inspector ("at the alehouse"). */
+  where?: string | undefined;
   /** The parts mood was summed from in the last block, for the inspector's "why" lines. */
   moodParts?: MoodPart[];
   /** Day of the last meal eaten. */
@@ -663,6 +670,8 @@ export interface Building {
   h: number;
   /** False for homes of counted (unfollowed) households. */
   followed: boolean;
+  /** Village life: the door, a wall tile on the street side (absent: bottom middle). */
+  door?: number;
   /** M3.3: builder-blocks done while it is being raised; absent once complete. */
   progress?: number;
   /** Materials hauled to it so far, by item id. */
@@ -814,6 +823,8 @@ export interface SiteFire {
 
 /** The live site (M3.1): its map, the people followed and what they own. */
 export interface ActiveSite {
+  /** Village life: the stall tiles on the square while a market morning runs; absent otherwise. */
+  stalls?: number[] | undefined;
   siteId: Id;
   enteredDay: number;
   map: LocalMap;

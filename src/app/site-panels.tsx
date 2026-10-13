@@ -660,6 +660,7 @@ const ACTIVITY_VERB: Record<Activity, string> = {
   defend: 'Standing to arms',
   shelter: 'Sheltering at home',
   flee: 'Fled the town',
+  errand: 'On an errand',
 };
 /** One word for the People list. */
 const ACTIVITY_SHORT: Record<Activity, string> = {
@@ -677,6 +678,7 @@ const ACTIVITY_SHORT: Record<Activity, string> = {
   defend: 'under arms',
   shelter: 'sheltering',
   flee: 'fled',
+  errand: 'on an errand',
 };
 const BREAKDOWN_TEXT: Record<BreakdownKind, string> = {
   tantrum: 'A tantrum',
@@ -742,6 +744,9 @@ function doingText(m: SiteModel, p: Person, homeId: Id | null): string {
   if (!detail?.activity) return 'Not yet known';
   const verb = ACTIVITY_VERB[detail.activity];
   if (detail.activity === 'wander') return verb;
+  // Village life: where a free block is spent ("At the alehouse", "Visiting Asa").
+  if (detail.where && detail.activity !== 'worship')
+    return detail.where.charAt(0).toUpperCase() + detail.where.slice(1);
   const job = detail.activity === 'work' ? jobOf(m, p) : undefined;
   if (job) {
     if (job.action) return siteWorkText(m, job);

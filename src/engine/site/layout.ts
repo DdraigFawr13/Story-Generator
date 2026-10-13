@@ -5,7 +5,7 @@ import { ORTHO } from '../core/math';
 import type { SiteRules } from '../core/content-types';
 import type { Building, LocalMap } from '../core/types';
 import { hash2 } from '../worldgen/noise';
-import { buildingDef, siteCodes, type SiteCodes } from './defs';
+import { buildingDef, doorstep, siteCodes, type SiteCodes } from './defs';
 
 export interface LayoutInput {
   /** Whole site population, followed or counted: sets the number of homes and fields. */
@@ -27,9 +27,20 @@ const IDEAL_WATER_DISTANCE = 10;
 const CLEAR_RADIUS = 22;
 /** ...with this chance in percent. */
 const CLEAR_PERCENT = 85;
-/** The first ring a home, shrine or field may use, so the green and the well stay open. */
-const HOME_MIN_RING = 4;
+/** The first ring a field may use, beyond the square and the first homes. */
 const FIELD_MIN_RING = 14;
+/** Village life: the market square's half size (along, across the main street). */
+const SQUARE_HALF: readonly [number, number] = [5, 3];
+/** Streets reach this far (tiles) from the square... */
+const STREET_REACH = 40;
+/** ...lanes run parallel to the main street this far apart (two home depths, a yard row, the lane)... */
+const STREET_GAP = 10;
+/** ...and a row of homes is this many long before a gap. */
+const TERRACE = 5;
+/** Share of street plots (percent) left open as gardens. */
+const OPEN_PLOT_PERCENT = 12;
+/** The square prefers to stand at least this far (tiles) from the map's edge. */
+const EDGE_MARGIN = 28;
 /** Rings searched before giving up on a building. */
 const MAX_RING = 60;
 
@@ -90,6 +101,80 @@ export function findSpot(
   return null;
 }
 
+/** A home's place in a row: its rectangle and door (a wall tile on the street side). */
+export interface RowSpot {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  door: number;
+}
+
+/**
+ * Village life: a spot for a new home at the end of an existing row, sharing the end home's wall
+ * and facing the same street; rows stop at TERRACE homes. Homes nearest `origin` are tried first.
+ */
+export function findRowSpot(
+  map: LocalMap,
+  rules: SiteRules,
+  buildings: Iterable<Building>,
+  origin: readonly [number, number],
+): RowSpot | null {
+  const code = siteCodes(rules);
+  const size = map.width;
+  const homes = [...buildings].filter((b) => b.defId === 'home' && b.door !== undefined);
+  const byCorner = new Map<number, Building>();
+  for (const b of homes) byCorner.set(b.y * size + b.x, b);
+  const [ox, oy] = origin;
+  const centre = (b: Building) => Math.abs(b.x + (b.w >> 1) - ox) + Math.abs(b.y + (b.h >> 1) - oy);
+  homes.sort((a, b) => centre(a) - centre(b) || a.id - b.id);
+  for (const b of homes) {
+    const door = b.door!;
+    const dy = Math.floor(door / size);
+    // A door in the top or bottom wall: the row runs along x.
+    const alongX = dy === b.y || dy === b.y + b.h - 1;
+    const pitch = (alongX ? b.w : b.h) - 1;
+    for (const dir of [1, -1]) {
+      const sx = alongX ? dir * pitch : 0;
+      const sy = alongX ? 0 : dir * pitch;
+      // The row's length counting back from b.
+      let length = 1;
+      for (let n = byCorner.get((b.y - sy) * size + b.x - sx); n; length += 1) {
+        n = byCorner.get((n.y - sy) * size + n.x - sx);
+      }
+      if (length >= TERRACE || byCorner.has((b.y + sy) * size + b.x + sx)) continue;
+      const spot: RowSpot = {
+        x: b.x + sx,
+        y: b.y + sy,
+        w: b.w,
+        h: b.h,
+        door: door + sy * size + sx,
+      };
+      if (!rowFree(map, code, spot, new Set(b.cells))) continue;
+      const step = doorstep(spot, size);
+      if (map.building[step] || map.water[step] === code.sea || map.water[step] === code.lake)
+        continue;
+      return spot;
+    }
+  }
+  return null;
+}
+
+/** Free for a home in a row, allowing the wall the neighbour already stands on. */
+function rowFree(map: LocalMap, code: SiteCodes, r: RowSpot, shared: Set<number>): boolean {
+  const size = map.width;
+  for (let yy = r.y; yy < r.y + r.h; yy += 1) {
+    for (let xx = r.x; xx < r.x + r.w; xx += 1) {
+      if (xx < 1 || yy < 1 || xx >= size - 1 || yy >= size - 1) return false;
+      const k = yy * size + xx;
+      if (shared.has(k)) continue;
+      if (map.building[k] || map.water[k] !== 0 || map.mineral[k]) return false;
+      if (map.terrain[k] !== code.grass && map.terrain[k] !== code.scrub) return false;
+    }
+  }
+  return true;
+}
+
 /** Writes a building into the map (terrain, building ids, trees cleared) and returns it. */
 export function stampBuilding(
   map: LocalMap,
@@ -99,20 +184,25 @@ export function stampBuilding(
   x: number,
   y: number,
   followed = true,
+  size2?: readonly [number, number],
 ): Building {
   const code = siteCodes(rules);
-  const { w, h } = buildingDef(rules, defId);
+  const def = buildingDef(rules, defId);
+  const { walled } = def;
+  // A street plot may turn a building a quarter turn (w and h swapped).
+  const [w, h] = size2 ?? [def.w, def.h];
   const size = map.width;
   const cells: number[] = [];
   for (let yy = y; yy < y + h; yy += 1) {
     for (let xx = x; xx < x + w; xx += 1) {
       const k = yy * size + xx;
       cells.push(k);
-      map.building[k] = id;
+      // A wall shared with a neighbour in the row stays the neighbour's tile.
+      if (!map.building[k]) map.building[k] = id;
       map.tree[k] = 0;
       const edge = yy === y || yy === y + h - 1 || xx === x || xx === x + w - 1;
       if (defId === 'field') map.terrain[k] = code.field;
-      else if (defId === 'home' || defId === 'hall') map.terrain[k] = edge ? code.wall : code.floor;
+      else if (walled) map.terrain[k] = edge ? code.wall : code.floor;
       else if (defId === 'wall') map.terrain[k] = code.wall;
       else map.terrain[k] = code.floor;
     }
@@ -207,10 +297,13 @@ export function layoutSite(
     const x = k % size;
     const y = (k - x) / size;
     if (x < 6 || y < 6 || x >= size - 6 || y >= size - 6) continue;
+    // Village life: the square keeps well in from the map's edge, so the rows have room.
+    const edge = Math.min(x, y, size - 1 - x, size - 1 - y);
     const score =
       Math.abs(x - centre) +
       Math.abs(y - centre) +
-      Math.abs(waterDist[k]! - IDEAL_WATER_DISTANCE) * 2;
+      Math.abs(waterDist[k]! - IDEAL_WATER_DISTANCE) * 2 +
+      Math.max(0, EDGE_MARGIN - edge) * 4;
     if (score < bestScore) {
       bestScore = score;
       best = k;
@@ -244,34 +337,244 @@ export function layoutSite(
     return at ? stamp(defId, at[0], at[1], followed) : null;
   };
 
-  // The central green, with paths.
-  for (let dy = -2; dy <= 2; dy += 1) {
-    for (let dx = -3; dx <= 3; dx += 1) {
-      const k = (oy + dy) * size + ox + dx;
+  // Village life: a street village. A market square at the origin, a main street along the axis
+  // with the most land, and back lanes parallel to it every STREET_GAP tiles; homes stand in rows
+  // facing the streets, sharing side walls, with yards behind them.
+  const axisLand = (alongX: boolean) => {
+    let n = 0;
+    for (let u = -STREET_REACH; u <= STREET_REACH; u += 1) {
+      for (let v = -8; v <= 8; v += 1) {
+        const x = alongX ? ox + u : ox + v;
+        const y = alongX ? oy + v : oy + u;
+        if (x < 0 || y < 0 || x >= size || y >= size) continue;
+        const k = y * size + x;
+        if (isLand(k) && waterDist[k]! >= MIN_WATER_DISTANCE) n += 1;
+      }
+    }
+    return n;
+  };
+  const alongX = axisLand(true) >= axisLand(false);
+  /** Street coordinates (u along the street, v across it) to a tile. */
+  const at = (u: number, v: number): [number, number] =>
+    alongX ? [ox + u, oy + v] : [ox + v, oy + u];
+  const inMap = (x: number, y: number) => x >= 1 && y >= 1 && x < size - 1 && y < size - 1;
+
+  // The market square.
+  for (let v = -SQUARE_HALF[1]; v <= SQUARE_HALF[1]; v += 1) {
+    for (let u = -SQUARE_HALF[0]; u <= SQUARE_HALF[0]; u += 1) {
+      const [x, y] = at(u, v);
+      if (!inMap(x, y)) continue;
+      const k = y * size + x;
       if (water[k] !== 0) continue;
       terrain[k] = code.path;
       tree[k] = 0;
     }
   }
-  if (input.isCapital) place('hall', 4);
-  place('well', 1);
-  place('stockpile', 3);
-  place('shrine', 6);
-  const homeCount = Math.ceil(input.pop / rules.peoplePerHome);
-  for (let h = 0; h < homeCount; h += 1) {
-    if (!place('home', HOME_MIN_RING, 1, h < input.followedHouseholds)) break;
+  // The main street, its whole length, so nothing is built across it.
+  for (let u = -STREET_REACH; u <= STREET_REACH; u += 1) {
+    const [x, y] = at(u, 0);
+    if (!inMap(x, y)) continue;
+    const k = y * size + x;
+    if (water[k] === code.sea || water[k] === code.lake) continue;
+    if (water[k] === code.river && terrain[k] !== code.path) map.bridges.push(k);
+    terrain[k] = code.path;
+    tree[k] = 0;
   }
-  // Paths run from each building's door toward the green and stop where they meet another path.
-  const carve = (x0: number, y0: number, x1: number, y1: number, stopAtPath: boolean) =>
-    carvePath(map, rules, x0, y0, x1, y1, stopAtPath);
-  for (const b of buildings) {
-    if (b.defId === 'home' || b.defId === 'hall') carve(b.x + (b.w >> 1), b.y + b.h, ox, oy, true);
+  /** The door of a building placed around the square: on the wall facing the origin. */
+  const faceOrigin = (b: Building) => {
+    const cx = b.x + (b.w >> 1);
+    const cy = b.y + (b.h >> 1);
+    const dx = ox - cx;
+    const dy = oy - cy;
+    const door =
+      Math.abs(dx) > Math.abs(dy)
+        ? (b.y + (b.h >> 1)) * size + (dx > 0 ? b.x + b.w - 1 : b.x)
+        : (dy > 0 ? b.y + b.h - 1 : b.y) * size + b.x + (b.w >> 1);
+    b.door = door;
+    const step = doorstep(b, size);
+    carvePath(map, rules, step % size, Math.floor(step / size), ox, oy, true);
+    const sk = step;
+    if (map.building[sk] === 0 && water[sk] === 0) terrain[sk] = code.path;
+  };
+  // Public buildings face the square.
+  const civic = (defId: string, ring: number) => {
+    const b = place(defId, ring);
+    if (b && buildingDef(rules, defId).walled) faceOrigin(b);
+    return b;
+  };
+  if (input.isCapital) civic('hall', 6);
+  place('well', 2);
+  for (const def of rules.buildings) {
+    if (def.minPop !== undefined && input.pop >= def.minPop) civic(def.id, 6);
+  }
+  civic('stockpile', 6);
+  civic('shrine', 7);
+
+  // Street plots: homes face the main street on both sides; behind each row lies its strip of
+  // fields (the crofts), then a back lane every STREET_GAP tiles whose homes face it from the far
+  // side. Along a street, plot i starts at u = i * (homeLong - 1): neighbours share a wall, and
+  // every TERRACE + 1th plot is left open as a way through the row.
+  const homeDef = buildingDef(rules, 'home');
+  const along = homeDef.w;
+  const deep = homeDef.h;
+  const pitch = along - 1;
+  interface Plot {
+    street: number;
+    side: number;
+    i: number;
+    d: number;
+  }
+  const plots: Plot[] = [];
+  const streets = Math.floor(STREET_REACH / STREET_GAP);
+  for (let street = -streets; street <= streets; street += 1) {
+    for (const side of [-1, 1]) {
+      // A back lane has homes on its far side only; its near side is the crofts of the row before.
+      if (street * side < 0) continue;
+      for (let i = -Math.ceil(STREET_REACH / pitch); i <= Math.ceil(STREET_REACH / pitch); i += 1) {
+        if (((i % (TERRACE + 1)) + TERRACE + 1) % (TERRACE + 1) === TERRACE) continue;
+        // Some plots stay open (a garden, a paddock), so rows are not all one length.
+        if (hash2(seed + 91 + street, side, i) % 100 < OPEN_PLOT_PERCENT) continue;
+        const u = i * pitch + (pitch >> 1);
+        const v = street * STREET_GAP + side * (deep >> 1);
+        // The main street fills first, then the lanes nearest it.
+        plots.push({ street, side, i, d: Math.abs(u) + Math.abs(v) * 2 + Math.abs(street) * 6 });
+      }
+    }
+  }
+  plots.sort((a, b) => a.d - b.d || a.street - b.street || a.side - b.side || a.i - b.i);
+  const placed = new Map<string, Building>();
+  const key = (p: Plot, di = 0) => `${p.street},${p.side},${p.i + di}`;
+  /** The plot's top-left tile, size and door (on the street side, in the middle). */
+  const plotRect = (p: Plot) => {
+    const u0 = p.i * pitch;
+    const vStreet = p.street * STREET_GAP;
+    const v0 = p.side > 0 ? vStreet + 1 : vStreet - deep;
+    const [ax, ay] = at(u0, v0);
+    const [bx, by] = at(u0 + along - 1, v0 + deep - 1);
+    const x = Math.min(ax, bx);
+    const y = Math.min(ay, by);
+    const [dx, dy] = at(u0 + (along >> 1), p.side > 0 ? v0 : v0 + deep - 1);
+    return { x, y, w: Math.abs(bx - ax) + 1, h: Math.abs(by - ay) + 1, door: dy * size + dx };
+  };
+  /** Free for a home, allowing the wall a neighbour in the row already stands on. */
+  const plotFree = (r: { x: number; y: number; w: number; h: number }, shared: Set<number>) => {
+    for (let yy = r.y; yy < r.y + r.h; yy += 1) {
+      for (let xx = r.x; xx < r.x + r.w; xx += 1) {
+        if (!inMap(xx, yy)) return false;
+        const k = yy * size + xx;
+        if (shared.has(k)) continue;
+        if (building[k] || water[k] !== 0 || map.mineral[k]) return false;
+        if (terrain[k] !== code.grass && terrain[k] !== code.scrub) return false;
+        if (waterDist[k]! < MIN_WATER_DISTANCE - 2) return false;
+      }
+    }
+    return true;
+  };
+  const homeCount = Math.ceil(input.pop / rules.peoplePerHome);
+  let homes = 0;
+  for (const p of plots) {
+    if (homes >= homeCount) break;
+    const r = plotRect(p);
+    const shared = new Set<number>();
+    for (const di of [-1, 1]) {
+      const n = placed.get(key(p, di));
+      if (!n) continue;
+      for (const k of n.cells) shared.add(k);
+    }
+    if (!plotFree(r, shared)) continue;
+    // The street in front must be walkable land.
+    const [sx, sy] = at(p.i * pitch + (along >> 1), p.street * STREET_GAP);
+    const sk = sy * size + sx;
+    if (!inMap(sx, sy) || building[sk] || (water[sk] !== 0 && water[sk] !== code.river)) continue;
+    const b = stampBuilding(
+      map,
+      rules,
+      nextId++,
+      'home',
+      r.x,
+      r.y,
+      homes < input.followedHouseholds,
+      [r.w, r.h],
+    );
+    b.door = r.door;
+    buildings.push(b);
+    placed.set(key(p), b);
+    homes += 1;
+    // The street along the home's front.
+    for (let u = p.i * pitch - 1; u <= p.i * pitch + along; u += 1) {
+      const [x, y] = at(u, p.street * STREET_GAP);
+      if (!inMap(x, y)) continue;
+      const k = y * size + x;
+      if (building[k] || water[k] === code.sea || water[k] === code.lake) continue;
+      if (water[k] === code.river) {
+        if (terrain[k] !== code.path) map.bridges.push(k);
+      }
+      terrain[k] = code.path;
+      tree[k] = 0;
+    }
+  }
+  // Each row on a back lane gets a way through to the street before it, at the gap on the row's
+  // end nearest the square; then the crofts fill the strip behind each row.
+  const span = TERRACE + 1;
+  const segments = new Map<string, { street: number; side: number; g: number }>();
+  for (const k of placed.keys()) {
+    const [street, side, i] = k.split(',').map(Number) as [number, number, number];
+    const g = Math.floor(i / span);
+    segments.set(`${street},${side},${g}`, { street, side, g });
+  }
+  const ordered = [...segments.values()].sort(
+    (a, b) =>
+      Math.abs(a.street) - Math.abs(b.street) ||
+      Math.abs(a.g * 2 + 1) - Math.abs(b.g * 2 + 1) ||
+      a.street - b.street ||
+      a.side - b.side ||
+      a.g - b.g,
+  );
+  const cut = (u: number, v0: number, v1: number) => {
+    for (let v = Math.min(v0, v1); v <= Math.max(v0, v1); v += 1) {
+      const [x, y] = at(u, v);
+      if (!inMap(x, y)) continue;
+      const k = y * size + x;
+      if (building[k] || water[k] === code.sea || water[k] === code.lake) continue;
+      if (water[k] === code.river && terrain[k] !== code.path) map.bridges.push(k);
+      terrain[k] = code.path;
+      tree[k] = 0;
+    }
+  };
+  for (const { street, side, g } of ordered) {
+    if (street === 0) continue;
+    const gap = g * span * pitch >= 0 ? g * span - 1 : g * span + TERRACE;
+    cut(gap * pitch + (along >> 1), street * STREET_GAP, (street - side) * STREET_GAP);
+  }
+  const fieldDef = buildingDef(rules, 'field');
+  const fieldCount = Math.ceil(input.pop / rules.peoplePerField);
+  let fields = 0;
+  for (const { street, side, g } of ordered) {
+    const u0 = g * span * pitch;
+    const vBack = street * STREET_GAP + side * (deep + 1);
+    for (
+      let u = u0;
+      u + fieldDef.w <= u0 + TERRACE * pitch + 1 && fields < fieldCount;
+      u += fieldDef.w
+    ) {
+      const v0 = side > 0 ? vBack : vBack - fieldDef.h + 1;
+      const [ax, ay] = at(u, v0);
+      const [bx, by] = at(u + fieldDef.w - 1, v0 + fieldDef.h - 1);
+      const r = {
+        x: Math.min(ax, bx),
+        y: Math.min(ay, by),
+        w: Math.abs(bx - ax) + 1,
+        h: Math.abs(by - ay) + 1,
+      };
+      if (!plotFree(r, new Set())) continue;
+      buildings.push(stampBuilding(map, rules, nextId++, 'field', r.x, r.y, true, [r.w, r.h]));
+      fields += 1;
+    }
   }
   // A road toward the world road: up to the north edge.
-  carve(ox, oy, Math.min(size - 1, ox + 6), 0, false);
-  // Fields: plots beyond the homes.
-  const fieldCount = Math.ceil(input.pop / rules.peoplePerField);
-  for (let f = 0; f < fieldCount; f += 1) if (!place('field', FIELD_MIN_RING, 0)) break;
+  carvePath(map, rules, ox, oy, Math.min(size - 1, ox + 6), 0, false);
+  // Fields the crofts could not hold: plots beyond the homes.
+  for (let f = fields; f < fieldCount; f += 1) if (!place('field', FIELD_MIN_RING, 0)) break;
   if (input.coast) {
     // The dock: the shore tile nearest the origin.
     let bestShore = -1;
@@ -292,7 +595,7 @@ export function layoutSite(
       const x = bestShore % size;
       const y = (bestShore - x) / size;
       stamp('dock', x, y);
-      carve(x, y, ox, oy, true);
+      carvePath(map, rules, x, y, ox, oy, true);
     }
   }
   return { buildings, origin: [ox, oy] };

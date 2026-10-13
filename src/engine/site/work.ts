@@ -270,6 +270,10 @@ interface WorkSite {
   /** The finished workshop and the kitchen (hall, else stockpile) at this version. */
   workshop: number[];
   kitchen: number[];
+  /** Village life: the smithy, else the workshop. */
+  forge: number[];
+  /** A finished smithy stands. */
+  smithy: boolean;
   /** Items by holder, and each holder's effective attributes; null/empty until needed. */
   held: Map<Id, HeldItem[]> | null;
   eff: Map<Id, Attributes>;
@@ -372,8 +376,20 @@ function rebuildLists(ws: WorkSite, content: SiteContent, active: ActiveSite): v
   const workshop = built.find(
     (b) => b.defId === steward.workshopBuilding && b.progress === undefined && !b.burnt,
   );
+  // Village life: a building that houses a workplace (the bakehouse, the smithy) comes first.
+  const housing = (place: Workplace) =>
+    built.find(
+      (b) =>
+        b.progress === undefined &&
+        !b.burnt &&
+        rules.buildings.find((d) => d.id === b.defId)?.houses?.includes(place) &&
+        b.defId !== 'hall',
+    );
+  const smithy = housing('forge');
   const kitchen =
-    built.find((b) => b.defId === 'hall') ?? built.find((b) => b.defId === 'stockpile');
+    housing('kitchen') ??
+    built.find((b) => b.defId === 'hall') ??
+    built.find((b) => b.defId === 'stockpile');
   // A site with no room left for a workshop (a crowded town) crafts in the stockpile yard.
   const planned = built.some((b) => b.defId === steward.workshopBuilding);
   const yard =
@@ -384,7 +400,10 @@ function rebuildLists(ws: WorkSite, content: SiteContent, active: ActiveSite): v
       : undefined;
   ws.workshop = workshop ? interiorCells(workshop) : yard ? interiorCells(yard) : [];
   ws.kitchen = kitchen ? interiorCells(kitchen) : [];
+  ws.forge = smithy ? interiorCells(smithy) : ws.workshop;
+  ws.smithy = smithy !== undefined;
   if (workshop || yard) has.add('workshop');
+  if (ws.forge.length > 0) has.add('forge');
   if (kitchen) has.add('kitchen');
   ws.workplaces = has;
   ws.version = active.layoutVersion;
@@ -422,6 +441,8 @@ function workSiteSlow(content: SiteContent, active: ActiveSite): WorkSite {
       wild: [],
       workplaces: new Set(),
       workshop: [],
+      forge: [],
+      smithy: false,
       kitchen: [],
       held: null,
       eff: new Map(),
@@ -617,6 +638,8 @@ export function workTile(
     }
     case 'workshop':
       return inside(ws.workshop);
+    case 'forge':
+      return inside(ws.forge);
     case 'kitchen':
       return inside(ws.kitchen);
     case 'construction': {
@@ -881,6 +904,10 @@ export function runSteward(
     const haveInputs = entries(craftTools.inputs).every(([i, n]) => itemCount(active, i) >= n);
     if (haveInputs) want('tools', craftTools, st.crafters);
     else if (mine) want('tools', mine, deficit > 20 ? st.miners : 1);
+  } else if (craftTools && ws.smithy && ore !== undefined) {
+    // Village life: a village with a smithy keeps a smith at the forge while there is iron to work.
+    if (entries(craftTools.inputs).every(([i, n]) => itemCount(active, i) >= n))
+      want('tools', craftTools, 1);
   }
   // Healers: one per `healersPer` mouths, and enough to see every sufferer (M3.5).
   const hr = content.health;

@@ -24,7 +24,11 @@ export const ENVIRONMENT: EnvironmentRules = {
     // Snow or a storm costs 30% more warmth outdoors.
     outdoorExtraLoss: 0.3,
     // Day length swings 8 hours from 12 at 90 degrees of latitude; outdoor work stops under 9 hours.
-    daylight: { swingPerDegree: 8 / 90, outdoorMinHours: 9, indoor: ['workshop', 'kitchen'] },
+    daylight: {
+      swingPerDegree: 8 / 90,
+      outdoorMinHours: 9,
+      indoor: ['workshop', 'forge', 'kitchen'],
+    },
     // 20 dry days in spring or summer is a dry spell; 30 dry days sink a well with no river or sea near.
     drySpell: { days: 20, months: [1, 6] },
     wellLowDays: 30,

@@ -414,6 +414,8 @@ export const ACTIVITIES = [
   'defend',
   'shelter',
   'flee',
+  // Village life: fetching water, going to market or helping a parent; restores purpose, no output.
+  'errand',
 ] as const;
 export type Activity = (typeof ACTIVITIES)[number];
 
@@ -475,7 +477,83 @@ export interface MemoryDef {
 }
 
 /** The day's rhythm and the stress rules (M3.2). Every number is a tunable in content/life.ts. */
+/** Where a free block may be spent (village life); `market` is set by the market day, not drawn. */
+export const ROUTINE_PLACES = [
+  'doorstep',
+  'home',
+  'visit',
+  'alehouse',
+  'green',
+  'shrine',
+  'nearHome',
+  'well',
+  'along',
+] as const;
+export type RoutinePlace = (typeof ROUTINE_PLACES)[number];
+export type RoutineWeights = Partial<Record<RoutinePlace, number>>;
+
+/** How free blocks are spent, who walks to market and when people set off (village life). */
+export interface RoutineRules {
+  /** Weighted places per table; a person's trait multipliers and favourite place scale them. */
+  tables: Record<string, RoutineWeights>;
+  /** Children under this age (years) use `childSmall`, older ones `childOlder`. */
+  smallChildUnder: number;
+  /** The table whose weights (with traits) decide a person's favourite place, by age band. */
+  favouriteTable: Record<'child' | 'adult' | 'elder', string>;
+  /** The favourite place's weight is multiplied by this. */
+  favouriteMul: number;
+  /** Weight multipliers by trait id. */
+  traitMul: Record<string, RoutineWeights>;
+  /** Children play within this many tiles of their own doorstep. */
+  nearHomeRange: number;
+  /** ...at one of this many tiles of their own, so that their routes repeat and are cached. */
+  nearHomeSpots: number;
+  /** Route search weight for strolls (looser and faster than `pathWeight`). */
+  strollWeight: number;
+  /** Jobs a child may go along to with a same-sex parent. */
+  alongJobs: string[];
+  /** Evenings at the alehouse: one in `peopleIn` people with the trait (or the favourite) go on one evening in `nightsIn`. */
+  eveningAlehouse: { trait: string; peopleIn: number; nightsIn: number };
+  market: {
+    /** Market day is every this many days, at this offset from the day count (the rest day is the last of seven). */
+    every: number;
+    offset: number;
+    /** These jobs set up a stall on the square instead of working at their workplace. */
+    stallJobs: string[];
+    /** One adult per household goes to market, preferring someone whose job is not one of these. */
+    foodJobs: string[];
+    /** Stalls stand on the square's ring this many tiles (Chebyshev) from the origin; shoppers one ring in. */
+    stallRing: number;
+    shopRing: number;
+  };
+  /** When people set off, as a share of the block: a base by job, then age and a random jitter. */
+  leave: {
+    jobBase: Record<string, number>;
+    defaultBase: number;
+    child: number;
+    elder: number;
+    jitter: number;
+    max: number;
+  };
+  /** Not everyone starts work at once (village life). */
+  shifts: {
+    /** These trades start one day in `lateEvery` after a free morning (drawn from the `late` table). */
+    lateJobs: string[];
+    lateEvery: number;
+    /** These trades go to work before dawn (the night block) one day in `earlyEvery`. */
+    earlyJobs: string[];
+    earlyEvery: number;
+    /** In a household with a child under `childUnder`, the child's carer keeps house one morning in `houseEvery`. */
+    childUnder: number;
+    houseEvery: number;
+  };
+  /** Inspector phrases for `PersonDetail.where`; `{name}` is the person visited or helped. */
+  where: Record<RoutinePlace | 'market' | 'house', string>;
+}
+
 export interface LifeRules {
+  /** Village life: how free blocks are spent and when people set off. */
+  routines: RoutineRules;
   /** Activity per age band and block. */
   schedule: Record<'child' | 'adult' | 'elder', Record<DayBlock, Activity>>;
   /** Children younger than this (years) go where a household adult goes, mother first. */
@@ -562,6 +640,8 @@ export interface LifeRules {
     theft: string;
     returned: string;
     storesEmpty: string;
+    /** Village life: a market morning on the square. */
+    market: string;
   };
 }
 
@@ -575,6 +655,12 @@ export interface BuildingDef extends SiteGlyphDef {
   cost?: Record<string, number>;
   /** The steward may order it. */
   buildable?: boolean;
+  /** Village life: drawn with walls and a door, like a home. */
+  walled?: boolean;
+  /** Village life: the workplaces (job `workplace` ids) it houses, preferred over the fallbacks. */
+  houses?: Workplace[];
+  /** Village life: laid out at embark when the site's whole population reaches this. */
+  minPop?: number;
 }
 
 export type ItemEffect =
@@ -617,6 +703,7 @@ export type Workplace =
   | 'ore'
   | 'wild'
   | 'workshop'
+  | 'forge'
   | 'kitchen'
   | 'construction'
   | 'herbs';

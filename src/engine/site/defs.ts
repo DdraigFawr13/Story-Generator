@@ -1,5 +1,6 @@
 // Small lookups shared by the site modules: layer codes by content id.
 
+import type { Building } from '../core/types';
 import type {
   BuildingDef,
   ContentBundle,
@@ -103,4 +104,20 @@ export function buildingDef(rules: SiteRules, id: string): BuildingDef {
   const def = rules.buildings.find((b) => b.id === id);
   if (!def) throw new Error(`Site content has no building "${id}".`);
   return def;
+}
+
+/** The door of a walled building: a wall tile, on the street side (bottom middle by default). */
+export function doorOf(b: Pick<Building, 'x' | 'y' | 'w' | 'h' | 'door'>, width: number): number {
+  return b.door ?? (b.y + b.h - 1) * width + b.x + (b.w >> 1);
+}
+
+/** The tile just outside a building's door, where people stand at their doorstep. */
+export function doorstep(b: Pick<Building, 'x' | 'y' | 'w' | 'h' | 'door'>, width: number): number {
+  const d = doorOf(b, width);
+  const x = d % width;
+  const y = (d - x) / width;
+  if (y === b.y) return d - width;
+  if (x === b.x) return d - 1;
+  if (x === b.x + b.w - 1) return d + 1;
+  return d + width;
 }

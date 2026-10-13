@@ -134,7 +134,8 @@ export const JOBS: JobDef[] = [
     worker: 'toolmaker',
     skill: 'crafting',
     requirements: { agility: 9 },
-    workplace: 'workshop',
+    // Village life: at the smithy, else the workshop.
+    workplace: 'forge',
     inputs: { ore: 1, logs: 1 },
     outputs: { tools: 1 },
     serves: 'tools',
