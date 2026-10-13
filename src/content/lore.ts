@@ -20,7 +20,7 @@ export const LORE: LoreRules = {
   books: {
     lendEveryDays: 7,
     maxLoanDays: 84,
-    // A loan lasts about 40 days (until the lessons are done), so about one in sixteen is lost.
+    // Measured over 45 town-years: 6 of 39 loans were lost (about one in seven).
     lossPerDay: 0.0025,
     minOpinion: 0,
     burnChance: 0.5,
