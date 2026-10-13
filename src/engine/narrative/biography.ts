@@ -2,7 +2,7 @@
 // lines. Summaries come from records (Person, Site, Civ, ...) because the trivial events that
 // would tell a life are pruned; lines come from the surviving events. Nothing here invents facts.
 
-import { DAYS_PER_YEAR, formatDate } from '../core/clock';
+import { DAYS_PER_YEAR, MONTH_NAMES, dateOf } from '../core/clock';
 import type { ContentBundle } from '../core/content-types';
 import { hashString } from '../core/rng';
 import type { Id, Person, SimEvent, WorldState } from '../core/types';
@@ -196,7 +196,8 @@ function personSummary(
     out.push(
       say('personWoke', {
         tier,
-        date: formatDate(woke.day),
+        // History years, as the site's clock shows them ("1 Highsun, Year 251").
+        date: `${dateOf(woke.day).dayOfMonth} ${MONTH_NAMES[dateOf(woke.day).month]}, Year ${Math.floor(woke.day / DAYS_PER_YEAR)}`,
         how: String(woke.data.how ?? ''),
       }),
     );
