@@ -3,6 +3,7 @@
 // fields for a normal year to leave a small surplus. Farming no longer produces grain per block:
 // a farmer's block sows, tends or cuts the field they stand in. Numbers: content/weather.ts.
 
+import { clamp } from '../core/math';
 import type { EmitInput } from '../core/context';
 import { DAYS_PER_YEAR, MONTHS_PER_YEAR, dateOf } from '../core/clock';
 import { streamFor } from '../core/rng';
@@ -16,7 +17,6 @@ type Emit = (input: EmitInput) => SimEvent;
 
 const within = (month: number, [from, to]: readonly [number, number]) =>
   month >= from && month <= to;
-const clamp = (x: number, lo: number, hi: number) => (x < lo ? lo : x > hi ? hi : x);
 
 /** "a field" or "3 fields". */
 export function fieldsWord(n: number): string {

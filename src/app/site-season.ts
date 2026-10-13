@@ -15,6 +15,7 @@ import {
   type SiteRules,
   type WorldState,
 } from '../engine';
+import { roundedCount as count } from './format';
 
 /** Under this width the time bar uses the short date and the short weather chip. */
 export const NARROW_PX = 480;
@@ -102,7 +103,6 @@ export interface SeasonRow {
   cause?: { id: Id; word: string };
 }
 
-const count = (n: number) => Math.round(n).toLocaleString('en-US');
 const plural = (n: number, one: string, many: string) => `${count(n)} ${n === 1 ? one : many}`;
 
 /** The followed fields that withered this year, and whether all of them lie far from water. */

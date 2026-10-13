@@ -13,6 +13,7 @@ import {
   type SimEvent,
   type WorldState,
 } from '../engine';
+import { cap } from './format';
 import { parseOpen, type LegendCategory } from './map-view';
 
 /** A page in the pane: any legend entity, a race (content only) or a single event. */
@@ -125,7 +126,7 @@ export function pageFromOpen(text: string | null): PageRef | null {
   return Number.isInteger(id) ? ({ kind: found.kind, id } as PageRef) : null;
 }
 
-export const cap = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+export { cap };
 export const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 export const count = (n: number) => n.toLocaleString('en-US');
 

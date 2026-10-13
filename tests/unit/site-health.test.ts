@@ -3,7 +3,6 @@ import { DEFAULT_CONTENT } from '../../src/content';
 import {
   beginChildbirth,
   embark,
-  generateWorld,
   leaveSite,
   rollChildbirth,
   RngStream,
@@ -13,18 +12,12 @@ import {
   voiceOf,
   type Condition,
   type Id,
-  type Site,
   type WorldState,
 } from '../../src/engine';
+import { base, biggest } from './helpers/site-fixture';
 
 const C = DEFAULT_CONTENT;
 
-let shared: WorldState | undefined;
-const base = () => (shared ??= generateWorld('SITE-A', { width: 64, height: 64 }, C));
-const biggest = (world: WorldState): Site =>
-  [...world.sites.values()]
-    .filter((s) => s.ruinedYear === undefined && sitePopulation(s) > 0)
-    .sort((a, b) => sitePopulation(b) - sitePopulation(a) || a.id - b.id)[0]!;
 function fresh() {
   const world = structuredClone(base());
   const active = embark(world, C, biggest(world).id);

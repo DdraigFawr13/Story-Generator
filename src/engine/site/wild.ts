@@ -2,6 +2,7 @@
 // fishing draw down and the months refill; trees are felled tile by tile and grow back in years;
 // deer, hares, boar and fowl wander the map's edge for hunters to walk to. Numbers: content/weather.ts.
 
+import { manhattan } from '../core/math';
 import type { EmitInput } from '../core/context';
 import { DAYS_PER_MONTH, DAYS_PER_YEAR } from '../core/clock';
 import { streamFor } from '../core/rng';
@@ -322,7 +323,7 @@ function nearestTreeWalk(active: ActiveSite): number {
   for (let k = 0; k < map.tree.length; k += 1) {
     if (map.tree[k] === 0) continue;
     const x = k % map.width;
-    dists.push(Math.abs(x - origin[0]) + Math.abs(Math.floor(k / map.width) - origin[1]));
+    dists.push(manhattan(x, Math.floor(k / map.width), origin[0], origin[1]));
   }
   dists.sort((a, b) => a - b);
   const take = dists.slice(0, 12);

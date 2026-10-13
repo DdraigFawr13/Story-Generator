@@ -57,7 +57,7 @@ export function emitScored(run: HistoryRun, input: EmitInput): SimEvent {
   }
   state.seen.add(input.type);
   if (place !== null) state.lastAt.set(key, run.year);
-  const base = run.content.eventTypes.find((t) => t.id === input.type)?.baseImportance ?? 0;
+  const base = state.types.get(input.type)?.baseImportance ?? 0;
   // Importance never drops under zero.
   const event = state.base({ ...input, importanceBonus: Math.max(-base, bonus) });
   if (event.type !== 'year_summary' && event.importance < rules.rollupBelow) {
@@ -74,7 +74,7 @@ export function runYearSummary(run: HistoryRun): void {
   const data: SimEvent['data'] = { year: run.year, summary: '' };
   const parts: string[] = [];
   for (const [type, n] of counts) {
-    const label = run.content.eventTypes.find((t) => t.id === type)?.rollup;
+    const label = run.importance.types.get(type)?.rollup;
     parts.push(`${n} ${label ? (n === 1 ? label[0] : label[1]) : type.replace(/_/g, ' ')}`);
     data[`n_${type}`] = n;
   }

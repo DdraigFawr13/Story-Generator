@@ -6,6 +6,7 @@ import { DAYS_PER_YEAR } from '../core/clock';
 import type { ContentBundle } from '../core/content-types';
 import { hashString } from '../core/rng';
 import type { Id, Person, SimEvent, WorldState } from '../core/types';
+import { totalPop } from '../history/pop';
 import { tierOfPower } from '../people/tiers';
 import { fillTemplate, type Narrator } from './render';
 
@@ -223,7 +224,7 @@ function siteSummary(world: WorldState, content: BioContent, ref: LegendRef): st
   } else {
     out.push(say(civ ? 'siteLive' : 'siteFree', base));
   }
-  const pop = site.pop.reduce((sum, band) => sum + band.count, 0);
+  const pop = totalPop(site);
   if (ruined !== undefined) out.push(say('sitePeak', { peak: site.peakPop }));
   else out.push(say('sitePop', { peak: site.peakPop, pop }));
   const raceCounts = new Map<string, number>();

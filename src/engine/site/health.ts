@@ -8,6 +8,7 @@
 // who share a household or (for most ailments) the job they were given. Randomness comes from the
 // `site.health` stream, people in id order.
 
+import { clamp } from '../core/math';
 import type { EmitInput } from '../core/context';
 import { dateOf, DAYS_PER_YEAR } from '../core/clock';
 import type { AilmentDef, ConditionDef, DiseaseDef, JobDef } from '../core/content-types';
@@ -40,7 +41,6 @@ const MAX_SEVERITY = 100;
 /** Event types looked back for when a cause event was not kept (days). */
 const LOOKBACK_DAYS = 90;
 
-const clamp = (x: number, lo: number, hi: number) => (x < lo ? lo : x > hi ? hi : x);
 const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
 // ---- Lookups ----

@@ -16,6 +16,7 @@ import {
   type SiteRules,
   type WorldState,
 } from '../engine';
+import { cap } from './format';
 
 // ---- zoom and view ----
 
@@ -26,8 +27,6 @@ const WHOLE_ZOOM_RANGE = [3, 8] as const;
 /** Letters show on people from this many pixels per tile; two letters from the second. */
 export const LETTERS_FROM = 14;
 export const TWO_LETTERS_FROM = 20;
-/** Building names show from this many pixels per tile. */
-export const LABELS_FROM = 14;
 
 /** Pixels per tile at each of the five zoom steps; the first is the whole site at the largest whole scale that fits. */
 export function zoomSteps(mapWidthPx: number, mapSize: number): number[] {
@@ -252,8 +251,6 @@ export function tileName(ctx: LookCtx, k: number, riverName: string, seaName: st
   if (map.mineral[k] === code.clay) return 'Clay';
   return cap(rules.terrains[map.terrain[k]!]?.name ?? 'ground');
 }
-
-const cap = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** How far an unfinished building is, 0-100, from its progress and the builder-blocks it takes. */
 export function buildPercent(rules: SiteRules, b: Pick<Building, 'defId' | 'progress'>): number {

@@ -8,6 +8,7 @@
 // activity, destination and walking; (2) work, needs, meals, memories, mood and stress. Once a
 // day, at the first block, the steward (work.ts) hands out the day's jobs.
 
+import { clamp, manhattan, sortedById } from '../core/math';
 import { DAYS_PER_YEAR } from '../core/clock';
 import { createEmitter, type EmitInput } from '../core/context';
 import {
@@ -149,7 +150,6 @@ function mix(id: number, salt: number): number {
 }
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
-const clamp = (x: number, lo: number, hi: number) => (x < lo ? lo : x > hi ? hi : x);
 
 /** The home a household lives in: its own, or the one that took it in while its own is burnt. */
 function livingHome(active: ActiveSite, h: Household): Building | undefined {
@@ -173,7 +173,7 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
   const site = world.sites.get(active.siteId);
   const races = new Map(content.races.map((r) => [r.id, r]));
   const traitDefs = new Map(content.traits.map((t) => [t.id, t]));
-  const buildings = [...active.buildings.values()].sort((a, b) => a.id - b.id);
+  const buildings = sortedById(active.buildings.values());
   const fields = buildings.filter((b) => b.defId === 'field' && b.followed);
   const stockpile = buildings.find((b) => b.defId === 'stockpile');
   const shrine = buildings.find((b) => b.defId === 'shrine');
@@ -184,7 +184,7 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
   // Homes of families, and how many live alone (see `table` below).
   const familyHomes: Building[] = [];
   let loners = 0;
-  for (const h of [...active.households.values()].sort((a, b) => a.id - b.id)) {
+  for (const h of sortedById(active.households.values())) {
     const home = livingHome(active, h);
     if (h.members.length > 1 && home) familyHomes.push(home);
     else if (h.members.length <= 1) loners += 1;
@@ -213,7 +213,7 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
     let best = Infinity;
     for (const f of fields) {
       const [fx, fy] = centreOf(f);
-      const d = Math.abs(fx - hx) + Math.abs(fy - hy);
+      const d = manhattan(fx, fy, hx, hy);
       if (d < best) {
         best = d;
         field = f;
@@ -224,7 +224,7 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
     best = Infinity;
     for (const f of familyHomes) {
       const [fx, fy] = centreOf(f);
-      const d = Math.abs(fx - hx) + Math.abs(fy - hy);
+      const d = manhattan(fx, fy, hx, hy);
       if (d < best) {
         best = d;
         neighbour = f;

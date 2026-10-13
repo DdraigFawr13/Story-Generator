@@ -52,6 +52,7 @@ import {
   type TierId,
   type WorldState,
 } from '../engine';
+import { cap, roundedCount as count } from './format';
 import { plainClick, refName, type PageRef } from './legends-ctx';
 import { briefDate, fieldFacts, seasonRows, stewardLine } from './site-season';
 import {
@@ -156,8 +157,6 @@ function needWhy(need: NeedDef, since: number | undefined, now: number): string 
   return days === 0 ? `${head} today` : `${head} for ${days} ${days === 1 ? 'day' : 'days'}`;
 }
 
-const cap = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
-
 /** "a", "a and b", "a, b and c". */
 export function joinList(items: readonly string[]): string {
   return items.length < 2
@@ -174,7 +173,11 @@ export function followedWording(ruleWord: string): string {
 /** "5 Thawmonth, Year 250" for a day. */
 export function dayText(day: number): string {
   const date = dateOf(day);
-  return `${date.dayOfMonth} ${MONTH_NAMES[date.month]}, Year ${date.year - 1}`;
+  return `${date.dayOfMonth} ${monthName(day)}, Year ${date.year - 1}`;
+}
+/** "Thawmonth" for a day. */
+export function monthName(day: number): string {
+  return MONTH_NAMES[dateOf(day).month]!;
 }
 function shortDay(day: number): string {
   const date = dateOf(day);
@@ -1674,7 +1677,6 @@ const STOCK_CARDS: [name: string, test: (item: ItemDef) => boolean][] = [
   ['Salt', (i) => i.good === 'salt'],
   ['Goods', (i) => i.good === 'luxury' || i.kind === 'tool'],
 ];
-const count = (n: number) => Math.round(n).toLocaleString('en-US');
 
 export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
   const { site, active, scene, world, content } = m;

@@ -2,6 +2,7 @@
 // harsh-winter chance of a harvest rises, and the epoch's opening event is a cause of the famines.
 
 import { cellDistance } from './settle';
+import { epochCovers } from '../core/math';
 import { liveSites, type Epoch, type HistoryRun } from './state';
 
 /** Name of the live site nearest a cell (ties to the lowest id), or ''. */
@@ -27,9 +28,7 @@ export function epochAt(run: HistoryRun, cell: number, kind: Epoch['kind']): Epo
     if (epoch.kind !== kind || epoch.ended || run.year < epoch.start || run.year > epoch.end) {
       continue;
     }
-    const dx = x - (epoch.cell % width);
-    const dy = y - Math.floor(epoch.cell / width);
-    if (dx * dx + dy * dy <= epoch.radius * epoch.radius) return epoch;
+    if (epochCovers(epoch, x, y, width)) return epoch;
   }
   return undefined;
 }
