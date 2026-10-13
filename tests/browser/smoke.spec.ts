@@ -212,6 +212,11 @@ test('a site can be watched: embark, play, inspect a person and return to the ma
   await page.getByRole('button', { name: '4×' }).click();
   await expect(date).not.toHaveText(savedDate!, { timeout: 10_000 });
   await page.getByRole('button', { name: 'Pause' }).click();
+  // The address bar follows the on-page link a moment later; reload only once it names the pause.
+  const pausedPoint = /[?&]day=\d+(&b=\d)?&/.exec(
+    (await page.getByTestId('site-link').textContent())!,
+  )![0];
+  await expect(page).toHaveURL(new RegExp(pausedPoint.replace('?', '\\?')));
   // Reload (the link replays the site to where play stopped), then load the save and continue.
   await page.reload();
   await expect(canvas).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
