@@ -46,6 +46,8 @@ export const BIOGRAPHIES: BiographyRules = {
     personRoleAlone: ['{He} was known as {title}{house}.'],
     personFamily: ['{He} {family}.'],
     personMagic: ['{He} carried {tier} magic.'],
+    // M3.9: an awakening; the tier is the one woken to.
+    personWoke: ['{He} woke to {tier} magic on {date}, {how}.'],
     personBornBefore: ['{name} was born {ago} years before the first settlements{where}{parents}.'],
     personDied: ['{He} died in Year {died}, aged {age}, {cause}{killer}.'],
     personLiving: ['{He} is still living, aged {age}.'],

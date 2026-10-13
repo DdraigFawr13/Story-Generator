@@ -145,4 +145,62 @@ describe('lore', () => {
     expect(t.world.events.filter((e) => e.type === C.lore.events.awakened)).toHaveLength(1);
     expect(t.active.lore.stats.awakenings).toBe(1);
   });
+
+  it('wakes a keeper of an item of power', () => {
+    const awake = {
+      ...SMALL,
+      awakenings: [
+        { ...C.awakenings.find((d) => d.source === 'item')!, afterDays: 0, monthlyChance: 1 },
+      ],
+    };
+    const t = fresh(awake);
+    t.child.magic = { power: 0, affinities: {} };
+    const id = t.world.nextId.item;
+    t.world.nextId.item += 1;
+    t.world.items.set(id, {
+      id,
+      kind: 'artifact',
+      name: 'the ring of Test',
+      form: 'ring',
+      made: 0,
+      makerId: null,
+      holder: t.child.id,
+      deeds: [],
+    });
+    refreshWork(awake, t.active);
+    run(t.world, awake, 40);
+    expect(t.child.awakening?.id).toBe('bound-item');
+    expect(t.child.magic.power).toBeGreaterThanOrEqual(1);
+  });
+
+  it('calms the most stressed member of the household, once a day', () => {
+    const t = fresh();
+    t.child.knownAbilities = ['calm'];
+    t.child.magic = { power: 1, affinities: { mind: 1 } };
+    const members = t.active.households.get(t.child.family.householdId!)!.members;
+    const other = t.world.people.get(members.find((id) => id !== t.child.id)!)!;
+    other.detail!.stress = 100;
+    run(t.world, t.content, 1);
+    expect(t.child.detail!.lore!.castTotal.calm).toBe(1);
+    expect(t.active.lore.stats.calmed).toBeCloseTo(C.lore.effects.calmStress);
+  });
+
+  it('says when a lost book was the last source of a cantrip', () => {
+    const t = fresh({
+      ...SMALL,
+      lore: { ...C.lore, books: { ...C.lore.books, lossPerDay: 1, lendEveryDays: 1 } },
+    });
+    const owner = t.parent;
+    owner.attributes = { ...owner.attributes, intellect: 15 };
+    addBook(t.world, t.active, owner.id);
+    run(t.world, t.content, 3);
+    const lost = t.world.events.filter((e) => e.type === C.lore.events.lost);
+    const last = t.world.events.filter((e) => e.type === C.lore.events.lastSource);
+    expect(lost).toHaveLength(1);
+    expect(last).toHaveLength(1);
+    expect(last[0]!.causes).toEqual([lost[0]!.id]);
+    expect(last[0]!.data.cantrips).toBe('Kindle');
+    expect(C.site.autoPause.magic).toContain(C.lore.events.lastSource);
+    expect(C.site.autoPause.magic).not.toContain(C.lore.events.lost);
+  });
 });

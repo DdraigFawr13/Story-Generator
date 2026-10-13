@@ -54,6 +54,9 @@ export function blankLore(day = 0): SiteLore {
       mended: 0,
       soothed: 0,
       frostsRead: 0,
+      calmed: 0,
+      soothedAtHome: 0,
+      herbsSpared: 0,
     },
   };
 }
@@ -392,12 +395,16 @@ export function frostHarmShare(
   return content.lore.effects.frostShare;
 }
 
-/** Soothers ease one untended hurt or illness per use: a household member first, then anyone. */
+/**
+ * Soothers ease one untended hurt or illness per use: a household member first, then anyone.
+ * `homeOnly` (before the healers' round) eases only the soother's own household.
+ */
 export function soothePass(
   world: WorldState,
   content: SiteContent,
   active: ActiveSite,
   tendable: (c: Condition) => boolean,
+  homeOnly = false,
 ): void {
   const ids = castersOf(world, content, active, 'soothe');
   if (ids.length === 0) return;
@@ -416,12 +423,14 @@ export function soothePass(
     const kin = new Set(active.households.get(caster.family.householdId ?? -1)?.members ?? []);
     while (open.length > 0) {
       let at = open.findIndex((t) => kin.has(t.p.id));
+      if (at < 0 && homeOnly) break;
       if (at < 0) at = 0;
       if (!tryCast(world, content, caster, 'soothe')) break;
       const [target] = open.splice(at, 1);
       target!.c.tended = true;
       target!.c.tendPower = content.lore.effects.soothePower;
       active.lore.stats.soothed += 1;
+      if (homeOnly) active.lore.stats.soothedAtHome += 1;
     }
   }
 }
@@ -459,7 +468,24 @@ function mendPass(world: WorldState, content: SiteContent, active: ActiveSite): 
   }
 }
 
-// ---- Daily (block 0): mending, dependencies, awakenings ----
+/** Each calmer steadies the most stressed member of their household (one use a day). */
+function calmPass(world: WorldState, content: SiteContent, active: ActiveSite): void {
+  for (const id of castersOf(world, content, active, 'calm')) {
+    const p = world.people.get(id);
+    if (!p) continue;
+    let target: PersonDetail | undefined;
+    for (const mid of active.households.get(p.family.householdId ?? -1)?.members ?? [id]) {
+      const d = world.people.get(mid)?.detail;
+      if (d && d.stress > 0 && (!target || d.stress > target.stress)) target = d;
+    }
+    if (!target || !tryCast(world, content, p, 'calm')) continue;
+    const eased = Math.min(target.stress, content.lore.effects.calmStress);
+    target.stress -= eased;
+    active.lore.stats.calmed += eased;
+  }
+}
+
+// ---- Daily (block 0): mending, calming, dependencies, awakenings ----
 
 /** The day's lore at block 0. */
 export function runLoreDay(
@@ -470,6 +496,7 @@ export function runLoreDay(
   label: SiteLabel,
 ): void {
   mendPass(world, content, active);
+  calmPass(world, content, active);
   const env: SocialEnv = { world, content, active, emit, label, day: world.day };
   runDependencies(env);
   if (dateOf(world.day).dayOfMonth === 1) runAwakenings(env);
@@ -623,6 +650,46 @@ function loseBook(ctx: Ctx, item: Item): void {
   refreshWork(ctx.content, ctx.active);
 }
 
+/**
+ * After a book is lost or burnt: the cantrips of its school that no one here knows and no other
+ * book here teaches now have no source at the site. Says so once (this line pauses play).
+ */
+function lastSourceGone(ctx: Ctx, env: SocialEnv, item: Item, actor: Id, cause: Id): void {
+  const { world, content, active } = ctx;
+  const school = ctx.look.formSchool.get(item.form);
+  if (!school) return;
+  for (const { item: other } of residentItems(world, content, active)) {
+    if (
+      other.id !== item.id &&
+      other.holder !== null &&
+      ctx.look.formSchool.get(other.form) === school
+    )
+      return;
+  }
+  const orphaned = ctx.look.cantrips.filter(
+    (a) =>
+      a.school === school &&
+      a.learnFrom.includes('book') &&
+      !active.residents.some((id) => {
+        const p = world.people.get(id);
+        return isLive(p) && knows(p, a.id);
+      }),
+  );
+  if (orphaned.length === 0) return;
+  const event = env.emit({
+    type: ctx.rules.events.lastSource,
+    actors: [actor],
+    place: env.label.cell,
+    causes: [cause],
+    data: {
+      site: env.label.name,
+      item: item.name,
+      cantrips: orphaned.map((a) => a.name).join(' and '),
+    },
+  });
+  item.deeds.push(event.id);
+}
+
 function runLoans(ctx: Ctx, env: SocialEnv, rng: Rng): void {
   const { world, content, active, rules } = ctx;
   const { emit, label, day } = env;
@@ -653,6 +720,7 @@ function runLoans(ctx: Ctx, env: SocialEnv, rng: Rng): void {
       });
       item.deeds.push(event.id);
       loseBook(ctx, item);
+      lastSourceGone(ctx, env, item, loan.borrower, event.id);
       if (isLive(owner)) {
         shiftOpinion(env, owner, borrower, books.lostSting, event.id);
         remember(env, owner, rules.memoryOf.bookLost, borrower.id, event.id);
@@ -666,10 +734,11 @@ function runLoans(ctx: Ctx, env: SocialEnv, rng: Rng): void {
       giveBack(ctx, env, loan, item);
     }
   }
-  if (day % books.lendEveryDays !== 0) return;
-  // Owners who can learn nothing from a school book lend it to someone who can.
+  // Owners who can learn nothing from a school book lend it to someone who can, each on their
+  // own day of the week (staggered by owner), so the lending is not all on one day.
   for (const { item, def } of residentItems(world, content, active)) {
     if (item.kind !== 'book' || def.kind !== 'book' || item.holder === null) continue;
+    if ((day + item.holder) % books.lendEveryDays !== 0) continue;
     const school = ctx.look.formSchool.get(item.form);
     if (!school || lore.loans.some((l) => l.item === item.id)) continue;
     const owner = world.people.get(item.holder);
@@ -755,6 +824,13 @@ export function burnBooks(
     });
     item.deeds.push(event.id);
     loseBook(ctx, item);
+    lastSourceGone(
+      ctx,
+      { world, content, active, emit, label, day: world.day },
+      item,
+      holder,
+      event.id,
+    );
   }
 }
 

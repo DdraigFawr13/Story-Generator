@@ -900,6 +900,12 @@ export interface SiteLore {
     soothed: number;
     /** Frosts read in the sky before they fell. */
     frostsRead: number;
+    /** Stress points calmed away. */
+    calmed: number;
+    /** Hurts a soother eased at home before the healers came, sparing their herbs. */
+    soothedAtHome: number;
+    /** Herbs the healers did not need for those hurts. */
+    herbsSpared: number;
   };
 }
 

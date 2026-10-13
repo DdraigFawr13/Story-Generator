@@ -289,6 +289,9 @@ export interface PaneUi {
   toggleWhy(key: string): void;
   limit: number;
   more(): void;
+  /** "At the site" shows only this event category (from a link such as "9 learned"), or all. */
+  liveOnly: string | null;
+  setLiveOnly(category: string | null): void;
 }
 
 function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
@@ -309,6 +312,7 @@ export function usePaneUi(): PaneUi {
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const [why, setWhy] = useState<ReadonlySet<string>>(new Set());
   const [limit, setLimit] = useState(CHRONICLE_WINDOW);
+  const [liveOnly, setLiveOnly] = useState<string | null>(null);
   return {
     q,
     setQ,
@@ -329,6 +333,8 @@ export function usePaneUi(): PaneUi {
     toggleWhy: (key) => setWhy((w) => toggled(w, key)),
     limit,
     more: () => setLimit((n) => n + CHRONICLE_WINDOW),
+    liveOnly,
+    setLiveOnly,
   };
 }
 
@@ -340,6 +346,8 @@ export interface PanelActions {
   /** Leave the site and open a Legends page. */
   openLegends(ref: PageRef): void;
   hrefOf(ref: PageRef): string;
+  /** Open the chronicle tab showing only one category of the days watched. */
+  showChronicle(category: string): void;
 }
 
 interface PanelProps {
@@ -1887,6 +1895,11 @@ const STOCK_CARDS: [name: string, test: (item: ItemDef) => boolean][] = [
 ];
 
 /** M3.9: the site's hedge-witch, cantrips known and lost, books and what the cantrips did. */
+/** A cantrip known by this many or fewer, with no book here, is marked as at risk of dying out. */
+const AT_RISK_KNOWERS = 2;
+/** Stress a bad day adds (life.stressRise at the mood floor, roughly): calmed stress in days. */
+const CALM_PER_BAD_DAY = 15;
+
 function LoreFacts({ m, a }: { m: SiteModel; a: PanelActions }) {
   const { world, active, content } = m;
   const lore = active.lore;
@@ -1899,17 +1912,29 @@ function LoreFacts({ m, a }: { m: SiteModel; a: PanelActions }) {
     if (p.magic.power > 0) for (const ab of learnableCantrips(content, p)) wanted.add(ab.id);
   }
   const name = (id: string) => content.abilities.find((x) => x.id === id)?.name ?? id;
-  const known = content.lore.cantrips.filter((id) => (knownBy.get(id) ?? 0) > 0);
+  // Most known first, as the table of knowers reads; ties in content order.
+  const known = content.lore.cantrips
+    .filter((id) => (knownBy.get(id) ?? 0) > 0)
+    .sort((x, y) => knownBy.get(y)! - knownBy.get(x)!);
   const lost = content.lore.cantrips.filter((id) => wanted.has(id) && !knownBy.has(id));
   const books = [...world.items.values()].filter(
     (it) => it.kind === 'book' && it.holder !== null && active.residents.includes(it.holder),
   );
+  // At risk of dying out: two knowers or fewer and no book here that teaches it.
+  const schools = new Set(books.map((it) => bookSchool(content, it.form)));
+  const atRisk = (id: string) => {
+    const ab = content.abilities.find((x) => x.id === id);
+    return knownBy.get(id)! <= AT_RISK_KNOWERS && !(ab?.school && schools.has(ab.school));
+  };
   const st = lore.stats;
   const done = [
     st.logsSaved >= 1 && `${count(st.logsSaved)} logs saved by kindled hearths`,
     st.frostsRead > 0 &&
       `${st.frostsRead} ${st.frostsRead === 1 ? 'frost' : 'frosts'} read in time`,
-    st.soothed > 0 && `${count(st.soothed)} ${st.soothed === 1 ? 'hurt' : 'hurts'} soothed`,
+    st.soothed > 0 &&
+      `${count(st.soothed)} ${st.soothed === 1 ? 'hurt' : 'hurts'} soothed` +
+        (st.herbsSpared > 0 ? ` (about ${count(st.herbsSpared)} herbs spared)` : ''),
+    st.calmed >= 1 && `about ${count(st.calmed / CALM_PER_BAD_DAY)} bad days calmed`,
     st.mended >= 1 &&
       `about ${count(st.mended * content.steward.conditionLossDays)} days of wear mended`,
   ].filter((x): x is string => Boolean(x));
@@ -1919,7 +1944,10 @@ function LoreFacts({ m, a }: { m: SiteModel; a: PanelActions }) {
       <div className="sect" data-testid="lore-site">
         Lore{' '}
         <span className="r">
-          {st.learned} learned · {st.awakenings} {st.awakenings === 1 ? 'awakening' : 'awakenings'}
+          <button type="button" className="lk" onClick={() => a.showChronicle('magic')}>
+            {st.learned} learned
+          </button>{' '}
+          · {st.awakenings} {st.awakenings === 1 ? 'awakening' : 'awakenings'}
         </span>
       </div>
       <Facts>
@@ -1932,7 +1960,18 @@ function LoreFacts({ m, a }: { m: SiteModel; a: PanelActions }) {
         </Fact>
         <Fact term="Cantrips">
           {known.length > 0
-            ? known.map((id) => `${name(id)} ${knownBy.get(id)}`).join(', ')
+            ? known.map((id, k) => (
+                <span key={id}>
+                  {k > 0 && ', '}
+                  {atRisk(id) ? (
+                    <span className="warnw" title="Few know it and no book here teaches it">
+                      {name(id)} {knownBy.get(id)} · no book
+                    </span>
+                  ) : (
+                    `${name(id)} ${knownBy.get(id)}`
+                  )}
+                </span>
+              ))
             : 'none known'}
           {lost.length > 0 && (
             <span className="warnw">
@@ -2528,25 +2567,46 @@ export function ChroniclePane({
       <div className="sect">
         At the site <span className="r">newest first</span>
       </div>
+      {ui.liveOnly !== null && (
+        <div className="chips" role="group" aria-label="Shown at the site">
+          <button
+            type="button"
+            className="chip tg"
+            aria-pressed={true}
+            title="Show every event again"
+            onClick={() => ui.setLiveOnly(null)}
+          >
+            {ui.liveOnly} only ×
+          </button>
+        </div>
+      )}
       <ul className="chron">
-        {[...live].reverse().map((line, k) =>
-          line.eventId !== undefined ? (
-            <EventItem
-              key={`${line.eventId}:${k}`}
-              m={m}
-              a={a}
-              ui={ui}
-              id={line.eventId}
-              path={`l${line.eventId}`}
-              label={shortDay(line.day)}
-            />
-          ) : (
-            <li key={`n${k}`} className="ev now">
-              <span className="y">{shortDay(line.day)}</span>
-              <span className="txt">{line.text}</span>
-            </li>
-          ),
-        )}
+        {[...live]
+          .filter(
+            (line) =>
+              ui.liveOnly === null ||
+              (line.eventId !== undefined &&
+                m.typeDefs.get(m.index.event(line.eventId)?.type ?? '')?.category === ui.liveOnly),
+          )
+          .reverse()
+          .map((line, k) =>
+            line.eventId !== undefined ? (
+              <EventItem
+                key={`${line.eventId}:${k}`}
+                m={m}
+                a={a}
+                ui={ui}
+                id={line.eventId}
+                path={`l${line.eventId}`}
+                label={shortDay(line.day)}
+              />
+            ) : (
+              <li key={`n${k}`} className="ev now">
+                <span className="y">{shortDay(line.day)}</span>
+                <span className="txt">{line.text}</span>
+              </li>
+            ),
+          )}
       </ul>
       <div className="sect">
         Before you arrived <span className="r">from the legends</span>

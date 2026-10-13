@@ -5,7 +5,7 @@
 import type { EventTypeDef, LoreRules, MemoryDef } from '../engine';
 
 export const LORE: LoreRules = {
-  cantrips: ['kindle', 'mend', 'soothe', 'read_sky', 'read_rain'],
+  cantrips: ['kindle', 'mend', 'soothe', 'read_sky', 'read_rain', 'calm'],
   // Most grown people with a spark were taught something before watching began; some never were.
   knownAtEmbark: 0.7,
   // About six weeks of evenings for a pupil of average learning attributes.
@@ -20,8 +20,8 @@ export const LORE: LoreRules = {
   books: {
     lendEveryDays: 7,
     maxLoanDays: 84,
-    // About one loan in ten never comes back.
-    lossPerDay: 0.0015,
+    // A loan lasts about 40 days (until the lessons are done), so about one in sixteen is lost.
+    lossPerDay: 0.0025,
     minOpinion: 0,
     burnChance: 0.5,
     lostSting: -20,
@@ -33,6 +33,8 @@ export const LORE: LoreRules = {
     // Half a herb-healer: at most doubles natural recovery (§5.4A).
     soothePower: 0.5,
     frostShare: 0.4,
+    // A quiet word and a steadying hand: about a day's worth of a bad mood's stress.
+    calmStress: 15,
   },
   castRest: 5,
   dependencies: {
@@ -49,6 +51,7 @@ export const LORE: LoreRules = {
     burned: 'site_book_burned',
     awakened: 'site_awakened',
     frostRead: 'site_frost_read',
+    lastSource: 'site_last_book',
   },
   memoryOf: {
     learned: 'learned-cantrip',
@@ -136,7 +139,7 @@ export const LORE_EVENTS: EventTypeDef[] = [
     category: 'magic',
     links: { site: 'site', item: 'item' },
     templates: [
-      '{actor2} lost {item}, lent by {actor}; what it taught is gone from {site}.',
+      '{actor2} lost {item}, lent by {actor}.',
       '{item}, borrowed from {actor}, was lost by {actor2}.',
       '{actor} will not see {item} again: {actor2} lost it.',
     ],
@@ -179,6 +182,19 @@ export const LORE_EVENTS: EventTypeDef[] = [
       '{actor} read a frost in the {sign}; the young crops of {site} were covered before dark.',
       'Warned by {actor}, the farmers of {site} covered the fields against the frost.',
       'The frost came to {site} as {actor} said it would, and found the crops covered.',
+    ],
+  },
+  {
+    id: 'site_last_book',
+    baseImportance: 6,
+    title: 'No one at {site} can teach {cantrips}',
+    causeWord: 'after',
+    category: 'magic',
+    links: { site: 'site', item: 'item' },
+    templates: [
+      'With {item} gone, no one at {site} can teach {cantrips} any more.',
+      '{item} was the last of its lore at {site}: {cantrips} has no teacher now.',
+      'Nothing at {site} teaches {cantrips} since {item} was lost to {actor}.',
     ],
   },
 ];

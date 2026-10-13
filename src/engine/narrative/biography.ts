@@ -2,7 +2,7 @@
 // lines. Summaries come from records (Person, Site, Civ, ...) because the trivial events that
 // would tell a life are pruned; lines come from the surviving events. Nothing here invents facts.
 
-import { DAYS_PER_YEAR } from '../core/clock';
+import { DAYS_PER_YEAR, formatDate } from '../core/clock';
 import type { ContentBundle } from '../core/content-types';
 import { hashString } from '../core/rng';
 import type { Id, Person, SimEvent, WorldState } from '../core/types';
@@ -191,7 +191,16 @@ function personSummary(
     const had = kids > 0 ? `had ${kids} ${plural(kids, 'child', 'children')}` : '';
     out.push(say('personFamily', { family: [wed, had].filter(Boolean).join(' and ') }));
   }
-  if (tier !== 'none') out.push(say('personMagic', { tier }));
+  const woke = person.awakening && world.events.find((e) => e.id === person.awakening!.eventId);
+  if (woke && tier !== 'none')
+    out.push(
+      say('personWoke', {
+        tier,
+        date: formatDate(woke.day),
+        how: String(woke.data.how ?? ''),
+      }),
+    );
+  else if (tier !== 'none') out.push(say('personMagic', { tier }));
   if (person.died !== undefined) {
     const killer =
       person.killerId === undefined ? undefined : world.people.get(person.killerId)?.name;

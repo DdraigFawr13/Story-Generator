@@ -198,6 +198,17 @@ export const abilities: AbilityDef[] = [
     // Weather-reading by the water's signs: the same warning as reading the sky.
     effect: { kind: 'weather', tag: 'weather_read', usesPerDay: 1 },
   },
+  {
+    id: 'calm',
+    name: 'Calm',
+    family: 'magic',
+    school: 'mind',
+    requirements: { power: 1, 'affinity.mind': 1 },
+    learnAttributes: ['willpower', 'intellect'],
+    learnFrom: ['teacher', 'book'],
+    // Calming: once a day, the most troubled member of the household is steadied a little.
+    effect: { kind: 'utility', tag: 'calm', usesPerDay: 1 },
+  },
   // Gifted: a village healer.
   {
     id: 'healing_touch',

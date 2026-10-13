@@ -2150,6 +2150,8 @@ export interface LoreRules {
     soothePower: number;
     /** With a weather-reader at the site, frost does this share of its harm to the fields. */
     frostShare: number;
+    /** Stress one use of calming takes off the most stressed member of the household. */
+    calmStress: number;
   };
   /** Rest a person loses for each cantrip they cast (mild fatigue, R-29). */
   castRest: number;
@@ -2169,6 +2171,8 @@ export interface LoreRules {
     burned: string;
     awakened: string;
     frostRead: string;
+    /** A lost or burnt book was the site's last source of a cantrip (pauses play). */
+    lastSource: string;
   };
   memoryOf: { learned: string; taught: string; bookLost: string; awakened: string };
 }

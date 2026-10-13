@@ -394,6 +394,10 @@ export function SiteView(props: Props) {
     },
     openLegends: props.onOpenLegends,
     hrefOf: props.hrefOf,
+    showChronicle(category) {
+      ui.setLiveOnly(category);
+      setTab('chron');
+    },
   };
 
   // ---- time ----
@@ -560,17 +564,20 @@ export function SiteView(props: Props) {
     : (props.restore.at ?? { x: Math.round(size / 2), y: Math.round(size / 2) });
   const openText = sel ? formatSelection(sel, size) : null;
   const zoomIndex = painted ? painted.z : (props.restore.zoom ?? SELECT_ZOOM);
+  // Whole days to run so a reload shows the same date: a pause part-way through a day links to
+  // the end of that day, not to the night before it.
+  const linkDay = day - active.enteredDay + (active.block === 0 ? 0 : 1);
   const linkText = useMemo(() => {
-    const parts = [`seed=${world.seed}`, `site=${active.siteId}`, `day=${day - active.enteredDay}`];
+    const parts = [`seed=${world.seed}`, `site=${active.siteId}`, `day=${linkDay}`];
     if (openText) parts.push(`open=${openText}`);
     parts.push(`z=${zoomIndex + 1}`, `at=${rounded.x},${rounded.y}`);
     return `?${parts.join('&')}`;
     // viewKey stands for the zoom and centre, which live in the renderer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [world.seed, active, day, openText, viewKey]);
+  }, [world.seed, active, linkDay, openText, viewKey]);
   const { onLink } = props;
   useEffect(() => {
-    onLink({ day: day - active.enteredDay, open: openText, zoom: zoomIndex, at: rounded });
+    onLink({ day: linkDay, open: openText, zoom: zoomIndex, at: rounded });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkText]);
 
@@ -935,7 +942,7 @@ export function SiteView(props: Props) {
               setPhoneTab('pane');
             }}
           >
-            Site
+            Details
           </button>
         </div>
       </div>

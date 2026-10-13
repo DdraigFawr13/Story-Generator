@@ -534,14 +534,24 @@ export function runHealthDay(
       c.tendPower = 0;
     }
   }
+  // Soothers see to their own household first (M3.9): what they ease needs none of the herbs.
+  const soothable = (c: Condition) => {
+    const kind = l.conditions.get(c.defId)?.kind;
+    return (kind === 'wound' || kind === 'disease') && tendable(l, rules, c);
+  };
+  const before = active.lore.stats.soothedAtHome;
+  soothePass(world, content, active, soothable, true);
   const healers = healersOf(world, content, active);
   state.stats.healerDays += healers.length;
   if (healers.length > 0) {
+    active.lore.stats.herbsSpared +=
+      (active.lore.stats.soothedAtHome - before) * rules.herbsPerPatient;
     const healerIds = new Set(healers.map((h) => h.id));
     const patients = subjects
       .filter(
         (s) =>
-          !healerIds.has(s.person.id) && s.detail.conditions.some((c) => tendable(l, rules, c)),
+          !healerIds.has(s.person.id) &&
+          s.detail.conditions.some((c) => c.tended !== true && tendable(l, rules, c)),
       )
       .sort((a, b) => a.person.health - b.person.health || a.person.id - b.person.id)
       .slice(0, healers.length * rules.patientsPerHealer);
@@ -550,7 +560,7 @@ export function runHealthDay(
       state.stats.herbsUsed += got;
       const power = got + 1e-9 >= rules.herbsPerPatient ? 1 : rules.noHerbsPower;
       for (const c of s.detail.conditions) {
-        if (!tendable(l, rules, c)) continue;
+        if (c.tended === true || !tendable(l, rules, c)) continue;
         c.tended = true;
         c.tendPower = power;
         if (c.ailment !== undefined && !c.cutPeak && c.stage === 'sick') {
@@ -566,10 +576,7 @@ export function runHealthDay(
   }
 
   // Soothers ease what no healer reached (M3.9).
-  soothePass(world, content, active, (c) => {
-    const kind = l.conditions.get(c.defId)?.kind;
-    return (kind === 'wound' || kind === 'disease') && tendable(l, rules, c);
-  });
+  soothePass(world, content, active, soothable);
 
   // 2. The course of what people already have. First, how long each need has sat at zero.
   const needNames = new Set(l.needs.map((c) => c.need!.need));
