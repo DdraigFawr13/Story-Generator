@@ -329,9 +329,10 @@ export function sizeKind(pop: number, rules: SettlementRules): SiteKind {
 
 /** Territory: each cell goes to the civ of the nearest site by travel cost, within `reach`. */
 export function computeTerritory(
-  cells: Pick<WorldCells, 'width' | 'height' | 'water' | 'travelCost'>,
+  cells: Pick<WorldCells, 'width' | 'height' | 'water' | 'travelCost' | 'wildness'>,
   sites: readonly Pick<Site, 'id' | 'cell' | 'civId'>[],
   reach: number,
+  wild: { deepWild: number; deepWildClaim: number },
 ): Uint16Array {
   const { width, height } = cells;
   const size = width * height;
@@ -366,7 +367,9 @@ export function computeTerritory(
         cells.travelCost[to]! >= 255
       )
         continue;
-      const next = dist[cell]! + cells.travelCost[to]!;
+      const cost = cells.travelCost[to]!;
+      const next =
+        dist[cell]! + (cells.wildness[to]! >= wild.deepWild ? cost * wild.deepWildClaim : cost);
       if (next > reach) continue;
       if (next < dist[to]! || (next === dist[to]! && ownerSite[cell]! < ownerSite[to]!)) {
         dist[to] = next;
@@ -621,5 +624,5 @@ export function settleWorld(world: WorldState, content: SettleContent): void {
   }
 
   // 5. Territory.
-  cells.territory = computeTerritory(cells, sites, rules.territoryReach);
+  cells.territory = computeTerritory(cells, sites, rules.territoryReach, rules);
 }

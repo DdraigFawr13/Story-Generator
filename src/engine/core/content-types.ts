@@ -1537,6 +1537,9 @@ export interface SettlementRules {
   civNames: Record<GovernmentKind, string>;
   /** Cost cap (summed travel cost) of a site's territory. */
   territoryReach: number;
+  /** Wildness at or above which history founds no site, and borders spread at `deepWildClaim` times the cost. */
+  deepWild: number;
+  deepWildClaim: number;
 }
 
 /** Tunable numbers for the yearly history stage (M2.3); see engine/history/. Rates are per year. */

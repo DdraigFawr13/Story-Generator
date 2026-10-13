@@ -56,7 +56,8 @@ export function findNewCell(run: HistoryRun, source: Site): number {
   for (let y = Math.max(0, sy - hi); y <= Math.min(height - 1, sy + hi); y += 1) {
     for (let x = Math.max(0, sx - hi); x <= Math.min(width - 1, sx + hi); x += 1) {
       const cell = y * width + x;
-      if (!search.featuresAt[cell]) continue;
+      if (!search.featuresAt[cell] || cells.wildness[cell]! >= content.settlement.deepWild)
+        continue;
       if (cellDistance(width, cell, source.cell) < lo) continue;
       if (search.landmass[cell] !== search.landmass[source.cell]) continue;
       const owner = run.territory[cell]!;

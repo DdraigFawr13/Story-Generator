@@ -76,8 +76,10 @@ describe('work', () => {
     const a = embark(fed, C, site.id);
     const b = embark(short, C, site.id);
     const need = a.residents.length * 2;
+    // The fed town gets a year of grain whatever its history left it; the short one two days.
     for (const item of C.items) {
       if (item.kind !== 'food') continue;
+      a.stock.set(item.id, item.id === 'grain' ? need * 168 : 0);
       b.stock.set(item.id, item.id === 'grain' ? need : 0);
     }
     stepBlock(fed, C);
