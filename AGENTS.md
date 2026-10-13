@@ -15,7 +15,11 @@ Shared rules come from AI-Master-Instructions and load through CLAUDE.md (`.clau
 ## Working style
 
 - Plan per phase: spec in `docs/phases/PHASE_N.md` (at most two pages), user approval, then implement.
-- Merge at milestones when CI is green; ask the user on design forks. End each phase with the playtest check-in from REBOOT_PLAN §1E.
+- One thread per milestone, run as a pipeline (decided 2026-10-13, measured in `/mnt/project-files/process/thread-times.md`): the coordinator starts the next milestone's mock-up thread as soon as the current milestone enters its build, so the review and approval of N+1 overlap the build of N. The waiting thread pushes its branch but opens its PR only after the running milestone merges, then rebases and re-runs the checks.
+- Mock-up round before a build ("lean round", 2026-10-13): a milestone that adds or changes UI gets a screen mock-up and one coordinator review pass (bugs and design changes in one list), then the user's approval card. An engine-only milestone gets an output mock-up (a numbers table, sample inspector and chronicle lines) that goes straight to the user, with no coordinator pass and no screenshot matrix. Read each milestone's reading list in the phase spec before anything else.
+- Merge approval comes with the mock-up approval: when the user approves the mock-up, the thread merges its PR itself once CI is green, with no second card. A card is still posted for any fork that changes what the user sees.
+- Tuning is time-boxed: at most 15 minutes or three runs per question, then a numbers table and a decision card. The status line is refreshed at every step, and a worker that runs longer than 20 minutes without a status change is stopped and asked for its numbers.
+- Ask the user on design forks. End each phase with the playtest check-in from REBOOT_PLAN §1E.
 - When the plan is silent, follow REBOOT_PLAN §1B: connect more systems, prefer data over code, make consequences visible.
 - Bulk coding goes to the synced `implementer` agent (DEL-01 to DEL-05); give it the AGENT_BRIEF rules that apply. Run `npm run check` and `npm run test:browser` directly (DEL-02: each takes under 30 s); only multi-seed drama, sweep or baseline runs go to `test-runner`.
 

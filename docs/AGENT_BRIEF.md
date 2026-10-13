@@ -16,7 +16,8 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256�
 
 ## How work flows
 
-1. One phase at a time, one thread per milestone. A phase gets a spec of at most two pages in `docs/phases/PHASE_N.md`, approved by the user, before code. Ask only on genuine design forks; record other defaults in the spec.
+1. One phase at a time, one thread per milestone, run as a pipeline: the next milestone's mock-up starts when the current build starts (AGENTS.md "Working style"). A phase gets a spec of at most two pages in `docs/phases/PHASE_N.md`, approved by the user, before code. Each milestone there carries a reading list; open those files first and grep for the rest. Ask only on genuine design forks; record other defaults in the spec.
+   - Lean mock-up round: a screen mock-up with one coordinator pass for UI milestones; an output mock-up (numbers table, sample lines) straight to the user for engine-only milestones. The user's mock-up approval is also the merge approval: merge on green CI with no second card. Tuning gets 15 minutes or three runs, then a numbers table and a card.
 2. The main session plans, writes specs, reviews diffs, commits and merges. Bulk coding goes to the synced `implementer` agent (Sonnet) with a written spec that names the rules above; run `npm run check` and `npm run test:browser` directly (under 30 s each, measured 2026-10-12), since a cold `test-runner` agent takes longer to start than the checks take to run. Send only multi-seed drama, sweep or baseline runs to `test-runner` (Haiku). Keep one-line fixes local.
 3. PRs of roughly 300–1,500 lines, one milestone each, squash-merged when CI is green. Branch pushes without a PR run no CI; push at reviewable checkpoints. Never retry a run blocked by a billing or runner message.
 4. Each milestone: update the phase spec status, `docs/ROADMAP.md` and `CHANGELOG.md`; save sample maps and drama output under `/mnt/project-files/worldgen/<milestone>/`.
@@ -24,7 +25,7 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256�
 
 ## Commands
 
-- `npm run check`: format, typecheck, boundaries, unit tests, build. Run before every push (about 27 s locally; CI's `core` job takes about 1 minute).
+- `npm run check`: format, typecheck, boundaries, unit tests, build. Run before every push (about 40 s locally on 2026-10-13, of which the unit tests are 30 s; CI's two jobs take about 1 minute each).
 - `npm run test:browser`: the Chromium smoke; run for UI or browser-test changes.
 - `npm run drama -- --seeds 5`: world and history statistics per seed (a tool, not a gate).
 - `npm run drama -- --seeds 10 --years 250 --baseline tests/baseline/drama-10-seeds.json`: diff history numbers against the saved baseline (`--write-baseline FILE` regenerates it).
@@ -39,9 +40,13 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256�
 | `src/engine/core/` | types, rng, clock, scheduler, context, content validation, save |
 | `src/engine/worldgen/` | terrain → erosion → climate → water → biomes → resources → aura → habitat → regions → routes |
 | `src/engine/history/` | settlement, then yearly harvest, demography, famine, plague, migration, expansion |
+| `src/engine/history/` (cont.) | then beasts, trade, raids, war, notables, items, importance, snapshots; `playback.ts` records display borders per year |
 | `src/engine/people/` | attributes, aptitude, magic tiers, combat scale (R-24) |
-| `src/content/` | races, cultures, biomes, resources, names, history rules, event types, map layers |
-| `src/platform/` | IndexedDB saves, world-gen worker host |
-| `src/app/` | the React world map and legends browser at `/` |
-| `scripts/` | boundaries check, drama, worldmap |
-| `tests/unit/`, `tests/browser/` | Vitest units, the Playwright smoke |
+| `src/engine/site/` | the watched site: `localmap`, `layout`, `promote`/`demote`, `tick` (day loop), `life` (needs, mood, breakdowns), `path` (A*), `work` (steward and jobs), `stock`, `build`, `outpost` |
+| `src/engine/systems/` | shared daily systems (`weather`) |
+| `src/engine/narrative/` | biographies, legend pages, chronicle text rendering |
+| `src/content/` | one file per content type: races, cultures, biomes, resources, names, history rules, settlement, diseases, notables, legends, biographies, map layers and why-lines, playback effects; site content in `site`, `life`, `jobs`, `items`, `buildings`, `abilities`, `creatures` |
+| `src/platform/` | IndexedDB saves, the world-gen and site workers and their hosts |
+| `src/app/` | React: `WorldMap`, `MapPanels`, `YearSlider`, `HistoryPlayback` (+ `playback/`), `Legends` and `LegendPages`, `EmbarkCards`, `SiteView` with `site-panels` and `site-render` |
+| `scripts/` | boundaries check, drama and baseline diff, sweep, worldmap, site, biographies |
+| `tests/unit/`, `tests/browser/` | Vitest units (31 files, 251 tests, 30 s), the Playwright smoke (3 tests, 24 s) |
