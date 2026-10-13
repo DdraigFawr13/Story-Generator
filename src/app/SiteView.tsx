@@ -29,7 +29,7 @@ import {
 import type { SiteHost } from '../platform/site-host';
 import type { SiteSpeed } from '../platform/site-worker';
 import type { PageRef } from './legends-ctx';
-import { siteLinkPoint, type SiteTab } from './map-view';
+import { siteLinkPoint, type PersonSection, type SiteTab } from './map-view';
 import {
   InspectPane,
   PeoplePane,
@@ -70,6 +70,7 @@ export interface SiteLinkParts {
   zoom: number;
   at: { x: number; y: number };
   tab: SiteTab;
+  sec: PersonSection;
 }
 
 export type TickListener = (
@@ -96,6 +97,7 @@ interface Props {
     zoom: number | null;
     at: { x: number; y: number } | null;
     tab: SiteTab | null;
+    sec: PersonSection | null;
   };
   onLeave(): void;
   onOpenLegends(ref: PageRef): void;
@@ -177,7 +179,7 @@ export function SiteView(props: Props) {
   const [index, setIndex] = useState<LegendIndex>(props.index);
   const m: SiteModel = useMemo(() => ({ ...base, index }), [base, index]);
   const digest = useMemo(() => localMapDigest(active.map), [active]);
-  const ui = usePaneUi();
+  const ui = usePaneUi(props.restore.sec ?? 'now');
   const narrow = useNarrow();
 
   const startLine = useMemo<LiveLine>(() => {
@@ -422,7 +424,7 @@ export function SiteView(props: Props) {
     const y = (cy - r.state.view.cy) * r.scale + r.vh / 2;
     const x = (cx - r.state.view.cx) * r.scale + r.vw / 2;
     const clear = r.vh - h;
-    if (y > 32 && y < clear - 56 && x > 16 && x < r.vw - 16) return;
+    if (sheet === 'peek' && y > 32 && y < clear - 56 && x > 16 && x < r.vw - 16) return;
     r.state.view.cx = cx;
     r.state.view.cy = cy + h / 2 / r.scale;
     r.clamp();
@@ -585,10 +587,19 @@ export function SiteView(props: Props) {
 
   // Until the map first paints (a hidden phone tab may never size it), the link keeps the restored view.
   const painted = renderer.current && viewKey !== '' ? renderer.current.state.view : null;
-  const rounded = painted
-    ? { x: Math.round(painted.cx), y: Math.round(painted.cy) }
-    : (props.restore.at ?? { x: Math.round(size / 2), y: Math.round(size / 2) });
+  // While the phone's sheet shifts the view, the link keeps the subject's own tile as the centre.
+  const sheetRect = sheetOpen ? rectOf(sel) : null;
+  const rounded = sheetRect
+    ? {
+        x: Math.round(sheetRect[0] + sheetRect[2] / 2),
+        y: Math.round(sheetRect[1] + sheetRect[3] / 2),
+      }
+    : painted
+      ? { x: Math.round(painted.cx), y: Math.round(painted.cy) }
+      : (props.restore.at ?? { x: Math.round(size / 2), y: Math.round(size / 2) });
   const openText = sel ? formatSelection(sel, size) : null;
+  // The person page's section (Ties, Story, Skills) rides the link while a person is open.
+  const sec: PersonSection = sel?.kind === 'person' ? ui.personTab : 'now';
   const zoomIndex = painted ? painted.z : (props.restore.zoom ?? SELECT_ZOOM);
   // The day and block the chips show, so a reload replays to the same moment.
   const point = siteLinkPoint(day, active.enteredDay, active.block);
@@ -600,13 +611,22 @@ export function SiteView(props: Props) {
     if (openText) parts.push(`open=${openText}`);
     parts.push(`z=${zoomIndex + 1}`, `at=${rounded.x},${rounded.y}`);
     if (tab !== 'inspect') parts.push(`tab=${tab}`);
+    if (sec !== 'now') parts.push(`sec=${sec}`);
     return `?${parts.join('&')}`;
     // viewKey stands for the zoom and centre, which live in the renderer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [world.seed, active, linkDay, linkBlock, openText, viewKey, tab]);
+  }, [world.seed, active, linkDay, linkBlock, openText, viewKey, tab, sec, sheetOpen]);
   const { onLink } = props;
   useEffect(() => {
-    onLink({ day: linkDay, block: linkBlock, open: openText, zoom: zoomIndex, at: rounded, tab });
+    onLink({
+      day: linkDay,
+      block: linkBlock,
+      open: openText,
+      zoom: zoomIndex,
+      at: rounded,
+      tab,
+      sec,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkText]);
 
@@ -1240,7 +1260,7 @@ export function SiteView(props: Props) {
           </div>
           <div className="body">
             {tab === 'inspect' && <InspectPane m={model} sel={sel} a={actions} ui={ui} />}
-            {tab === 'site' && <SitePane m={model} a={actions} ui={ui} />}
+            {tab === 'site' && <SitePane m={model} a={actions} />}
             {tab === 'people' && <PeoplePane m={model} sel={sel} a={actions} ui={ui} />}
             {tab === 'chron' && <ChroniclePane m={model} a={actions} ui={ui} live={live} />}
           </div>

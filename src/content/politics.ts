@@ -105,7 +105,7 @@ export const POLITICS_EVENTS: EventTypeDef[] = [
   {
     id: 'site_caravan_arrived',
     baseImportance: 4,
-    title: 'A caravan from {from} reached {site}',
+    title: 'A caravan came from {from}',
     causeWord: 'with news of',
     category: 'politics',
     links: { site: 'site', from: 'site' },
@@ -118,7 +118,7 @@ export const POLITICS_EVENTS: EventTypeDef[] = [
   {
     id: 'site_caravan_quiet',
     baseImportance: 3,
-    title: 'A caravan from {from} reached {site}',
+    title: 'A caravan came from {from}',
     category: 'politics',
     links: { site: 'site', from: 'site' },
     templates: [

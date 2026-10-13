@@ -322,7 +322,7 @@ export const HEALTH_EVENTS: EventTypeDef[] = [
   {
     id: 'site_outbreak',
     baseImportance: 5,
-    title: '{illness} spreads at {site}',
+    title: '{illness} spread at {site}',
     causeWord: 'after',
     category: 'life',
     links: { site: 'site' },

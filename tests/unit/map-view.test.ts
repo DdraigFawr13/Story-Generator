@@ -129,6 +129,7 @@ describe('site view URL (M3.1)', () => {
       zoom: 2,
       at: { x: 65, y: 47 },
       tab: null,
+      sec: null,
     });
   });
 
@@ -139,6 +140,15 @@ describe('site view URL (M3.1)', () => {
     expect(parseViewUrl(url.slice(2), IDS).site?.tab).toBe('chron');
     expect(buildSiteUrl({ ...base, at: { x: 1, y: 2 }, tab: 'inspect' })).not.toContain('tab=');
     expect(parseViewUrl('?seed=S1&site=6&tab=nope', IDS).site?.tab).toBeNull();
+  });
+
+  it("carries the person page's section, leaving Now out", () => {
+    const base = { seed: 'S1', size: 256, site: 6, day: 3, open: 'person:9', zoom: 2 } as const;
+    const url = buildSiteUrl({ ...base, at: { x: 1, y: 2 }, sec: 'ties' });
+    expect(url).toBe('/?seed=S1&size=256&site=6&day=3&open=person:9&z=3&at=1,2&sec=ties');
+    expect(parseViewUrl(url.slice(2), IDS).site?.sec).toBe('ties');
+    expect(buildSiteUrl({ ...base, at: { x: 1, y: 2 }, sec: 'now' })).not.toContain('sec=');
+    expect(parseViewUrl('?seed=S1&site=6&sec=nope', IDS).site?.sec).toBeNull();
   });
 
   it('carries the last block run, and names the moment a clock shows', () => {
@@ -189,6 +199,7 @@ describe('site view URL (M3.1)', () => {
       zoom: null,
       at: null,
       tab: null,
+      sec: null,
     });
     expect(parseViewUrl('?seed=S1&site=4&day=999999', IDS).site?.day).toBe(MAX_LINK_DAY);
     // Old links are untouched.

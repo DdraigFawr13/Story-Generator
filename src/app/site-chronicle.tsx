@@ -5,19 +5,20 @@
 import { Fragment } from 'react';
 import {
   biography,
+  countWord,
   dateOf,
   type EventTypeDef,
   type Id,
   type LegendRef,
   type SimEvent,
 } from '../engine';
+import { briefDate } from './site-season';
 import {
   CHRONICLE_WINDOW,
   EventItem,
   LegendLines,
   RecapCard,
   dayText,
-  shortDay,
   type SiteModel,
   type PanelProps,
 } from './site-panels';
@@ -41,20 +42,26 @@ const LIVE_FLOORS: [number, string][] = [
   [3, 'Notable'],
   [5, 'Major'],
 ];
+/** "a market day", "an early frost", but "the first snow": one of a kind takes "the". */
+function withArticle(noun: string): string {
+  if (/^(first|last)\b/.test(noun)) return `the ${noun}`;
+  return /^[aeiou]/.test(noun) ? `an ${noun}` : `a ${noun}`;
+}
+
 const KIND_ORDER = ['life', 'social', 'nature', 'threat', 'politics', 'magic'];
 
-/** "market days" for a type: its rollup label, else its title without the {placeholders}. */
+/** "three market days" or "the first snow" for a type: its rollup label, else its title. */
 function rollupPhrase(def: EventTypeDef | undefined, type: string, n: number): string {
-  if (def?.rollup) return `${n} ${n === 1 ? def.rollup[0] : def.rollup[1]}`;
+  if (def?.rollup) return n === 1 ? withArticle(def.rollup[0]) : `${countWord(n)} ${def.rollup[1]}`;
   const raw = (def?.title ?? type)
     .replace(/\{[^}]*\}/g, '')
     .replace(/\s+/g, ' ')
     .trim();
   const title = raw.charAt(0).toLowerCase() + raw.slice(1);
-  return n === 1 ? title : n === 2 ? `${title} twice` : `${title} ${n} times`;
+  return n === 1 ? title : n === 2 ? `${title} twice` : `${title} ${countWord(n)} times`;
 }
 
-/** "4 market days, 2 skills gained and stores spoiling twice". */
+/** "four market days, the first snow and a spoiled store". */
 function rollupText(m: SiteModel, events: readonly SimEvent[]): string {
   const counts = new Map<string, number>();
   for (const event of events) counts.set(event.type, (counts.get(event.type) ?? 0) + 1);
@@ -180,18 +187,11 @@ export function ChroniclePane({
             {month.lines.map((line, k) =>
               line.eventId === undefined ? (
                 <li key={`n${k}`} className="ev now">
-                  <span className="y">{shortDay(line.day)}</span>
+                  <span className="y">{briefDate(line.day)}</span>
                   <span className="txt">{line.text}</span>
                 </li>
               ) : recapTypes.has(m.index.event(line.eventId)?.type ?? '') ? (
-                <RecapCard
-                  key={`${line.eventId}:${k}`}
-                  m={m}
-                  a={a}
-                  ui={ui}
-                  id={line.eventId}
-                  path={`l${line.eventId}`}
-                />
+                <RecapCard key={`${line.eventId}:${k}`} m={m} a={a} id={line.eventId} />
               ) : (
                 <EventItem
                   key={`${line.eventId}:${k}`}
@@ -200,7 +200,7 @@ export function ChroniclePane({
                   ui={ui}
                   id={line.eventId}
                   path={`l${line.eventId}`}
-                  label={shortDay(line.day)}
+                  label={briefDate(line.day)}
                 />
               ),
             )}
@@ -229,7 +229,7 @@ export function ChroniclePane({
                   ui={ui}
                   id={event.id}
                   path={`l${event.id}`}
-                  label={shortDay(event.day)}
+                  label={briefDate(event.day)}
                 />
               ))}
           </Fragment>

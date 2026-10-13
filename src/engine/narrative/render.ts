@@ -32,6 +32,25 @@ export function grouped(n: number): string {
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
+const NUMBER_WORDS = [
+  'no',
+  'one',
+  'two',
+  'three',
+  'four',
+  'five',
+  'six',
+  'seven',
+  'eight',
+  'nine',
+  'ten',
+];
+
+/** A count in words up to ten ("three"), then in digits. */
+export function countWord(n: number): string {
+  return NUMBER_WORDS[n] ?? grouped(n);
+}
+
 /**
  * The placeholder values for an event: `date`, `year` (history year), its data, and its actors
  * as `actor`, `actor2`, ... History events carry no real day, so `precision: 'year'` types print "Year N".

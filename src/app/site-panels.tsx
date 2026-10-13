@@ -184,9 +184,11 @@ export function dayText(day: number): string {
 export function monthName(day: number): string {
   return MONTH_NAMES[dateOf(day).month]!;
 }
-export function shortDay(day: number): string {
+/** "12 Firstfrost", with the year only when it is not the year of `now`. */
+export function shortDay(day: number, now: number): string {
   const date = dateOf(day);
-  return `${date.dayOfMonth} ${MONTH_NAMES[date.month]!.slice(0, 4)} ${date.year - 1}`;
+  const text = `${date.dayOfMonth} ${MONTH_NAMES[date.month]!}`;
+  return dateOf(now).year === date.year ? text : `${text} ${date.year - 1}`;
 }
 
 export function householdName(m: SiteModel, h: Household): string {
@@ -337,7 +339,7 @@ function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
 /** Items shown in a chronicle list before "Show more". */
 export const CHRONICLE_WINDOW = 200;
 
-export function usePaneUi(): PaneUi {
+export function usePaneUi(section: PersonTab = 'now'): PaneUi {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<PaneUi['sort']>('household');
   const [filters, setFilters] = useState<ReadonlySet<string>>(new Set());
@@ -348,7 +350,7 @@ export function usePaneUi(): PaneUi {
   const [limit, setLimit] = useState(CHRONICLE_WINDOW);
   const [liveOnly, setLiveOnly] = useState<string | null>(null);
   const [numbers, setNumbers] = useState(readNumbers);
-  const [personTab, setPersonTab] = useState<PersonTab>('now');
+  const [personTab, setPersonTab] = useState<PersonTab>(section);
   const [liveHidden, setLiveHidden] = useState<ReadonlySet<string>>(new Set());
   const [liveFloor, setLiveFloor] = useState(0);
   const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(new Set());
@@ -689,47 +691,44 @@ export function EventItem({
 }
 
 /** The historian's recap: its own words, then the period's top events it is remembered for. */
-export function RecapCard({
-  m,
-  a,
-  ui,
-  id,
-  path,
-}: {
-  m: SiteModel;
-  a: PanelActions;
-  ui: PaneUi;
-  id: Id;
-  path: string;
-}) {
+export function RecapCard({ m, a, id }: { m: SiteModel; a: PanelActions; id: Id }) {
   const event = m.index.event(id);
   if (!event) return null;
   const rules = m.content.chronicle.recap;
-  const causes = event.causes.filter((c) => m.index.event(c) !== undefined);
+  // Cited as one line of dated links, newest first like the chronicle around it.
+  const causes = event.causes
+    .map((c) => eventOf(m, c))
+    .filter((c) => c !== undefined)
+    .sort((x, y) => y.id - x.id);
   return (
     <li className={event.type === rules.yearType ? 'recap year' : 'recap'}>
       <b>{eventTitle(event, m.typeDefs.get(event.type))}</b>
       <p>{m.narrator.renderEvent(event)}</p>
       {causes.length > 0 && (
-        <>
-          <div className="cw">Remembered for</div>
-          <ul className="chron">
-            {causes.map((c) => (
-              <EventItem
-                key={c}
-                m={m}
-                a={a}
-                ui={ui}
-                id={c}
-                path={`${path}>${c}`}
-                label={shortDay(m.index.event(c)!.day)}
-              />
-            ))}
-          </ul>
-        </>
+        <p className="cites">
+          <span className="cw">Remembered for </span>
+          {causes.map((c, k) => (
+            <Fragment key={c.id}>
+              {k > 0 && ' · '}
+              <EventLink a={a} id={c.id}>
+                {briefDate(c.day)}: {namedTitle(m, c)}
+              </EventLink>
+            </Fragment>
+          ))}
+        </p>
       )}
     </li>
   );
+}
+
+/** "Ketil took revenge on Bjorn": an event's title with its people named. */
+export function namedTitle(m: SiteModel, event: SimEvent): string {
+  const data: SimEvent['data'] = { ...event.data };
+  event.actors.forEach((id, k) => {
+    const name = m.names.get(id) ?? m.world.people.get(id)?.name;
+    if (name !== undefined) data[k === 0 ? 'actor' : `actor${k + 1}`] = name;
+  });
+  return eventTitle({ ...event, data }, m.typeDefs.get(event.type));
 }
 
 export function LegendLines({
@@ -880,7 +879,7 @@ function doingText(m: SiteModel, spent: BlockSpent, homeId: Id | null): string {
   }
   const place = placeText(m, spent, homeId);
   // The schedule sends an adult with no job to the fields, where they have nothing set to do.
-  if (spent.activity === 'work') return `Idle ${place}, no work set`;
+  if (spent.activity === 'work') return `Out ${place}, with no trade to follow`;
   return `${verb} ${place}`;
 }
 
@@ -1383,13 +1382,13 @@ function LifePage({
       </div>
       {parts.length > 0 ? (
         <ul className="quiet" style={{ margin: 0, paddingLeft: 18 }}>
-          {(numbers ? parts : parts.slice(0, 4)).map((part) => (
+          {(numbers ? parts : parts.slice(0, 5)).map((part) => (
             <li key={part.key}>
               {part.text}
               {numbers ? ` ${signed(part.value)}` : ''}
             </li>
           ))}
-          {!numbers && parts.length > 4 && <li>and {parts.length - 4} more</li>}
+          {!numbers && parts.length > 5 && <li>and {parts.length - 5} more</li>}
         </ul>
       ) : (
         <p className="quiet">Nothing weighs on the mood.</p>
@@ -1536,11 +1535,26 @@ function FamilyBlock({
 
 /** "spouse", "parent", "child" or "sibling" when `other` is that to `p`. */
 function kinWord(m: SiteModel, p: Person, other: Id): string | null {
-  if (p.family.spouses.includes(other)) return 'spouse';
-  if (p.family.parents.includes(other)) return 'parent';
-  if (p.family.children.includes(other)) return 'child';
-  const theirs = m.world.people.get(other)?.family.parents ?? [];
-  return theirs.some((x) => p.family.parents.includes(x)) ? 'sibling' : null;
+  const them = m.world.people.get(other);
+  const f = them?.sex === 'f';
+  const word = p.family.spouses.includes(other)
+    ? f
+      ? 'wife'
+      : 'husband'
+    : p.family.parents.includes(other)
+      ? f
+        ? 'mother'
+        : 'father'
+      : p.family.children.includes(other)
+        ? f
+          ? 'daughter'
+          : 'son'
+        : (them?.family.parents ?? []).some((x) => p.family.parents.includes(x))
+          ? f
+            ? 'sister'
+            : 'brother'
+          : null;
+  return word && `${p.sex === 'f' ? 'her' : 'his'} ${word}`;
 }
 
 /** Why one person holds another as they do; only what the data records. */
@@ -1557,31 +1571,32 @@ function TieReason({
   other: Id;
   rel: Relationship;
 }) {
+  // The grudge's own day, then the earlier event that soured the pair, each with its own date.
+  const soured = (id: Id, lead: string) => {
+    const event = eventOf(m, id);
+    if (!event) return null;
+    return (
+      <>
+        {lead}
+        <EventLink a={a} id={id}>
+          {briefDate(event.day)}: {namedTitle(m, event)}
+        </EventLink>
+      </>
+    );
+  };
   const eventId = rel.grudge?.eventId;
-  if (rel.grudge && eventId !== undefined) {
+  if (rel.grudge) {
     return (
       <>
-        grudge since {briefDate(rel.grudge.since)} (
-        <EventLink a={a} id={eventId}>
-          {cap(causeTitle(m, eventId))}
-        </EventLink>
-        )
+        grudge since {briefDate(rel.grudge.since)}
+        {eventId !== undefined && soured(eventId, ', soured by ')}
       </>
     );
   }
-  if (rel.cause !== undefined) {
-    return (
-      <>
-        since{' '}
-        <EventLink a={a} id={rel.cause}>
-          {causeTitle(m, rel.cause)}
-        </EventLink>
-      </>
-    );
+  if (rel.cause !== undefined) return soured(rel.cause, 'since ');
+  if (rel.met !== undefined && kinWord(m, p, other) === null) {
+    return <>last spoke {briefDate(rel.met)}</>;
   }
-  const kin = kinWord(m, p, other);
-  if (kin) return <>{kin}</>;
-  if (rel.met !== undefined) return <>last spoke {briefDate(rel.met)}</>;
   return null;
 }
 
@@ -1626,11 +1641,13 @@ function KnownPeople({
           {shown.map(([other, rel]) => {
             const label = tieLabel(rel);
             const word = label ?? (rel.opinion > 0 ? 'thinks well of' : 'dislikes');
+            const kin = kinWord(m, p, other);
             return (
               <li key={other} className="ppl" style={{ padding: '3px 0' }}>
                 <PersonRef m={m} a={a} sel={sel} id={other} />{' '}
                 <span className="rel">
                   {word}
+                  {kin && ` · ${kin}`}
                   {ui.numbers ? ` · opinion ${signed(rel.opinion)}` : ''}
                 </span>
                 <div className="empty reason">
@@ -1704,7 +1721,7 @@ function StorySection({
               ui={ui}
               id={e.id}
               path={`s${id}>${e.id}`}
-              label={shortDay(e.day)}
+              label={shortDay(e.day, m.world.day)}
             />
           ))}
         </ul>
@@ -2127,7 +2144,7 @@ function HouseholdPage({ m, a, sel, ui, h }: PanelProps & { h: Household }) {
                 ui={ui}
                 id={e.id}
                 path={`h${h.id}>${e.id}`}
-                label={shortDay(e.day)}
+                label={shortDay(e.day, m.world.day)}
               />
             ))}
           </ul>
@@ -2585,7 +2602,7 @@ function LoreFacts({ m, a }: { m: SiteModel; a: PanelActions }) {
   );
 }
 
-export function SitePane({ m, a, ui }: Omit<PanelProps, 'sel'>) {
+export function SitePane({ m, a }: Omit<PanelProps, 'ui' | 'sel'>) {
   const { site, active, scene, world, content } = m;
   // M3.11: the newest season or year recap of the days watched.
   const recapTypes = [content.chronicle.recap.seasonType, content.chronicle.recap.yearType];
@@ -2705,7 +2722,7 @@ export function SitePane({ m, a, ui }: Omit<PanelProps, 'sel'>) {
             </button>
           </div>
           <ul className="chron">
-            <RecapCard m={m} a={a} ui={ui} id={lastRecap.id} path={`sr${lastRecap.id}`} />
+            <RecapCard m={m} a={a} id={lastRecap.id} />
           </ul>
         </>
       )}
