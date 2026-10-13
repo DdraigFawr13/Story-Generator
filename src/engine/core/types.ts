@@ -189,6 +189,25 @@ export interface Item {
   deeds: Id[];
 }
 
+/** One history year as the world-map playback draws it. Display only: no rule reads it. */
+export interface PlaybackYear {
+  year: number;
+  /** Display borders, encoded like `DecadeSnapshot.territory`; absent when unchanged since the year before. */
+  territory?: Uint16Array;
+  /** Same rows as `DecadeSnapshot.sites`. */
+  sites: Uint32Array;
+  /** [civId, capital site id] per standing civ. */
+  seats: Uint32Array;
+}
+
+/** The yearly record behind the history playback on the world map. */
+export interface PlaybackLog {
+  /** One entry per year from 0, oldest first. */
+  years: PlaybackYear[];
+  /** Each decade's trades as flat [year, siteA, siteB, value] rows. */
+  trade: Uint32Array;
+}
+
 /** Borders and sites at one decade (M2.5), for the M2.7 year slider. */
 export interface DecadeSnapshot {
   /** History year. */
@@ -559,6 +578,8 @@ export interface WorldState {
   items: Map<Id, Item>;
   /** Decade snapshots of borders and sites (M2.5), oldest first. */
   snapshots: DecadeSnapshot[];
+  /** Yearly borders, sites, capitals and trade for the playback; null until history runs. */
+  playback: PlaybackLog | null;
   events: SimEvent[];
   commands: Command[];
   /** Demo climate state for the scaffold; Phase 1 moves weather to per-cell climate. */

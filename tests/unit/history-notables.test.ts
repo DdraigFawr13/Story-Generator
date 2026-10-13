@@ -176,6 +176,24 @@ describe('notables', () => {
     expect(decodeTerritory(last.territory, size)).toEqual(cells.territory);
   });
 
+  it('keeps a yearly playback log whose borders match the rules at each decade', () => {
+    const world = base();
+    const log = world.playback!;
+    expect(log.years.map((y) => y.year)).toEqual(Array.from({ length: YEARS + 1 }, (_, n) => n));
+    const size = world.cells!.width * world.cells!.height;
+    let shown: Uint16Array | undefined;
+    for (const entry of log.years) {
+      if (entry.territory) shown = decodeTerritory(entry.territory, size);
+      const snap = world.snapshots.find((s) => s.year === entry.year);
+      if (snap) expect(shown).toEqual(decodeTerritory(snap.territory, size));
+      for (let k = 0; k + 1 < entry.seats.length; k += 2) {
+        expect(world.sites.has(entry.seats[k + 1]!)).toBe(true);
+      }
+    }
+    expect(log.trade.length % 4).toBe(0);
+    for (let k = 0; k < log.trade.length; k += 4) expect(log.trade[k]! % 10).toBe(0);
+  });
+
   it('is rejected by content checks when a culture has no dynasty pattern', () => {
     const broken: ContentBundle = {
       ...DEFAULT_CONTENT,

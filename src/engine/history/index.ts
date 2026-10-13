@@ -12,6 +12,7 @@ import { runBeasts } from './beasts';
 import { runClimate } from './climate';
 import { runDiseases } from './disease';
 import { pruneEvents, runYearSummary } from './importance';
+import { createPlaybackRecorder, finishPlayback, recordPlaybackYear } from './playback';
 import { runDemography, runKinds } from './demography';
 import { runGoods } from './goods';
 import { runFamine, runHarvest } from './harvest';
@@ -62,6 +63,9 @@ export function runHistory(
   const run = createRun(world, content, search, linkSearch, links);
   initNotables(run);
   world.snapshots = [takeSnapshot(world, cells, 0)];
+  world.playback = null;
+  const recorder = createPlaybackRecorder();
+  recordPlaybackYear(run, recorder, 0);
 
   for (let year = 1; year <= years; year += 1) {
     run.year = year;
@@ -91,6 +95,7 @@ export function runHistory(
       run.territoryDirty = false;
     }
     if (decade || year === years) world.snapshots.push(takeSnapshot(world, cells, year));
+    recordPlaybackYear(run, recorder, year);
     if (decade) runDiplomacy(run);
     runYearSummary(run);
     if (decade || year === years) {
@@ -98,5 +103,6 @@ export function runHistory(
     }
   }
   world.day = years * DAYS_PER_YEAR;
+  finishPlayback(run);
   pruneEvents(run);
 }

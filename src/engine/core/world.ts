@@ -68,6 +68,7 @@ export function createWorld(seed: string, params: Partial<WorldParams> = {}): Wo
     dynasties: new Map(),
     items: new Map(),
     snapshots: [],
+    playback: null,
     events: [],
     commands: [],
     weather: { current: 'mild', sinceDay: 0, causeEvent: null },
