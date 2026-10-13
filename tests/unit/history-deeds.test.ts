@@ -20,9 +20,10 @@ const FREQUENT = {
 };
 const LEGEND_POWER = 17;
 
+// Compact continents (2026-10-13) moved DH-285's legend_founded (and spell_cast); DH-234 has every deed.
 let shared: WorldState | undefined;
 const world = () =>
-  (shared ??= generateWorld('DH-285', { width: 64, height: 64, historyYears: 250 }, FREQUENT));
+  (shared ??= generateWorld('DH-234', { width: 64, height: 64, historyYears: 250 }, FREQUENT));
 const ofType = (type: string) => world().events.filter((e) => e.type === type);
 const cause = (e: SimEvent, type: string) =>
   e.causes.map((id) => world().events.find((x) => x.id === id)).find((c) => c?.type === type);

@@ -87,7 +87,8 @@ export const SETTLEMENT: SettlementRules = {
     shire: 'Shire of {n}',
     warren: 'Warren of {n}',
   },
-  territoryReach: 150,
+  // Travel cost a realm claims around its towns; 200 lets neighbours on compact continents meet (2026-10-13).
+  territoryReach: 200,
   // Deep wilds (wildness at or above this) take no new sites in history and cost `deepWildClaim`
   // times as much for a border to reach, so some land stays unclaimed however long history runs.
   deepWild: 60,

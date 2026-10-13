@@ -16,7 +16,7 @@ export const DEFAULT_PARAMS: WorldParams = {
   width: 256,
   height: 256,
   historyYears: 250,
-  continents: 4,
+  continents: 3,
   landFraction: 0.25,
   temperatureShift: 0,
   rainfallScale: 1,

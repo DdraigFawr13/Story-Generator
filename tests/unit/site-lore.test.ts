@@ -18,8 +18,9 @@ import {
 const C = DEFAULT_CONTENT;
 const SMALL = { ...C, site: { ...C.site, followCap: 30 } };
 
+// Compact continents (2026-10-13) moved SITE-A's biggest site (the year's lore check found 2 wakings, not 1); SITE-C passes.
 let shared: WorldState | undefined;
-const base = () => (shared ??= generateWorld('SITE-A', { width: 64, height: 64 }, C));
+const base = () => (shared ??= generateWorld('SITE-C', { width: 64, height: 64 }, C));
 const biggest = (world: WorldState): Site =>
   [...world.sites.values()]
     .filter((s) => s.ruinedYear === undefined && sitePopulation(s) > 0)

@@ -16,9 +16,10 @@ const BUSY = {
   },
 };
 
+// Compact continents (2026-10-13) moved CS-16's sworn-ally aid (ally_aided); CS-18 has it.
 let shared: WorldState | undefined;
 const world = () =>
-  (shared ??= generateWorld('CS-16', { width: 64, height: 64, historyYears: 250 }, BUSY));
+  (shared ??= generateWorld('CS-18', { width: 64, height: 64, historyYears: 250 }, BUSY));
 const ofType = (type: string) => world().events.filter((e) => e.type === type);
 const byId = (id: number) => world().events.find((e) => e.id === id);
 const yearOf = (e: SimEvent) => Math.floor(e.day / DAYS_PER_YEAR);
@@ -73,9 +74,10 @@ describe('colleges and spells', () => {
     ...D,
     notables: { ...D.notables, legendChance: 1 },
   };
+  // Compact continents (2026-10-13) moved DH-21's spell casting and college founding; DH-22 has both.
   let magical: WorldState | undefined;
   const w = () =>
-    (magical ??= generateWorld('DH-21', { width: 64, height: 64, historyYears: 250 }, MAGICAL));
+    (magical ??= generateWorld('DH-22', { width: 64, height: 64, historyYears: 250 }, MAGICAL));
 
   it('are worked only by Exceptional casters, against the trouble they name', () => {
     const spells = w().events.filter((e) => e.type === 'spell_cast');

@@ -24,8 +24,9 @@ import {
 
 const C = DEFAULT_CONTENT;
 
+// Compact continents (2026-10-13) moved SITE-A's biggest site (no wedding in a year); SITE-I has weddings and births.
 let shared: WorldState | undefined;
-const base = () => (shared ??= generateWorld('SITE-A', { width: 64, height: 64 }, C));
+const base = () => (shared ??= generateWorld('SITE-I', { width: 64, height: 64 }, C));
 const biggest = (world: WorldState): Site =>
   [...world.sites.values()]
     .filter((s) => s.ruinedYear === undefined && sitePopulation(s) > 0)
