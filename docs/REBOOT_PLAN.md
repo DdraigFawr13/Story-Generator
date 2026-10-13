@@ -59,6 +59,7 @@ These are the user's own words and what they mean for your work.
 5. Prefer **simple numbers you can tune** over elaborate formulas. Put them in content or config with a comment.
 6. If two options are equal, pick the cheaper one and note the alternative in the phase spec.
 7. If an option would change what the user sees or experiences in a major way, it is a **design fork**: ask.
+8. **Fame comes from deeds, not from power** (added 2026-10-13). Rising to a tier is a start, not a biography. A figure with power should be the first pick when the engine needs someone to lead a hunt, a battle, a founding or a raid, and the event names them. A legend whose deeds are birth, marriage and death is a bug in the plan.
 
 ### 1C. Glossary
 - **World tier / site tier:** the coarse whole-world simulation versus the detailed simulation of the watched place (section 7.4).
@@ -172,6 +173,10 @@ These are **examples of the kind of stories the systems should be able to produc
    - The farmhand drags a scaled hide and a strange ring out. The ring awakens a faint gift for fire in her, once, and she is noticed.
    - The hedge-witch teaches her two cantrips. Her grandson is a court mage.
    - Her neighbours envy the ring. One night it is stolen, and the thief's family carries the grudge.
+9. **The champion of Coedwenallt (world, Phases 4–7; added 2026-10-13):**
+   - A council mage rises to legend. The next war names her in every battle; one day of her power breaks a raiding host, and she is spent for a season.
+   - She leads the hunt that kills the afanc of the mere and takes its hoard, then raises a tower on the shore.
+   - She dies old. Her apprentice carries her books into an order that keeps them for a century, until a fire.
 
 **Bad outcomes to avoid:**
 - Everyone dies in year one on most seeds.
@@ -719,7 +724,7 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 - **M4.7 Perilous places, hoards and expeditions** (about 1,200 lines; added 2026-10-12):
   - `content/places.ts` defines ruin, barrow, lair, old mine and aura place, each with danger, hoard and lore odds; the ruins and lairs that already exist become places with no new data.
   - Hoards: great beasts and dragons gather items lost near their lair and what their raids carry off; slaying one releases the hoard to the slayers. Rulers are buried with one item by culture custom, which seeds barrows.
-  - A yearly expedition step: bounties from sites with a grievance against a beast or a ruin nearby; a notable leads a party drawn from the site's counts; outcomes roll against danger and party strength under R-24: death, loot, lore (a book) or fame, each a chronicled event with cause links. A commoner who returns with something becomes a notable.
+  - A yearly expedition step: bounties from sites with a grievance against a beast or a ruin nearby; the strongest willing figure of the civ leads a party drawn from the site's counts (legend, then exceptional mage, then hero, then captain; added 2026-10-13), so a legend can face a great beast or the dragon and claim its hoard, or die in the lair; outcomes roll against danger and party strength under R-24: death, loot, lore (a book) or fame, each a chronicled event with cause links. A commoner who returns with something becomes a notable.
   - Beast parts (scales, hide, bone, horn) from a slain creature become luxury goods or a crafted item.
   - A map layer and a Places page in the legends browser with each place's history.
   - Site hooks: a passing expedition recruits a resident (M4.2 visiting notables), who returns changed or not at all.
@@ -728,16 +733,17 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 
 ### Phase 5 — Magic depth (4–6 PRs)
 - **M5.1 Schools and affinities:** full spell content per school, with stronger spells gated by Power and Affinity, all inside the R-24 caps. The school fork also decides whether to grow the flat list of six (for example shadow and making) and whether a primary affinity can shift with training.
-- **M5.2 Learning lineages:** apprenticeship relationships, teacher lineages, spellbooks as valuable or stealable lore, knowledge lost when teachers die or books burn.
-- **M5.3 Magic in life:** healing, crops/weather-reading, crafting, defence and war. Ordinary mages are valuable specialists, not decisive alone. Only the rare legend can swing a battle, and only within the field-army ceiling. Enchanting: Strong-tier mages and master smiths make effect items from beast parts and rare ore, so knowledge loss (R-28) applies to items as well as spells.
+- **M5.2 Learning lineages:** apprenticeship relationships, teacher lineages, spellbooks as valuable or stealable lore, knowledge lost when teachers die or books burn. A legend takes an apprentice from the civ's Strong-or-better mages; lineages start from legends, and the apprentice carries the books when the legend dies (target story 7; added 2026-10-13).
+- **M5.3 Magic in life:** healing, crops/weather-reading, crafting, defence and war. Ordinary mages are valuable specialists, not decisive alone. Only the rare legend can swing a battle, and only within the field-army ceiling. Enchanting: Strong-tier mages and master smiths make effect items from beast parts and rare ore, so knowledge loss (R-28) applies to items as well as spells. A legend makes or awakens one great item in their lifetime, or raises a **great work** (content: a tower, a wall, a bridge, a warded grove) that becomes a site feature with a map glyph and a chronicle line (added 2026-10-13).
 - **M5.4 Environment:** awakening near high-aura places, legendary-place effects, race dependencies with real consequences. Magical beasts proper: great and legendary lairs prefer high aura, each such creature carries one ability from the `AbilityDef` shape inside its tier caps (a wyvern's fire, an afanc's flood, a water horse's lure), and a blighted variant appears at extreme aura.
-- **M5.5 World tier:** notable mages and bloodlines influence history within the caps.
+- **M5.5 World tier: legends act** (expanded 2026-10-13 from "notable mages and bloodlines influence history within the caps"). A legend is their civ's **champion**: battles name them, one day of their power breaks about 1,000 soldiers and leaves them spent for a season, victory raises their fame, and a bigger host or a second legend can kill them (R-24). A non-ruler legend may lead a founding (a hall or a town, target story 5) with the `founder` title. Vengeance made visible: a notable with a sworn oath leads one raid on the killer's site. Two living legends in neighbouring civs may feud or duel (`legend_duel`). Fame by deeds: `legend_risen` gives a start, and victories, slayings and foundings add the rest. Done when every legend in most seeds has a deed beyond birth, marriage and death.
 - **M5.6 Dragons and great beasts as individuals** (about 600 lines; added 2026-10-12): a name, age, temper and hoard; settlement suppressed for some cells around the lair; a death event ranked with a legend's; the restless dead as a creature entry that a robbed barrow may wake. Dragons stay at most one per world and at danger 700 (R-24).
 - **Forks:**
   - school names and flavour, and whether to extend the flat list of six;
   - whether casting has a price (default mild fatigue).
 - **Done when:**
   - in some seeds a rare mage or a lost book changes events;
+  - every legend in most seeds has a deed beyond birth, marriage and death (M5.5);
   - most people stay non-magical;
   - no race dominates;
   - the scale-ceiling check passes.
@@ -746,14 +752,14 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 - Governments (chiefdom, monarchy, council, theocracy), nobles and titles, legitimacy, factions and succession disputes.
 - Diplomacy, alliances, vassalage, marriages between houses, betrayals.
 - Armies, battles and sieges; occupations and rebellions.
-- **Legends in politics:** kingdoms court, fear, bribe or try to assassinate the 0–3 living legends. A legend can be a ruler, an ally or a deterrent, but a coalition or a larger host can still bring one down. Their deaths are world-shaking events. The same applies to the dragon (M5.6): kingdoms court it, fear it or put a bounty on it.
+- **Legends in politics:** kingdoms court, fear, bribe or try to assassinate the 0–3 living legends. A legend can be a ruler, an ally or a deterrent, but a coalition or a larger host can still bring one down. A legend may seize a seat (a succession dispute won by power, not fame), betray their ruler, or draw a bounty and a coalition against the civ that shelters them (target story 7; added 2026-10-13). Their deaths are world-shaking events. The same applies to the dragon (M5.6): kingdoms court it, fear it or put a bounty on it.
 - Deep trade, roads and inequality.
 - Switching the watched site, plus 2–3 detailed sites at once if performance allows.
 - A 512×512 world option.
 - **Done when:** over a long run, borders shift, kingdoms rise, split or fall, and the site's fate is tied to them.
 
 ### Phase 7 — Institutions and magical society (5–8 PRs)
-- Guilds, temples, orders and academies as content.
+- Guilds, temples, orders and academies as content. A legend may found an order or academy that outlives them and keeps or loses their lore (added 2026-10-13).
 - Recruiting the gifted, training, hoarding or sharing lore, institutional politics.
 - Society's attitude to magic (revered, regulated or persecuted) from culture values.
 - Religion deepening.
