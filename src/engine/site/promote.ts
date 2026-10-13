@@ -405,6 +405,7 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
         moodParts: [],
         lastAte: world.day,
         lastMet: Object.fromEntries(Object.keys(needs).map((id) => [id, world.day])),
+        conditions: [],
       };
     });
   }
@@ -466,6 +467,7 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
     origin: layout.origin,
     block: 0,
     storesEmptyEvent: null,
+    dead: [],
     layoutVersion: 0,
     itemsAtEntry,
     stewardFocus: null,

@@ -225,6 +225,154 @@ export interface ContentBundle {
   steward: StewardRules;
   /** Weather, crops, stores, firewood, fire and wild land at the watched site (M3.4). */
   environment: EnvironmentRules;
+  /** Health and death with a cause (M3.5): conditions, ailments and the rules that run them. */
+  health: HealthRules;
+  conditions: ConditionDef[];
+  ailments: AilmentDef[];
+}
+
+/** What a condition is, for its harm and the words of its chronicle lines (M3.5). */
+export interface ConditionDef {
+  id: string;
+  name: string;
+  kind: 'need' | 'wound' | 'disease' | 'chronic' | 'age' | 'birth';
+  /** Health lost per point of severity. */
+  harm: number;
+  /** What a person who dies of it died of. */
+  deathCause: DeathCause;
+  /** The sufferer stays home while severity is above this (disease: `HealthRules.abedSeverity`). */
+  abed?: boolean;
+  /** `onset`: said when it begins ("the chill"); `death`: "died of {death}". */
+  words: { onset: string; death: string };
+  /** Hunger, thirst, cold and weariness: grows while a need has sat at zero, eases once it is met. */
+  need?: {
+    need: string;
+    /** Days in a row the need must sit at zero before it begins. */
+    days: number;
+    gain: number;
+    ease: number;
+    /** Severity it cannot grow past. */
+    cap?: number;
+    /** Gain multipliers by age band. */
+    vulnerable?: Partial<Record<'child' | 'adult' | 'elder', number>>;
+    /** Which open event to name as the cause. */
+    cause?: 'stores' | 'well' | 'cold';
+  };
+  /** A wound's course. */
+  wound?: {
+    start: number;
+    /** Severity healed per day. */
+    heal: number;
+    /** Share of accidents of this tier, in percent. */
+    share: number;
+    /** Chance of festering over the first week: untended, tended. */
+    fester: [untended: number, tended: number];
+    /** Chance of lasting harm on recovery. */
+    lasting?: number;
+    /** Silent in the chronicle (minor wounds). */
+    silent?: boolean;
+  };
+  /** A chronic illness: starting severity range and yearly growth range. */
+  chronic?: { start: [number, number]; growth: [number, number] };
+  /** Childbirth: chance of death untended and tended. */
+  birth?: { untended: number; tended: number; start: number; heal: number };
+}
+
+/** A contagious illness peculiar to the site's daily life (M3.5). */
+export interface AilmentDef {
+  id: string;
+  name: string;
+  conditionId: string;
+  /** Days before symptoms, days sick (range) and the peak severity (range) before age risk. */
+  incubation: number;
+  duration: [number, number];
+  peak: [number, number];
+  /** Chance per sick contact per day. */
+  infectivity: number;
+  /** Only the household passes it on. */
+  householdOnly?: boolean;
+  ageRisk: { child: number; adult: number; elder: number };
+  /** Days of immunity after recovering. */
+  immuneDays: number;
+  /** Daily chance per person from each source. */
+  sources: {
+    /** Having this condition (def id). */
+    condition?: Record<string, number>;
+    /** Sleeping in a home with no firewood. */
+    coldHome?: number;
+    /** While the well is low. */
+    wellLow?: number;
+  };
+  /** Months (inclusive range) in which sources are multiplied. */
+  season?: { months: [number, number]; mul: number };
+}
+
+/** Health rules (M3.5). Tunables live in content/health.ts. */
+export interface HealthRules {
+  /** Below this health a person stays home. */
+  abedBelow: number;
+  /** A sick person stays home while their illness is above this severity. */
+  abedSeverity: number;
+  /** A condition with harm and at least this severity counts as a sufferer for the steward. */
+  sufferAt: number;
+  patientsPerHealer: number;
+  /** Herbs used per patient tended, and how good tending is without them. */
+  herbsPerPatient: number;
+  noHerbsPower: number;
+  /** Condition kinds a healer can tend. */
+  tendable: ConditionDef['kind'][];
+  /** Wound healing is multiplied by this when tended (times the tending power). */
+  tendedHeal: number;
+  /** A disease tended before its peak peaks at this share. */
+  tendedPeak: number;
+  /** Chronic growth multiplier when tended. */
+  tendedChronic: number;
+  /** Weariness multiplies accident and catch chances. */
+  exhaustedMul: number;
+  exhaustedCondition: string;
+  /** Skill (0-100) lowers a worker's accident chance by skill / this. */
+  skillDivisor: number;
+  /** Chance per fire-fighting block that a fighter is hurt. */
+  fireRisk: number;
+  /** Festering: days it can start in, severity it begins with, growth a day, days it grows, relief a day after. */
+  festering: {
+    condition: string;
+    days: number;
+    start: number;
+    grow: number;
+    growDays: number;
+    ease: number;
+  };
+  /** The condition and daily growth of age. */
+  frailty: { condition: string; severityAtElder: number };
+  /** The scale of Phase 2 diseases (history `DiseaseDef`) at the site. */
+  disease: {
+    condition: string;
+    /** Multiplies `infectivity / duration` into a per-contact-day chance. */
+    infectivityScale: number;
+    /** `severity` (share of people who die) times this is the peak severity, capped. */
+    severityScale: number;
+    severityCap: number;
+  };
+  /** Chronic illnesses: ages and yearly chances. */
+  chronic: { fromAge: number; adult: number; elder: number; conditions: string[] };
+  /** The permanent mark a critical wound can leave. */
+  oldWound: { condition: string; attributes: string[]; amount: number };
+  /** Days between ailment cases that each make the chronicle. */
+  caseGapDays: number;
+  /** People sick with the same illness that make an outbreak. */
+  outbreakAt: number;
+  /** Accidents: severity tiers in order, as condition ids. */
+  woundTiers: string[];
+  /** Memory a household and kin keep of a death. */
+  griefMemory: string;
+  events: {
+    wounded: string;
+    fellIll: string;
+    outbreak: string;
+    lastingHarm: string;
+    died: string;
+  };
 }
 
 /** The four blocks of a site day (M3.2), in the order they run. */
@@ -483,6 +631,8 @@ export interface JobDef {
   perWorkplace?: number;
   /** Trait ids whose bearers prefer it. */
   likedBy?: string[];
+  /** M3.5: chance per block worked that the worker is hurt (before skill and tiredness). */
+  risk?: number;
 }
 
 /** How the steward sizes and fills the day's jobs, and how work teaches (M3.3). */

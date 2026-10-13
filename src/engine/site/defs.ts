@@ -28,6 +28,10 @@ export type SiteContent = Pick<
   | 'jobs'
   | 'steward'
   | 'environment'
+  | 'health'
+  | 'diseases'
+  | 'conditions'
+  | 'ailments'
 >;
 
 /** A person's age band: children play, adults work, elders work lightly. */

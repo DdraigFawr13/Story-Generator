@@ -70,6 +70,44 @@ export interface PersonDetail {
   with?: Id | undefined;
   /** A running breakdown: despair and wandering last days, tantrum and theft one block. */
   breakdown?: { kind: BreakdownKind; untilDay: number; eventId: Id } | undefined;
+  /** M3.5: wounds, illnesses and the like, newest last. */
+  conditions: Condition[];
+  /** Stays home: too ill or hurt to work (health below `abedBelow`, or a symptomatic disease). */
+  abed?: boolean | undefined;
+  /** Ailment or disease id → day their immunity ends. */
+  immune?: Record<string, number>;
+  /** Need id → days in a row the need has sat at zero (what starts hunger, thirst, cold). */
+  lows?: Record<string, number>;
+}
+
+/** One thing wrong with a person (M3.5). Health is 100 minus severity times the def's harm, summed. */
+export interface Condition {
+  defId: string;
+  /** 0-100. */
+  severity: number;
+  sinceDay: number;
+  /** The event behind it, for cause links. */
+  cause?: Id;
+  /** Its own onset event, if it had one. */
+  eventId?: Id;
+  /** The ailment or disease id a disease condition belongs to. */
+  ailment?: string;
+  stage?: 'incubating' | 'sick';
+  /** A disease: symptoms begin on this day, and it ends on `untilDay`. */
+  onsetDay?: number;
+  untilDay?: number;
+  /** A disease was tended before its peak, which is cut once. */
+  cutPeak?: boolean;
+  /** Looked after by a healer today. */
+  tended?: boolean;
+  /** How well: 1 with herbs, less without. */
+  tendPower?: number;
+  /** Disease: severity at the peak. Wound: the severity it began with. */
+  peak?: number;
+  /** Severity change per day (chronic and festering conditions). */
+  rate?: number;
+  /** An old wound's permanent cost. */
+  lasting?: { attribute: string; amount: number };
 }
 
 /** One term of a person's mood: a low need, a memory or a trait. */
@@ -108,6 +146,9 @@ export interface Person {
   birthplaceCell: number | null;
   /** History year of death. */
   died?: number;
+  /** M3.5: the day (`world.day`) and event of a death at the watched site. */
+  diedDay?: number;
+  deathEvent?: Id;
   family: Family;
   attributes: Attributes;
   potential: Attributes;
@@ -159,6 +200,12 @@ export const DEATH_CAUSES = [
   'raid',
   'razing',
   'murder',
+  // M3.5: deaths at the watched site.
+  'exposure',
+  'thirst',
+  'wound',
+  'illness',
+  'childbirth',
 ] as const;
 export type DeathCause = (typeof DEATH_CAUSES)[number];
 
@@ -502,6 +549,25 @@ export interface Household {
   lodgingHome?: Id | undefined;
 }
 
+/** Running state of the health system at the site (M3.5). */
+export interface SiteHealth {
+  /** Ailment or disease id → day of the last case that made the chronicle. */
+  lastCase: Record<string, number>;
+  /** Ailment or disease id → an outbreak is open. */
+  outbreak: Record<string, boolean>;
+  stats: {
+    healerDays: number;
+    herbsUsed: number;
+    /** Most people abed on one day. */
+    abedPeak: number;
+    /** Wounds by tier id, cases by ailment or disease id, deaths by cause, lasting harms. */
+    wounds: Record<string, number>;
+    cases: Record<string, number>;
+    deaths: Record<string, number>;
+    lasting: number;
+  };
+}
+
 /** Where a field's crop stands in the year (M3.4). */
 export type CropStage = 'bare' | 'sown' | 'growing' | 'ripe' | 'cut' | 'ruined';
 
@@ -701,6 +767,10 @@ export interface ActiveSite {
   residents: Id[];
   /** Residents created at promotion (removed again on demotion). */
   promoted: Id[];
+  /** M3.5: people who died here, in order; they are no longer in `residents`. */
+  dead: Id[];
+  /** M3.5: running counts for the health summary and the daily pass. */
+  health?: SiteHealth;
   households: Map<Id, Household>;
   buildings: Map<Id, Building>;
   /** Item id → count (M3.3); food is counted in meals. */

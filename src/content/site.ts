@@ -68,7 +68,7 @@ export const SITE: SiteRules = {
   travelCostPerDay: 20,
   // Event types that pause play; later milestones fill the empty categories.
   autoPause: {
-    deaths: [],
+    deaths: ['site_died'],
     breakdowns: ['site_tantrum', 'site_despair', 'site_wandered', 'site_theft', 'site_item_stolen'],
     fires: ['site_fire', 'site_wildfire'],
     raids: [],

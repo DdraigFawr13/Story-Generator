@@ -16,3 +16,4 @@ export * from './crops';
 export * from './fire';
 export * from './wild';
 export * from './environment';
+export * from './health';
