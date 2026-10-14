@@ -17,10 +17,10 @@ const BUSY = {
 };
 
 // Compact continents (2026-10-13) moved CS-16's sworn-ally aid (ally_aided) to CS-18; roaming beasts
-// (2026-10-13) moved it again; CS-20 has it.
+// (2026-10-13) moved it again; CS-20 had it until religion (faiths and holy wars) moved it; CS-21 has it.
 let shared: WorldState | undefined;
 const world = () =>
-  (shared ??= generateWorld('CS-20', { width: 64, height: 64, historyYears: 250 }, BUSY));
+  (shared ??= generateWorld('CS-21', { width: 64, height: 64, historyYears: 250 }, BUSY));
 const ofType = (type: string) => world().events.filter((e) => e.type === type);
 const byId = (id: number) => world().events.find((e) => e.id === id);
 const yearOf = (e: SimEvent) => Math.floor(e.day / DAYS_PER_YEAR);
@@ -113,14 +113,14 @@ describe('colleges and spells', () => {
 describe('succession wars', () => {
   const D = DEFAULT_CONTENT;
   const cw = D.history.civilWar;
-  // Every beaten claimant rises; re-pinned for M5.6 dragons: history drift; CW-43 had a throne seized, a revolt crushed and a split until expeditions (M4.7, history drift: no civil war at all); re-pinned: CW-2 has all three (CW-13 lost its ending).
+  // Every beaten claimant rises; re-pinned for M5.6 dragons: history drift; CW-43 had a throne seized, a revolt crushed and a split until expeditions (M4.7, history drift: no civil war at all); re-pinned: CW-2 has all three (CW-13 lost its ending); CW-2 lost its endings to religion (faiths and holy wars), CW-24 has all three.
   const RESTLESS = {
     ...D,
     history: { ...D.history, civilWar: { ...cw, chance: 1, minSites: 2 } },
   };
   let restless: WorldState | undefined;
   const w = () =>
-    (restless ??= generateWorld('CW-2', { width: 64, height: 64, historyYears: 250 }, RESTLESS));
+    (restless ??= generateWorld('CW-24', { width: 64, height: 64, historyYears: 250 }, RESTLESS));
   const of = (type: string) => w().events.filter((e) => e.type === type);
   const find = (id: number) => w().events.find((e) => e.id === id);
   const named = (name: unknown) => [...w().civs.values()].find((c) => c.name === name);

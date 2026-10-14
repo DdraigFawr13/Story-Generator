@@ -11,13 +11,13 @@ Detail for every phase lives in [REBOOT_PLAN.md §9](REBOOT_PLAN.md#9-phases); o
 | 4 | Living world | 8–11 PRs | Site life fixes (M4.0), monthly world during play, world↔site links, medium politics/trade, trade between peoples, deeper life, perilous places and expeditions (M4.7), named battles (M4.8), annals of each people (M4.9), dwarven holds (M4.10) | M4.0 site life fixes, M4.8 named battles, M4.9 annals, M4.10 dwarven holds and M4.7's history part (expeditions and perilous places) built (2026-10-14); M4.7's map layer and Places page next |
 | 5 | Magic depth | 5–7 PRs | Schools, lineages, books, magic in life and war, enchanting, magical beasts, race dependencies, legends' deeds (M5.5), dragons as individuals (M5.6) | M5.5 legends as champions and M5.6 dragons as individuals built (pulled ahead, 2026-10-14) |
 | 6 | Kingdoms | 6–8 PRs | Governments, succession wars and dynasties, diplomacy, court intrigue, armies, deep trade, multiple sites, bigger worlds | Succession wars and dynasties built (pulled ahead, 2026-10-14) |
-| 7 | Institutions | 5–8 PRs | Guilds, temples, orders, gods and holy wars, attitudes to magic | |
+| 7 | Institutions | 5–8 PRs | Guilds, temples, orders, gods and holy wars, attitudes to magic | Religion (faiths, high priests, prophets, schisms, holy wars) built (pulled ahead, 2026-10-14); its screens come with the UI redesign |
 | 8 | Hybrid modes | 5–8 PRs | Steward mode, follow-a-character mode | |
 | 9+ | Expansion | ongoing | Art, sliders, races, z-levels, narrator | |
 
 ## Build order after Phase 3
 
-Since 2026-10-14 work follows Morgan's ranked list rather than phase order: legends as champions (M5.5, built), site life fixes (built), named battles, annals of each people, dwarven holds, succession wars and dynasties (built), dragons (M5.6, built), religion, spellbooks and lineages, court intrigue, story threads, expeditions (history part built), diplomacy, trade between peoples, then the world moving during play. The full list with value and effort is in [REBOOT_PLAN §9](REBOOT_PLAN.md#build-order-after-phase-3-morgans-ranked-list-2026-10-14).
+Since 2026-10-14 work follows Morgan's ranked list rather than phase order: legends as champions (M5.5, built), site life fixes (built), named battles, annals of each people, dwarven holds, succession wars and dynasties (built), dragons (M5.6, built), religion (built), spellbooks and lineages, court intrigue, story threads, expeditions (history part built), diplomacy, trade between peoples, then the world moving during play. The full list with value and effort is in [REBOOT_PLAN §9](REBOOT_PLAN.md#build-order-after-phase-3-morgans-ranked-list-2026-10-14).
 
 ## Deferred decisions (asked when the phase arrives)
 

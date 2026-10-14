@@ -17,6 +17,7 @@ import { runDiseases } from './disease';
 import { pruneEvents, runYearSummary } from './importance';
 import { createPlaybackRecorder, finishPlayback, recordPlaybackYear } from './playback';
 import { runDemography, runKinds } from './demography';
+import { initFaiths, runFaith } from './faith';
 import { runGoods } from './goods';
 import { runFamine, runHarvest } from './harvest';
 import { buildLinks, createLinkSearch } from './links';
@@ -71,6 +72,7 @@ export function runHistory(
   const links = buildLinks(cells, [...world.sites.values()], content.history, linkSearch);
   const run = createRun(world, content, search, linkSearch, links);
   initNotables(run);
+  initFaiths(run);
   initPlaces(run);
   world.snapshots = [takeSnapshot(world, cells, 0)];
   world.playback = null;
@@ -97,6 +99,7 @@ export function runHistory(
     runCivilWars(run);
     runColleges(run);
     runCityStates(run);
+    runFaith(run);
     if (year % DECADE === 0) runItems(run);
     runKinds(run);
     runAbandonment(run);

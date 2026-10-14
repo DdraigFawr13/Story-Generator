@@ -9,7 +9,9 @@ import {
   type WorldCells,
 } from '../../src/engine';
 
-const SMALL = { width: 96, height: 96 };
+// Terrain only: no history years, which these tests never read (a 250-year history per world
+// pushed the three-world test past the 5 s limit once religion added wars).
+const SMALL = { width: 96, height: 96, historyYears: 0 };
 
 function landShare(cells: WorldCells): number {
   let land = 0;

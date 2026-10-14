@@ -16,6 +16,8 @@ export const BIOGRAPHIES: BiographyRules = {
     crafter: 'craftsman',
     scholar: 'scholar',
     mage: 'mage',
+    priest: 'high priest',
+    prophet: 'prophet',
   },
   causes: {
     'old-age': 'of old age',

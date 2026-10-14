@@ -24,7 +24,7 @@ const generate = (seed: string, years = YEARS, content: ContentBundle = DEFAULT_
 let shared: WorldState | undefined;
 const base = () => (shared ??= generate('NOT-A'));
 /** Seed whose default world has a razing death; its quarrelsome variant settles a dispute. */
-const RAZED_SEED = 'NOT-B';
+const RAZED_SEED = 'NOT-1'; // NOT-B had a razing death and a settled dispute until religion (faiths and holy wars) moved both; NOT-1 has both.
 
 const yearOf = (event: SimEvent) => Math.floor(event.day / DAYS_PER_YEAR);
 

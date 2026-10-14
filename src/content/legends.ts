@@ -21,6 +21,10 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'legend_duel',
       'vengeance_raid',
       'ally_aided',
+      'holy_war_proclaimed',
+      'holy_war_preached',
+      'temple_desecrated',
+      'holy_city_taken',
     ],
   },
   {
@@ -46,6 +50,20 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'spell_cast',
       'mage_went_to_study',
       'mage_came_home',
+    ],
+  },
+  {
+    id: 'faith',
+    label: 'Faith',
+    types: [
+      'high_priest_named',
+      'heresy_denounced',
+      'site_converted',
+      'ruler_converted',
+      'prophet_rose',
+      'faith_schism',
+      'faith_spread',
+      'faith_forgotten',
     ],
   },
   {

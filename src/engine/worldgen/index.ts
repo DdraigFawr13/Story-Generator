@@ -35,6 +35,7 @@ export type WorldgenContent = Pick<
   | 'creatures'
   | 'dragons'
   | 'places'
+  | 'faiths'
   | 'diseases'
   | 'notables'
   | 'threats'

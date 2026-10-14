@@ -8,6 +8,7 @@ import { cultures } from './cultures';
 import { diseases } from './diseases';
 import { dragons } from './dragons';
 import { places } from './places';
+import { FAITHS, FAITH_EVENTS } from './faiths';
 import { AILMENTS, CONDITIONS, HEALTH, HEALTH_EVENTS, HEALTH_MEMORIES } from './health';
 import { FAMILY, FAMILY_EVENTS, FAMILY_MEMORIES } from './family';
 import { HISTORY } from './history';
@@ -57,6 +58,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
     ...LORE_EVENTS,
     ...POLITICS_EVENTS,
     ...CHRONICLE_EVENTS,
+    ...FAITH_EVENTS,
   ],
   typeGroups: TYPE_GROUPS,
   rules,
@@ -65,6 +67,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   creatures,
   dragons,
   places,
+  faiths: FAITHS,
   diseases,
   notables: NOTABLES,
   biographies: BIOGRAPHIES,
@@ -112,6 +115,7 @@ export * from './cultures';
 export * from './diseases';
 export * from './dragons';
 export * from './places';
+export * from './faiths';
 export * from './health';
 export * from './family';
 export * from './history';
