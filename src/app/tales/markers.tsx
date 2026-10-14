@@ -99,10 +99,20 @@ interface MarksProps {
   height: number;
   followId: number | null;
   recent: readonly Recent[];
+  /** Tags at once (3 by default; phones show 1). */
+  maxTags?: number;
 }
 
 /** Beasts, figures, armies and tags; re-renders when the clock moves by a fiftieth of a year. */
-export function Marks({ model, clock, width, height, followId, recent }: MarksProps) {
+export function Marks({
+  model,
+  clock,
+  width,
+  height,
+  followId,
+  recent,
+  maxTags = MAX_TAGS,
+}: MarksProps) {
   const [t, setT] = useState(clock.current.t);
   useEffect(() => {
     let raf = 0;
@@ -125,7 +135,7 @@ export function Marks({ model, clock, width, height, followId, recent }: MarksPr
     top: `${((p.y + 0.5) / height) * 100}%`,
   });
 
-  let budget = MAX_TAGS;
+  let budget = maxTags;
   const take = (want = true): boolean => {
     if (!want || budget <= 0) return false;
     budget -= 1;

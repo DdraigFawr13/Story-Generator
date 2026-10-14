@@ -158,6 +158,11 @@
   gap: 8px;
   font-size: 15px;
 }
+.tr-root .tr-chooser .name small {
+  font-size: 12px;
+  color: var(--soft);
+  font-variant-numeric: tabular-nums;
+}
 .tr-root .tr-chooser input {
   margin: 0;
   cursor: pointer;
@@ -755,6 +760,11 @@
   transform: translate(-50%, -50%);
   box-shadow: 0 0 0 1.5px #fbf8f1;
 }
+/* Battles are many: smaller dots. */
+.tr-root .tr-line > i[data-kind='battle'] {
+  width: 6px;
+  height: 6px;
+}
 .tr-root .tr-thumb {
   position: absolute;
   top: 12px;
@@ -968,13 +978,26 @@
     border-radius: 18px 18px 0 0;
     padding: 18px 20px 18px;
   }
+  /* The present-day card stays inside the stage, above the chip and the "?" button, so the
+     ribbon's controls below stay in reach. */
   .tr-root .tr-ask.end {
+    position: absolute;
     left: 12px;
     right: 12px;
-    bottom: 12px;
+    bottom: 52px;
     top: auto;
     transform: none;
     border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .tr-root .tr-ask.end .acts {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  .tr-root .tr-ask.end button {
+    padding: 7px 9px;
+    font-size: 12.5px;
+    white-space: nowrap;
   }
   .tr-root .tr-ask h2 {
     font-size: 23px;
@@ -1027,6 +1050,11 @@
   opacity: 0;
 }
 
+.tr-root .tr-chooser .name small {
+  font-size: 12px;
+  color: var(--soft);
+  font-variant-numeric: tabular-nums;
+}
 .tr-root .tr-chooser input {
   accent-color: #2d2a25;
 }

@@ -21,9 +21,9 @@ export const PAUSE_KINDS: readonly PauseKindInfo[] = [
   { id: 'legend', label: 'legends', colour: '#c99a18', on: true, shown: true },
   { id: 'war', label: 'wars', colour: '#a0442c', on: true, shown: true },
   { id: 'realm', label: 'new realms', colour: '#6d675c', on: true, shown: true },
-  { id: 'battle', label: 'battles', colour: '#6b2d22', on: false, shown: false },
+  { id: 'battle', label: 'battles', colour: '#d9826b', on: false, shown: false },
   { id: 'ruler', label: 'new rulers', colour: '#7a58a8', on: false, shown: false },
-  { id: 'town', label: 'towns taken', colour: '#8a5a3c', on: false, shown: true },
+  { id: 'town', label: 'towns taken', colour: '#2e8b8b', on: false, shown: false },
   { id: 'hardship', label: 'famine and plague', colour: '#8f8a3a', on: false, shown: false },
   { id: 'treasure', label: 'treasure', colour: '#2f8a5c', on: false, shown: false },
   { id: 'faith', label: 'faith', colour: '#3e7ca6', on: false, shown: false },
@@ -36,14 +36,14 @@ export const DEFAULT_SHOWN: ReadonlySet<PauseKind> = new Set(
   PAUSE_KINDS.filter((k) => k.shown).map((k) => k.id),
 );
 
-/** Event types by kind, with the least importance that counts. */
-const KIND_OF: Record<string, { kind: PauseKind; min?: number }> = {
+/** Event types by kind, with the least importance that counts; `show` types never pause. */
+const KIND_OF: Record<string, { kind: PauseKind; min?: number; show?: true }> = {
   legend_risen: { kind: 'legend' },
   beast_slain: { kind: 'legend', min: 9 },
   legend_duel: { kind: 'legend', min: 6 },
   war_declared: { kind: 'war' },
   civil_war_began: { kind: 'war' },
-  peace_made: { kind: 'war' },
+  peace_made: { kind: 'war', show: true },
   civ_founded: { kind: 'realm' },
   realm_split: { kind: 'realm' },
   civ_fell: { kind: 'realm' },
@@ -133,7 +133,7 @@ export function shouldPause(
     return event.actors.includes(follow) && event.importance >= FOLLOW_MIN_IMPORTANCE;
   }
   const kind = pauseKindOf(event.type, event.importance);
-  return kind !== null && kinds.has(kind);
+  return kind !== null && kinds.has(kind) && !KIND_OF[event.type]?.show;
 }
 
 /** The most important event of a list that stops the playback, or null (the first wins ties). */

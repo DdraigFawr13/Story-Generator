@@ -29,7 +29,7 @@ import {
 } from './colours';
 import { settleLabels } from './labels';
 import { PHONE_MAX, cardSide, fitMap, nearestCell } from './layout';
-import { Capitals, Marks, type Clock, type Recent } from './markers';
+import { Capitals, MAX_TAGS, Marks, type Clock, type Recent } from './markers';
 import { buildModel } from './model';
 import {
   DEFAULT_PAUSES,
@@ -92,12 +92,28 @@ const TAG_SPEED = 8;
 /** Events that draw a short tag as they play, at this importance or more. */
 const TAG_MIN_IMPORTANCE = 6;
 /** Rows of realms, peoples or faiths the map key lists before "and N more". */
-const KEY_ROWS = 6;
+const KEY_ROWS = 4;
 /** A biome joins the Land key when it covers this share of the land. */
 const KEY_BIOME_SHARE = 0.03;
 
 /** Worlds whose history has played to the present once: later plays pause to ask. */
 const playedThrough = new WeakSet<WorldState>();
+/** The event filter outlives a visit to another room and a reload (per browser tab). */
+const FILTER_KEY = 'tales-events';
+
+function readFilter(): { shown: Set<PauseKind>; paused: Set<PauseKind> } | null {
+  try {
+    const raw = window.sessionStorage.getItem(FILTER_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as { shown?: unknown; paused?: unknown };
+    const ids = new Set<string>(PAUSE_KINDS.map((k) => k.id));
+    const pick = (v: unknown) =>
+      new Set((Array.isArray(v) ? v : []).filter((k): k is PauseKind => ids.has(String(k))));
+    return { shown: pick(saved.shown), paused: pick(saved.paused) };
+  } catch {
+    return null;
+  }
+}
 
 export function TalesRoom(props: Props) {
   // The log is read once per world; a new title function each render does not rebuild it.
@@ -177,8 +193,22 @@ function Room({
   );
 
   const [mode, setMode] = useState<MapMode>('realms');
-  const [kinds, setKinds] = useState<ReadonlySet<PauseKind>>(DEFAULT_PAUSES);
-  const [shown, setShown] = useState<ReadonlySet<PauseKind>>(DEFAULT_SHOWN);
+  const [kinds, setKinds] = useState<ReadonlySet<PauseKind>>(
+    () => readFilter()?.paused ?? DEFAULT_PAUSES,
+  );
+  const [shown, setShown] = useState<ReadonlySet<PauseKind>>(
+    () => readFilter()?.shown ?? DEFAULT_SHOWN,
+  );
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(
+        FILTER_KEY,
+        JSON.stringify({ shown: [...shown], paused: [...kinds] }),
+      );
+    } catch {
+      // Storage may be off; the filter then lasts for this visit only.
+    }
+  }, [shown, kinds]);
   // The first play of a world runs to the present without stopping; later plays pause to ask.
   const [firstRun, setFirstRun] = useState(() => !playedThrough.has(world));
   const [chooser, setChooser] = useState(false);
@@ -208,8 +238,8 @@ function Room({
     () => (firstRun ? new Set<PauseKind>() : new Set([...kinds].filter((k) => shown.has(k)))),
     [firstRun, kinds, shown],
   );
-  const live = useRef({ kinds: pausing, shown, follow, speed, mode });
-  live.current = { kinds: pausing, shown, follow, speed, mode };
+  const live = useRef({ kinds: pausing, shown, follow, speed, mode, firstRun });
+  live.current = { kinds: pausing, shown, follow, speed, mode, firstRun };
   useEffect(() => {
     if (!ended) return;
     playedThrough.add(world);
@@ -311,12 +341,19 @@ function Room({
     const step = (now: number) => {
       const dt = Math.max(0, Math.min(0.1, (now - prev) / 1000));
       prev = now;
-      const { kinds: on, shown: seen, follow: who, speed: perSecond } = live.current;
+      const {
+        kinds: on,
+        shown: seen,
+        follow: who,
+        speed: perSecond,
+        firstRun: first,
+      } = live.current;
       const c = clock.current;
       const next = c.t + dt * perSecond;
       const lo = Math.floor(c.t) + 1;
       const hi = Math.min(Math.floor(next), data.last);
-      for (let y = lo; y <= hi; y += 1) {
+      // The first play never stops, not even for a followed person.
+      for (let y = lo; !first && y <= hi; y += 1) {
         if (
           !pauseAllowed(y, lastPause.current, performance.now(), closedAt.current, who !== null)
         ) {
@@ -490,6 +527,14 @@ function Room({
       })),
     };
   }, [baseModel, atlas, armies, legends]);
+  /** Key rows for marks only while the map can draw them in the shown year. */
+  const keyMarks = useMemo(
+    () => ({
+      figure: model.figures.some((f) => f.from <= year + 1 && year <= f.to),
+      beast: model.beasts.some((b) => b.from <= year + 1 && year <= b.to),
+    }),
+    [model, year],
+  );
   const pct = (cell: number) => ({
     left: `${(((cell % W) + 0.5) / W) * 100}%`,
     top: `${((Math.floor(cell / W) + 0.5) / H) * 100}%`,
@@ -598,6 +643,15 @@ function Room({
       )),
     [ticks, data],
   );
+  /** Events of each kind in the whole history: the dots a kind puts on the ribbon. */
+  const kindCount = useMemo(() => {
+    const out = new Map<PauseKind, number>();
+    for (const e of data.events) {
+      const kind = pauseKindOf(e.type, e.importance);
+      if (kind) out.set(kind, (out.get(kind) ?? 0) + 1);
+    }
+    return out;
+  }, [data]);
   const lane = useMemo(
     () =>
       follow
@@ -646,8 +700,8 @@ function Room({
   const legend = useMemo(() => {
     type Row = { key: string; label: string; fill: string; edge?: string };
     const css = ([r, g, b]: Rgb3, a = 1) => `rgba(${r},${g},${b},${a})`;
-    // Fills lie over the land at about 0.42; the swatch shows them a touch stronger to read small.
-    const soft = (c: Rgb3) => css(c, 0.6);
+    // The same strength the fills lie over the land with (atlas.ts FILL_STRENGTH).
+    const soft = (c: Rgb3) => css(c, 0.42);
     const held = [...labels]
       .filter(([, c]) => c.n > 0)
       .sort((a, b) => b[1].n - a[1].n || a[0] - b[0]);
@@ -803,6 +857,7 @@ function Room({
                 width={W}
                 height={H}
                 followId={follow?.id ?? null}
+                maxTags={stage.w <= PHONE_MAX ? 1 : MAX_TAGS}
                 recent={recent}
               />
             )}
@@ -827,7 +882,9 @@ function Room({
                   {follow.name}
                 </button>
               </b>
-              <small>pauses only on their story</small>
+              <small>
+                {firstRun ? 'no pauses on the first play' : 'pauses only on their story'}
+              </small>
               <button type="button" aria-label="Stop following" onClick={() => setFollow(null)}>
                 ✕
               </button>
@@ -863,6 +920,7 @@ function Room({
                       <span className="name">
                         <i style={{ background: k.colour }} />
                         {k.label}
+                        <small>{kindCount.get(k.id) ?? 0}</small>
                       </span>
                       <input
                         type="checkbox"
@@ -881,8 +939,8 @@ function Room({
                   ))}
                   <p>
                     {firstRun
-                      ? 'The first play runs to the present without pausing. Replays pause on the ticked events.'
-                      : 'Shown events are marked on the map and the ribbon; paused ones stop to ask.'}
+                      ? 'The first play runs to the present (or until you skip) without pausing. Replays pause on the ticked events.'
+                      : 'Shown events are marked on the map and the ribbon; paused ones stop to ask. Peace is shown with wars but never pauses.'}
                   </p>
                 </div>
               )}
@@ -944,33 +1002,43 @@ function Room({
                     <span>{row.label}</span>
                   </div>
                 ))}
-                {legend.more > 0 && <small>and {legend.more} more</small>}
+                {legend.more > 0 && (
+                  <small>
+                    and {legend.more} more{mode === 'realms' ? ', named on the map' : ''}
+                  </small>
+                )}
               </section>
             )}
             <div>
               <i className="town" />
               town
             </div>
-            <div>
-              <FlagKey />
-              army
-            </div>
+            {armies && (
+              <div>
+                <FlagKey />
+                army
+              </div>
+            )}
             <div>
               <i className="capital" />
               capital
             </div>
-            <div>
-              <StarKey />
-              great figure
-            </div>
+            {keyMarks.figure && (
+              <div>
+                <StarKey />
+                great figure
+              </div>
+            )}
             <div>
               <i className="road" />
               road
             </div>
-            <div>
-              <BeastKey />
-              great beast
-            </div>
+            {keyMarks.beast && (
+              <div>
+                <BeastKey />
+                great beast
+              </div>
+            )}
             <div>
               <i className="wild" />
               wild land
