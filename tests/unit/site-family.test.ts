@@ -32,9 +32,9 @@ const biggest = (world: WorldState): Site =>
     .filter((s) => s.ruinedYear === undefined && sitePopulation(s) > 0)
     .sort((a, b) => sitePopulation(b) - sitePopulation(a) || a.id - b.id)[0]!;
 // Roaming beasts (2026-10-13) took SITE-I's wedding in the year; SITE-A had weddings and births until
-// expeditions (M4.7, history drift) took its wedding; SITE-K has weddings and births.
+// expeditions (M4.7, history drift) took its wedding; SITE-K had weddings and births until religion (faiths and holy wars) took its wedding; SITE-L has weddings and births.
 let weddings: WorldState | undefined;
-const marrying = () => (weddings ??= generateWorld('SITE-K', { width: 64, height: 64 }, C));
+const marrying = () => (weddings ??= generateWorld('SITE-L', { width: 64, height: 64 }, C));
 function fresh(content = C, from = base) {
   const world = structuredClone(from());
   const active = embark(world, content, biggest(world).id);

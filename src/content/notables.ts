@@ -57,6 +57,15 @@ export const NOTABLES: NotableRules = {
       plunder_raid: 4,
       artifact_made: 8,
       book_written: 6,
+      // Faith: the high priest who names a quarrel, the prophet who preaches, splits or converts.
+      heresy_denounced: 2,
+      high_priest_named: 4,
+      ruler_converted: 4,
+      holy_war_proclaimed: 6,
+      holy_war_preached: 8,
+      prophet_rose: 6,
+      faith_schism: 10,
+      faith_spread: 4,
     },
   },
   // A ruler (fame 20) adds 2 importance to the events around them; a legend adds the cap.
@@ -72,6 +81,8 @@ export const NOTABLES: NotableRules = {
     crafter: 'smith',
     scholar: 'scholar',
     mage: 'mage',
+    priest: 'high priest',
+    prophet: 'prophet',
   },
   deathPhrases: {
     'old-age': 'of old age',

@@ -4,7 +4,13 @@
 // per-version compatibility layers (R-02, R-03).
 
 import type { RngState } from './rng';
-import type { Activity, BreakdownKind, CreatureTier, RoutinePlace } from './content-types';
+import type {
+  Activity,
+  BreakdownKind,
+  CreatureTier,
+  CultureValue,
+  RoutinePlace,
+} from './content-types';
 
 export type Id = number;
 
@@ -17,6 +23,7 @@ export const ENTITY_KINDS = [
   'item',
   'dynasty',
   'place',
+  'faith',
 ] as const;
 export type EntityKind = (typeof ENTITY_KINDS)[number];
 
@@ -260,6 +267,8 @@ export const NOTABLE_ROLES = [
   'crafter',
   'scholar',
   'mage',
+  'priest',
+  'prophet',
 ] as const;
 export type NotableRole = (typeof NOTABLE_ROLES)[number];
 
@@ -593,6 +602,30 @@ export interface Civ {
   /** Year the ruling house took the seat, and how many of its rulers have held it since. */
   houseSince?: number;
   houseRulers?: number;
+  /** The faith the realm keeps (faith.ts); filled at year 0 and for realms born later. */
+  faithId?: Id;
+}
+
+/** A faith (religion engine): one per culture religion at the start, more by schism. Plain data. */
+export interface Faith {
+  id: Id;
+  /** The `FaithDef` id, which is the culture religion id. */
+  defId: string;
+  name: string;
+  /** One name is one god; two to four are a pantheon. */
+  gods: string[];
+  sacred: CultureValue[];
+  abhors: CultureValue;
+  /** Year it began: 0 for the old faiths. */
+  founded: number;
+  /** The faith it split from, and the prophet who split it. */
+  parentId?: Id;
+  founderId?: Id;
+  highPriestId?: Id;
+  /** The holy city: a site that stays while it is live and keeps the faith. */
+  seatSiteId?: Id;
+  /** Year no live site kept it any more. */
+  forgotten?: number;
 }
 
 /** The goods a site stocks (M2.4): food plus four traded materials. */
@@ -618,6 +651,8 @@ export interface Site {
   features: SiteFeature[];
   /** Highest total population the site has held (M2.3). */
   peakPop: number;
+  /** The faith its people keep, which may differ from its realm's (faith.ts). */
+  faithId?: Id;
 }
 
 /** What makes a dragon an individual (M5.6): its temper, its sleep and what it has hoarded. */
@@ -1190,6 +1225,8 @@ export interface WorldState {
   creatures: Map<Id, Creature>;
   /** Perilous places (M4.7): ruins, old mines, barrows, empty lairs and aura places. Items lying in one have no holder and `lostAt` at its cell. */
   places: Map<Id, PerilousPlace>;
+  /** Faiths, living and forgotten, filled by the history stage. */
+  faiths: Map<Id, Faith>;
   /** Notables, living and dead (M2.5); everyone else is a count in `Site.pop`. */
   people: Map<Id, Person>;
   dynasties: Map<Id, Dynasty>;

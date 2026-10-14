@@ -16,6 +16,7 @@ import {
   skillCap,
   stepBlock,
   stepSite,
+  sitePopulation,
   type HeldItem,
   type Person,
   type WorldState,
@@ -97,7 +98,12 @@ describe('work', () => {
 
   it('grows skill by doing and stops at the cap', () => {
     const world = copy();
-    const active = embark(world, C, biggest(world).id);
+    // A small town: 400 days of play scale with the residents, and only one of them farms here
+    // (SITE-A's biggest town grew from 506 to 623 people with religion and passed the 5 s limit).
+    const small = [...world.sites.values()]
+      .filter((s) => s.ruinedYear === undefined && sitePopulation(s) >= 30)
+      .sort((a, b) => sitePopulation(a) - sitePopulation(b) || a.id - b.id)[0]!;
+    const active = embark(world, C, small.id);
     const farm = C.jobs.find((j) => j.id === ST.roles.farm)!;
     const ability = C.abilities.find((x) => x.id === farm.skill)!;
     const person = active.residents

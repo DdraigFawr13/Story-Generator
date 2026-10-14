@@ -63,6 +63,16 @@ export function notableMetrics(world, n, DAYS_PER_YEAR) {
     realmSplits: n.realm_split ?? 0,
     dynastiesEnded: n.dynasty_ended ?? 0,
     citiesFreed: n.city_freed ?? 0,
+    // Faiths: schisms, holy wars, prophets, conversions and wrongs done to holy places.
+    faiths: world.faiths.size,
+    schisms: n.faith_schism ?? 0,
+    holyWars: n.holy_war_proclaimed ?? 0,
+    prophets: n.prophet_rose ?? 0,
+    conversions: n.site_converted ?? 0,
+    rulersConverted: n.ruler_converted ?? 0,
+    desecrations: (n.temple_desecrated ?? 0) + (n.holy_city_taken ?? 0),
+    heresies: n.heresy_denounced ?? 0,
+    faithsForgotten: n.faith_forgotten ?? 0,
     // Dragons as individuals (M5.6).
     dragons: dragons.length,
     dragonsSlain: dragons.filter((c) => c.slayerId !== undefined || c.slainBy).length,

@@ -510,6 +510,18 @@ for (const r of rows) {
 }
 
 process.stdout.write(
+  '\nfaith: seed | faiths | schisms | prophets | heresies | holy wars | conversions | rulers converted | desecrations | forgotten\n',
+);
+for (const r of rows) {
+  const h = r.history;
+  process.stdout.write(
+    `${r.seed.padEnd(4)} | ${String(h.faiths).padStart(3)} | ${String(h.schisms).padStart(3)} | ${String(h.prophets).padStart(3)} | ` +
+      `${String(h.heresies).padStart(3)} | ${String(h.holyWars).padStart(3)} | ${String(h.conversions).padStart(3)} | ` +
+      `${String(h.rulersConverted).padStart(3)} | ${String(h.desecrations).padStart(3)} | ${String(h.faithsForgotten).padStart(3)}\n`,
+  );
+}
+
+process.stdout.write(
   '\nperilous places (M4.7): seed | places (emptied) | barrows | expeditions | treasure / lore / glory / failed | leaders lost | commoners rose | dead woke | parts crafted | carried off\n',
 );
 for (const r of rows) {

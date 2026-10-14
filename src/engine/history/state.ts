@@ -13,7 +13,7 @@ import { nearestAuraSpot, type SettleContent, type SettleSearch } from './settle
 export type HistoryContent = SettleContent &
   Pick<
     ContentBundle,
-    'history' | 'creatures' | 'dragons' | 'places' | 'diseases' | 'notables' | 'threats'
+    'history' | 'creatures' | 'dragons' | 'places' | 'faiths' | 'diseases' | 'notables' | 'threats'
   >;
 
 /** The latest events that touched one site, for linking causes. */
@@ -101,6 +101,8 @@ export interface War {
   champions?: Id[];
   /** A succession war: the attacker is the claimant's realm, risen from the defender. */
   civil?: boolean;
+  /** A holy war: the faiths clash or a faith's wrong began it (faith.ts). */
+  holy?: boolean;
 }
 
 /** A beaten claimant from this year's successions, who may raise part of the realm (civil-war.ts). */
@@ -196,6 +198,7 @@ export interface HistoryRun {
     magic: RngStream;
     cityStates: RngStream;
     civilWar: RngStream;
+    faith: RngStream;
   };
   /** Current year, 1..historyYears. */
   year: number;
@@ -239,6 +242,8 @@ export interface HistoryRun {
   pacts: Pact[];
   /** Beaten claimants waiting to rise or yield, cleared each year. */
   claims: Claim[];
+  /** The latest faith event per `site:${id}` or `faith:${id}`, cited by the next event there. */
+  faithEvents: Map<string, Id>;
 }
 
 /** The civil war a civ is fighting, on either side. */
@@ -361,6 +366,7 @@ export function createRun(
       magic: streamFor(world, 'history.magic'),
       cityStates: streamFor(world, 'history.cityStates'),
       civilWar: streamFor(world, 'history.civilWar'),
+      faith: streamFor(world, 'history.faith'),
     },
     year: 0,
     logs: new Map(),
@@ -402,6 +408,7 @@ export function createRun(
     studied: new Set(),
     pacts: [],
     claims: [],
+    faithEvents: new Map(),
   };
   for (const site of world.sites.values()) {
     run.siteAtCell.set(site.cell, site.id);

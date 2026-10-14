@@ -22,6 +22,7 @@ import {
 } from './notables';
 import { civLosesSite, ruinSite } from './abandon';
 import { allyAid, pactStrength } from './city-states';
+import { faithAfterTaken, faithOf, proclaimHolyWar } from './faith';
 import { decideCivilWar, splitRealm } from './civil-war';
 import { bandCount, removePeople } from './pop';
 import { cellDistance } from './settle';
@@ -109,7 +110,9 @@ function warScore(
       : rules.maxStrengthRatio;
   const gated = touched.every((s) => s.features.includes('pass') || s.features.includes('ford'));
   const warlike = (cultureOf(run, a)?.values.war ?? 0) / 10;
-  return grievance * ratio * (gated ? rules.crossingPenalty : 1) * warlike;
+  const [fa, fb] = [faithOf(run, a), faithOf(run, b)];
+  const kin = fa && fb && fa.id === fb.id ? run.content.faiths.sameFaithWar : 1;
+  return grievance * ratio * (gated ? rules.crossingPenalty : 1) * warlike * kin;
 }
 
 function inWar(run: HistoryRun, civ: Civ): boolean {
@@ -156,7 +159,7 @@ function declareWars(run: HistoryRun): void {
       causes,
       data: { civ: a.name, enemy: target.name, war: run.wars.length + 1 },
     });
-    run.wars.push({
+    const war: War = {
       id: run.wars.length + 1,
       attacker: a.id,
       defender: target.id,
@@ -170,7 +173,9 @@ function declareWars(run: HistoryRun): void {
       defenderAdults: adultsOf(civSites(run, target)),
       attackerCaptain: attackerCaptain?.id,
       defenderCaptain: defenderCaptain?.id,
-    });
+    };
+    run.wars.push(war);
+    proclaimHolyWar(run, war, a, target, event);
   }
 }
 
@@ -237,6 +242,7 @@ function conquer(
     data: { site: site.name, civ: attacker.name, loser: defender.name },
   });
   war.lastEvent = event.id;
+  faithAfterTaken(run, { site, attacker, defender, event, razed: false, war, lead });
   const fell = civLosesSite(run, defender, site, event.id);
   siteLost(run, { site, attacker, defender, event: event.id, razed: false, lead });
   return fell;
@@ -259,6 +265,7 @@ function raze(
     data: { site: site.name, civ: attacker.name, loser: defender.name, dead: killed },
   });
   war.lastEvent = event.id;
+  faithAfterTaken(run, { site, attacker, defender, event, razed: true, war, lead });
   const fell = civLosesSite(run, defender, site, event.id);
   siteLost(run, { site, attacker, defender, event: event.id, razed: true, lead });
   return fell;
@@ -457,9 +464,10 @@ function fightWars(run: HistoryRun): void {
     }
     const a = liveCiv(run, war.attacker);
     const d = liveCiv(run, war.defender);
+    const wearyShare = rules.wearyShare * (war.holy ? run.content.faiths.holyWeary : 1);
     const weary =
-      war.attackerDead > rules.wearyShare * war.attackerAdults ||
-      war.defenderDead > rules.wearyShare * war.defenderAdults;
+      war.attackerDead > wearyShare * war.attackerAdults ||
+      war.defenderDead > wearyShare * war.defenderAdults;
     // A ruler who cannot end a civil war in a few years has to live with a split realm.
     const most = war.civil ? run.rules.civilWar.maxYears : rules.maxWarYears;
     if (!a || !d || weary || run.year - war.started >= most) endWar(run, war, a, d);

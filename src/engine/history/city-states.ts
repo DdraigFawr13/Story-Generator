@@ -10,6 +10,7 @@ import type { CultureDef } from '../core/content-types';
 import { streamFor } from '../core/rng';
 import type { Civ, Id, Person, SimEvent, Site, WorldState } from '../core/types';
 import { culturePlaceName } from '../people/names';
+import { faithOf, siteFaith } from './faith';
 import { emptyGoods } from './goods';
 import { seatHouse } from './notables';
 import { createAdult, isAdult, livingAt } from './people';
@@ -211,12 +212,19 @@ function runBreakaways(run: HistoryRun, tornOnly: boolean): void {
         freedom *
         (hungry ? rules.famine : 1) *
         (torn ? run.rules.civilWar.breakaway : atWarNow ? rules.war : 1) *
-        (dispute !== undefined ? rules.dispute : 1);
+        (dispute !== undefined ? rules.dispute : 1) *
+        (keepsOtherFaith(run, civ, site) ? run.content.faiths.minorityBreakaway : 1);
       if (!rng.chance(odds)) continue;
       breakAway(run, civ, site, causesOf(hungry?.event, (torn ?? atWarNow)?.lastEvent, dispute));
       break;
     }
   }
+}
+
+/** True when the site keeps a faith other than its realm's. */
+function keepsOtherFaith(run: HistoryRun, civ: Civ, site: Site): boolean {
+  const [own, mine] = [faithOf(run, civ), siteFaith(run, site)];
+  return own !== undefined && mine !== undefined && own.id !== mine.id;
 }
 
 function breakAway(run: HistoryRun, old: Civ, site: Site, causes: Id[]): void {
@@ -338,7 +346,9 @@ export function swearPact(run: HistoryRun, civ: Civ): void {
       continue;
     if ((civ.grievances.get(id) ?? 0) > rules.maxGrievance) continue;
     if ((other.grievances.get(civ.id) ?? 0) > rules.maxGrievance) continue;
-    const adults = adultsOfCiv(run, id);
+    const mine = faithOf(run, civ);
+    const kin = mine !== undefined && faithOf(run, other)?.id === mine.id;
+    const adults = adultsOfCiv(run, id) * (kin ? run.content.faiths.sameFaithPact : 1);
     if (adults > most) {
       most = adults;
       partner = other;

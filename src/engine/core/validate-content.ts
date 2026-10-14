@@ -99,6 +99,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...creatureProblems(content));
   problems.push(...dragonProblems(content));
   problems.push(...placeProblems(content));
+  problems.push(...faithProblems(content));
   problems.push(...diseaseProblems(content));
   problems.push(...notableProblems(content));
   problems.push(...siteProblems(content));
@@ -244,6 +245,68 @@ export function dragonProblems(content: ContentBundle): string[] {
   for (const key of ['tributeShare', 'seekerMax'] as const) {
     if (!(rules[key] >= 0 && rules[key] <= 1)) problems.push(`Dragons: ${key} must be 0-1.`);
   }
+  return problems;
+}
+
+/** Faiths: one def per culture religion, valid values, unique schism names, numbers in range. */
+export function faithProblems(content: ContentBundle): string[] {
+  const rules = content.faiths;
+  if (!rules) return ['Content has no faith rules.'];
+  const problems: string[] = [];
+  const values = CULTURE_VALUES as readonly string[];
+  const religions = new Set(content.cultures.map((c) => c.religion.id));
+  const seen = new Set<string>();
+  const schisms = new Set<string>();
+  for (const def of rules.defs) {
+    const where = `Faith ${def.id}`;
+    if (seen.has(def.id)) problems.push(`Duplicate faith "${def.id}".`);
+    seen.add(def.id);
+    if (!religions.has(def.id)) problems.push(`${where}: no culture has this religion.`);
+    if (def.gods.length < 1) problems.push(`${where}: needs at least one god.`);
+    if (def.priestTitle.trim() === '') problems.push(`${where}: no priest title.`);
+    for (const v of [...def.sacred, def.abhors]) {
+      if (!values.includes(v)) problems.push(`${where}: unknown value "${v}".`);
+    }
+    if (def.sacred[0] === def.sacred[1]) problems.push(`${where}: sacred values must differ.`);
+    if (def.sacred.includes(def.abhors)) problems.push(`${where}: abhors a sacred value.`);
+    if (def.schismNames.length < 2) problems.push(`${where}: needs at least 2 schism names.`);
+    for (const name of def.schismNames) {
+      if (schisms.has(name)) problems.push(`${where}: schism name "${name}" is used twice.`);
+      schisms.add(name);
+    }
+  }
+  for (const id of religions) {
+    if (!seen.has(id)) problems.push(`Religion "${id}" has no faith def.`);
+  }
+  const chances = [
+    'heresyChance',
+    'holyConvert',
+    'convertChance',
+    'rulerConvertShare',
+    'rulerConvertChance',
+    'prophetChance',
+  ] as const;
+  for (const key of chances) {
+    if (!(rules[key] >= 0 && rules[key] <= 1)) problems.push(`Faiths: ${key} must be 0-1.`);
+  }
+  if (!(rules.minZeal >= 0 && rules.minZeal <= 10)) problems.push('Faiths: minZeal must be 0-10.');
+  if (!(rules.holyZeal >= 0 && rules.holyZeal <= 10))
+    problems.push('Faiths: holyZeal must be 0-10.');
+  for (const key of ['holyWeary', 'minorityBreakaway', 'sameFaithWar', 'sameFaithPact'] as const) {
+    if (!(rules[key] > 0)) problems.push(`Faiths: ${key} must be above 0.`);
+  }
+  for (const key of ['heresyGrievance', 'desecrationGrievance', 'preachGrievance'] as const) {
+    if (!(rules[key] >= 0)) problems.push(`Faiths: ${key} must be 0 or more.`);
+  }
+  if (!(Number.isInteger(rules.maxProphets) && rules.maxProphets >= 0))
+    problems.push('Faiths: maxProphets must be a whole number, 0 or more.');
+  for (const key of ['priest', 'prophet'] as const) {
+    if (!(rules.fame[key] >= 0 && rules.fame[key] <= 100))
+      problems.push(`Faiths: ${key} fame must be 0-100.`);
+  }
+  const acts = Object.values(rules.prophetActs);
+  if (acts.some((w) => !(w >= 0)) || acts.every((w) => w === 0))
+    problems.push('Faiths: prophet act weights need one above 0.');
   return problems;
 }
 
@@ -520,6 +583,18 @@ const HISTORY_EVENT_IDS = [
   'ally_aided',
   'mage_went_to_study',
   'mage_came_home',
+  'high_priest_named',
+  'heresy_denounced',
+  'site_converted',
+  'ruler_converted',
+  'prophet_rose',
+  'holy_war_preached',
+  'faith_schism',
+  'faith_spread',
+  'faith_forgotten',
+  'holy_war_proclaimed',
+  'temple_desecrated',
+  'holy_city_taken',
 ];
 
 /** Settlement rules: present, capitalKind keys are culture ids, a civ name template per government used. */

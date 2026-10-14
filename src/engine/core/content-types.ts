@@ -234,6 +234,8 @@ export interface ContentBundle {
   dragons: DragonRules;
   /** Perilous places, hoards and expeditions (M4.7). */
   places: PlaceRules;
+  /** Gods, high priests, prophets and holy wars (faith.ts). */
+  faiths: FaithRules;
   diseases: DiseaseDef[];
   notables: NotableRules;
   biographies: BiographyRules;
@@ -1562,6 +1564,62 @@ export interface PlaceKindDef {
   guardians: string[];
   /** For `{adj}` names. */
   adjectives?: string[];
+}
+
+/** One religion's flavour (one per culture religion id); a schism borrows its names. */
+export interface FaithDef {
+  /** The culture's `religion.id`. */
+  id: string;
+  /** One name is one god; two to four are a pantheon. */
+  gods: string[];
+  /** Title of the faith's high priest. */
+  priestTitle: string;
+  /** What it holds dear (two values) and what it abhors: a faith clashes with one that holds dear what it abhors. */
+  sacred: [CultureValue, CultureValue];
+  abhors: CultureValue;
+  /** Names for the faiths a prophet may split off (never reused across faiths). */
+  schismNames: string[];
+}
+
+/** Faiths: the defs and every tunable the faith engine reads (per decade unless said). */
+export interface FaithRules {
+  defs: FaithDef[];
+  /** Culture faith value (0-10) at or above which a civ's faith acts: heresy, prophets. */
+  minZeal: number;
+  /** Attacker's culture faith value at or above which a war between clashing faiths is holy without a holy cause. */
+  holyZeal: number;
+  /** Chance per decade per linked pair of clashing faiths, times zeal/10, that a side denounces the other. */
+  heresyChance: number;
+  /** Grievance a denunciation adds, times the clash (1 or 2). */
+  heresyGrievance: number;
+  /** Grievance every co-religionist realm holds against one that razes or takes a holy place. */
+  desecrationGrievance: number;
+  /** Chance a site taken in a holy war takes the conqueror's faith at once. */
+  holyConvert: number;
+  /** Multiplier on the weariness threshold of a holy war (it ends later). */
+  holyWeary: number;
+  /** Chance per decade, times its realm's zeal/10, that a site keeping another faith takes its realm's. */
+  convertChance: number;
+  /** Share of a realm's adults keeping one other faith at which its ruler may adopt it. */
+  rulerConvertShare: number;
+  /** Chance per decade that such a ruler adopts it. */
+  rulerConvertChance: number;
+  /** Multiplier on a site's odds of breaking away when it keeps another faith than its realm. */
+  minorityBreakaway: number;
+  /** Multiplier on the war score between realms of one faith. */
+  sameFaithWar: number;
+  /** Weight on a co-religionist's adults when a free city picks a pact partner. */
+  sameFaithPact: number;
+  /** Chance per decade per live realm (not a free city), times zeal/10, that a prophet rises. */
+  prophetChance: number;
+  /** Most prophets alive at once. */
+  maxProphets: number;
+  /** Fame (0-100) a high priest and a prophet start with. */
+  fame: { priest: number; prophet: number };
+  /** Relative weights of what a prophet does on rising, among the acts that are possible. */
+  prophetActs: { preach: number; schism: number; mission: number };
+  /** Grievance a preached holy war adds against the faith's enemy. */
+  preachGrievance: number;
 }
 
 /** Perilous places, hoards and expeditions (M4.7): every number the engine reads is here. */
