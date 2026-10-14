@@ -150,8 +150,13 @@ export function spoilStock(
   active: ActiveSite,
   content: Pick<SiteContent, 'items' | 'environment'>,
   tempC: number,
+  day: number,
 ): void {
   const rules = content.environment.spoilage;
+  // The counts start again on the first of the month and of the year, so the Site tab and the
+  // month's chronicle line (on its last day) count the same days.
+  if (day % DAYS_PER_MONTH === 0) active.spoiled.month = 0;
+  if (dateOf(day).month === 0 && day % DAYS_PER_MONTH === 0) active.spoiled.year = 0;
   const weather =
     tempC > rules.warmAboveC ? rules.warmMul : tempC < rules.coldBelowC ? rules.coldMul : 1;
   for (const item of content.items) {
@@ -169,7 +174,7 @@ export function spoilStock(
   }
 }
 
-/** On the first of a month, says so when the last month's spoilage was large, and starts the count again. */
+/** On the last day of a month, after the day's spoilage, says so when the month's spoilage was large. */
 export function reportSpoilage(
   content: Pick<SiteContent, 'environment'>,
   active: ActiveSite,
@@ -177,10 +182,8 @@ export function reportSpoilage(
   label: SiteLabel,
   day: number,
 ): void {
-  if (day % DAYS_PER_MONTH !== 0) return;
+  if ((day + 1) % DAYS_PER_MONTH !== 0) return;
   const meals = Math.round(active.spoiled.month);
-  active.spoiled.month = 0;
-  if (dateOf(day).month === 0) active.spoiled.year = 0;
   if (meals <= content.environment.spoilage.reportAbove) return;
   emit({
     type: content.environment.events.spoiled,

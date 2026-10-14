@@ -2,8 +2,9 @@
 // records; everyone else becomes a new `Person` matching the site's race, culture and age bands,
 // grouped into households by the culture's marriage custom, and housed in a freshly laid-out map.
 
+import { DAYS_PER_MONTH, DAYS_PER_YEAR } from '../core/clock';
 import { sortedById } from '../core/math';
-import { totalPop } from '../history/pop';
+import { siteNeed, totalPop } from '../history/pop';
 import { streamFor, type RngStream } from '../core/rng';
 import {
   GOODS,
@@ -456,9 +457,19 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
   // Stock: each good becomes its starting item, scaled by the followed share, in whole items.
   const { items, steward } = content;
   const stock = new Map<string, number>();
+  // History's food is what is left after the year's eating, so the part of last harvest still to
+  // be eaten before the next one is added, with the seed for this year's fields: a town with no
+  // surplus reaches its harvest rather than starting with an empty store.
+  const crop = content.environment.crop;
+  const harvestDay = crop.harvestMonths[0]! * DAYS_PER_MONTH;
+  const toHarvest = (harvestDay - (world.day % DAYS_PER_YEAR) + DAYS_PER_YEAR) % DAYS_PER_YEAR;
+  const carried = siteNeed(site, races) * (toHarvest / DAYS_PER_YEAR);
+  const fields = layout.buildings.filter((b) => b.defId === 'field' && b.followed).length;
+  const seed = fields * crop.fieldYield * crop.seedShare;
   for (const good of GOODS) {
     const def = items.find((i) => i.id === steward.startItems[good])!;
-    stock.set(def.id, Math.round((site.goods[good] * share) / def.per));
+    const amount = site.goods[good] + (good === 'food' ? carried : 0);
+    stock.set(def.id, Math.round((amount * share) / def.per + (good === 'food' ? seed : 0)));
   }
   // Everyone grown starts with a tool, made from the site's ore.
   const toolDef = items.find((i) => i.kind === 'tool');

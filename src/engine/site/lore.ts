@@ -639,6 +639,29 @@ function lastDeed(item: Item): Id[] {
   return item.deeds.length > 0 ? [item.deeds[item.deeds.length - 1]!] : [];
 }
 
+/**
+ * The item's last deed that is not one of `routine` (a loan or a return): lending a book again is
+ * not caused by its last return, so a book lent week after week makes no chain of causes.
+ */
+function lastStoryDeed(world: WorldState, item: Item, routine: readonly string[]): Id[] {
+  const events = world.events;
+  for (let i = item.deeds.length - 1; i >= 0; i -= 1) {
+    const id = item.deeds[i]!;
+    // Events are kept in id order: find this one by halving.
+    let lo = 0;
+    let hi = events.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (events[mid]!.id < id) lo = mid + 1;
+      else hi = mid;
+    }
+    const event = events[lo];
+    if (event?.id !== id) return [id];
+    if (!routine.includes(event.type)) return [id];
+  }
+  return [];
+}
+
 /** Loses a book held by its owner: the item has no holder, and the lessons from it end. */
 function loseBook(ctx: Ctx, item: Item): void {
   item.holder = null;
@@ -765,7 +788,7 @@ function runLoans(ctx: Ctx, env: SocialEnv, rng: Rng): void {
       type: rules.events.lent,
       actors: [owner.id, pick.id],
       place: label.cell,
-      causes: lastDeed(item),
+      causes: lastStoryDeed(world, item, [rules.events.lent, rules.events.returned]),
       data: { site: label.name, item: item.name },
     });
     item.deeds.push(event.id);

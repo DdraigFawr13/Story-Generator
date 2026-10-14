@@ -25,7 +25,7 @@ export interface SiteHost {
   setSpeed(
     daysPerSecond: SiteSpeed,
     stopOn?: readonly string[],
-    until?: { minImportance: number; maxDays: number },
+    until?: { minImportance: number; maxDays: number; ignore: string[] },
   ): void;
   /** M3.12: the running world, serialized and gzipped by the worker, for a save. */
   save(): Promise<{ header: SaveHeader; data: Uint8Array }>;

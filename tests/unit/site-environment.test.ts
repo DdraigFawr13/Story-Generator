@@ -64,10 +64,26 @@ describe('spoilage', () => {
     active.stock.set('fish', 1000);
     active.stock.set('berries', 1000);
     active.stock.set('preserved', 1000);
-    for (let d = 0; d < 56; d += 1) spoilStock(active, C, 12);
+    for (let d = 0; d < 56; d += 1) spoilStock(active, C, 12, d);
     const left = (id: string) => active.stock.get(id) ?? 0;
     expect(left('preserved')).toBeGreaterThan(left('berries'));
     expect(left('preserved')).toBeGreaterThan(900);
+  });
+
+  it("dates the month's line on its last day, with the Site tab's count for that month", () => {
+    // The line used to come on the 1st, naming the month before as "this month" (729 against the
+    // Site tab's 214 at S1 in the playtest).
+    const { world, active } = fresh();
+    const lines: number[] = [];
+    for (let d = 0; d < 56; d += 1) {
+      for (const e of stepSite(world, C)) {
+        if (e.type !== C.environment.events.spoiled) continue;
+        expect((e.day + 1) % 28).toBe(0);
+        expect(e.data.meals).toBe(Math.round(active.spoiled.month));
+        lines.push(e.day);
+      }
+    }
+    expect(lines.length).toBeGreaterThan(0);
   });
 });
 
