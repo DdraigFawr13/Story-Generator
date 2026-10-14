@@ -584,7 +584,7 @@ function PersonNote({
 }: {
   id: Id;
   finalYear: number;
-  siteActions: { enabled: boolean; watch: (siteId: Id) => void };
+  siteActions: { enabled: boolean; watchTown: (siteId: Id, who?: Id) => void };
 }) {
   const { world, content, index } = useLegends();
   const person = world.people.get(id);
@@ -630,7 +630,7 @@ function PersonNote({
             type="button"
             className="bk-btn"
             disabled={watch.reason !== undefined}
-            onClick={() => siteActions.watch(watch.siteId)}
+            onClick={() => siteActions.watchTown(watch.siteId, id)}
           >
             {person.died === undefined
               ? `Watch ${person.sex === 'f' ? 'her' : 'him'} in ${watch.name} (leaves the book)`

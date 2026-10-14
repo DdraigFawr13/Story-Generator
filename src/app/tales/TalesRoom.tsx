@@ -64,6 +64,8 @@ interface Props {
   onLegends: (category?: LegendCategory) => void;
   /** Open the People room's index; `year` and `follow` say where Tales comes back to. */
   onPeople: (year: number, follow: { id: Id; name: string } | null) => void;
+  /** Open the Town room (the last town watched, else the picker); Tales comes back to `year`. */
+  onTown: (year: number, follow: { id: Id; name: string } | null) => void;
   /** Open a person's page; `year` and `follow` say where to come back to. */
   onOpenPerson: (id: Id, year: number, follow: { id: Id; name: string } | null) => void;
   /** A person to follow from the start (Follow on their page). */
@@ -152,6 +154,7 @@ function Room({
   onOpenEvent,
   onLegends,
   onPeople,
+  onTown,
   onBook,
   onOpenPerson,
   initialFollow,
@@ -580,7 +583,8 @@ function Room({
   const onRoom = (room: RoomId) => {
     if (room === 'people') onPeople(Math.floor(clock.current.t), follow ? { ...follow } : null);
     else if (room === 'book') onBook(Math.floor(clock.current.t), follow ? { ...follow } : null);
-    else if (room === 'world' || room === 'town') finish();
+    else if (room === 'town') onTown(Math.floor(clock.current.t), follow ? { ...follow } : null);
+    else if (room === 'world') finish();
   };
 
   return (

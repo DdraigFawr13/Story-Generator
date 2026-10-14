@@ -60,6 +60,8 @@ import { booksOf, chapterOfEvent, pickBook } from './book/data';
 import { PeopleRoom } from './people/PeopleRoom';
 import type { RoomId } from './rooms/Rooms';
 import { TalesRoom } from './tales/TalesRoom';
+import { TownPicker } from './town/TownPicker';
+import { TownRoom } from './town/TownRoom';
 import { WorldMap, type ViewChange } from './WorldMap';
 import { YearSlider, finalHistoryYear } from './YearSlider';
 import {
@@ -71,6 +73,7 @@ import {
   parseBookLink,
   type BookLink,
   parseRoomLink,
+  parseTownLink,
   parseViewUrl,
   type SiteLink,
   type ViewState,
@@ -162,6 +165,8 @@ interface Watching {
   siteId: Id;
   name: string;
   key: number;
+  /** Set when the site is shown in the Town room (who is followed), null for the old site view. */
+  town: { follow: Id | null } | null;
   restore: {
     events: SimEvent[];
     open: string | null;
@@ -249,6 +254,21 @@ export function NextApp() {
   /** The realm whose book was read last, for the rail's Book item. */
   const lastBook = useRef<Id | null>(book?.civ ?? null);
   const peopleRef = useRef(people);
+  /** The Town room's picker (`room=town` with no town named) covers them too while set. */
+  const [picker, setPicker] = useState(initialRoom.room === 'town');
+  const pickerRef = useRef(picker);
+  /** The town watched last, for the rail's Town item. */
+  const lastTown = useRef<Id | null>(null);
+  const showPicker = (on: boolean) => {
+    pickerRef.current = on;
+    setPicker(on);
+    if (on) {
+      peopleRef.current = false;
+      setPeople(false);
+      bookRef.current = null;
+      setBook(null);
+    }
+  };
   const showBook = (link: BookLink | null) => {
     bookRef.current = link;
     setBook(link);
@@ -256,6 +276,8 @@ export function NextApp() {
       if (link.civ !== null) lastBook.current = link.civ;
       peopleRef.current = false;
       setPeople(false);
+      pickerRef.current = false;
+      setPicker(false);
     }
   };
   const showPeople = (on: boolean) => {
@@ -264,6 +286,8 @@ export function NextApp() {
     if (on) {
       bookRef.current = null;
       setBook(null);
+      pickerRef.current = false;
+      setPicker(false);
     }
   };
   const playbackKey = useRef(0);
@@ -359,6 +383,7 @@ export function NextApp() {
     if (bookRef.current) {
       return buildViewUrl({ ...state, ...v, room: 'book', book: bookRef.current });
     }
+    if (pickerRef.current) return buildViewUrl({ ...state, ...v, room: 'town' });
     if (peopleRef.current && !n.open) return buildViewUrl({ ...state, ...v, room: 'people' });
     return null;
   };
@@ -487,8 +512,12 @@ export function NextApp() {
     link?: SiteLink | null,
     fallback?: View,
     place?: Restore,
+    /** Show it in the Town room (a fresh watch from a room); a link names its own room. */
+    inTown?: { follow: Id | null },
   ) => {
     const host = hostOf();
+    const townLink = link ? parseTownLink(window.location.search) : null;
+    const town = townLink?.town ? { follow: townLink.follow } : (inTown ?? null);
     const label =
       target.kind === 'site'
         ? (world.current.sites.get(target.id)?.name ?? 'the site')
@@ -528,6 +557,7 @@ export function NextApp() {
         siteId: active.siteId,
         name,
         key: watchKey.current,
+        town,
         restore: {
           events,
           open: link?.open ?? null,
@@ -549,9 +579,12 @@ export function NextApp() {
         at: next.restore.at ?? { x: 0, y: 0 },
         tab: next.restore.tab,
         sec: next.restore.sec,
+        town: town !== null,
+        follow: town?.follow ?? null,
       });
       if (link) window.history.replaceState({}, '', url);
       else window.history.pushState({}, '', url);
+      lastTown.current = active.siteId;
       setWatching(next);
       setPlayback(null);
       setProgress(null);
@@ -603,6 +636,7 @@ export function NextApp() {
         siteId: active.siteId,
         name,
         key: watchKey.current,
+        town: null,
         // The save's view (selection, zoom, centre, tabs) reopens the scene it was made in.
         restore: {
           events: [],
@@ -656,7 +690,7 @@ export function NextApp() {
   };
 
   /** Leaves the site: demotes it, takes the world back and shows the map at the site. */
-  const leave = async (pushUrl: boolean): Promise<boolean> => {
+  const leave = async (pushUrl: boolean, after?: () => void): Promise<boolean> => {
     const current = watchingRef.current;
     if (!current || !siteHost.current) return true;
     setProgress({ label: `Leaving ${current.name}…`, fraction: 0.6 });
@@ -673,6 +707,8 @@ export function NextApp() {
       setTab('map');
       setNav((n) => ({ ...n, rev: n.rev + 1 }));
       setRevision((n) => n + 1);
+      // Same batch as the rest, so the room it opens is the one the address is written for.
+      after?.();
       if (pushUrl) {
         window.history.pushState(
           { trail: latest.current.nav.trail.map(openOf), all: latest.current.nav.all },
@@ -705,6 +741,15 @@ export function NextApp() {
       go({ open: ref }, 'replace');
       setTab('legends');
     } else pushNext.current = false;
+  };
+
+  /** Leaves the town for another room: the room's address becomes a new history entry. */
+  const leaveToRoom = (open: () => void) => {
+    pushNext.current = true;
+    return leave(false, open).then((left) => {
+      if (!left) pushNext.current = false;
+      return left;
+    });
   };
 
   // The site link changes every game day, so the address bar is rewritten at most once a
@@ -786,6 +831,7 @@ export function NextApp() {
         setPlayback(null);
         showBook(link.room === 'book' ? parseBookLink(window.location.search) : null);
         showPeople(link.room === 'people' || (!place.tales && place.nav.open?.kind === 'person'));
+        showPicker(link.room === 'town');
         if (place.tales && world.current.playback) {
           // Back to Tales: play on from the year and person its address names.
           const who =
@@ -904,6 +950,7 @@ export function NextApp() {
     // Opening a page: show it, and move the map and the slider to it.
     showPeople(open.kind === 'person');
     showBook(null);
+    showPicker(false);
     setTab('legends');
     setPlayback(null);
     const { legend: index, locked: lock } = latest.current;
@@ -925,6 +972,7 @@ export function NextApp() {
     talesRef.current = { year: from, follow };
     showPeople(false);
     showBook(null);
+    showPicker(false);
     setTab('map');
     playbackKey.current += 1;
     setPlayback({ from, key: playbackKey.current, follow });
@@ -971,9 +1019,35 @@ export function NextApp() {
     );
     return found ? { civ: found.civId, ch: found.ch, ev: id } : null;
   };
+  /** Watch a town in the Town room, following `who` when they live there; a new history entry. */
+  const watchTown = (siteId: Id, who?: Id) => {
+    flushTalesUrl();
+    void watchRef.current({ kind: 'site', id: siteId }, undefined, undefined, undefined, {
+      follow: who ?? null,
+    });
+  };
+  /** The rail's Town item: the last town watched when it can be, else the picker. */
+  const openTownRoom = () => {
+    const last = lastTown.current === null ? undefined : world.current.sites.get(lastTown.current);
+    if (last && last.ruinedYear === undefined && progress === null) return watchTown(last.id);
+    if (pickerRef.current) return;
+    roomChange(() => {
+      setPlayback(null);
+      showPicker(true);
+      if (latest.current.nav.open) go({ open: null });
+    });
+  };
+  /** "Leave for the world": out of the town and back to Tales where it was left. */
+  const leaveTown = () => {
+    const { year, follow } = talesRef.current;
+    void leave(false, () => {
+      if (world.current.playback) roomChange(() => showTales(year, follow));
+    });
+  };
   /** A rail item pressed in the People or Book room. */
   const peopleRoom = (room: RoomId) => {
     if (room === 'people') return openPeopleIndex();
+    if (room === 'town') return openTownRoom();
     if (room === 'tales') {
       if (state.playback) roomChange(() => showTales(0, null));
       return;
@@ -986,6 +1060,7 @@ export function NextApp() {
     roomChange(() => {
       showPeople(false);
       showBook(null);
+      showPicker(false);
       setPlayback(null);
       setTab('map');
       if (latest.current.nav.open?.kind === 'person') go({ open: null });
@@ -1049,6 +1124,54 @@ export function NextApp() {
     return ids.size > 0 ? ids : null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nav.open, sitesAt, revision]);
+  if (watching?.town && state.activeSite) {
+    return (
+      <main className="tw-page" data-revision={revision}>
+        <h1 className="tw-sr">Story Generator — {watching.name}</h1>
+        {error && <p role="alert">{error}</p>}
+        <TownRoom
+          key={watching.key}
+          world={state}
+          content={DEFAULT_CONTENT}
+          index={legend}
+          narrator={narrator}
+          host={hostOf()}
+          ticks={ticks}
+          failures={siteFailures}
+          follow={watching.town.follow}
+          onRoom={(room) => {
+            if (room === 'tales' || room === 'world') leaveTown();
+            else if (room === 'people') void leaveToRoom(() => openPeopleIndex());
+            else if (room === 'book') {
+              void leaveToRoom(() => {
+                const civ = pickBook(
+                  booksOf(world.current, latest.current.legend),
+                  lastBook.current,
+                );
+                openBookRoom({ civ: civ ?? null, ch: 0, ev: null });
+              });
+            }
+          }}
+          onLeave={leaveTown}
+          onRecords={(siteId) => void leaveToLegends({ kind: 'site', id: siteId })}
+          onLife={(id) => void leaveToLegends({ kind: 'person', id })}
+          onLink={(p) =>
+            writeSiteLink({
+              day: p.day,
+              block: p.block,
+              open: null,
+              zoom: 2,
+              at: { x: 0, y: 0 },
+              tab: 'inspect',
+              sec: 'now',
+              town: true,
+              follow: p.follow,
+            })
+          }
+        />
+      </main>
+    );
+  }
   if (watching && state.activeSite) {
     return (
       <main className="sv-root" data-revision={revision}>
@@ -1079,6 +1202,7 @@ export function NextApp() {
     content: DEFAULT_CONTENT,
     enabled: yearShown >= finalYear && progress === null,
     watch: (siteId: Id) => void watch({ kind: 'site', id: siteId }),
+    watchTown,
     outpostCheck: (cell: number) => outpostCheck(state, DEFAULT_CONTENT, cell),
     found: (cell: number, name: string) =>
       void watch({ kind: 'outpost', cell, name: name === '' ? null : name }),
@@ -1232,6 +1356,10 @@ export function NextApp() {
                   talesRef.current = { year, follow };
                   openPeopleIndex();
                 }}
+                onTown={(year, follow) => {
+                  talesRef.current = { year, follow };
+                  openTownRoom();
+                }}
                 onOpenPerson={(id, year, follow) => {
                   talesRef.current = { year, follow };
                   openPersonPage(id);
@@ -1305,6 +1433,13 @@ export function NextApp() {
                   lastBook={lastBook.current}
                   onRoom={peopleRoom}
                   onOpen={(link) => roomChange(() => showBook(link))}
+                />
+              ) : picker ? (
+                <TownPicker
+                  world={state}
+                  enabled={progress === null}
+                  onRoom={peopleRoom}
+                  onWatch={(id) => watchTown(id)}
                 />
               ) : people ? (
                 <PeopleRoom

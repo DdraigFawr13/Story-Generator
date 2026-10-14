@@ -43,6 +43,8 @@ export interface SiteActions {
   /** False while another site is starting or when the slider is on a past year. */
   enabled: boolean;
   watch: (siteId: Id) => void;
+  /** Watch in the Town room, following `who` when they live there. */
+  watchTown: (siteId: Id, who?: Id) => void;
   outpostCheck: (cell: number) => OutpostCheck;
   found: (cell: number, name: string) => void;
 }

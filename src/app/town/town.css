@@ -1,0 +1,506 @@
+/* The Town room: the watched site drawn calmly, with the person you follow beside it. Paper
+   colours and Alegreya type match the other rooms; the picture follows the approved mock-up. */
+.tw-root {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--paper);
+  overflow: hidden;
+  --warm: #c0703a;
+  --card: #fffdf8;
+}
+.tw-root.tw-root :is(h1, h2, h3, p) {
+  margin: 0;
+}
+.tw-root .tw-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+.tw-root .tw-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- the picture ---- */
+.tw-root .tw-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #dfe3cf;
+}
+.tw-root .tw-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: manipulation;
+}
+.tw-root .tw-head {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 20px;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  pointer-events: none;
+}
+.tw-root .tw-title {
+  min-width: 0;
+}
+.tw-root .tw-title h1 {
+  font-family: 'Alegreya', serif;
+  font-weight: 400;
+  font-size: 44px;
+  line-height: 1;
+  text-shadow: 0 0 14px #e6e8d8;
+}
+.tw-root .tw-title p {
+  font-size: 16px;
+  color: var(--soft);
+  margin-top: 6px;
+  text-shadow: 0 0 10px #e6e8d8;
+}
+.tw-root .tw-clock {
+  flex: none;
+  background: var(--card);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 15px;
+  line-height: 1.35;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  text-align: right;
+}
+.tw-root .tw-clock b {
+  font-family: 'Alegreya', serif;
+  font-size: 24px;
+  font-weight: 400;
+  display: block;
+}
+.tw-root .tw-clock .warn {
+  color: var(--red);
+}
+.tw-root .tw-notice {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 84px;
+  z-index: 2;
+  background: var(--card);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  border-left: 4px solid var(--red);
+}
+.tw-root .tw-bar {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 22px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.tw-root .tw-speeds {
+  display: flex;
+  gap: 6px;
+}
+.tw-root .tw-far {
+  flex: 1;
+}
+.tw-root .tw-rate {
+  font-size: 15px;
+  color: var(--soft);
+  text-shadow: 0 0 8px #e6e8d8;
+}
+.tw-root .tw-pill {
+  background: var(--card);
+  border-radius: 99px;
+  padding: 9px 16px;
+  font-size: 15px;
+  line-height: 1.2;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.tw-root .tw-pill:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.16);
+}
+.tw-root .tw-pill.dark,
+.tw-root .tw-speeds .tw-pill[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--card);
+}
+.tw-root .tw-speeds .tw-pill {
+  padding: 9px 13px;
+}
+.tw-root button:focus-visible,
+.tw-root .tw-canvas:focus-visible {
+  outline: 2px solid var(--warm);
+  outline-offset: 2px;
+}
+
+/* ---- the side panel ---- */
+.tw-root .tw-side {
+  border-left: 1px solid var(--line);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--paper);
+  min-height: 0;
+}
+.tw-root .tw-handle {
+  display: none;
+}
+.tw-root .tw-sec h3 {
+  font-family: 'Alegreya Sans SC', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--soft);
+  margin-bottom: 10px;
+}
+.tw-root .tw-quiet,
+.tw-root .tw-where {
+  color: var(--soft);
+  font-size: 15px;
+}
+.tw-root .tw-where {
+  margin: -4px 0 6px;
+  font-style: italic;
+}
+.tw-root .tw-who {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+}
+.tw-root .tw-r {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.tw-root .tw-r b {
+  font-family: 'Alegreya', serif;
+  font-size: 24px;
+  font-weight: 400;
+  display: block;
+  line-height: 1.1;
+}
+.tw-root .tw-r small {
+  color: var(--soft);
+  font-size: 14px;
+}
+.tw-root .tw-av {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--warm);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-family: 'Alegreya', serif;
+  font-size: 21px;
+  flex: none;
+}
+.tw-root .tw-av.grey {
+  width: 30px;
+  height: 30px;
+  font-size: 15px;
+  background: #8d8478;
+}
+.tw-root .tw-doing {
+  margin: 10px 0 10px;
+  font-size: 16px;
+  line-height: 1.35;
+}
+.tw-root .tw-earlier {
+  color: var(--soft);
+}
+.tw-root .tw-needs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 10px;
+  font-size: 13px;
+  color: var(--soft);
+}
+.tw-root .tw-needs span i {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  margin-top: 3px;
+  position: relative;
+  overflow: hidden;
+}
+.tw-root .tw-needs span i::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--v);
+  background: #6f9b62;
+}
+.tw-root .tw-needs span.low {
+  color: var(--red);
+}
+.tw-root .tw-needs span.low i::after {
+  background: var(--red);
+}
+.tw-root .tw-link {
+  margin-top: 12px;
+  font-size: 15px;
+  color: var(--warm);
+  font-weight: 600;
+  display: block;
+}
+.tw-root .tw-link:hover {
+  text-decoration: underline;
+}
+.tw-root .tw-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 16px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+.tw-root .tw-row:first-child {
+  border-top: 0;
+}
+.tw-root .tw-row small {
+  color: var(--soft);
+  display: block;
+  font-size: 13px;
+}
+.tw-root .tw-name {
+  text-align: left;
+  color: inherit;
+  border-bottom: 1px solid #c9bfa9;
+}
+.tw-root .tw-name:hover {
+  border-bottom-color: var(--warm);
+}
+.tw-root .tw-news {
+  font-size: 15.5px;
+  line-height: 1.4;
+}
+.tw-root .tw-news div {
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+.tw-root .tw-news div:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.tw-root .tw-news small {
+  display: block;
+  color: var(--soft);
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+/* ---- the picker ---- */
+.tw-root .tw-pick {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(#e6eeee, var(--paper) 260px);
+}
+.tw-root .tw-pick-head {
+  padding: 28px 40px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 24px;
+}
+.tw-root .tw-pick-head h1 {
+  font-family: 'Alegreya', serif;
+  font-weight: 400;
+  font-size: 40px;
+}
+.tw-root .tw-pick-head p {
+  flex-basis: 100%;
+  color: var(--soft);
+  font-size: 17px;
+}
+.tw-root .tw-pick-head input {
+  font: inherit;
+  font-size: 16px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: #fff;
+  color: var(--ink);
+  width: min(100%, 280px);
+}
+.tw-root .tw-pick-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 40px 40px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  align-content: start;
+  /* Rows hold their content: the buttons set min-height 0 and would otherwise be squeezed. */
+  grid-auto-rows: min-content;
+}
+.tw-root .tw-pick-list button {
+  font: inherit;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: block;
+}
+.tw-root .tw-pick-list button:hover:not(:disabled) {
+  border-color: var(--warm);
+}
+.tw-root .tw-pick-list button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.tw-root .tw-pick-list b {
+  font-family: 'Alegreya', serif;
+  font-size: 21px;
+  font-weight: 500;
+  display: block;
+}
+.tw-root .tw-pick-list small {
+  color: var(--soft);
+  font-size: 14px;
+}
+
+@media (max-width: 1000px) {
+  .tw-root .tw-main {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+  .tw-root .tw-title h1 {
+    font-size: 36px;
+  }
+}
+
+/* ---- phone: the picture on top, the panel a sheet above the tab bar ---- */
+@media (max-width: 600px) {
+  .tw-root .tw-main {
+    display: block;
+    position: relative;
+  }
+  /* The stage keeps the room above the collapsed sheet; an open sheet slides over it. */
+  .tw-root .tw-stage {
+    height: calc(100% - 190px);
+  }
+  .tw-root .tw-head {
+    left: 14px;
+    right: 14px;
+    top: 12px;
+    gap: 10px;
+  }
+  .tw-root .tw-title h1 {
+    font-size: 30px;
+  }
+  .tw-root .tw-title p {
+    font-size: 14px;
+  }
+  .tw-root .tw-clock {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .tw-root .tw-clock b {
+    font-size: 19px;
+  }
+  .tw-root .tw-bar {
+    left: 12px;
+    right: 12px;
+    bottom: 10px;
+    gap: 6px;
+  }
+  .tw-root .tw-pill {
+    padding: 7px 12px;
+    font-size: 14px;
+  }
+  .tw-root .tw-speeds .tw-pill {
+    padding: 7px 10px;
+  }
+  .tw-root .tw-rate,
+  .tw-root .tw-far {
+    display: none;
+  }
+  .tw-root .tw-notice {
+    left: 12px;
+    right: 12px;
+    bottom: 96px;
+    font-size: 14px;
+  }
+  .tw-root .tw-side {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 190px;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 24px rgba(20, 30, 30, 0.14);
+    padding: 0 16px 16px;
+    gap: 18px;
+    transition: height 0.2s ease;
+    z-index: 3;
+  }
+  .tw-root .sheet-open .tw-side {
+    height: 66vh;
+    height: 66dvh;
+  }
+  .tw-root .tw-handle {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    width: calc(100% + 32px);
+    margin: 0 -16px;
+    padding: 10px 0 8px;
+    background: var(--paper);
+    flex: none;
+  }
+  .tw-root .tw-handle i {
+    display: block;
+    width: 44px;
+    height: 5px;
+    border-radius: 3px;
+    background: #cfc6b3;
+    margin: 0 auto;
+  }
+  .tw-root .tw-pick-head {
+    padding: 18px 16px 8px;
+  }
+  .tw-root .tw-pick-head h1 {
+    font-size: 30px;
+  }
+  .tw-root .tw-pick-list {
+    padding: 8px 16px 24px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -228,6 +228,9 @@ export function buildSiteUrl(link: {
   tab?: SiteTab | null;
   /** The person page's section; Now (or none) is left out. */
   sec?: PersonSection | null;
+  /** The Town room (`room=town`): it names the person followed, and leaves out the view fields. */
+  town?: boolean;
+  follow?: number | null;
 }): string {
   const parts = [
     `seed=${encodeURIComponent(link.seed)}`,
@@ -239,14 +242,22 @@ export function buildSiteUrl(link: {
   if (link.block != null) parts.push(`b=${link.block}`);
   if (link.open)
     parts.push(`open=${encodeURIComponent(link.open).replace(/%3A/g, ':').replace(/%2C/g, ',')}`);
+  if (link.town) {
+    parts.push('room=town');
+    if (link.follow != null) parts.push(`follow=${link.follow}`);
+    return `/?${parts.join('&')}`;
+  }
   parts.push(`z=${link.zoom + 1}`, `at=${link.at.x},${link.at.y}`);
   if (link.tab && link.tab !== 'inspect') parts.push(`tab=${link.tab}`);
   if (link.sec && link.sec !== 'now') parts.push(`sec=${link.sec}`);
   return `/?${parts.join('&')}`;
 }
 
-/** The rooms a link can name: `?room=tales&follow=12&year=190`, `?room=people` or `?room=book`. */
-export const ROOM_LINKS = ['tales', 'people', 'book'] as const;
+/**
+ * The rooms a link can name: `?room=tales&follow=12&year=190`, `?room=people`, `?room=book` or
+ * `?room=town` (the picker; with `site=` it is the Town room, see `parseTownLink`).
+ */
+export const ROOM_LINKS = ['tales', 'people', 'book', 'town'] as const;
 export type RoomLink = (typeof ROOM_LINKS)[number];
 
 /** The room and followed person a link names (Tales only follows); null room is the map. */
@@ -258,6 +269,17 @@ export function parseRoomLink(search: string): { room: RoomLink | null; follow: 
   return {
     room,
     follow: room === 'tales' && follow !== null && /^\d{1,9}$/.test(follow) ? Number(follow) : null,
+  };
+}
+
+/** The Town room a site link names (`site=6&room=town&follow=776`): whether it is, and who is followed. */
+export function parseTownLink(search: string): { town: boolean; follow: number | null } {
+  const params = new URLSearchParams(search);
+  if (!params.has('site') || params.get('room') !== 'town') return { town: false, follow: null };
+  const follow = params.get('follow');
+  return {
+    town: true,
+    follow: follow !== null && /^\d{1,9}$/.test(follow) ? Number(follow) : null,
   };
 }
 

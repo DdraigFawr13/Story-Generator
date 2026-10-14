@@ -257,7 +257,11 @@ function PersonPage({
           </div>
         </div>
         <div className="acts">
-          <WatchButton watch={watch} onWatch={siteActions.watch} primary />
+          <WatchButton
+            watch={watch}
+            onWatch={(site) => siteActions.watchTown(site, person.id)}
+            primary
+          />
           <button
             type="button"
             className="pp-btn"
@@ -396,7 +400,12 @@ function PersonPage({
               </ul>
             </>
           )}
-          <LivesAt world={world} person={person} watch={watch} onWatch={siteActions.watch} />
+          <LivesAt
+            world={world}
+            person={person}
+            watch={watch}
+            onWatch={(site) => siteActions.watchTown(site, person.id)}
+          />
         </aside>
       </div>
     </div>
