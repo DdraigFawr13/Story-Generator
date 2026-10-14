@@ -608,6 +608,28 @@ On phone the map is on top and the chronicle/inspector is a bottom sheet.
 
 Each phase lists its goal, milestones (PR-sized), done-when criteria and known forks. Sizes are rough and assume one agent.
 
+### Build order after Phase 3 (Morgan's ranked list, 2026-10-14)
+
+After the Phase 3 playtest Morgan asked for additions ranked by value and coding effort ([ranked list](https://claude.ai/code/artifact/f0a2128a-8c01-45d0-b3ed-802706df83d1)), liked all fifteen and chose legends first. Work now follows this order; the phases below still group the work by topic, and each item is spelled out in its phase. Value is 1–5; effort is S (one short thread), M (one thread) or L (two or three). The order may change at any playtest check-in.
+
+1. **Legends as champions** (M5.5; value 5, M): in progress from 2026-10-14, pulled ahead of Phases 4 and 5.
+2. **Site life fixes** (M4.0; value 3, S): the Phase 3 playtest's known rough edges. Can run beside any other item.
+3. **Named battles on the map** (M4.8; value 3, S).
+4. **Annals of each people** (M4.9; value 3, S).
+5. **Dwarven mountain holds** (M4.10; value 3, S).
+6. **Succession wars and dynasties** (Phase 6, pulled forward; value 5, M).
+7. **Dragons and great beasts as individuals** (M5.6; value 4, M).
+8. **Religion: gods, priests, holy wars** (Phase 7, pulled forward; value 4, M).
+9. **Spellbooks and lineages** (M5.2; value 4, M).
+10. **Court intrigue** (Phase 6 "Legends in politics", pulled forward; value 4, M).
+11. **Story threads view** (M4.6; value 2, S).
+12. **Expeditions and perilous places** (M4.7; value 5, L).
+13. **Diplomacy: alliances, vassalage, betrayal** (Phase 6; value 5, L).
+14. **Trade between peoples in history** (M4.4; value 3, M).
+15. **The world keeps moving while you watch** (M4.1–M4.3; value 4, L).
+
+Items not in the list (M4.5, M5.1, M5.3, M5.4, the rest of Phases 6–9) keep their place and come after it unless a check-in moves them.
+
 ### Phase 0 — Reset and skeleton (2–3 PRs)
 - **M0.1 Docs reset:**
   - `git mv` the old docs, ADRs, probes and evidence into `docs/archive/`.
@@ -714,30 +736,34 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
   - the phone can view and read.
 - **Forks:** local map size, glyph style, default auto-pause categories.
 
-### Phase 4 — The world keeps moving (5–7 PRs)
-- **M4.1:** the world tier runs **monthly** during play.
+### Phase 4 — The world keeps moving (8–11 PRs)
+- **M4.0 Site life fixes** (added 2026-10-14, build order 2): fishers join the staggered starts; jobless adults get staggered household chores outside sowing and harvest; the chronicle's spoilage line and the Site tab agree (729 against 214 meals at S1 Ashabum); child deaths match history's share; a cause for test towns hungry at day 60 (5 of 9 after #98, 3 of 9 before) and for the orc share falling 8.6% to 6.6% after roaming beasts; same-block work starts at the 60% target (66% now); "Next notable" no longer stops on the year recap; back lanes that bend with the ground if time allows.
+- **M4.1:** the world tier runs **monthly** during play (M4.1–M4.3 are build order 15).
 - **M4.2 World → site:** refugees and migrants from real troubled sites, caravans with real goods, raids from civs with real grievances, visiting notables and travellers, and "news from afar".
 - **M4.3 Site → world:** population, wealth, deeds and new notables update the site's world record and appear in legends.
-- **M4.4 Politics and trade (medium):** allegiance, tribute and taxes, conscription in war, civ decisions affecting the site, routes and scarcity-driven prices.
+- **M4.4 Politics and trade (medium):** allegiance, tribute and taxes, conscription in war, civ decisions affecting the site, routes and scarcity-driven prices. **Trade between peoples in history** (added 2026-10-14, build order 14): cross-border trade is almost absent today, so caravans travel the routes between realms, a port city on a busy route grows rich and famous, an embargo is a cause of war, and a plundered caravan is a grievance.
 - **M4.5 Life deepening:** multi-generation feuds, inheritance disputes, customs and cultural drift, marriages between families from different sites, exile.
-- **M4.6 Story threads:** a derived view of unresolved situations, mentioned in recaps.
-- **M4.7 Perilous places, hoards and expeditions** (about 1,200 lines; added 2026-10-12):
+- **M4.6 Story threads** (build order 11): a derived view of unresolved situations, mentioned in recaps.
+- **M4.7 Perilous places, hoards and expeditions** (about 1,200 lines; added 2026-10-12; build order 12):
   - `content/places.ts` defines ruin, barrow, lair, old mine and aura place, each with danger, hoard and lore odds; the ruins and lairs that already exist become places with no new data.
   - Hoards: great beasts and dragons gather items lost near their lair and what their raids carry off; slaying one releases the hoard to the slayers. Rulers are buried with one item by culture custom, which seeds barrows.
   - A yearly expedition step: bounties from sites with a grievance against a beast or a ruin nearby; the strongest willing figure of the civ leads a party drawn from the site's counts (legend, then exceptional mage, then hero, then captain; added 2026-10-13), so a legend can face a great beast or the dragon and claim its hoard, or die in the lair; outcomes roll against danger and party strength under R-24: death, loot, lore (a book) or fame, each a chronicled event with cause links. A commoner who returns with something becomes a notable.
   - Beast parts (scales, hide, bone, horn) from a slain creature become luxury goods or a crafted item.
   - A map layer and a Places page in the legends browser with each place's history.
   - Site hooks: a passing expedition recruits a resident (M4.2 visiting notables), who returns changed or not at all.
+- **M4.8 Named battles on the map** (added 2026-10-14, build order 3): each battle takes the name of its place ("the Battle of Carrow Ford"), a crossed-swords marker on the world map and in playback, the count of the fallen and the champions who died there; Legends links battle, place and people, and the existing play-by-play sits on the battle's page.
+- **M4.9 Annals of each people** (added 2026-10-14, build order 4): a page per people in the legends browser with its eras named from what happened ("the Long Peace", "the Years of the Wolf"), its rulers in order, its wars won and lost and a ten-line rise-and-fall summary, built only from recorded events.
+- **M4.10 Dwarven mountain holds** (added 2026-10-14, build order 5): a hold is a settlement kind carved under the ranges that mines ore and trades it down the passes, so dwarves (3% of people after #95) reach about a tenth and become the people everyone meets at the pass.
 - **Done when:** in some seeds an event elsewhere clearly changes life at the site, and the chronicle shows the link; in some seeds a commoner finds an item in a perilous place and becomes a notable, with cause links.
 - **Forks:** whether to switch the watched site in this phase (default: wait for Phase 6).
 
 ### Phase 5 — Magic depth (4–6 PRs)
 - **M5.1 Schools and affinities:** full spell content per school, with stronger spells gated by Power and Affinity, all inside the R-24 caps. The school fork also decides whether to grow the flat list of six (for example shadow and making) and whether a primary affinity can shift with training.
-- **M5.2 Learning lineages:** apprenticeship relationships, teacher lineages, spellbooks as valuable or stealable lore, knowledge lost when teachers die or books burn. A legend takes an apprentice from the civ's Strong-or-better mages; lineages start from legends, and the apprentice carries the books when the legend dies (target story 7; added 2026-10-13).
+- **M5.2 Learning lineages** (build order 9; the colleges of magic from #92 give lineages a home): apprenticeship relationships, teacher lineages, spellbooks as valuable or stealable lore, knowledge lost when teachers die or books burn. A legend takes an apprentice from the civ's Strong-or-better mages; lineages start from legends, and the apprentice carries the books when the legend dies (target story 7; added 2026-10-13).
 - **M5.3 Magic in life:** healing, crops/weather-reading, crafting, defence and war. Ordinary mages are valuable specialists, not decisive alone. Only the rare legend can swing a battle, and only within the field-army ceiling. Enchanting: Strong-tier mages and master smiths make effect items from beast parts and rare ore, so knowledge loss (R-28) applies to items as well as spells. A legend makes or awakens one great item in their lifetime, or raises a **great work** (content: a tower, a wall, a bridge, a warded grove) that becomes a site feature with a map glyph and a chronicle line (added 2026-10-13).
 - **M5.4 Environment:** awakening near high-aura places, legendary-place effects, race dependencies with real consequences. Magical beasts proper: great and legendary lairs prefer high aura, each such creature carries one ability from the `AbilityDef` shape inside its tier caps (a wyvern's fire, an afanc's flood, a water horse's lure), and a blighted variant appears at extreme aura.
-- **M5.5 World tier: legends act** (expanded 2026-10-13 from "notable mages and bloodlines influence history within the caps"). A legend is their civ's **champion**: battles name them, one day of their power breaks about 1,000 soldiers and leaves them spent for a season, victory raises their fame, and a bigger host or a second legend can kill them (R-24). A non-ruler legend may lead a founding (a hall or a town, target story 5) with the `founder` title. Vengeance made visible: a notable with a sworn oath leads one raid on the killer's site. Two living legends in neighbouring civs may feud or duel (`legend_duel`). Fame by deeds: `legend_risen` gives a start, and victories, slayings and foundings add the rest. Done when every legend in most seeds has a deed beyond birth, marriage and death.
-- **M5.6 Dragons and great beasts as individuals** (about 600 lines; added 2026-10-12): a name, age, temper and hoard; settlement suppressed for some cells around the lair; a death event ranked with a legend's; the restless dead as a creature entry that a robbed barrow may wake. Dragons stay at most one per world and at danger 700 (R-24).
+- **M5.5 World tier: legends act** (in progress from 2026-10-14 in the "Legends as champions" thread, build order 1; expanded 2026-10-13 from "notable mages and bloodlines influence history within the caps"). A legend is their civ's **champion**: battles name them, one day of their power breaks about 1,000 soldiers and leaves them spent for a season, victory raises their fame, and a bigger host or a second legend can kill them (R-24). A non-ruler legend may lead a founding (a hall or a town, target story 5) with the `founder` title. Vengeance made visible: a notable with a sworn oath leads one raid on the killer's site. Two living legends in neighbouring civs may feud or duel (`legend_duel`). Fame by deeds: `legend_risen` gives a start, and victories, slayings and foundings add the rest. Done when every legend in most seeds has a deed beyond birth, marriage and death.
+- **M5.6 Dragons and great beasts as individuals** (about 600 lines; added 2026-10-12; build order 7): a name, age, temper and hoard; settlement suppressed for some cells around the lair; a death event ranked with a legend's; the restless dead as a creature entry that a robbed barrow may wake. Dragons stay at most one per world and at danger 700 (R-24).
 - **Forks:**
   - school names and flavour, and whether to extend the flat list of six;
   - whether casting has a price (default mild fatigue).
@@ -750,9 +776,10 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 
 ### Phase 6 — Kingdoms (6–8 PRs)
 - Governments (chiefdom, monarchy, council, theocracy), nobles and titles, legitimacy, factions and succession disputes.
-- Diplomacy, alliances, vassalage, marriages between houses, betrayals.
+- **Succession wars and dynasties** (pulled forward 2026-10-14, build order 6): a disputed succession can become a civil war; a pretender raises part of the realm, the realm may split in two or a far town break away as a free city, and a dynasty can end with a new house taking the seat. Dynasties get names and a family tree in the legends browser.
+- Diplomacy, alliances, vassalage, marriages between houses, betrayals (build order 13, added 2026-10-14: a sworn alliance binds a people to join a war, a lost war can make a people a vassal, a marriage between houses can end a feud, and a betrayal comes when the allies' values drift apart).
 - Armies, battles and sieges; occupations and rebellions.
-- **Legends in politics:** kingdoms court, fear, bribe or try to assassinate the 0–3 living legends. A legend can be a ruler, an ally or a deterrent, but a coalition or a larger host can still bring one down. A legend may seize a seat (a succession dispute won by power, not fame), betray their ruler, or draw a bounty and a coalition against the civ that shelters them (target story 7; added 2026-10-13). Their deaths are world-shaking events. The same applies to the dragon (M5.6): kingdoms court it, fear it or put a bounty on it.
+- **Legends in politics** (court intrigue, pulled forward 2026-10-14, build order 10; assassination is a notable's deed with cause links back to the grudge): kingdoms court, fear, bribe or try to assassinate the 0–3 living legends. A legend can be a ruler, an ally or a deterrent, but a coalition or a larger host can still bring one down. A legend may seize a seat (a succession dispute won by power, not fame), betray their ruler, or draw a bounty and a coalition against the civ that shelters them (target story 7; added 2026-10-13). Their deaths are world-shaking events. The same applies to the dragon (M5.6): kingdoms court it, fear it or put a bounty on it.
 - Deep trade, roads and inequality.
 - Switching the watched site, plus 2–3 detailed sites at once if performance allows.
 - A 512×512 world option.
@@ -762,8 +789,8 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 - Guilds, temples, orders and academies as content. A legend may found an order or academy that outlives them and keeps or loses their lore (added 2026-10-13).
 - Recruiting the gifted, training, hoarding or sharing lore, institutional politics.
 - Society's attitude to magic (revered, regulated or persecuted) from culture values.
-- Religion deepening.
-- **Fork:** propose an institutions brief first.
+- Religion deepening. **Gods, priests and holy wars** (pulled forward 2026-10-14, build order 8): each culture gets a god or pantheon drawn from its values, temples at its sites and a prophet or high priest as a notable; schisms, conversion after conquest, and holy wars between peoples whose gods disagree, beside the culture-values rules from #93.
+- **Fork:** propose an institutions brief first (religion's pulled-forward thread needs only its own short spec).
 
 ### Phase 8 — Hybrid modes (5–8 PRs)
 - Commands go through the existing queue and are recorded.
@@ -790,10 +817,10 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 | 1 | World generation | 6–7 PRs | Topography, seasonal climate, rivers, biomes, resources, aura, fertility and wildness, world map, names, passes and harbours, routes |
 | 2 | Legends | 6–8 PRs | Races, cultures, inheritance, sites, demographics, families/dynasties, history, legends browser |
 | 3 | Live site (**Milestone A**) | 10–14 PRs | Full everyday life thinly: needs, mood, health, environment, family, relationships, work, threats, light magic; saves |
-| 4 | Living world | 6–8 PRs | Monthly world during play, world↔site links, medium politics/trade, deeper life, perilous places and expeditions |
+| 4 | Living world | 8–11 PRs | Site life fixes, monthly world during play, world↔site links, medium politics/trade, trade between peoples, deeper life, perilous places and expeditions, named battles, annals of each people, dwarven holds |
 | 5 | Magic depth | 5–7 PRs | Schools, lineages, books, magic in life and war, enchanting, magical beasts, race dependencies, dragons as individuals |
-| 6 | Kingdoms | 6–8 PRs | Governments, diplomacy, armies, deep trade, multiple sites, bigger worlds |
-| 7 | Institutions | 5–8 PRs | Guilds, temples, orders, attitudes to magic |
+| 6 | Kingdoms | 6–8 PRs | Governments, succession wars and dynasties, diplomacy, court intrigue, armies, deep trade, multiple sites, bigger worlds |
+| 7 | Institutions | 5–8 PRs | Guilds, temples, orders, gods and holy wars, attitudes to magic |
 | 8 | Hybrid modes | 5–8 PRs | Steward mode, follow-a-character mode |
 | 9+ | Expansion | ongoing | Art, sliders, races, z-levels, narrator |
 
