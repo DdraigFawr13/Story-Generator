@@ -97,6 +97,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...cultureProblems(content));
   problems.push(...settlementProblems(content));
   problems.push(...creatureProblems(content));
+  problems.push(...dragonProblems(content));
   problems.push(...diseaseProblems(content));
   problems.push(...notableProblems(content));
   problems.push(...siteProblems(content));
@@ -198,6 +199,49 @@ export function cultureProblems(content: ContentBundle): string[] {
     if (!content.cultures.some((c) => c.raceId === race.id)) {
       problems.push(`Race ${race.id} has no culture.`);
     }
+  }
+  return problems;
+}
+
+/** Dragons (M5.6): a known creature, ranges that run low to high, tempers with weight, names to use. */
+export function dragonProblems(content: ContentBundle): string[] {
+  const rules = content.dragons;
+  if (!rules) return ['Content has no dragon rules.'];
+  const problems: string[] = [];
+  if (!content.creatures.some((c) => c.id === rules.creatureId))
+    problems.push(`Dragons: unknown creature "${rules.creatureId}".`);
+  if (!(rules.firstBy >= 1)) problems.push('Dragons: firstBy must be at least 1.');
+  if (!(rules.laterFirstBy >= 1)) problems.push('Dragons: laterFirstBy must be at least 1.');
+  if (!(rules.maxAlive >= 1 && rules.cellsPerDragon >= 1))
+    problems.push('Dragons: maxAlive and cellsPerDragon must be at least 1.');
+  for (const key of ['successorGap', 'ageOnWaking'] as const) {
+    const [low, high] = rules[key];
+    if (low < 0 || low > high) problems.push(`Dragons: ${key} needs 0 <= min <= max.`);
+  }
+  if (rules.names.length === 0) problems.push('Dragons: no names.');
+  if (new Set(rules.names).size !== rules.names.length) problems.push('Dragons: duplicate names.');
+  if (rules.lairNames.length === 0 || rules.lairNames.some((n) => !n.includes('{name}')))
+    problems.push('Dragons: every lair name needs {name}.');
+  if (!rules.lairUnder.includes('{region}')) problems.push('Dragons: lairUnder needs {region}.');
+  if (!rules.lairNear.includes('{near}')) problems.push('Dragons: lairNear needs {near}.');
+  if (rules.tempers.length === 0) problems.push('Dragons: no tempers.');
+  const seen = new Set<string>();
+  for (const temper of rules.tempers) {
+    const where = `Dragon temper ${temper.id}`;
+    if (seen.has(temper.id)) problems.push(`Duplicate dragon temper "${temper.id}".`);
+    seen.add(temper.id);
+    if (!(temper.weight > 0)) problems.push(`${where}: weight must be above 0.`);
+    if (!(temper.raidFactor >= 0)) problems.push(`${where}: raidFactor must not be negative.`);
+    if (!(temper.burnChance >= 0 && temper.burnChance <= 1))
+      problems.push(`${where}: burnChance must be 0-1.`);
+    if (!temper.sleep !== !temper.wake) problems.push(`${where}: sleep and wake go together.`);
+    for (const range of [temper.sleep, temper.wake]) {
+      if (range && (range[0] < 1 || range[0] > range[1]))
+        problems.push(`${where}: sleep and wake need 1 <= min <= max.`);
+    }
+  }
+  for (const key of ['tributeShare', 'seekerMax'] as const) {
+    if (!(rules[key] >= 0 && rules[key] <= 1)) problems.push(`Dragons: ${key} must be 0-1.`);
   }
   return problems;
 }
@@ -380,6 +424,15 @@ const HISTORY_EVENT_IDS = [
   'beast_hunt_failed',
   'beast_fought',
   'beast_roamed',
+  'dragon_woke',
+  'dragon_slept',
+  'dragon_stirred',
+  'dragon_tribute',
+  'dragon_tribute_refused',
+  'dragon_burned',
+  'dragon_quest',
+  'dragon_hoard_claimed',
+  'item_hoarded',
   'artifact_made',
   'book_written',
   'item_inherited',

@@ -9,7 +9,7 @@ Detail for every phase lives in [REBOOT_PLAN.md §9](REBOOT_PLAN.md#9-phases); o
 | 2 | Legends | 6–8 PRs | Races, cultures, inheritance, sites, demographics, families/dynasties, history, legends browser | Done ([spec](phases/PHASE_2.md)) |
 | 3 | Live site (**Milestone A**) | 10–14 PRs | Full everyday life thinly: needs, mood, health, environment, family, relationships, work, threats, light magic; saves | Built: M3.1–M3.12, the village life pass and the close; playtest add-ons (weddings and fame, colleges and free cities, culture values, closer peoples, more races and peoples, compact continents, roaming beasts, more land and free cities); Milestone A playtest next ([spec](phases/PHASE_3.md)) |
 | 4 | Living world | 8–11 PRs | Site life fixes (M4.0), monthly world during play, world↔site links, medium politics/trade, trade between peoples, deeper life, perilous places and expeditions (M4.7), named battles (M4.8), annals of each people (M4.9), dwarven holds (M4.10) | M4.0 site life fixes built (2026-10-14) |
-| 5 | Magic depth | 5–7 PRs | Schools, lineages, books, magic in life and war, enchanting, magical beasts, race dependencies, legends' deeds (M5.5), dragons as individuals (M5.6) | M5.5 legends as champions built (pulled ahead, 2026-10-14) |
+| 5 | Magic depth | 5–7 PRs | Schools, lineages, books, magic in life and war, enchanting, magical beasts, race dependencies, legends' deeds (M5.5), dragons as individuals (M5.6) | M5.5 legends as champions and M5.6 dragons as individuals built (pulled ahead, 2026-10-14) |
 | 6 | Kingdoms | 6–8 PRs | Governments, succession wars and dynasties, diplomacy, court intrigue, armies, deep trade, multiple sites, bigger worlds | Succession wars and dynasties built (pulled ahead, 2026-10-14) |
 | 7 | Institutions | 5–8 PRs | Guilds, temples, orders, gods and holy wars, attitudes to magic | |
 | 8 | Hybrid modes | 5–8 PRs | Steward mode, follow-a-character mode | |
@@ -17,7 +17,7 @@ Detail for every phase lives in [REBOOT_PLAN.md §9](REBOOT_PLAN.md#9-phases); o
 
 ## Build order after Phase 3
 
-Since 2026-10-14 work follows Morgan's ranked list rather than phase order: legends as champions (M5.5, built), site life fixes (built), named battles, annals of each people, dwarven holds, succession wars and dynasties (built), dragons, religion, spellbooks and lineages, court intrigue, story threads, expeditions, diplomacy, trade between peoples, then the world moving during play. The full list with value and effort is in [REBOOT_PLAN §9](REBOOT_PLAN.md#build-order-after-phase-3-morgans-ranked-list-2026-10-14).
+Since 2026-10-14 work follows Morgan's ranked list rather than phase order: legends as champions (M5.5, built), site life fixes (built), named battles, annals of each people, dwarven holds, succession wars and dynasties (built), dragons (M5.6, built), religion, spellbooks and lineages, court intrigue, story threads, expeditions, diplomacy, trade between peoples, then the world moving during play. The full list with value and effort is in [REBOOT_PLAN §9](REBOOT_PLAN.md#build-order-after-phase-3-morgans-ranked-list-2026-10-14).
 
 ## Deferred decisions (asked when the phase arrives)
 

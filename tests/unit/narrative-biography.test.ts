@@ -14,10 +14,10 @@ import {
 } from '../../src/engine';
 
 let shared: WorldState | undefined;
-/** One 64x64, 250-year world shared by the cases. */
+/** One 64x64, 250-year world shared by the cases (re-pinned NOT-A to NOT-B for M5.6 dragons: history drift made the most famous dead notable one born before the first settlement). */
 const base = () =>
   (shared ??= generateWorld(
-    'NOT-A',
+    'NOT-B',
     { width: 64, height: 64, historyYears: 250 },
     DEFAULT_CONTENT,
   ));

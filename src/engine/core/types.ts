@@ -586,6 +586,26 @@ export interface Site {
   peakPop: number;
 }
 
+/** What makes a dragon an individual (M5.6): its temper, its sleep and what it has hoarded. */
+export interface DragonState {
+  /** Id of its temper in the dragon rules. */
+  temper: string;
+  /** Years it had lived when it woke. */
+  ageAtWaking: number;
+  lairName: string;
+  /** Slumbering tempers: asleep until this year, or awake until it. */
+  asleepUntil?: number;
+  awakeUntil?: number;
+  /** The year the current sleep began. */
+  sleptSince?: number;
+  /** The year it last burned a site. */
+  burned?: number;
+  /** Tribute payments and raids taken, and the treasures (item ids) of the figures it killed. */
+  hoard: { tribute: number; plunder: number; items: Id[] };
+  /** Sites that paid tribute, in first-paid order. */
+  tributeFrom: Id[];
+}
+
 /** A beast with a lair (M2.4). Lairs are cells, not sites. `deeds` are the event ids of its appearance and raids. */
 export interface Creature {
   id: Id;
@@ -605,6 +625,8 @@ export interface Creature {
   haunt?: number;
   /** Figures it killed, in order. */
   kills?: Id[];
+  /** Set for the world's dragon (M5.6). */
+  dragon?: DragonState;
   deeds: Id[];
 }
 

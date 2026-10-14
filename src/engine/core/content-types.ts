@@ -10,6 +10,7 @@ import type {
   GoodId,
   Goods,
   NotableRole,
+  RegionKind,
   SiteFeature,
   SiteKind,
 } from './types';
@@ -229,6 +230,8 @@ export interface ContentBundle {
   settlement: SettlementRules;
   history: HistoryRules;
   creatures: CreatureDef[];
+  /** The dragon as an individual (M5.6). */
+  dragons: DragonRules;
   diseases: DiseaseDef[];
   notables: NotableRules;
   biographies: BiographyRules;
@@ -1412,6 +1415,81 @@ export interface CreatureDef {
   names: string[];
   /** Cells from its lair it wanders; it raids and is hunted where it roams (absent: it keeps to its lair). */
   roam?: number;
+}
+
+/** One temper a dragon can wake with (M5.6). */
+export interface DragonTemper {
+  id: string;
+  /** Joined to its given name: "Ysgythr the Greedy". */
+  epithet: string;
+  /** What the temper is called in a biography: "greedy". */
+  word: string;
+  /** Relative chance it is drawn. */
+  weight: number;
+  /** Multiplies the kind's raid chance. */
+  raidFactor: number;
+  /** It asks for tribute from the nearest site instead of raiding it. */
+  tribute: boolean;
+  /** After a raid that leaves a site under this many people, it may burn the site (0: never). */
+  burnBelow: number;
+  burnChance: number;
+  /** Years after one burning before it may burn another site. */
+  burnGap: number;
+  /** Years asleep and years awake in turn (absent: never sleeps). */
+  sleep?: [number, number];
+  wake?: [number, number];
+}
+
+/** The world's one dragon at a time (M5.6): when it wakes, who it is, what it does and what it hoards. */
+export interface DragonRules {
+  /** The `CreatureDef` it uses for danger, raids, roaming, lifespan, lair biomes and wildness. */
+  creatureId: string;
+  /** The first dragon wakes in a year drawn uniformly from 1 to this. */
+  firstBy: number;
+  /** Other slots' first dragons wake in a year drawn uniformly from 1 to this. */
+  laterFirstBy: number;
+  /** One dragon may be alive at once per this many map cells, at least 1 and at most `maxAlive`. */
+  cellsPerDragon: number;
+  maxAlive: number;
+  /** Fewest cells between two living dragons' lairs. */
+  lairsApart: number;
+  /** Years after a dragon dies, of any cause, before the next wakes (min, max). */
+  successorGap: [number, number];
+  /** Years it had lived when it woke (min, max). */
+  ageOnWaking: [number, number];
+  /** Given names; the epithet of its temper follows. */
+  names: string[];
+  tempers: DragonTemper[];
+  /** Lair name templates; `{name}` is its given name. */
+  lairNames: string[];
+  /** Region kinds a lair can lie under, and how far (cells) from the region's anchor still counts. */
+  lairRegionKinds: RegionKind[];
+  lairRegionReach: number;
+  /** Place phrases: `{region}` is the region's name, `{near}` the nearest live site. */
+  lairUnder: string;
+  lairNear: string;
+  /** No migration or expansion founds a site within this many cells (Chebyshev) of a living dragon's lair. */
+  noSettleRadius: number;
+  /** Share of the paying site's food stores a tribute takes, and how that reads in the chronicle. */
+  tributeShare: number;
+  tributeWord: string;
+  /** Appended when a town pays again; `{nth}` is "second", "third"... */
+  tributeAgain: string;
+  /** Yearly chance a hoard-seeker sets out = min(seekerMax, seekerPerHoard * hoard value). */
+  seekerPerHoard: number;
+  seekerMax: number;
+  /** Cells from the lair within which a figure's home must lie to set out. */
+  seekerRange: number;
+  /** Hoard value of one treasure, in tributes. */
+  treasureValue: number;
+  /** Food a slayer's home gains per tribute or plunder in the hoard (capped at the site's stores limit). */
+  grainPerSpoil: number;
+  /** Added to the importance of a dragon's slaying. */
+  slainImportance: number;
+  /** Words for a hoard: [singular, plural] of tribute, plunder and treasure. */
+  hoardWords: Record<'tribute' | 'plunder' | 'treasure', [string, string]>;
+  /** Said of a hoard with no treasure when its taker carries it home. */
+  spoilsWord: string;
 }
 
 /** Hard cap on a creature's danger, in soldier equivalents (R-24). */

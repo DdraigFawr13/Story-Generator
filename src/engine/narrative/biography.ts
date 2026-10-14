@@ -5,7 +5,7 @@
 import { DAYS_PER_YEAR, MONTH_NAMES, dateOf } from '../core/clock';
 import type { ContentBundle } from '../core/content-types';
 import { hashString } from '../core/rng';
-import type { Id, Person, SimEvent, WorldState } from '../core/types';
+import type { Creature, Id, Person, SimEvent, WorldState } from '../core/types';
 import { totalPop } from '../history/pop';
 import { tierOfPower } from '../people/tiers';
 import { fillTemplate, type Narrator } from './render';
@@ -43,7 +43,7 @@ export interface Biography {
 
 type BioContent = Pick<
   ContentBundle,
-  'eventTypes' | 'biographies' | 'races' | 'cultures' | 'history' | 'creatures'
+  'eventTypes' | 'biographies' | 'races' | 'cultures' | 'history' | 'creatures' | 'dragons'
 >;
 
 const keyOf = (kind: LegendKind, id: Id) => `${kind}:${id}`;
@@ -308,6 +308,38 @@ function civSummary(
   return out;
 }
 
+/** A dragon's own lines: temper and lair, the tribute it took, and its hoard (or who carried it off). */
+function dragonLines(
+  world: WorldState,
+  content: BioContent,
+  beast: Creature,
+  say: (name: string, vars: Record<string, string | number>) => string,
+): string[] {
+  const state = beast.dragon;
+  if (!state) return [];
+  const temper = content.dragons.tempers.find((t) => t.id === state.temper);
+  const out = [
+    say(beast.died === undefined ? 'dragonLairLive' : 'dragonLair', {
+      temper: temper?.word ?? state.temper,
+      age: state.ageAtWaking,
+      lair: state.lairName,
+    }),
+  ];
+  const towns = state.tributeFrom.flatMap((id) => world.sites.get(id)?.name ?? []);
+  if (state.hoard.tribute > 0 && towns.length > 0) {
+    const n = state.hoard.tribute;
+    out.push(
+      say('dragonTribute', { times: n === 1 ? 'once' : `${n} times`, towns: nameList(towns) }),
+    );
+  }
+  const items = state.hoard.items.flatMap((id) => world.items.get(id)?.name ?? []);
+  if (items.length > 0 && beast.died === undefined)
+    out.push(say('dragonHoard', { items: nameList(items) }));
+  else if (items.length > 0 && beast.slainBy)
+    out.push(say('dragonHoardTaken', { slayer: beast.slainBy, items: nameList(items) }));
+  return out;
+}
+
 function otherSummary(world: WorldState, content: BioContent, ref: LegendRef): string[] {
   const say = (name: string, vars: Record<string, string | number>) =>
     sentence(content.biographies, ref, name, vars);
@@ -318,13 +350,15 @@ function otherSummary(world: WorldState, content: BioContent, ref: LegendRef): s
     const base = { name: beast.name, kind, born: beast.born };
     const killed = (beast.kills ?? []).flatMap((id) => world.people.get(id)?.name ?? []);
     const kills = killed.length > 0 ? [say('beastKills', { names: nameList(killed) })] : [];
-    if (beast.died === undefined) return [say('beastLive', base), ...kills];
+    const dragon = dragonLines(world, content, beast, say);
+    if (beast.died === undefined) return [say('beastLive', base), ...dragon, ...kills];
     return [
       say('beastDead', {
         ...base,
         died: beast.died,
         slain: beast.slainBy ? `, slain by ${beast.slainBy}` : '',
       }),
+      ...dragon,
       ...kills,
     ];
   }

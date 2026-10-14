@@ -117,6 +117,14 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'beast_hunt_failed',
       'beast_fought',
       'beast_roamed',
+      'dragon_woke',
+      'dragon_slept',
+      'dragon_stirred',
+      'dragon_tribute',
+      'dragon_tribute_refused',
+      'dragon_burned',
+      'dragon_quest',
+      'dragon_hoard_claimed',
     ],
   },
   {
@@ -143,6 +151,7 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'item_lost',
       'item_stolen',
       'item_found',
+      'item_hoarded',
     ],
   },
 ];

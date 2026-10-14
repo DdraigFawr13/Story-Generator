@@ -78,8 +78,8 @@ describe('daily life', () => {
     // SITE-B: after the colleges and free cities change, SITE-A's biggest town is another one, where
     // a forager's purpose sits at zero at the checked moment (logged as a playtest follow-up). Since
     // roaming beasts (2026-10-13) SITE-B's biggest town ends history short of food, so six residents
-    // are hungry at day 60; SITE-D's is fed.
-    const world = generateWorld('SITE-D', { width: 64, height: 64 }, C);
+    // are hungry at day 60; SITE-D's was fed until M5.6 dragons (history drift left a need at zero); re-pinned: SITE-B is fed again.
+    const world = generateWorld('SITE-B', { width: 64, height: 64 }, C);
     const active = embark(world, C, biggest(world).id);
     for (let d = 0; d < 60; d += 1) {
       stepSite(world, C);

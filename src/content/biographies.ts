@@ -78,6 +78,12 @@ export const BIOGRAPHIES: BiographyRules = {
     beastLive: ['{name}, a {kind}, has haunted the land since Year {born}.'],
     beastDead: ['{name}, a {kind}, haunted the land from Year {born} until Year {died}{slain}.'],
     beastKills: ['It killed {names}.', '{names} died fighting it.'],
+    // A dragon (M5.6): its temper and lair, the tribute it took and the hoard it keeps or lost.
+    dragonLair: ['It was {temper}, some {age} years old when it woke, and lay in {lair}.'],
+    dragonLairLive: ['It is {temper}, was some {age} years old when it woke, and lies in {lair}.'],
+    dragonTribute: ['It took tribute {times} from {towns}.'],
+    dragonHoard: ['Its hoard holds {items}.'],
+    dragonHoardTaken: ['{slayer} carried off its hoard: {items}.'],
     itemHeld: ['{name}, a {form}, was made in Year {made} and is held by {holder}.'],
     itemLost: ['{name}, a {form}, was made in Year {made} and is lost.'],
     dynasty: ['{Name} was founded in Year {founded} by {founder}{civ}.'],
