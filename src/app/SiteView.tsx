@@ -73,6 +73,9 @@ export interface SiteLinkParts {
   at: { x: number; y: number };
   tab: SiteTab;
   sec: PersonSection;
+  /** The Town room's link (`room=town&follow=`): the view fields above are ignored. */
+  town?: boolean;
+  follow?: number | null;
 }
 
 export type TickListener = (

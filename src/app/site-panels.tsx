@@ -850,7 +850,7 @@ function siteWorkText(m: SiteModel, job: JobDef): string {
 }
 
 /** The last block run, as the current detail holds it. */
-function lastSpent(p: Person): BlockSpent {
+export function lastSpent(p: Person): BlockSpent {
   const d = p.detail;
   return {
     activity: d?.activity,
@@ -862,7 +862,7 @@ function lastSpent(p: Person): BlockSpent {
 }
 
 /** "Working in a field", "Sleeping at home": the activity and the place of one block. */
-function doingText(m: SiteModel, spent: BlockSpent, homeId: Id | null): string {
+export function doingText(m: SiteModel, spent: BlockSpent, homeId: Id | null): string {
   if (spent.with !== undefined) return `With ${m.names.get(spent.with) ?? 'a carer'}`;
   if (!spent.activity) return 'Not yet known';
   const verb = ACTIVITY_VERB[spent.activity];
@@ -1216,7 +1216,7 @@ function LoreSection({ m, a, p }: { m: SiteModel; a: PanelActions; p: Person }) 
 }
 
 // Presentation: mood and stress as words when numbers are off. The numbers stay the engine's.
-function moodWord(mood: number): string {
+export function moodWord(mood: number): string {
   if (mood >= 40) return 'happy';
   if (mood >= 10) return 'content';
   if (mood > -10) return 'even';

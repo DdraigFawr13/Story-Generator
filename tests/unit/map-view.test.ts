@@ -12,6 +12,7 @@ import {
   maxZoom,
   parseBookLink,
   parseRoomLink,
+  parseTownLink,
   parseViewUrl,
   rampPosition,
   rampTicks,
@@ -301,6 +302,13 @@ describe('room links', () => {
     expect(parseRoomLink(url.slice(2))).toEqual({ room: 'book', follow: null });
     expect(parseBookLink(url.slice(2))).toEqual({ civ: 4, ch: 2, ev: 881 });
   });
+  it('keeps the open margin note in the book link', () => {
+    const book = { civ: 4, ch: 2, ev: null, note: { kind: 'person', id: 3737 } } as const;
+    const url = buildViewUrl({ ...base, room: 'book', book });
+    expect(url).toBe('/?seed=S1&size=256&layer=elevation&room=book&book=4&ch=2&note=person:3737');
+    expect(parseBookLink(url.slice(2))).toEqual(book);
+    expect(parseBookLink('?room=book&note=ship:9')).toEqual({ civ: null, ch: 0, ev: null });
+  });
   it('leaves a bare Book room and bad book fields safe', () => {
     const bare = buildViewUrl({ ...base, room: 'book', book: { civ: null, ch: 0, ev: null } });
     expect(bare).toBe('/?seed=S1&size=256&layer=elevation&room=book');
@@ -308,5 +316,40 @@ describe('room links', () => {
     expect(parseBookLink('?room=book&book=x&ch=-1&ev=2.5')).toEqual({ civ: null, ch: 0, ev: null });
     expect(parseBookLink('?room=people&book=3')).toBeNull();
     expect(parseBookLink('?room=book&book=3&site=1')).toBeNull();
+  });
+});
+
+describe('the Town room link', () => {
+  const site = {
+    seed: 'S1',
+    size: 256 as const,
+    site: 84,
+    day: 3,
+    block: 1,
+    open: null,
+    zoom: 2,
+    at: { x: 0, y: 0 },
+  };
+
+  it('writes room=town and the person followed, and leaves the view fields out', () => {
+    const url = buildSiteUrl({ ...site, town: true, follow: 776 });
+    expect(url).toBe('/?seed=S1&size=256&site=84&day=3&b=1&room=town&follow=776');
+    expect(buildSiteUrl({ ...site, town: true })).not.toContain('follow=');
+    expect(buildSiteUrl(site)).not.toContain('room=');
+  });
+
+  it('reads it back, and tells the town from the picker', () => {
+    const url = buildSiteUrl({ ...site, town: true, follow: 776 });
+    expect(parseTownLink(url.slice(1))).toEqual({ town: true, follow: 776 });
+    expect(parseViewUrl(url.slice(1), IDS).site?.site).toBe(84);
+    expect(parseTownLink('?seed=S1&room=town')).toEqual({ town: false, follow: null });
+    expect(parseTownLink('?seed=S1&site=4&room=town&follow=x')).toEqual({
+      town: true,
+      follow: null,
+    });
+    expect(parseTownLink('?seed=S1&site=4')).toEqual({ town: false, follow: null });
+    // Without a site, room=town is the picker; with one, the room link steps aside for the town.
+    expect(parseRoomLink('?seed=S1&room=town').room).toBe('town');
+    expect(parseRoomLink('?seed=S1&site=4&room=town').room).toBeNull();
   });
 });

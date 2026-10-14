@@ -228,6 +228,9 @@ export function buildSiteUrl(link: {
   tab?: SiteTab | null;
   /** The person page's section; Now (or none) is left out. */
   sec?: PersonSection | null;
+  /** The Town room (`room=town`): it names the person followed, and leaves out the view fields. */
+  town?: boolean;
+  follow?: number | null;
 }): string {
   const parts = [
     `seed=${encodeURIComponent(link.seed)}`,
@@ -239,14 +242,22 @@ export function buildSiteUrl(link: {
   if (link.block != null) parts.push(`b=${link.block}`);
   if (link.open)
     parts.push(`open=${encodeURIComponent(link.open).replace(/%3A/g, ':').replace(/%2C/g, ',')}`);
+  if (link.town) {
+    parts.push('room=town');
+    if (link.follow != null) parts.push(`follow=${link.follow}`);
+    return `/?${parts.join('&')}`;
+  }
   parts.push(`z=${link.zoom + 1}`, `at=${link.at.x},${link.at.y}`);
   if (link.tab && link.tab !== 'inspect') parts.push(`tab=${link.tab}`);
   if (link.sec && link.sec !== 'now') parts.push(`sec=${link.sec}`);
   return `/?${parts.join('&')}`;
 }
 
-/** The rooms a link can name: `?room=tales&follow=12&year=190`, `?room=people` or `?room=book`. */
-export const ROOM_LINKS = ['tales', 'people', 'book'] as const;
+/**
+ * The rooms a link can name: `?room=tales&follow=12&year=190`, `?room=people`, `?room=book` or
+ * `?room=town` (the picker; with `site=` it is the Town room, see `parseTownLink`).
+ */
+export const ROOM_LINKS = ['tales', 'people', 'book', 'town'] as const;
 export type RoomLink = (typeof ROOM_LINKS)[number];
 
 /** The room and followed person a link names (Tales only follows); null room is the map. */
@@ -261,11 +272,24 @@ export function parseRoomLink(search: string): { room: RoomLink | null; follow: 
   };
 }
 
+/** The Town room a site link names (`site=6&room=town&follow=776`): whether it is, and who is followed. */
+export function parseTownLink(search: string): { town: boolean; follow: number | null } {
+  const params = new URLSearchParams(search);
+  if (!params.has('site') || params.get('room') !== 'town') return { town: false, follow: null };
+  const follow = params.get('follow');
+  return {
+    town: true,
+    follow: follow !== null && /^\d{1,9}$/.test(follow) ? Number(follow) : null,
+  };
+}
+
 /** Where the Book room is open: a realm's book, a chapter (0-based) and an event to highlight. */
 export interface BookLink {
   civ: number | null;
   ch: number;
   ev: number | null;
+  /** The margin note open (`note=person:3737`), so Back from the Town room reopens it. */
+  note?: { kind: 'person' | 'place' | 'civ'; id: number } | null;
 }
 
 /** The book a link names (`room=book&book=3&ch=2&ev=881`); null unless the room is the Book. */
@@ -276,7 +300,10 @@ export function parseBookLink(search: string): BookLink | null {
     const v = params.get(key);
     return v !== null && /^\d{1,9}$/.test(v) ? Number(v) : null;
   };
-  return { civ: whole('book'), ch: whole('ch') ?? 0, ev: whole('ev') };
+  const note = /^(person|place|civ):(\d{1,9})$/.exec(params.get('note') ?? '');
+  const link: BookLink = { civ: whole('book'), ch: whole('ch') ?? 0, ev: whole('ev') };
+  if (note) link.note = { kind: note[1] as 'person' | 'place' | 'civ', id: Number(note[2]) };
+  return link;
 }
 
 /** Path and query for a view; zoom 0, no selection and empty Legends state are left out. */
@@ -304,6 +331,7 @@ export function buildViewUrl(
   if (view.room === 'book' && view.book) {
     if (view.book.civ !== null) parts.push(`book=${view.book.civ}`, `ch=${view.book.ch}`);
     if (view.book.ev !== null) parts.push(`ev=${view.book.ev}`);
+    if (view.book.note) parts.push(`note=${view.book.note.kind}:${view.book.note.id}`);
   }
   if (view.year != null) parts.push(`year=${view.year}`);
   if (view.open) parts.push(`open=${encodeURIComponent(view.open).replace(/%3A/g, ':')}`);

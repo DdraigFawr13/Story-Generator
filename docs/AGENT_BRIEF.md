@@ -48,6 +48,6 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256Ã
 | `src/engine/narrative/` | biographies, legend pages, chronicle text rendering |
 | `src/content/` | one file per content type: races, cultures, biomes, resources, names, history rules, settlement, diseases, notables, legends, biographies, map layers and why-lines, playback effects; site content in `site`, `life`, `jobs`, `items`, `buildings`, `abilities`, `creatures` |
 | `src/platform/` | IndexedDB saves, the world-gen and site workers and their hosts |
-| `src/app/` | React: `WorldMap`, `MapPanels`, `YearSlider`, `tales/` (Tales room, atlas and markers), `playback/data.ts`, `Legends` and `LegendPages`, `EmbarkCards`, `SiteView` with `site-panels` and `site-render` |
+| `src/app/` | React: `WorldMap`, `MapPanels`, `YearSlider`, `tales/` (Tales room, atlas and markers), `town/` (Town room, canvas and scene model), `playback/data.ts`, `Legends` and `LegendPages`, `EmbarkCards`, `SiteView` with `site-panels` and `site-render` |
 | `scripts/` | boundaries check, drama and baseline diff, sweep, worldmap, site, biographies |
 | `tests/unit/`, `tests/browser/` | Vitest units (31 files, 251 tests, 30 s), the Playwright smoke (3 tests, 24 s) |
