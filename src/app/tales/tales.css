@@ -27,76 +27,6 @@
   box-shadow: none;
 }
 
-/* ---- rail ---- */
-.tr-root .tr-rail {
-  flex: none;
-  width: 76px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 18px 0 12px;
-  background: #fbf8f1;
-  border-right: 1px solid var(--line);
-  z-index: 4;
-  font-family: 'Alegreya Sans SC', sans-serif;
-  letter-spacing: 0.06em;
-  font-size: 12px;
-  color: var(--soft);
-}
-.tr-root .tr-logo {
-  font-family: 'Alegreya', serif;
-  font-size: 18px;
-  color: var(--ink);
-  margin-bottom: 12px;
-  letter-spacing: 0;
-}
-.tr-root .tr-grow {
-  flex: 1;
-}
-.tr-root .tr-room {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 0;
-  width: 64px;
-  border: 0;
-  border-radius: 10px;
-  background: none;
-  color: var(--soft);
-  font-family: inherit;
-  letter-spacing: inherit;
-}
-.tr-root .tr-room i {
-  width: 24px;
-  height: 24px;
-  border: 2px solid currentColor;
-  border-radius: 7px;
-  display: block;
-}
-.tr-root .tr-room i.round {
-  border-radius: 50%;
-}
-.tr-root .tr-room .soon {
-  font-style: normal;
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  line-height: 1;
-  padding: 2px 6px;
-  border-radius: 99px;
-  background: #efe6d4;
-  color: var(--soft);
-  text-transform: lowercase;
-}
-.tr-root .tr-room.on {
-  background: #efe6d4;
-  color: var(--ink);
-}
-.tr-root .tr-room:hover {
-  color: var(--ink);
-}
-
 /* ---- main column ---- */
 .tr-root .tr-main {
   flex: 1;
@@ -187,6 +117,10 @@
 .tr-root .tr-chip.following button {
   font-size: 15px;
   color: var(--soft);
+}
+.tr-root .tr-chip.following button.tr-who {
+  font-size: inherit;
+  color: inherit;
 }
 .tr-root .tr-chooser {
   position: absolute;
@@ -779,6 +713,14 @@
   opacity: 0;
   cursor: pointer;
 }
+.tr-root .tr-who {
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .tr-root .tr-lane {
   margin-top: 4px;
 }
@@ -836,35 +778,6 @@
   .tr-root {
     flex-direction: column-reverse;
   }
-  .tr-root .tr-rail {
-    width: auto;
-    flex-direction: row;
-    justify-content: space-around;
-    padding: 4px 8px calc(6px + env(safe-area-inset-bottom));
-    border-right: 0;
-    border-top: 1px solid var(--line);
-    gap: 0;
-  }
-  .tr-root .tr-logo,
-  .tr-root .tr-grow {
-    display: none;
-  }
-  .tr-root .tr-room {
-    flex-direction: row;
-    width: auto;
-    padding: 10px 8px;
-    font-size: 13px;
-    letter-spacing: 0.08em;
-    border-radius: 6px;
-  }
-  .tr-root .tr-room i {
-    display: none;
-  }
-  .tr-root .tr-room.on {
-    background: none;
-    color: var(--ink);
-    font-weight: 700;
-  }
   .tr-root .tr-modes {
     top: 12px;
     right: 8px;
@@ -901,12 +814,6 @@
   .tr-root .tr-chooser {
     top: auto;
     bottom: 40px;
-  }
-  .tr-root .tr-room .soon {
-    margin-left: 5px;
-  }
-  .tr-root .tr-room {
-    align-items: center;
   }
   /* The double frame stays, thinner; the key moves behind a small "?" button. */
   .tr-root .tr-frame {

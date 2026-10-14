@@ -1,0 +1,529 @@
+/* The People room: index and personal page in the Tales room's paper colours and Alegreya type. */
+.pp-root {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--paper);
+  overflow: hidden;
+}
+.pp-root .pp-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(#e6eeee, var(--paper) 260px);
+}
+.pp-root .pp-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 0 40px;
+}
+.pp-root h1,
+.pp-root h2,
+.pp-root h3,
+.pp-root p {
+  margin: 0;
+}
+.pp-root a {
+  color: inherit;
+}
+.pp-root .pp-ln {
+  color: #2f5d7a;
+  text-decoration: none;
+  border-bottom: 1px solid #b9cbd6;
+}
+.pp-root .pp-ln.plain {
+  color: inherit;
+  border-bottom-color: transparent;
+}
+.pp-root .pp-ln.plain:hover,
+.pp-root .pp-ln:hover {
+  border-bottom-color: currentColor;
+}
+.pp-root .pp-ln.big {
+  font-size: 19px;
+}
+/* Buttons start plain (the app's own button look would otherwise show through). */
+.pp-root .pp-chips button,
+.pp-root .pp-tabs button,
+.pp-root .pp-back,
+.pp-root .pp-btn,
+.pp-root .pp-linkbtn,
+.pp-root .pp-more {
+  font: inherit;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  min-height: 0;
+  box-shadow: none;
+  color: inherit;
+  cursor: pointer;
+}
+.pp-root .pp-chips,
+.pp-root .pp-tabs,
+.pp-root .pp-btn,
+.pp-root .pp-back,
+.pp-root .pp-side h3,
+.pp-root .pp-group h2,
+.pp-root .pp-more {
+  font-family: 'Alegreya Sans SC', sans-serif;
+  letter-spacing: 0.08em;
+}
+.pp-root .pp-chips button,
+.pp-root .pp-tabs button,
+.pp-root .pp-back,
+.pp-root .pp-btn,
+.pp-root .pp-more {
+  font-family: inherit;
+  letter-spacing: inherit;
+}
+
+/* ---- index ---- */
+.pp-root .pp-top {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 34px 28px 10px;
+}
+.pp-root .pp-top h1 {
+  font-size: 44px;
+  line-height: 1.1;
+}
+.pp-root .pp-top p {
+  color: var(--soft);
+  margin: 2px 0 14px;
+}
+.pp-root .pp-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  font: inherit;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.pp-root .pp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.pp-root .pp-chips button {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: #fff;
+  color: var(--soft);
+}
+.pp-root .pp-chips button[aria-pressed='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.pp-root .pp-list,
+.pp-root .pp-people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pp-root .pp-list {
+  max-width: 880px;
+  margin: 6px auto 0;
+  padding: 0 16px;
+}
+.pp-root .pp-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+.pp-root .pp-row:hover {
+  background: #f3ecdc;
+}
+.pp-root .pp-row .who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pp-root .pp-row b {
+  font-size: 19px;
+  font-weight: 500;
+}
+.pp-root .pp-row .role {
+  color: var(--soft);
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pp-root .pp-row .when {
+  flex: none;
+  text-align: right;
+  font-size: 15px;
+  max-width: 34%;
+}
+.pp-root .pp-row .when small {
+  display: block;
+  color: var(--soft);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pp-root .pp-disc {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 20px;
+}
+.pp-root .pp-disc.big {
+  width: 92px;
+  height: 92px;
+  font-size: 46px;
+  border: 4px solid #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.18);
+}
+.pp-root .pp-disc .gold {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #e8b830;
+  border: 2px solid var(--paper);
+}
+.pp-root .pp-disc.big .gold {
+  width: 20px;
+  height: 20px;
+  right: 2px;
+  bottom: 2px;
+}
+.pp-root .pp-empty {
+  max-width: 880px;
+  margin: 20px auto;
+  padding: 0 28px;
+  color: var(--soft);
+}
+.pp-root .pp-panel .pp-empty {
+  padding: 0;
+  margin: 0;
+}
+.pp-root .pp-more {
+  display: block;
+  margin: 14px auto;
+  padding: 8px 14px;
+  border: 1px solid #cfc6b4;
+  border-radius: 4px;
+}
+
+/* ---- personal page ---- */
+.pp-root .pp-back {
+  display: block;
+  margin: 14px 28px 0;
+  font-size: 13px;
+  color: var(--soft);
+}
+.pp-root .pp-head {
+  max-width: 1120px;
+  margin: 8px auto 0;
+  padding: 10px 28px 20px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px 24px;
+  align-items: center;
+}
+.pp-root .pp-head h1 {
+  font-size: 54px;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+.pp-root .pp-head .role {
+  font-size: 21px;
+  margin-top: 4px;
+}
+.pp-root .pp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.pp-root .pp-tag {
+  padding: 3px 11px;
+  font-size: 14.5px;
+  color: var(--soft);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  text-decoration: none;
+}
+.pp-root a.pp-tag {
+  color: #2f5d7a;
+}
+.pp-root .acts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+.pp-root .pp-btn {
+  padding: 11px 20px;
+  font-size: 14px;
+  border: 1px solid #cfc6b4;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+}
+.pp-root .pp-btn.dark {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.pp-root .pp-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.pp-root .pp-why {
+  color: var(--red);
+  font-size: 13.5px;
+  text-align: center;
+}
+.pp-root .pp-tabs {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 4px;
+  padding: 0 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  font-size: 14px;
+}
+.pp-root .pp-tabs button {
+  flex: none;
+  padding: 13px 14px;
+  color: var(--soft);
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+}
+.pp-root .pp-tabs button[aria-selected='true'] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+.pp-root .pp-body {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 22px 28px 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 40px;
+  align-items: start;
+}
+.pp-root .pp-life {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pp-root .pp-life li {
+  display: grid;
+  grid-template-columns: 76px 22px minmax(0, 1fr);
+  gap: 0 12px;
+  padding: 7px 0;
+  font-size: 19px;
+  line-height: 1.3;
+}
+.pp-root .pp-life .age {
+  text-align: right;
+  line-height: 1.15;
+}
+.pp-root .pp-life .age b {
+  display: block;
+  font-weight: 700;
+}
+.pp-root .pp-life .age small {
+  color: var(--soft);
+  font-size: 14px;
+}
+.pp-root .pp-life i {
+  position: relative;
+  margin-top: 4px;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2.5px solid #a6a39a;
+  background: var(--paper);
+}
+.pp-root .pp-life li.gold i {
+  border-color: #c99a18;
+  background: #e8b830;
+}
+.pp-root .pp-life .txt {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.pp-root .pp-group {
+  margin-bottom: 22px;
+}
+.pp-root .pp-group h2,
+.pp-root .pp-side h3 {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--soft);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.pp-root .pp-group ul:not(.pp-people) {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pp-root .pp-group li:not(.pp-kids) {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.pp-root .pp-group .yr {
+  display: block;
+  color: var(--soft);
+  font-size: 14px;
+}
+.pp-root .pp-group .txt {
+  display: block;
+  color: var(--soft);
+  font-size: 16px;
+}
+.pp-root .pp-mini {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  text-decoration: none;
+  color: inherit;
+}
+.pp-root .pp-mini .who {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.pp-root .pp-mini b {
+  font-weight: 500;
+  font-size: 18px;
+}
+.pp-root .pp-mini small {
+  color: var(--soft);
+  font-size: 14px;
+}
+.pp-root .pp-mini:hover b {
+  text-decoration: underline;
+}
+.pp-root .pp-kids {
+  padding: 4px 0 6px 52px;
+  font-size: 16px;
+}
+.pp-root .pp-kids small {
+  display: block;
+  color: var(--soft);
+  font-size: 14px;
+}
+.pp-root .pp-side h3 {
+  margin-top: 4px;
+}
+.pp-root .pp-side .pp-people {
+  margin-bottom: 18px;
+}
+.pp-root .pp-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 18px;
+}
+.pp-root .pp-card p {
+  color: var(--soft);
+  margin: 2px 0 4px;
+}
+.pp-root .pp-linkbtn {
+  color: #2f5d7a;
+  font-size: 16px;
+}
+.pp-root .pp-records {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+@media (max-width: 800px) {
+  .pp-root .pp-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+}
+@media (max-width: 600px) {
+  .pp-root .pp-top {
+    padding: 20px 16px 6px;
+  }
+  .pp-root .pp-top h1 {
+    font-size: 34px;
+  }
+  .pp-root .pp-list {
+    padding: 0 6px;
+  }
+  .pp-root .pp-row .when {
+    display: none;
+  }
+  .pp-root .pp-back {
+    margin: 12px 16px 0;
+  }
+  .pp-root .pp-head {
+    align-items: start;
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 8px 16px 14px;
+    gap: 12px;
+  }
+  .pp-root .pp-disc.big {
+    width: 64px;
+    height: 64px;
+    font-size: 32px;
+  }
+  .pp-root .pp-head h1 {
+    font-size: 36px;
+  }
+  .pp-root .pp-head .role {
+    font-size: 17px;
+  }
+  .pp-root .pp-head .acts {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .pp-root .pp-head .acts .pp-btn {
+    flex: 1 1 140px;
+  }
+  .pp-root .pp-head .acts .pp-why {
+    flex: 1 0 100%;
+    text-align: left;
+  }
+  .pp-root .pp-tabs {
+    padding: 0 8px;
+  }
+  .pp-root .pp-body {
+    padding: 16px 16px 0;
+  }
+  .pp-root .pp-life li {
+    grid-template-columns: 60px 18px minmax(0, 1fr);
+    gap: 0 8px;
+    font-size: 17px;
+  }
+}

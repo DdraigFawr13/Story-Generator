@@ -55,6 +55,8 @@ import {
 } from './legends-ctx';
 import { VIEWER_LAYER_IDS } from './MapPanels';
 import { SiteView, type SiteLinkParts, type TickListener } from './SiteView';
+import { PeopleRoom } from './people/PeopleRoom';
+import type { RoomId } from './rooms/Rooms';
 import { TalesRoom } from './tales/TalesRoom';
 import { WorldMap, type ViewChange } from './WorldMap';
 import { YearSlider, finalHistoryYear } from './YearSlider';
@@ -137,6 +139,10 @@ interface EntryState {
   trail?: string[];
   all?: boolean;
   scroll?: number;
+  /** The People room is open on this entry. */
+  people?: boolean;
+  /** Tales was playing here (year and followed person), so back from a page restores it. */
+  tales?: { from: number; follow: { id: Id; name: string } | null } | undefined;
 }
 /** The slider year and Legends place a world is shown with. */
 interface Restore {
@@ -211,7 +217,18 @@ export function NextApp() {
   /** With the year locked, chronicle lines after the slider year fade. */
   const [locked, setLocked] = useState(false);
   /** The history playback replaces the map while set; `from` is the year it starts at. */
-  const [playback, setPlayback] = useState<{ from: number; key: number } | null>(null);
+  const [playback, setPlayback] = useState<{
+    from: number;
+    key: number;
+    follow?: { id: Id; name: string } | null;
+  } | null>(null);
+  /** The People room (index or a person's page) covers the map and Legends while set. */
+  const [people, setPeople] = useState(initial.open?.startsWith('person:') ?? false);
+  const peopleRef = useRef(people);
+  const showPeople = (on: boolean) => {
+    peopleRef.current = on;
+    setPeople(on);
+  };
   const playbackKey = useRef(0);
   /** Play the history after a world is generated (a Generate click or a link with no year). */
   const [playHistory, setPlayHistory] = useState(readPlayHistory);
@@ -276,7 +293,7 @@ export function NextApp() {
     });
   const writeUrl = (mode: 'push' | 'replace', v: View, n: LegendNav, y: number | null) => {
     if (!shown.current || watchingRef.current) return;
-    const entry: EntryState = { trail: n.trail.map(openOf), all: n.all };
+    const entry: EntryState = { trail: n.trail.map(openOf), all: n.all, people: peopleRef.current };
     const url = urlFor(shown.current, v, n, y);
     if (mode === 'push') window.history.pushState(entry, '', url);
     else window.history.replaceState({ ...window.history.state, ...entry }, '', url);
@@ -650,6 +667,7 @@ export function NextApp() {
       initial.year === null && !initial.open && !initial.site,
     );
     const popstate = () => {
+      const entry = (window.history.state ?? null) as EntryState | null;
       const url = parseViewUrl(window.location.search, VIEWER_LAYER_IDS);
       const next = { layer: url.layer, at: url.at, zoom: url.zoom };
       const seed = url.seed ?? DEFAULT_SEED;
@@ -663,6 +681,19 @@ export function NextApp() {
         setYears(url.years);
         if (place.nav.open) setTab('legends');
         setPlayback(null);
+        showPeople(entry?.people === true || place.nav.open?.kind === 'person');
+        if (entry?.tales) {
+          // Back from a page opened out of Tales: play on from where the reader left.
+          playbackKey.current += 1;
+          setPlayback({
+            from: entry.tales.from,
+            key: playbackKey.current,
+            follow: entry.tales.follow,
+          });
+          showPeople(false);
+          setTab('map');
+          window.history.replaceState({ ...entry, tales: undefined }, '');
+        }
         if (
           shown.current?.seed === seed &&
           shown.current.size === url.size &&
@@ -738,6 +769,7 @@ export function NextApp() {
   /** Move the Legends pane. A page or list change adds a history entry; the rest edit this one. */
   const go = (patch: GoPatch, mode: 'push' | 'replace' = 'push') => {
     const cur = latest.current.nav;
+    if (patch.open?.kind === 'person' && !peopleRef.current) showPeople(true);
     const open = patch.open === undefined ? cur.open : patch.open;
     const cat = patch.cat === undefined ? cur.cat : patch.cat;
     const q = patch.q === undefined ? cur.q : patch.q;
@@ -768,6 +800,7 @@ export function NextApp() {
     });
     if (!moved || open === null || (cur.open && sameRef(open, cur.open))) return;
     // Opening a page: show it, and move the map and the slider to it.
+    showPeople(open.kind === 'person');
     setTab('legends');
     setPlayback(null);
     const { legend: index, locked: lock } = latest.current;
@@ -784,6 +817,47 @@ export function NextApp() {
     }
   };
 
+  /** Remember where Tales was, so back from the next page plays on from there. */
+  const parkTales = (year: number, follow: { id: Id; name: string } | null) => {
+    window.history.replaceState({ ...window.history.state, tales: { from: year, follow } }, '');
+    setPlayback(null);
+  };
+  /** The People room's index, as a new history entry. */
+  const openPeopleIndex = () => {
+    if (!peopleRef.current) {
+      window.history.pushState({ people: true }, '', window.location.href);
+      showPeople(true);
+    }
+    if (latest.current.nav.open?.kind === 'person') go({ open: null });
+  };
+  /** Tales with a person followed, as a new history entry (back returns to their page). */
+  const followInTales = (who: { id: Id; name: string }) => {
+    const born = world.current.people.get(who.id)?.born ?? 0;
+    window.history.pushState({}, '', window.location.href);
+    showPeople(false);
+    setTab('map');
+    playbackKey.current += 1;
+    setPlayback({ from: Math.max(0, born), key: playbackKey.current, follow: who });
+  };
+  /** A rail item pressed in the People room. */
+  const peopleRoom = (room: RoomId) => {
+    if (room === 'people') return openPeopleIndex();
+    if (room === 'tales' && state.playback) {
+      window.history.pushState({}, '', window.location.href);
+      showPeople(false);
+      setTab('map');
+      playbackKey.current += 1;
+      setPlayback({ from: 0, key: playbackKey.current });
+      return;
+    }
+    showPeople(false);
+    setPlayback(null);
+    if (room === 'book') {
+      setSliderYear(null);
+      setTab('legends');
+      go({ cat: 'event', open: null });
+    } else setTab('map');
+  };
   const hrefOf = (ref: PageRef | null): string => {
     if (!shown.current) return '#';
     const event = ref?.kind === 'event' ? latest.current.legend.event(ref.id) : undefined;
@@ -1000,10 +1074,20 @@ export function NextApp() {
                 onOpenEvent={(id) => go({ open: { kind: 'event', id } })}
                 onLegends={(category) => {
                   setPlayback(null);
+                  showPeople(false);
                   setSliderYear(null);
                   setTab('legends');
                   if (category) go({ cat: category, open: null });
                 }}
+                onPeople={(year, follow) => {
+                  parkTales(year, follow);
+                  openPeopleIndex();
+                }}
+                onOpenPerson={(id, year, follow) => {
+                  parkTales(year, follow);
+                  go({ open: { kind: 'person', id } });
+                }}
+                initialFollow={playback.follow}
               />
             ) : (
               <>
@@ -1065,6 +1149,16 @@ export function NextApp() {
             )}
           </div>
           <Legends
+            room={
+              people ? (
+                <PeopleRoom
+                  person={nav.open?.kind === 'person' ? nav.open.id : null}
+                  onRoom={peopleRoom}
+                  onFollow={followInTales}
+                  onIndex={() => go({ open: null })}
+                />
+              ) : null
+            }
             world={state}
             index={legend}
             narrator={narrator}

@@ -65,6 +65,8 @@ interface Props {
   onOpenOnMap: (cell: number | null, year: number) => void;
   /** Switch to the map tab (narrow layout). */
   onGoMap: () => void;
+  /** A room drawn over the pane that needs the Legends context (the People room). */
+  room?: React.ReactNode;
 }
 
 const CATEGORIES: { id: CategoryId; label: string; blurb: string }[] = [
@@ -703,6 +705,7 @@ export function Legends(props: Props) {
           {body}
         </div>
       </section>
+      {props.room}
     </LegendsContext.Provider>
   );
 }
