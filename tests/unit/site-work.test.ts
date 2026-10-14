@@ -26,10 +26,11 @@ const C = DEFAULT_CONTENT;
 const ST = C.steward;
 
 /** A world whose biggest site is not already at the food-worker ceiling when fed (SITE-C since
- * peoples settle closer on a quarter-land map: SITE-B's biggest town is at the ceiling). */
+ * peoples settle closer on a quarter-land map: SITE-B's biggest town is at the ceiling;
+ * re-pinned for M5.6 dragons: history drift put SITE-C's at the ceiling too, SITE-A's is not). */
 let shortBase: WorldState | undefined;
 const shortCopy = () =>
-  structuredClone((shortBase ??= generateWorld('SITE-C', { width: 64, height: 64 }, C)));
+  structuredClone((shortBase ??= generateWorld('SITE-A', { width: 64, height: 64 }, C)));
 const bandOf = (world: WorldState, p: Person) => {
   const race = C.races.find((r) => r.id === p.raceId)!;
   const age = world.params.historyYears - p.born;

@@ -20,10 +20,10 @@ import {
   warCaptain,
   type LegendPlay,
 } from './notables';
-import { civLosesSite, evacuate } from './abandon';
+import { civLosesSite, ruinSite } from './abandon';
 import { allyAid, pactStrength } from './city-states';
 import { decideCivilWar, splitRealm } from './civil-war';
-import { bandCount, removePeople, removeProportional, stochasticRound, totalPop } from './pop';
+import { bandCount, removePeople } from './pop';
 import { cellDistance } from './settle';
 import {
   atWar,
@@ -251,13 +251,7 @@ function raze(
   battle: Id,
   lead: Person | undefined,
 ) {
-  const killed = removeProportional(
-    site,
-    stochasticRound(run.rng.war, totalPop(site) * run.rules.razeDeathShare),
-  );
-  evacuate(run, site);
-  site.ruinedYear = run.year;
-  run.territoryDirty = true;
+  const killed = ruinSite(run, site, run.rng.war);
   const event = run.emit({
     type: 'site_razed',
     place: site.cell,

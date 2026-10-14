@@ -7,6 +7,7 @@ import type { Civ, Creature, DeathCause, Dynasty, Id, Person, SimEvent, Site } f
 import { cultureGivenName } from '../people/names';
 import { BIRTH_TIER_IDS, TIERS, legendSlotOpen, tierOfPower } from '../people/tiers';
 import { legendFactor, noticeFactor } from './colleges';
+import { hoardItems } from './dragons';
 import { passItems, primarySchool, stealItem, itemsHeldBy } from './items';
 import {
   ELDER_AT,
@@ -380,7 +381,9 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
   if (killer && killer.civId != null && person.civId != null && killer.civId !== person.civId) {
     swearVengeance(run, person, killer, event.id);
   }
-  passItems(run, person, event.id);
+  // A dragon's kill leaves its treasures in the hoard, not to an heir.
+  if (beast?.dragon) hoardItems(run, person, beast, event.id);
+  else passItems(run, person, event.id);
   if (civ && civ.fell === undefined && civ.rulerId === person.id) succeed(run, civ, person, event);
   return event;
 }

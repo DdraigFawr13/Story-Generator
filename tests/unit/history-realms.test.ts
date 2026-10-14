@@ -75,10 +75,10 @@ describe('colleges and spells', () => {
     ...D,
     notables: { ...D.notables, legendChance: 1 },
   };
-  // Compact continents (2026-10-13) moved DH-21's spell casting and college founding; DH-22 has both.
+  // Compact continents (2026-10-13) moved DH-21's spell casting and college founding; DH-22 had both until M5.6 dragons (history drift); re-pinned: DH-1 has both.
   let magical: WorldState | undefined;
   const w = () =>
-    (magical ??= generateWorld('DH-22', { width: 64, height: 64, historyYears: 250 }, MAGICAL));
+    (magical ??= generateWorld('DH-1', { width: 64, height: 64, historyYears: 250 }, MAGICAL));
 
   it('are worked only by Exceptional casters, against the trouble they name', () => {
     const spells = w().events.filter((e) => e.type === 'spell_cast');
@@ -113,14 +113,14 @@ describe('colleges and spells', () => {
 describe('succession wars', () => {
   const D = DEFAULT_CONTENT;
   const cw = D.history.civilWar;
-  // Every beaten claimant rises; CW-13 has a throne seized, a revolt crushed and a split.
+  // Every beaten claimant rises; re-pinned for M5.6 dragons: history drift; CW-43 has a throne seized, a revolt crushed and a split (CW-13 lost its ending).
   const RESTLESS = {
     ...D,
     history: { ...D.history, civilWar: { ...cw, chance: 1, minSites: 2 } },
   };
   let restless: WorldState | undefined;
   const w = () =>
-    (restless ??= generateWorld('CW-13', { width: 64, height: 64, historyYears: 250 }, RESTLESS));
+    (restless ??= generateWorld('CW-43', { width: 64, height: 64, historyYears: 250 }, RESTLESS));
   const of = (type: string) => w().events.filter((e) => e.type === type);
   const find = (id: number) => w().events.find((e) => e.id === id);
   const named = (name: unknown) => [...w().civs.values()].find((c) => c.name === name);

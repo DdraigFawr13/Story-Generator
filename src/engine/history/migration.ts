@@ -15,6 +15,7 @@ import {
   siteCapacity,
   sizeKind,
 } from './settle';
+import { dragonLairs } from './dragons';
 import { createFounder, foundingLegend, legendFounded } from './notables';
 import { addDeed } from './people';
 import { causesOf, civName, isLive, liveSites, logOf, type HistoryRun } from './state';
@@ -51,6 +52,8 @@ export function findNewCell(run: HistoryRun, source: Site): number {
     }
     return false;
   };
+  const lairs = dragonLairs(run);
+  const noSettle = content.dragons.noSettleRadius;
   let best = -1;
   let bestScore = -Infinity;
   for (let y = Math.max(0, sy - hi); y <= Math.min(height - 1, sy + hi); y += 1) {
@@ -63,6 +66,8 @@ export function findNewCell(run: HistoryRun, source: Site): number {
       const owner = run.territory[cell]!;
       if (owner !== 0 && owner !== civ.id) continue;
       if (crowded(cell)) continue;
+      // Nobody founds a town in a living dragon's shadow.
+      if (lairs.some((lair) => cellDistance(width, cell, lair) <= noSettle)) continue;
       const score = search.scoreCell(culture, cell);
       if (score <= bestScore) continue;
       // Capacity is costly, so it is only worked out for a cell that would take the lead.

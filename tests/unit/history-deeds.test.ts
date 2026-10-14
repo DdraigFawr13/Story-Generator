@@ -24,11 +24,11 @@ const LEGEND_POWER = 17;
 // Compact continents (2026-10-13) moved DH-285's legend_founded (and spell_cast); DH-234 had every
 // deed until roaming beasts (2026-10-13) moved its legend_founded; DH-338 had every deed until more
 // land and free cities (2026-10-13) moved its legend_founded and spell_cast; DH-105 had every deed
-// until legends as champions (2026-10-14) moved its spell_cast; DH-34 has every deed, a legend duel
-// and a broken host.
+// until legends as champions (2026-10-14) moved its spell_cast; DH-34 had every deed, a legend duel
+// and a broken host until dragons (M5.6) moved its legend_duel; re-pinned for M5.6 dragons: history drift; DH-3 has every deed.
 let shared: WorldState | undefined;
 const world = () =>
-  (shared ??= generateWorld('DH-34', { width: 64, height: 64, historyYears: 250 }, FREQUENT));
+  (shared ??= generateWorld('DH-3', { width: 64, height: 64, historyYears: 250 }, FREQUENT));
 const ofType = (type: string) => world().events.filter((e) => e.type === type);
 const cause = (e: SimEvent, type: string) =>
   e.causes.map((id) => world().events.find((x) => x.id === id)).find((c) => c?.type === type);
@@ -77,8 +77,10 @@ describe('legend deeds', () => {
     }
   });
 
-  it('send only legends on failed hunts', () => {
+  it('send only legends on failed hunts, unless a dragon hoard drew the hunter', () => {
+    // M5.6: heroes and great mages may ride for a dragon's hoard too (dragon_quest).
     for (const e of ofType('beast_hunt_failed')) {
+      if (cause(e, 'dragon_quest')) continue;
       expect(world().people.get(e.actors[0]!)!.magic.power).toBeGreaterThanOrEqual(LEGEND_POWER);
     }
   });

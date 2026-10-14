@@ -1,9 +1,10 @@
 // Abandonment (M2.3): a site whose people dwindle is left to ruin; a people with no site left falls.
 
+import type { RngStream } from '../core/rng';
 import type { Civ, Id, SimEvent, Site } from '../core/types';
 import { emptyGoods } from './goods';
 import { relocateNotables } from './notables';
-import { addParty, totalPop, type Party } from './pop';
+import { addParty, removeProportional, stochasticRound, totalPop, type Party } from './pop';
 import { cellDistance } from './settle';
 import { causesOf, civName, isLive, logOf, type HistoryRun } from './state';
 
@@ -42,6 +43,18 @@ export function evacuate(run: HistoryRun, site: Site): void {
   if (refuge) addParty(refuge, survivors);
   for (const band of site.pop) band.count = 0;
   site.goods = emptyGoods();
+}
+
+/** A razed or burned site: `razeDeathShare` of its people die, the rest flee, and it is left in ruin. Returns the dead. */
+export function ruinSite(run: HistoryRun, site: Site, rng: RngStream): number {
+  const killed = removeProportional(
+    site,
+    stochasticRound(rng, totalPop(site) * run.rules.razeDeathShare),
+  );
+  evacuate(run, site);
+  site.ruinedYear = run.year;
+  run.territoryDirty = true;
+  return killed;
 }
 
 /**

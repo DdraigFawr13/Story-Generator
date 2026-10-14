@@ -41,6 +41,7 @@ export function notableMetrics(world, n, DAYS_PER_YEAR) {
     legendsMax = Math.max(legendsMax, spans.filter(([s, end]) => s <= start && start < end).length);
   }
   const items = [...world.items.values()];
+  const dragons = [...world.creatures.values()].filter((c) => c.dragon);
   return {
     notablesAlive: alive,
     notablesEver: world.people.size,
@@ -62,6 +63,12 @@ export function notableMetrics(world, n, DAYS_PER_YEAR) {
     realmSplits: n.realm_split ?? 0,
     dynastiesEnded: n.dynasty_ended ?? 0,
     citiesFreed: n.city_freed ?? 0,
+    // Dragons as individuals (M5.6).
+    dragons: dragons.length,
+    dragonsSlain: dragons.filter((c) => c.slayerId !== undefined || c.slainBy).length,
+    dragonTributes: n.dragon_tribute ?? 0,
+    dragonQuests: n.dragon_quest ?? 0,
+    dragonBurned: n.dragon_burned ?? 0,
   };
 }
 

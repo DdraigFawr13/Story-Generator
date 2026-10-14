@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
+import { createRun } from '../../src/engine/history/state';
+import { claimHoard } from '../../src/engine/history/dragons';
+import { fightHunt } from '../../src/engine/history/beasts';
+import { createHero, initNotables, killNotable } from '../../src/engine/history/notables';
 import {
   createWorld,
   emptyGoods,
@@ -283,6 +287,178 @@ describe('beasts', () => {
     world.nextId.creature = 2;
     runHistory(world, withRules(STILL, [{ ...DEN, spawnChance: 1, raidChance: 0 }]));
     expect(world.creatures.get(2)?.name).toBe('the wolf of Site1 the Second');
+  });
+});
+
+describe('dragons', () => {
+  const DRAIG: CreatureDef = {
+    id: 'draig',
+    name: 'dragon',
+    tier: 'legendary',
+    biomes: ['grassland'],
+    minWildness: 0,
+    danger: 700,
+    maxAlive: 1,
+    spawnChance: 0,
+    lifespan: [100, 100],
+    raidChance: 0,
+    raidRange: 100,
+    roam: 0,
+    names: ['unused'],
+  };
+  const GREEDY = DEFAULT_CONTENT.dragons.tempers.find((t) => t.id === 'greedy')!;
+
+  const withDragons = (
+    history: HistoryRules,
+    def: Partial<CreatureDef>,
+    dragons: Partial<ContentBundle['dragons']> = {},
+  ): ContentBundle => ({
+    ...withRules(history, [{ ...DRAIG, ...def }]),
+    dragons: { ...DEFAULT_CONTENT.dragons, ...dragons },
+  });
+
+  /** A living dragon of the given temper already lying at `lair`, with an empty hoard. */
+  function lairedDragon(world: WorldState, lair: number, temper = 'greedy') {
+    world.creatures.set(1, {
+      id: 1,
+      defId: 'draig',
+      name: 'Test the Greedy',
+      lair,
+      born: 0,
+      lifespan: 1000,
+      dragon: {
+        temper,
+        ageAtWaking: 100,
+        lairName: "Test's Hollow",
+        hoard: { tribute: 0, plunder: 0, items: [] },
+        tributeFrom: [],
+      },
+      deeds: [],
+    });
+    world.nextId.creature = 2;
+    return world.creatures.get(1)!;
+  }
+
+  it('wakes one by firstBy and, where the world holds one, never two at once', () => {
+    const world = strip([{ x: 10, pop: 200 }], 80);
+    const content = withDragons(
+      STILL,
+      { lifespan: [10, 10] },
+      { firstBy: 5, successorGap: [3, 6], tempers: [GREEDY] },
+    );
+    runHistory(world, content);
+    const dragons = [...world.creatures.values()].filter((c) => c.dragon);
+    expect(dragons.length).toBeGreaterThan(2);
+    expect(dragons[0]!.born).toBeLessThanOrEqual(5);
+    expect(new Set(dragons.map((d) => d.name)).size).toBe(dragons.length);
+    for (let n = 1; n < dragons.length; n += 1) {
+      // The next one wakes only after the last died, and after the gap.
+      expect(dragons[n]!.born - dragons[n - 1]!.died!).toBeGreaterThanOrEqual(3);
+    }
+    expect(eventsOf(world, 'dragon_woke')).toHaveLength(dragons.length);
+  });
+
+  it('holds up to maxAlive at once in a world big enough, their lairs kept apart', () => {
+    // 900 cells / 300 = 3 slots; maxAlive 3.
+    const world = strip([{ x: 10, pop: 200 }], 40);
+    const content = withDragons(
+      STILL,
+      { raidChance: 0 },
+      { firstBy: 5, laterFirstBy: 10, cellsPerDragon: 300, maxAlive: 3, lairsApart: 20 },
+    );
+    runHistory(world, content);
+    const alive = [...world.creatures.values()].filter((c) => c.dragon && c.died === undefined);
+    expect(alive).toHaveLength(3);
+    for (const a of alive)
+      for (const b of alive)
+        if (a.id < b.id)
+          expect(Math.abs((a.lair % WIDTH) - (b.lair % WIDTH))).toBeGreaterThanOrEqual(20);
+  });
+
+  it('takes tribute from a town with no legend instead of raiding it', () => {
+    const world = strip([{ x: 10, pop: 200 }], 1);
+    const baseline = strip([{ x: 10, pop: 200 }], 1);
+    runHistory(baseline, withRules(STILL));
+    runHistory(world, withDragons(STILL, { raidChance: 1 }, { firstBy: 1, tempers: [GREEDY] }));
+    const dragon = [...world.creatures.values()].find((c) => c.dragon)!;
+    expect(dragon.dragon!.hoard.tribute).toBe(1);
+    expect(dragon.dragon!.tributeFrom).toEqual([1]);
+    expect(eventsOf(world, 'dragon_tribute')).toHaveLength(1);
+    expect(eventsOf(world, 'beast_raid')).toHaveLength(0);
+    expect(world.sites.get(1)!.goods.food).toBeLessThan(baseline.sites.get(1)!.goods.food * 0.7);
+  });
+
+  it('hoards what it kills, and its slayer carries the hoard home', () => {
+    const world = strip([{ x: 10, pop: 200 }], 1);
+    const content = withDragons(
+      {
+        ...STILL,
+        slayBase: 1,
+        slayTierFactor: { ...STILL.slayTierFactor, legendary: 1000 },
+      },
+      {},
+    );
+    const run = createRun(world, content, {} as never, {} as never, new Map());
+    run.year = 5;
+    initNotables(run);
+    const dragon = lairedDragon(world, 4 * WIDTH + 30);
+    const ruler = world.people.get(world.civs.get(1)!.rulerId!)!;
+    world.items.set(1, {
+      id: 1,
+      kind: 'artifact',
+      name: 'the Test Torc',
+      form: 'torc',
+      made: 0,
+      makerId: null,
+      holder: ruler.id,
+      deeds: [],
+    });
+    killNotable(run, ruler, { cause: 'beast', beast: dragon, fought: true });
+    const item = world.items.get(1)!;
+    expect(item.holder).toBeNull();
+    expect(item.lostAt).toBe(dragon.lair);
+    expect(dragon.dragon!.hoard.items).toEqual([1]);
+    expect(eventsOf(world, 'item_hoarded')).toHaveLength(1);
+
+    const site = world.sites.get(1)!;
+    const hero = createHero(run, site, 'Test Hero', 700)!;
+    fightHunt(run, hero, dragon, DRAIG, site, world.civs.get(1)!);
+    expect(dragon.died).toBe(5);
+    expect(dragon.slayerId).toBe(hero.id);
+    expect(item.holder).toBe(hero.id);
+    expect(eventsOf(world, 'dragon_hoard_claimed')).toHaveLength(1);
+    const slain = eventsOf(world, 'beast_slain')[0]!;
+    expect(slain.importance).toBeGreaterThanOrEqual(7 + DEFAULT_CONTENT.dragons.slainImportance);
+    claimHoard(run, dragon, undefined, slain.id);
+    expect(eventsOf(world, 'dragon_hoard_claimed')).toHaveLength(1);
+  });
+
+  it('keeps new sites out of the shadow of a living dragon', () => {
+    const rules: HistoryRules = {
+      ...STILL,
+      birthRate: 0.2,
+      crowdingBirthCut: 0.3,
+      expandChance: 1,
+      expandCooldown: 1,
+      expandRange: [5, 12],
+    };
+    const lair = 4 * WIDTH + 58;
+    const radius = DEFAULT_CONTENT.dragons.noSettleRadius;
+    const near = (world: WorldState) =>
+      [...world.sites.values()].filter(
+        (s) =>
+          s.founded > 0 &&
+          Math.max(Math.abs((s.cell % WIDTH) - 58), Math.abs(Math.floor(s.cell / WIDTH) - 4)) <=
+            radius,
+      );
+    const free = strip([{ x: 50, pop: 400 }], 90);
+    runHistory(free, withRules(rules, []));
+    expect(near(free).length).toBeGreaterThan(0);
+    const shadowed = strip([{ x: 50, pop: 400 }], 90);
+    lairedDragon(shadowed, lair);
+    runHistory(shadowed, withDragons(rules, {}));
+    expect([...shadowed.sites.values()].filter((s) => s.founded > 0).length).toBeGreaterThan(0);
+    expect(near(shadowed)).toEqual([]);
   });
 });
 

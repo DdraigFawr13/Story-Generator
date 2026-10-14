@@ -112,6 +112,7 @@ export const creatures: CreatureDef[] = [
     raidChance: 0.08,
     raidRange: 30,
     roam: 36,
+    // Not spawned by the decade roll: dragons wake by dragons.ts and take names from there.
     names: ['Draig Goch of {near}', 'the Draig of {near}', 'Ysgythr the Draig'],
   },
   {

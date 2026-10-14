@@ -6,6 +6,7 @@ import { BIOMES, BIOME_RULES } from './biomes';
 import { creatures } from './creatures';
 import { cultures } from './cultures';
 import { diseases } from './diseases';
+import { dragons } from './dragons';
 import { AILMENTS, CONDITIONS, HEALTH, HEALTH_EVENTS, HEALTH_MEMORIES } from './health';
 import { FAMILY, FAMILY_EVENTS, FAMILY_MEMORIES } from './family';
 import { HISTORY } from './history';
@@ -61,6 +62,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   settlement: SETTLEMENT,
   history: HISTORY,
   creatures,
+  dragons,
   diseases,
   notables: NOTABLES,
   biographies: BIOGRAPHIES,
@@ -106,6 +108,7 @@ export * from './buildings';
 export * from './creatures';
 export * from './cultures';
 export * from './diseases';
+export * from './dragons';
 export * from './health';
 export * from './family';
 export * from './history';

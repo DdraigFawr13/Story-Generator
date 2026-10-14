@@ -16,6 +16,7 @@ import {
   rebuildIndex,
   siteOf,
 } from './people';
+import { hoardedItems } from './dragons';
 import { liveSites, type HistoryRun } from './state';
 
 const cap = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
@@ -180,8 +181,9 @@ function writeBooks(run: HistoryRun): void {
 /** Each lost item may be found by the most famous notable of the civ whose land it lies in. */
 function findLost(run: HistoryRun): void {
   const { world, rng } = run;
+  const hoarded = hoardedItems(run);
   for (const item of world.items.values()) {
-    if (item.holder !== null || item.lostAt === undefined) continue;
+    if (item.holder !== null || item.lostAt === undefined || hoarded.has(item.id)) continue;
     if (!rng.notables.chance(run.content.notables.itemFindChance)) continue;
     const owner = run.cells.territory[item.lostAt]!;
     const finder = owner === 0 ? undefined : mostFamous(run, owner);
