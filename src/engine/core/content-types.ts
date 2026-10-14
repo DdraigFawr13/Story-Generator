@@ -232,6 +232,8 @@ export interface ContentBundle {
   creatures: CreatureDef[];
   /** The dragon as an individual (M5.6). */
   dragons: DragonRules;
+  /** Perilous places, hoards and expeditions (M4.7). */
+  places: PlaceRules;
   diseases: DiseaseDef[];
   notables: NotableRules;
   biographies: BiographyRules;
@@ -1542,6 +1544,109 @@ export interface DragonRules {
   hoardWords: Record<'tribute' | 'plunder' | 'treasure', [string, string]>;
   /** Said of a hoard with no treasure when its taker carries it home. */
   spoilsWord: string;
+}
+
+/** One kind of perilous place (M4.7). Ranges run low to high. */
+export interface PlaceKindDef {
+  id: string;
+  /** Name patterns: `{site}` (the ruined or elder name), `{name}` (the buried ruler), `{beast}`, `{adj}`. */
+  names: string[];
+  /** Danger when the place appears (min, max), in soldier equivalents like a creature's. */
+  danger: [number, number];
+  /** Treasures or lore to be found besides the items lying there (min, max). */
+  finds: [number, number];
+  /** Chance an expedition's find is a book, then (if not) an artifact. */
+  loreChance: number;
+  treasureChance: number;
+  /** Phrases for what keeps the place: "where {guardians} keep what was lost". */
+  guardians: string[];
+  /** For `{adj}` names. */
+  adjectives?: string[];
+}
+
+/** Perilous places, hoards and expeditions (M4.7): every number the engine reads is here. */
+export interface PlaceRules {
+  kinds: PlaceKindDef[];
+  /** Kinds that exist before history, one of each per `cellsPerAncient` map cells. */
+  ancientKinds: string[];
+  cellsPerAncient: number;
+  /** Random cells tried per ancient place. */
+  ancientTries: number;
+  /** An ancient place needs wildness at least this (0-100). */
+  ancientMinWildness: number;
+  /** Fewest cells (Chebyshev) from any site and any other place. */
+  placeSpacing: number;
+  /** An ancient aura place needs `cells.aura` at least this. */
+  auraMin: number;
+  /** An ancient old mine needs a metal deposit or at least this elevation (metres). */
+  mineElevation: number;
+  /** Names of the ancient ruins and old mines, never repeating. */
+  elderNames: string[];
+  /** Site kinds whose ruin becomes a place (every kind but hamlet). */
+  ruinFrom: string[];
+  /** Ruined site kinds that become an old mine rather than a ruin. */
+  mineSiteKinds: string[];
+  barrow: {
+    /** Chance a ruler's death raises a barrow, times the culture's faith / 10. */
+    chance: number;
+    /** Cells from the capital (min, max). */
+    reach: [number, number];
+    /** Random cells tried for the site of the mound. */
+    tries: number;
+  };
+  expedition: {
+    /** Yearly chance per standing civ, times (war + wealth + learning) / 15 of its culture. */
+    chance: number;
+    /** Cells from the setting-out site to the target. */
+    range: number;
+    /** Years between visits to one place. */
+    restYears: number;
+    /** Years a beast's raid still counts as a bounty. */
+    bountyYears: number;
+    /** Share of the site's adults who go, with a floor and a ceiling; a site needs partyMin * 3 adults. */
+    partyShare: number;
+    partyMin: number;
+    partyMax: number;
+    successBase: number;
+    successMax: number;
+    /** Share of the party who die on a failed and on a won expedition. */
+    failLoss: number;
+    winLoss: number;
+    /** A band of commoners will go to a place of at most this danger. */
+    commonerMaxDanger: number;
+    /** Chance a noble of the ruling kin leads when no greater figure can; else commoners go alone. */
+    bandChance: number;
+    /** Weight of a bounty beast against a place's (items * 2 + finds + 1). */
+    bountyWeight: number;
+    /** Grievance a robbed barrow's civ holds against the robbers. */
+    barrowGrievance: number;
+    /** Chance the robbed dead wake. */
+    wakeDeadChance: number;
+    restlessDeadId: string;
+    /** Phrases for events: `{party}`, `{dead}`, `{guardians}`, `{site}`, `{civ}`. */
+    bandWord: string;
+    commonerRole: string;
+    companyLed: string;
+    companyBand: string;
+    whyPlace: string;
+    whyBounty: string;
+    lossPhrase: string;
+    emptiedPhrase: string;
+    outcomes: { driven: string; lost: string };
+    /** Names of what a find is: `{Epithet}`, `{Form}` (capitalised), `{place}`; books use the mundane forms. */
+    treasureNames: string[];
+    loreNames: string[];
+  };
+  parts: {
+    /** Luxury per point of danger a slaying brings the slayer's home (great and legendary only). */
+    luxuryPerDanger: number;
+    /** Chance the home's crafter makes an artifact from the remains. */
+    craftChance: number;
+    /** Artifact forms and names: `{Beast}` (kind, capitalised), `{beast}` (its name). */
+    items: { form: string; name: string }[];
+  };
+  /** Chance a great or legendary beast's raid carries off an artifact held at the site. */
+  raidCarryOff: number;
 }
 
 /** Hard cap on a creature's danger, in soldier equivalents (R-24). */

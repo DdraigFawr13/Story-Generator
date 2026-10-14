@@ -115,4 +115,5 @@ export function pruneEvents(run: HistoryRun): void {
   for (const person of world.people.values()) person.deeds = live(person.deeds);
   for (const item of world.items.values()) item.deeds = live(item.deeds);
   for (const creature of world.creatures.values()) creature.deeds = live(creature.deeds);
+  for (const place of world.places.values()) place.deeds = live(place.deeds);
 }

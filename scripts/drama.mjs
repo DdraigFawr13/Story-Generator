@@ -509,6 +509,19 @@ for (const r of rows) {
   );
 }
 
+process.stdout.write(
+  '\nperilous places (M4.7): seed | places (emptied) | barrows | expeditions | treasure / lore / glory / failed | leaders lost | commoners rose | dead woke | parts crafted | carried off\n',
+);
+for (const r of rows) {
+  const h = r.history;
+  process.stdout.write(
+    `${r.seed.padEnd(4)} | ${String(h.places).padStart(3)} (${String(h.placesEmptied).padStart(3)}) | ${String(h.barrows).padStart(3)} | ` +
+      `${String(h.expeditions).padStart(3)} | ${String(h.expeditionTreasure).padStart(3)} / ${String(h.expeditionLore).padStart(3)} / ${String(h.expeditionGlory).padStart(3)} / ${String(h.expeditionFailed).padStart(3)} | ` +
+      `${String(h.expeditionDeaths).padStart(3)} | ${String(h.commonersRose).padStart(3)} | ${String(h.deadWoke).padStart(3)} | ` +
+      `${String(h.partsCrafted).padStart(3)} | ${String(h.carriedOff).padStart(3)}\n`,
+  );
+}
+
 if (siteMode) {
   process.stdout.write(
     `\nsite tier (${siteYears} years of site play after ${years} of history):\n`,

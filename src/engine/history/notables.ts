@@ -3,11 +3,22 @@
 // Yearly: deaths, marriages, births, mage births among commoners, legends. Succession follows each
 // culture's rule; a killing by a foreign notable becomes sworn vengeance, which can become war.
 
-import type { Civ, Creature, DeathCause, Dynasty, Id, Person, SimEvent, Site } from '../core/types';
+import type {
+  Civ,
+  Creature,
+  DeathCause,
+  Dynasty,
+  Id,
+  PerilousPlace,
+  Person,
+  SimEvent,
+  Site,
+} from '../core/types';
 import { cultureGivenName } from '../people/names';
 import { BIRTH_TIER_IDS, TIERS, legendSlotOpen, tierOfPower } from '../people/tiers';
 import { legendFactor, noticeFactor } from './colleges';
-import { hoardItems } from './dragons';
+import { hoardItems, hoards } from './dragons';
+import { buryRuler, leaveItemsAt } from './places';
 import { passItems, primarySchool, stealItem, itemsHeldBy } from './items';
 import {
   ELDER_AT,
@@ -326,6 +337,8 @@ export interface DeathOptions {
   beast?: Creature | undefined;
   /** They faced the beast (a hunt or an answered raid), rather than fell in its raid. */
   fought?: boolean;
+  /** The perilous place they died in (an expedition): their items stay there. */
+  peril?: PerilousPlace | undefined;
 }
 
 /** A notable dies: the event, vengeance, their items and, for a ruler, the succession. */
@@ -345,7 +358,9 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
         '{beast}',
         beast.name,
       )
-    : rules.deathPhrases[options.cause].replace('{kind}', where?.kind ?? 'town');
+    : rules.deathPhrases[options.cause]
+        .replace('{kind}', where?.kind ?? 'town')
+        .replace('{peril}', options.peril?.name ?? 'the wilds');
   // The living spouse is an actor too, so the death shows on the widow's or widower's page.
   const spouses = person.family.spouses
     .map((id) => livingPerson(run, id))
@@ -359,7 +374,7 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
     // A figure a beast killed is never rolled into a year's count: it is part of the beast's story.
     ...(beast ? { importanceBonus: run.content.notables.beastDeathImportance } : {}),
     actors: [person.id, ...(killer ? [killer.id] : []), ...spouses.map((p) => p.id)],
-    place: where?.cell ?? placeOf(run, person),
+    place: options.peril?.cell ?? where?.cell ?? placeOf(run, person),
     causes: options.causes && options.causes.length > 0 ? options.causes : person.deeds.slice(-1),
     data: {
       name: person.name,
@@ -381,8 +396,15 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
   if (killer && killer.civId != null && person.civId != null && killer.civId !== person.civId) {
     swearVengeance(run, person, killer, event.id);
   }
-  // A dragon's kill leaves its treasures in the hoard, not to an heir.
-  if (beast?.dragon) hoardItems(run, person, beast, event.id);
+  // A ruler of a standing people may be buried with an artifact, unless a hoarding beast took them
+  // or they died in a perilous place.
+  const hoarder = beast !== undefined && hoards(run, beast);
+  if (civ && civ.fell === undefined && civ.rulerId === person.id && !hoarder && !options.peril)
+    buryRuler(run, person, civ, event.id);
+  // A hoarding beast's kill leaves its treasures in the hoard, and a death in a perilous place
+  // leaves them there; neither goes to an heir.
+  if (beast && hoarder) hoardItems(run, person, beast, event.id);
+  else if (options.peril) leaveItemsAt(run, person, options.peril, event.id);
   else passItems(run, person, event.id);
   if (civ && civ.fell === undefined && civ.rulerId === person.id) succeed(run, civ, person, event);
   return event;

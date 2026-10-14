@@ -125,6 +125,10 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'dragon_burned',
       'dragon_quest',
       'dragon_hoard_claimed',
+      'expedition_set_out',
+      'expedition_glory',
+      'expedition_failed',
+      'barrow_woke',
     ],
   },
   {
@@ -139,6 +143,8 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'migration',
       'grain_relief',
       'trade_opened',
+      'barrow_raised',
+      'lair_abandoned',
     ],
   },
   {
@@ -152,6 +158,10 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'item_stolen',
       'item_found',
       'item_hoarded',
+      'expedition_treasure',
+      'expedition_lore',
+      'beast_parts_crafted',
+      'item_carried_off',
     ],
   },
 ];

@@ -56,11 +56,23 @@ export function dragonLairs(run: HistoryRun): number[] {
   return livingCreatures(run).flatMap((c) => (c.dragon ? [c.lair] : []));
 }
 
-/** Items lying in a living dragon's hoard (no one finds them while it lives). */
+/** Whether the beast keeps a hoard of what it kills: a dragon, or any other great or legendary beast. */
+export function hoards(run: HistoryRun, creature: Creature): boolean {
+  if (creature.dragon) return true;
+  const def = run.content.creatures.find((d) => d.id === creature.defId);
+  return def !== undefined && def.tier !== 'beast';
+}
+
+/** The ids of the items in the beast's hoard (a dragon's, else the creature's own list). */
+export function hoardListOf(creature: Creature): Id[] {
+  return creature.dragon ? creature.dragon.hoard.items : (creature.hoard ??= []);
+}
+
+/** Items lying in a living beast's hoard (no one finds them while it lives). */
 export function hoardedItems(run: HistoryRun): Set<Id> {
   const out = new Set<Id>();
   for (const creature of livingCreatures(run))
-    for (const id of creature.dragon?.hoard.items ?? []) out.add(id);
+    for (const id of creature.dragon?.hoard.items ?? creature.hoard ?? []) out.add(id);
   return out;
 }
 
@@ -377,29 +389,30 @@ export function burnAfterRaid(
 
 // --- the hoard ----------------------------------------------------------------------------------
 
-/** What a dragon killed: the dead figure's items go to the hoard, lost to everyone else. */
+/** What a hoarding beast killed: the dead figure's items go to the hoard, lost to everyone else. */
 export function hoardItems(run: HistoryRun, dead: Person, beast: Creature, deathEvent: Id): void {
-  const state = beast.dragon;
-  if (!state) return;
+  if (!hoards(run, beast)) return;
+  const list = hoardListOf(beast);
+  const lair = beast.dragon?.lairName ?? `the lair of ${beast.name}`;
   for (const item of itemsHeldBy(run, dead)) {
     item.holder = null;
     item.lostAt = beast.lair;
-    state.hoard.items.push(item.id);
+    list.push(item.id);
     const event = run.emit({
       type: 'item_hoarded',
       place: beast.lair,
       actors: [dead.id],
       causes: [deathEvent, ...item.deeds.slice(-1)],
-      data: { item: item.name, from: dead.name, beast: beast.name, lair: state.lairName },
+      data: { item: item.name, from: dead.name, beast: beast.name, lair },
     });
     item.deeds.push(event.id);
   }
 }
 
 /**
- * The slayer of a dragon carries its hoard home: the treasures become theirs and their home
- * gains grain for the tribute and plunder (never past its stores limit). A no-op for other
- * beasts, a dragon with an empty hoard, or a slain-by-nobody dragon.
+ * The slayer of a hoarding beast carries its hoard home: the treasures become theirs and, for a
+ * dragon, their home gains grain for the tribute and plunder (never past its stores limit). A
+ * no-op for an ordinary beast, an empty hoard, or a slain-by-nobody beast.
  */
 export function claimHoard(
   run: HistoryRun,
@@ -408,10 +421,10 @@ export function claimHoard(
   slainEvent: Id,
 ): void {
   const state = dragon.dragon;
-  if (!state || !claimant) return;
+  if (!claimant || !hoards(run, dragon)) return;
   const rules = run.content.dragons;
-  const spoils = state.hoard.tribute + state.hoard.plunder;
-  const items = state.hoard.items.flatMap((id) => {
+  const spoils = state ? state.hoard.tribute + state.hoard.plunder : 0;
+  const items = hoardListOf(dragon).flatMap((id) => {
     const item = run.world.items.get(id);
     return item && item.holder === null ? [item] : [];
   });

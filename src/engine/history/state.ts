@@ -11,7 +11,10 @@ import { nearestAuraSpot, type SettleContent, type SettleSearch } from './settle
 
 /** What the history stage reads from content. */
 export type HistoryContent = SettleContent &
-  Pick<ContentBundle, 'history' | 'creatures' | 'dragons' | 'diseases' | 'notables' | 'threats'>;
+  Pick<
+    ContentBundle,
+    'history' | 'creatures' | 'dragons' | 'places' | 'diseases' | 'notables' | 'threats'
+  >;
 
 /** The latest events that touched one site, for linking causes. */
 export interface SiteLog {
@@ -186,6 +189,7 @@ export interface HistoryRun {
     names: RngStream;
     beasts: RngStream;
     dragons: RngStream;
+    places: RngStream;
     trade: RngStream;
     war: RngStream;
     notables: RngStream;
@@ -350,6 +354,7 @@ export function createRun(
       names: streamFor(world, 'history.names'),
       beasts: streamFor(world, 'history.beasts'),
       dragons: streamFor(world, 'history.dragons'),
+      places: streamFor(world, 'history.places'),
       trade: streamFor(world, 'history.trade'),
       war: streamFor(world, 'history.war'),
       notables: streamFor(world, 'history.notables'),

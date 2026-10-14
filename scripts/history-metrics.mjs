@@ -69,6 +69,25 @@ export function notableMetrics(world, n, DAYS_PER_YEAR) {
     dragonTributes: n.dragon_tribute ?? 0,
     dragonQuests: n.dragon_quest ?? 0,
     dragonBurned: n.dragon_burned ?? 0,
+    // Perilous places, hoards and expeditions (M4.7).
+    places: world.places.size,
+    placesEmptied: [...world.places.values()].filter((p) => p.emptied !== undefined).length,
+    barrows: n.barrow_raised ?? 0,
+    expeditions: n.expedition_set_out ?? 0,
+    expeditionTreasure: n.expedition_treasure ?? 0,
+    expeditionLore: n.expedition_lore ?? 0,
+    expeditionGlory: n.expedition_glory ?? 0,
+    expeditionFailed: n.expedition_failed ?? 0,
+    expeditionDeaths: [...world.people.values()].filter((p) => p.causeOfDeath === 'peril').length,
+    // Heroes a commoner band made by bringing something home.
+    commonersRose: world.events.filter(
+      (e) =>
+        (e.type === 'expedition_treasure' || e.type === 'expedition_lore') &&
+        String(e.data.role ?? '') !== '',
+    ).length,
+    deadWoke: n.barrow_woke ?? 0,
+    partsCrafted: n.beast_parts_crafted ?? 0,
+    carriedOff: n.item_carried_off ?? 0,
   };
 }
 

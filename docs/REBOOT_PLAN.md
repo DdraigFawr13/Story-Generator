@@ -623,7 +623,7 @@ After the Phase 3 playtest Morgan asked for additions ranked by value and coding
 9. **Spellbooks and lineages** (M5.2; value 4, M).
 10. **Court intrigue** (Phase 6 "Legends in politics", pulled forward; value 4, M).
 11. **Story threads view** (M4.6; value 2, S).
-12. **Expeditions and perilous places** (M4.7; value 5, L).
+12. **Expeditions and perilous places** (M4.7; value 5, L): history part built 2026-10-14 (places, barrows, hoards, expeditions, beast parts, the restless dead); the map layer and Places page are still to come.
 13. **Diplomacy: alliances, vassalage, betrayal** (Phase 6; value 5, L).
 14. **Trade between peoples in history** (M4.4; value 3, M).
 15. **The world keeps moving while you watch** (M4.1–M4.3; value 4, L).
@@ -744,7 +744,7 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 - **M4.4 Politics and trade (medium):** allegiance, tribute and taxes, conscription in war, civ decisions affecting the site, routes and scarcity-driven prices. **Trade between peoples in history** (added 2026-10-14, build order 14): cross-border trade is almost absent today, so caravans travel the routes between realms, a port city on a busy route grows rich and famous, an embargo is a cause of war, and a plundered caravan is a grievance.
 - **M4.5 Life deepening:** multi-generation feuds, inheritance disputes, customs and cultural drift, marriages between families from different sites, exile.
 - **M4.6 Story threads** (build order 11): a derived view of unresolved situations, mentioned in recaps.
-- **M4.7 Perilous places, hoards and expeditions** (about 1,200 lines; added 2026-10-12; build order 12):
+- **M4.7 Perilous places, hoards and expeditions** (about 1,200 lines; added 2026-10-12; build order 12; history part built 2026-10-14, leaders also include a noble of the ruling kin and bands of commoners; the map layer, the Places page and the site hook are still to come):
   - `content/places.ts` defines ruin, barrow, lair, old mine and aura place, each with danger, hoard and lore odds; the ruins and lairs that already exist become places with no new data.
   - Hoards: great beasts and dragons gather items lost near their lair and what their raids carry off; slaying one releases the hoard to the slayers. Rulers are buried with one item by culture custom, which seeds barrows.
   - A yearly expedition step: bounties from sites with a grievance against a beast or a ruin nearby; the strongest willing figure of the civ leads a party drawn from the site's counts (legend, then exceptional mage, then hero, then captain; added 2026-10-13), so a legend can face a great beast or the dragon and claim its hoard, or die in the lair; outcomes roll against danger and party strength under R-24: death, loot, lore (a book) or fame, each a chronicled event with cause links. A commoner who returns with something becomes a notable.
