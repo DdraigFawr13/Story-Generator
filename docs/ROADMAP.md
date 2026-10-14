@@ -17,7 +17,7 @@ Detail for every phase lives in [REBOOT_PLAN.md §9](REBOOT_PLAN.md#9-phases); o
 
 ## Build order after Phase 3
 
-Since 2026-10-14 work follows Morgan's ranked list rather than phase order: legends as champions (M5.5, in progress), site life fixes, named battles, annals of each people, dwarven holds, succession wars and dynasties, dragons, religion, spellbooks and lineages, court intrigue, story threads, expeditions, diplomacy, trade between peoples, then the world moving during play. The full list with value and effort is in [REBOOT_PLAN §9](REBOOT_PLAN.md#build-order-after-phase-3-morgans-ranked-list-2026-10-14).
+Since 2026-10-14 work follows Morgan's ranked list rather than phase order: legends as champions (M5.5, built in #101), then site life fixes, named battles, annals of each people, dwarven holds, succession wars and dynasties, dragons, religion, spellbooks and lineages, court intrigue, story threads, expeditions, diplomacy, trade between peoples, then the world moving during play. The full list with value and effort is in [REBOOT_PLAN §9](REBOOT_PLAN.md#build-order-after-phase-3-morgans-ranked-list-2026-10-14).
 
 ## Deferred decisions (asked when the phase arrives)
 
