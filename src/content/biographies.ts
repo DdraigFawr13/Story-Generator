@@ -32,6 +32,7 @@ export const BIOGRAPHIES: BiographyRules = {
     illness: 'of a long illness',
     childbirth: 'in childbirth',
     execution: 'by the executioner',
+    duel: 'in single combat with another legend',
   },
   sentences: {
     // Person

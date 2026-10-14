@@ -8,10 +8,17 @@ import { cultureOf } from './state';
 import {
   battleChampions,
   battleOutcome,
+  canSpend,
+  deedSoldiers,
+  legendBreaks,
+  legendFeuds,
   mageStrength,
+  pickChampions,
+  rollDuel,
   siteLost,
   startCaptains,
   warCaptain,
+  type LegendPlay,
 } from './notables';
 import { civLosesSite, evacuate } from './abandon';
 import { allyAid, pactStrength } from './city-states';
@@ -288,14 +295,45 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ): void
     civStrength(run, defender) + allyAid(run, war, attacker, defender, (c) => civStrength(run, c));
   const luck = () =>
     1 - rules.battleLuck + (2 * rules.battleLuck * rng.war.between(0, 1000)) / 1000;
-  const army = attackStrength * rules.campaignShare;
-  const defenders = defendStrength * rules.campaignShare;
+  // A legend who has not spent their day of power this year fights in the open: their share of
+  // the civ's strength leaves the ranks and they break soldiers instead (M5.5).
+  const champions = pickChampions(run, attacker, defender, target);
+  const acting = champions.map((c) => (c && canSpend(run, c) ? c : undefined));
+  const share = (p: Person | undefined) => (p ? deedSoldiers(run, p) : 0);
+  const army = Math.max(0, attackStrength - share(acting[0])) * rules.campaignShare;
+  const defenders = Math.max(0, defendStrength - share(acting[1])) * rules.campaignShare;
   const walls = siteDefence(run, target, defender);
-  const attackForce = army * luck();
-  const defendForce = defenders * walls * luck();
+  let attackForce = army * luck();
+  let defendForce = defenders * walls * luck();
+  const unaided = attackForce > defendForce;
+  const legends: LegendPlay = { broke: [0, 0], overmatched: [false, false], turned: false };
+  // Two legends meet each other; one alone breaks what they can of the enemy host.
+  if (acting[0] && acting[1]) legends.duel = rollDuel(run, acting[0], acting[1]);
+  else if (acting[0] || acting[1]) {
+    // What a legend breaks is force (walls and luck included); `broke` is counted in the
+    // enemy's own soldiers, so it never passes the host they brought.
+    const side = acting[0] ? 0 : 1;
+    const breaks = legendBreaks(run, (acting[0] ?? acting[1])!);
+    const force = side === 0 ? defendForce : attackForce;
+    const soldiers = side === 0 ? defenders : army;
+    const broken = Math.min(breaks, force);
+    legends.overmatched[side] = force > breaks;
+    legends.broke[side] = force > 0 ? Math.round((broken * soldiers) / force) : 0;
+    if (side === 0) defendForce -= broken;
+    else attackForce -= broken;
+  }
   const attackerWins = attackForce > defendForce;
-  const attackerLost = army * (attackerWins ? rules.winnerLoss : rules.loserLoss);
-  const defenderLost = defenders * (attackerWins ? rules.loserLoss : rules.winnerLoss);
+  legends.turned = attackerWins !== unaided;
+  // Of the soldiers a legend breaks, `brokenDie` die and the rest run.
+  const brokenDie = run.content.notables.deeds.brokenDie;
+  const attackerLost = Math.min(
+    army,
+    army * (attackerWins ? rules.winnerLoss : rules.loserLoss) + legends.broke[1] * brokenDie,
+  );
+  const defenderLost = Math.min(
+    defenders,
+    defenders * (attackerWins ? rules.loserLoss : rules.winnerLoss) + legends.broke[0] * brokenDie,
+  );
   const mine = civSites(run, attacker);
   const theirs = civSites(run, defender);
   const attackerKilled = killAdults(
@@ -336,6 +374,8 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ): void
       walls: Math.round(walls * 100),
       attackForce: Math.round(attackForce),
       defendForce: Math.round(defendForce),
+      attackerBroke: legends.broke[0],
+      defenderBroke: legends.broke[1],
     },
   });
   war.lastEvent = battle.id;
@@ -348,6 +388,8 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ): void
     battle: battle.id,
     war,
     leads: [attackerLead, defenderLead],
+    champions,
+    legends,
   });
   if (!attackerWins) return;
   const differ = run.races.get(attacker.raceId) !== run.races.get(defender.raceId);
@@ -394,8 +436,9 @@ function fightWars(run: HistoryRun): void {
   }
 }
 
-/** Yearly: declare wars, then fight the ones under way. */
+/** Yearly: declare wars, fight the ones under way, then legends of quarrelling peoples may duel. */
 export function runWar(run: HistoryRun): void {
   declareWars(run);
   fightWars(run);
+  legendFeuds(run);
 }

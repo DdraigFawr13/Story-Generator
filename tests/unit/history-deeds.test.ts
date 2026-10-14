@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
-import { generateWorld, type SimEvent, type WorldState } from '../../src/engine';
+import { DAYS_PER_YEAR, generateWorld, type SimEvent, type WorldState } from '../../src/engine';
 
 /** Frequent deeds on a 64x64 world; the seed was picked because every deed type occurs in it (re-picked when history changes). */
 const rules = DEFAULT_CONTENT.notables.deeds;
@@ -15,6 +15,7 @@ const FREQUENT = {
       huntIdleYears: 1,
       vengeanceChance: 1,
       legendFounds: 1,
+      feudChance: 1,
     },
   },
 };
@@ -22,10 +23,12 @@ const LEGEND_POWER = 17;
 
 // Compact continents (2026-10-13) moved DH-285's legend_founded (and spell_cast); DH-234 had every
 // deed until roaming beasts (2026-10-13) moved its legend_founded; DH-338 had every deed until more
-// land and free cities (2026-10-13) moved its legend_founded and spell_cast; DH-105 has every deed.
+// land and free cities (2026-10-13) moved its legend_founded and spell_cast; DH-105 had every deed
+// until legends as champions (2026-10-14) moved its spell_cast; DH-34 has every deed, a legend duel
+// and a broken host.
 let shared: WorldState | undefined;
 const world = () =>
-  (shared ??= generateWorld('DH-105', { width: 64, height: 64, historyYears: 250 }, FREQUENT));
+  (shared ??= generateWorld('DH-34', { width: 64, height: 64, historyYears: 250 }, FREQUENT));
 const ofType = (type: string) => world().events.filter((e) => e.type === type);
 const cause = (e: SimEvent, type: string) =>
   e.causes.map((id) => world().events.find((x) => x.id === id)).find((c) => c?.type === type);
@@ -39,6 +42,7 @@ describe('legend deeds', () => {
       'beast_hunt_failed',
       'spell_cast',
       'college_founded',
+      'legend_duel',
     ]) {
       expect(ofType(type).length, type).toBeGreaterThan(0);
     }
@@ -92,6 +96,52 @@ describe('legend deeds', () => {
       expect(world().people.get(e.actors[0]!)!.fame).toBeGreaterThanOrEqual(
         DEFAULT_CONTENT.notables.fame.legend,
       );
+    }
+  });
+
+  it('break no more of a host than it brought, and only legends break one', () => {
+    const battles = ofType('battle');
+    expect(
+      battles.some((b) => Number(b.data.attackerBroke) + Number(b.data.defenderBroke) > 0),
+    ).toBe(true);
+    for (const b of battles) {
+      expect(Number(b.data.attackerBroke)).toBeLessThanOrEqual(Number(b.data.defenders));
+      expect(Number(b.data.defenderBroke)).toBeLessThanOrEqual(Number(b.data.army));
+    }
+    for (const e of ofType('champion_fought')) {
+      if (Number(e.data.broke) > 0)
+        expect(world().people.get(e.actors[0]!)!.magic.power).toBeGreaterThanOrEqual(LEGEND_POWER);
+    }
+  });
+
+  it('duel only between legends of two peoples, and the slain die of the duel', () => {
+    for (const e of ofType('legend_duel')) {
+      const [winner, loser] = e.actors.map((id) => world().people.get(id)!);
+      expect(winner!.magic.power).toBeGreaterThanOrEqual(LEGEND_POWER);
+      expect(loser!.magic.power).toBeGreaterThanOrEqual(LEGEND_POWER);
+      expect(winner!.civId).not.toBe(loser!.civId);
+      const death = ofType('notable_died').find((d) => d.causes.includes(e.id));
+      if (String(e.data.outcome).includes('killed')) {
+        expect(death?.actors[0]).toBe(loser!.id);
+        expect(loser!.causeOfDeath).toBe('duel');
+      } else expect(death).toBeUndefined();
+    }
+  });
+
+  it("spend a legend's day of power at most once a year", () => {
+    const spent = new Set<string>();
+    for (const e of world().events) {
+      const named =
+        e.type === 'legend_duel'
+          ? e.actors.slice(0, 2)
+          : e.type === 'champion_fought' && Number(e.data.broke) > 0
+            ? e.actors.slice(0, 1)
+            : [];
+      for (const id of named) {
+        const key = `${id}:${Math.floor(e.day / DAYS_PER_YEAR)}`;
+        expect(spent.has(key), key).toBe(false);
+        spent.add(key);
+      }
     }
   });
 });

@@ -279,6 +279,8 @@ export const DEATH_CAUSES = [
   'childbirth',
   // M3.7: put to death by the site's law.
   'execution',
+  // M5.5: killed by another legend in single combat.
+  'duel',
 ] as const;
 export type DeathCause = (typeof DEATH_CAUSES)[number];
 

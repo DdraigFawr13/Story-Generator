@@ -4,7 +4,7 @@
 import type { Civ, Id, Person, Site } from '../core/types';
 import { raidSteal } from './items';
 import { addDeed, isAdult, isElder, livingList, livingPerson, makeRivals } from './people';
-import { killNotable, markDeed, raidDeaths, raiderFor, rulerOf } from './notables';
+import { isLegend, killNotable, markDeed, raidDeaths, raiderFor, rulerOf } from './notables';
 import { cellDistance } from './settle';
 import { removePeople, siteNeed, stochasticRound, totalPop } from './pop';
 import {
@@ -215,7 +215,10 @@ function runVengeance(run: HistoryRun): void {
       'child',
       'elder',
     ]);
-    const slain = rng.chance(run.content.notables.raidKill);
+    // A legend at the head of the raid seldom lets the enemy get away.
+    const slain = rng.chance(
+      isLegend(avenger) ? deeds.legendRaidKill : run.content.notables.raidKill,
+    );
     const phrase = slain ? deeds.vengeancePhrases.slain : deeds.vengeancePhrases.escaped;
     const oath = oathOf(run, avenger, enemy);
     const event = run.emit({

@@ -43,6 +43,7 @@ export const NOTABLES: NotableRules = {
       war_declared: 5,
       battle: 4,
       champion_fought: 6,
+      legend_duel: 10,
       vengeance_raid: 8,
       oath_sworn: 2,
       insult: 2,
@@ -84,6 +85,7 @@ export const NOTABLES: NotableRules = {
     illness: 'of a long illness',
     childbirth: 'in childbirth',
     execution: 'by the executioner',
+    duel: 'in single combat',
   },
   successionPhrases: {
     'kin-elected': 'by the choice of the kin',
@@ -173,12 +175,34 @@ export const NOTABLES: NotableRules = {
     slayerRange: 24,
     // Exceptional and Legendary (R-24, 30+ soldiers): enough to turn a battle, so the chronicle names them.
     championPower: 13,
+    // About a week's march: a champion comes to battles in their own lands, not across the world.
+    championRange: 80,
+    // One day of a legend's power breaks 500-1,000 soldiers (R-24, x mageStrength); most of them run.
+    brokenDie: 0.25,
+    legendDeath: 0.03,
+    bigHostDeath: 0.5,
+    // Power 20 against power 17: 80 in 100; equal legends: even.
+    duelEdge: 0.1,
+    duelOdds: [0.2, 0.8],
+    duelDeath: 0.5,
+    // About a week's ride; a border clash or an insult is grievance enough.
+    feudChance: 0.15,
+    feudRange: 100,
+    feudGrievance: 0.5,
+    legendRaidKill: 0.6,
+    brokeStand: 'put about {broke} of the {enemy} to flight in a single day of power',
+    duelPhrases: {
+      slain: 'and {enemy} was killed',
+      fled: 'and {enemy} was driven off, wounded',
+      inBattle: ' before the hosts met',
+      again: ' once more',
+    },
     // Most oaths are kept within a decade or two, if the enemy lives near enough to reach.
     vengeanceChance: 0.1,
     vengeanceRange: 40,
     // A legend left idle goes looking for a fight (R-24: a legend can face a great beast).
     huntIdleYears: 10,
-    huntRange: 40,
+    huntRange: 80,
     huntPhrases: {
       survived: 'and came home with nothing but scars',
       died: 'and never came home',
@@ -188,6 +212,7 @@ export const NOTABLES: NotableRules = {
       died: 'and was killed',
     },
     legendFounds: 0.5,
+    foundRange: 24,
     foundingFame: 12,
     championPhrases: {
       first: 'stood as champion of the {civ} in their war with the {enemy}',

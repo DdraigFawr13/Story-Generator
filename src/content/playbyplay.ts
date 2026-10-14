@@ -51,6 +51,41 @@ export const PLAY_BY_PLAY: PlayByPlayRules = {
     endingNamed: ['{names} died in the fight.', 'Among the dead: {names}.'],
     endingTaken: ['{site} was taken by the {civ}.', 'The {civ} took {site}.'],
     endingRazed: ['{site} was burned by the {civ}.', 'The {civ} burned {site}.'],
+    // Legends (M5.5): a duel in a battle, and a broken host that turned the day.
+    duelInBattle: [
+      'Before the hosts met, {name} and {enemy} fought between the lines; {name} won, {outcome}.',
+      '{name} and {enemy} met alone before the battle; {name} had the better of it, {outcome}.',
+    ],
+    turnLegend: [
+      'Without {name} the {winner} would have lost; one day of power turned the battle.',
+      'It was {name} who turned the day: the {winner} would not have won without them.',
+    ],
+    // A duel of two legends outside any battle; the odds are the winner's.
+    duelMeet: [
+      '{name} of the {civ} and {enemy} of the {enemyCiv} met at {site}, two legends who could each break an army.',
+      'At {site} two legends faced each other: {name} of the {civ} and {enemy} of the {enemyCiv}.',
+    ],
+    duelOddsLong: [
+      'Few would have backed {name}: about {odds} in 100.',
+      'The odds lay against {name}, about {odds} in 100.',
+    ],
+    duelOddsEven: [
+      'They were near matched; {name} had about {odds} chances in 100.',
+      'It could have gone either way, about {odds} in 100 for {name}.',
+    ],
+    duelOddsFavoured: [
+      '{name} was the stronger, about {odds} in 100 to win.',
+      'The odds were with {name}, about {odds} in 100.',
+    ],
+    duelClash: [
+      'Their powers met for a single day, and {name} prevailed.',
+      'They fought until one of them was spent, and it was {enemy}.',
+    ],
+    duelSlain: ['{enemy} died there.', '{enemy} did not leave {site} alive.'],
+    duelFled: [
+      '{enemy} was driven off, wounded, and lived.',
+      '{enemy} fled from {site}, beaten but alive.',
+    ],
     // Beast fights.
     approachHunt: [
       '{name} went out alone against {beastKindEnd}.',

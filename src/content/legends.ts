@@ -18,6 +18,7 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'plunder_raid',
       'oath_sworn',
       'champion_fought',
+      'legend_duel',
       'vengeance_raid',
       'ally_aided',
     ],

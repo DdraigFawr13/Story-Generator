@@ -1296,6 +1296,33 @@ export interface DeedRules {
   slayerRange: number;
   /** Power at which a figure fights as their civ's named champion in battle. */
   championPower: number;
+  /** A champion fights only in battles within this many cells of their home. */
+  championRange: number;
+  /** Share of the soldiers a legend breaks who die (the rest flee). */
+  brokenDie: number;
+  /** A legend's death chance in a battle when they could break the whole enemy host. */
+  legendDeath: number;
+  /** A legend's death chance when the enemy host is bigger than they can break: they are spent and overrun. */
+  bigHostDeath: number;
+  /** Two legends meet: the stronger's win chance rises by `duelEdge` per point of power, within `duelOdds`. */
+  duelEdge: number;
+  duelOdds: [number, number];
+  /** Chance the loser of a duel dies; else they are driven off. */
+  duelDeath: number;
+  /** Yearly chance two legends of quarrelling peoples, homes within `feudRange` cells and not at war, duel. */
+  feudChance: number;
+  feudRange: number;
+  /** The grievance one of the two peoples must hold against the other for a feud. */
+  feudGrievance: number;
+  /** Chance a legend leading a vengeance raid kills the sworn enemy (others: `raidKill`). */
+  legendRaidKill: number;
+  /** A legend breaking a host ({broke}, {enemy}): the stand clause of `champion_fought`. */
+  brokeStand: string;
+  /**
+   * The end of a duel ({enemy}: the loser); `inBattle` follows the site when hosts were waiting;
+   * `again` follows the loser's name when the pair has met before.
+   */
+  duelPhrases: { slain: string; fled: string; inBattle: string; again: string };
   /** Yearly chance an avenger leads a raid on their enemy's home, once in their life, within this many cells. */
   vengeanceChance: number;
   vengeanceRange: number;
@@ -1306,8 +1333,9 @@ export interface DeedRules {
   huntPhrases: { survived: string; died: string };
   /** After a figure who answered a raid lost the fight: driven back, or killed. */
   answerPhrases: { survived: string; died: string };
-  /** Chance a non-ruler legend at the mother site leads the settlers of a new site. */
+  /** Chance a non-ruler legend of the mother site's people, living within `foundRange` cells of it, leads the settlers of a new site. */
   legendFounds: number;
+  foundRange: number;
   /** Fame a legend's founding adds. */
   foundingFame: number;
   /**
