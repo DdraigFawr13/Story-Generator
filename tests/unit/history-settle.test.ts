@@ -5,6 +5,7 @@ import {
   computeTerritory,
   createWorld,
   generateWorld,
+  isHoldSite,
   popBands,
   serializeWorld,
   settleWorld,
@@ -179,6 +180,18 @@ describe('population and capacity', () => {
 });
 
 const WILD = { deepWild: 70, deepWildClaim: 3 };
+
+describe('holds', () => {
+  it('makes a Dvergar site on heights a hold, other peoples and low ground not, and holds defend', () => {
+    expect(isHoldSite(RULES, 'dvergar', ['heights', 'deposit'])).toBe(true);
+    expect(isHoldSite(RULES, 'dvergar', ['river'])).toBe(false);
+    expect(isHoldSite(RULES, 'human', ['heights'])).toBe(false);
+    expect(RULES.capitalKind['dvergar']).toBe('hold');
+    expect(DEFAULT_CONTENT.history.defence.hold).toBeGreaterThanOrEqual(
+      DEFAULT_CONTENT.history.defence.fortress!,
+    );
+  });
+});
 
 describe('territory', () => {
   it('goes to the nearer site by travel cost, never over sea, and stops at the reach', () => {

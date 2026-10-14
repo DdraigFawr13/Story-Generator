@@ -323,6 +323,15 @@ export function popBands(
 /** Total people at a site. */
 export const sitePopulation = totalPop;
 
+/** True when a site of `raceId` at a cell with these features is a hold (content: settlement.holds). */
+export function isHoldSite(
+  rules: SettlementRules,
+  raceId: string,
+  features: readonly SiteFeature[],
+): boolean {
+  return rules.holds.races.includes(raceId) && features.includes(rules.holds.needs);
+}
+
 export function sizeKind(pop: number, rules: SettlementRules): SiteKind {
   for (const [limit, kind] of rules.kindByPop) if (pop < limit) return kind;
   return 'city';
@@ -391,20 +400,30 @@ export function computeTerritory(
  */
 export function drawCultures(
   content: Pick<ContentBundle, 'biomes' | 'cultures'>,
-  cells: Pick<WorldCells, 'biome'>,
+  cells: Pick<WorldCells, 'biome' | 'elevation'>,
   candidates: readonly number[],
-  rules: Pick<SettlementRules, 'peoples'>,
+  rules: Pick<SettlementRules, 'peoples' | 'holds' | 'heightsMin'>,
   rng: RngStream,
 ): CultureDef[] {
   const { weight, fitFull, fitMin } = rules.peoples;
   const home = new Map<string, number>();
+  // Hold-building races also count high ground as home: heights cells outside their biomes.
+  const heightsByBiome = new Map<string, number>();
   for (const cell of candidates) {
     const id = content.biomes[cells.biome[cell]!]?.id ?? '';
     home.set(id, (home.get(id) ?? 0) + 1);
+    if (cells.elevation[cell]! >= rules.heightsMin) {
+      heightsByBiome.set(id, (heightsByBiome.get(id) ?? 0) + 1);
+    }
   }
   const total = Math.max(1, candidates.length);
-  const fitOf = (culture: CultureDef) =>
-    culture.preferredBiomes.reduce((sum, b) => sum + (home.get(b) ?? 0), 0) / total;
+  const fitOf = (culture: CultureDef) => {
+    let sum = culture.preferredBiomes.reduce((n, b) => n + (home.get(b) ?? 0), 0);
+    if (rules.holds.races.includes(culture.raceId) && rules.holds.needs === 'heights') {
+      for (const [id, n] of heightsByBiome) if (!culture.preferredBiomes.includes(id)) sum += n;
+    }
+    return sum / total;
+  };
   let pool = content.cultures.filter((c) => fitOf(c) >= fitMin);
   if (pool.length === 0) pool = [...content.cultures];
   const order: CultureDef[] = [];
@@ -635,11 +654,13 @@ export function settleWorld(world: WorldState, content: SettleContent): void {
         const second = makeSite(culture, race, cell, civId, rules.secondPop, (pop, features) =>
           features.includes('harbour')
             ? 'port'
-            : features.includes('aura')
-              ? 'temple'
-              : features.includes('deposit')
-                ? 'mine'
-                : sizeKind(pop, rules),
+            : isHoldSite(rules, race.id, features)
+              ? 'hold'
+              : features.includes('aura')
+                ? 'temple'
+                : features.includes('deposit')
+                  ? 'mine'
+                  : sizeKind(pop, rules),
         );
         emit({
           type: 'site_founded',

@@ -185,6 +185,14 @@ function drawSiteGlyph(
       ctx.lineTo(x - r - 1, y + r);
       ctx.closePath();
       break;
+    case 'hold':
+      // A gate: square body with an arched top.
+      ctx.moveTo(x - r, y + r);
+      ctx.lineTo(x - r, y - 1);
+      ctx.arc(x, y - 1, r, Math.PI, 0);
+      ctx.lineTo(x + r, y + r);
+      ctx.closePath();
+      break;
     case 'mine':
       ctx.moveTo(x, y - r - 1);
       ctx.lineTo(x + r + 1, y);
