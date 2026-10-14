@@ -4,6 +4,7 @@ import {
   buildLegendIndex,
   eventYear,
   generateWorld,
+  templateNarrator,
   type SimEvent,
   type WorldState,
 } from '../../src/engine';
@@ -13,12 +14,20 @@ import {
   chapterAt,
   chapterOfEvent,
   chaptersOf,
+  BODY_WORDS,
   cropBox,
+  dropCapFits,
   eraEvents,
+  fitBox,
+  lifeSpanText,
   paragraphsOf,
+  perilsOf,
   pickBook,
   roman,
+  siteInYear,
+  stripYear,
   summaryOf,
+  wordCount,
 } from '../../src/app/book/data';
 
 let shared: WorldState | undefined;
@@ -71,25 +80,142 @@ describe('book chapters', () => {
     }
   });
 
-  it('prints key events plus the one asked for, grouped by year', () => {
+  const narrator = (world: WorldState) =>
+    templateNarrator(
+      DEFAULT_CONTENT,
+      (id) => world.people.get(id)?.name ?? world.sites.get(id)?.name ?? `#${id}`,
+    );
+
+  it('prints the highlighted event and groups events by year', () => {
     const world = base();
     const index = buildLegendIndex(world, DEFAULT_CONTENT);
+    const say = narrator(world);
+    const lineOf = (e: SimEvent) => stripYear(say.renderEvent(e), eventYear(e));
     const book = booksOf(world, index)[0]!;
     const chapter = chaptersOf(world, index, DEFAULT_CONTENT, book.civId)[0]!;
-    const inside = eraEvents(index, book.civId, chapter.from, chapter.to).find(
-      (e) => !chapter.keyEvents.includes(e.id),
-    );
-    const plain = bodyIds(index, chapter, null);
-    expect(plain).toEqual([...chapter.keyEvents].sort((a, b) => a - b));
-    if (inside) expect(bodyIds(index, chapter, inside.id)).toContain(inside.id);
+    const events = eraEvents(index, book.civId, chapter.from, chapter.to);
+    const inside = events.find((e) => !chapter.keyEvents.includes(e.id));
+    const options = { lineOf, famous: () => false };
+    const plain = bodyIds(index, chapter, events, null, options);
+    if (inside) expect(bodyIds(index, chapter, events, inside.id, options)).toContain(inside.id);
     const paragraphs = paragraphsOf(plain.flatMap((id) => index.event(id) ?? []));
     expect(paragraphs.flatMap((p) => p.ids)).toEqual(plain);
     for (const p of paragraphs) {
       for (const id of p.ids) expect(eventYear(index.event(id)!)).toBe(p.year);
     }
     for (let k = 1; k < paragraphs.length; k += 1) {
-      expect(paragraphs[k]!.year).not.toBe(paragraphs[k - 1]!.year);
+      expect(paragraphs[k]!.year).toBeGreaterThan(paragraphs[k - 1]!.year);
     }
+  });
+
+  it('draws a long era from all its events, within the word budget, never short of its key events', () => {
+    const world = base();
+    const index = buildLegendIndex(world, DEFAULT_CONTENT);
+    const say = narrator(world);
+    const lineOf = (e: SimEvent) => stripYear(say.renderEvent(e), eventYear(e));
+    const options = { lineOf, famous: () => false };
+    let fuller = 0;
+    for (const book of booksOf(world, index)) {
+      for (const chapter of chaptersOf(world, index, DEFAULT_CONTENT, book.civId)) {
+        const events = eraEvents(index, book.civId, chapter.from, chapter.to);
+        const ids = bodyIds(index, chapter, events, null, options);
+        const words = ids.reduce((sum, id) => sum + wordCount(lineOf(index.event(id)!)), 0);
+        expect(words).toBeLessThanOrEqual(BODY_WORDS.max);
+        // Every key event that fits stays; the page runs to at least the least, if the era has it.
+        const keyOnly = paragraphsOf(chapter.keyEvents.flatMap((id) => index.event(id) ?? []));
+        const all = paragraphsOf(ids.flatMap((id) => index.event(id) ?? []));
+        expect(all.length).toBeGreaterThanOrEqual(Math.min(keyOnly.length, 1));
+        if (all.length > keyOnly.length) fuller += 1;
+        const pool = events.reduce((sum, e) => sum + wordCount(lineOf(e)), 0);
+        if (pool >= BODY_WORDS.min) expect(words).toBeGreaterThanOrEqual(BODY_WORDS.min - 40);
+        expect(ids).toEqual(
+          [...ids].sort((a, b) => index.event(a)!.day - index.event(b)!.day || a - b),
+        );
+      }
+    }
+    expect(fuller).toBeGreaterThan(0);
+  });
+
+  it('takes rulers, then wars, then famous deaths, then the rest, as the budget allows', () => {
+    const world = base();
+    const index = buildLegendIndex(world, DEFAULT_CONTENT);
+    const book = booksOf(world, index)[0]!;
+    const chapter = { ...chaptersOf(world, index, DEFAULT_CONTENT, book.civId)[0]!, keyEvents: [] };
+    const events = eraEvents(index, book.civId, 0, 250);
+    // Each line is 40 words, so 150 words stops after four events.
+    const lineOf = () => 'word '.repeat(40).trim();
+    const rank = (type: string) =>
+      type === 'ruler_succeeded'
+        ? 1
+        : ['war_declared', 'peace_made', 'battle'].includes(type)
+          ? 2
+          : 4;
+    const ids = bodyIds(index, { ...chapter, from: 0, to: 250 }, events, null, {
+      lineOf,
+      famous: () => false,
+    });
+    expect(ids.length).toBe(4);
+    const kept = ids.map((id) => rank(index.event(id)!.type));
+    const pool = events.filter((e) => e.type !== 'year_summary').map((e) => rank(e.type));
+    const best = [...pool].sort((a, b) => a - b).slice(0, 4);
+    expect(kept.sort((a, b) => a - b)).toEqual(best);
+  });
+});
+
+describe('book text', () => {
+  it("strips only the paragraph's own year, in its leading, bracketed and trailing forms", () => {
+    expect(stripYear('In Year 5 Gwened died.', 5)).toBe('Gwened died.');
+    expect(stripYear('In Year 5, Gwened died.', 5)).toBe('Gwened died.');
+    expect(stripYear('Year 5: the harvest failed.', 5)).toBe('The harvest failed.');
+    expect(stripYear('Nantgad became their village (Year 34).', 34)).toBe(
+      'Nantgad became their village.',
+    );
+    expect(stripYear('Gwened died at Nantgad in Year 5.', 5)).toBe('Gwened died at Nantgad.');
+    expect(stripYear('Gwened died in Year 5, aged 40.', 5)).toBe('Gwened died, aged 40.');
+    // Another year, a longer year and a mid-sentence "in Year" that is not the label's stay.
+    expect(stripYear('In Year 6 Gwened died.', 5)).toBe('In Year 6 Gwened died.');
+    expect(stripYear('Gwened died in Year 50.', 5)).toBe('Gwened died in Year 50.');
+    expect(stripYear('Peace came (Year 12).', 5)).toBe('Peace came (Year 12).');
+    expect(stripYear('In Year \u22123 a star fell.', -3)).toBe('A star fell.');
+  });
+  it('uses a drop cap only when the first word has four letters or more', () => {
+    expect(dropCapFits('Gwened died.')).toBe(true);
+    expect(dropCapFits('The Chieftaincy rose.')).toBe(false);
+    expect(dropCapFits('At Khazazthar the gates fell.')).toBe(false);
+    expect(dropCapFits('Nantgad grew.')).toBe(true);
+    expect(dropCapFits('')).toBe(false);
+  });
+  it('writes a life as years, or a birth for the living', () => {
+    expect(lifeSpanText('12\u201371')).toBe('Year 12\u201371');
+    expect(lifeSpanText('12\u2013')).toBe('born Year 12');
+  });
+});
+
+describe('book places', () => {
+  it('lists perilous places by deaths, each with its beast, from the record', () => {
+    const world = base();
+    const perils = perilsOf(world, DEFAULT_CONTENT);
+    for (const p of perils) {
+      expect(world.sites.get(p.siteId)?.name).toBe(p.name);
+      expect(p.beasts.length).toBeGreaterThan(0);
+    }
+    for (let k = 1; k < perils.length; k += 1) {
+      expect(perils[k]!.deaths).toBeLessThanOrEqual(perils[k - 1]!.deaths);
+    }
+    const names = new Set(perils.flatMap((p) => p.beasts.map((b) => b.name)));
+    for (const name of names) {
+      expect([...world.creatures.values()].some((c) => c.name === name)).toBe(true);
+    }
+  });
+  it("reads a town's owner and size in a given year from the yearly record", () => {
+    const world = base();
+    const site = [...world.sites.values()].find((s) => s.ruinedYear === undefined)!;
+    const last = world.playback!.years.length - 1;
+    const row = siteInYear(world, site.id, last);
+    expect(row).toBeDefined();
+    expect(row!.ruined).toBe(false);
+    expect(row!.pop).toBeGreaterThan(0);
+    expect(siteInYear(world, -1, last)).toBeUndefined();
   });
 });
 
@@ -164,5 +290,22 @@ describe('book helpers', () => {
     expect(far.y1).toBeLessThanOrEqual(64);
     expect(far.x0).toBeLessThanOrEqual(12);
     expect(far.y1).toBeGreaterThanOrEqual(61);
+  });
+  it("grows a crop to the plate's shape, around the same centre and inside the world", () => {
+    const base = cropBox([30 * 256 + 100], 256, 256, { w: 64, h: 40 }, 6);
+    const fit = fitBox(base, 3.6, 256, 256);
+    expect((fit.x1 - fit.x0) / (fit.y1 - fit.y0)).toBeCloseTo(3.6, 5);
+    expect(fit.x1 - fit.x0).toBeGreaterThanOrEqual(64);
+    expect(fit.y1 - fit.y0).toBeGreaterThanOrEqual(40);
+    expect(fit.x0).toBeGreaterThanOrEqual(0);
+    expect(fit.x1).toBeLessThanOrEqual(256);
+    // A narrow phone plate grows taller instead.
+    const tall = fitBox(base, 1, 256, 256);
+    expect((tall.x1 - tall.x0) / (tall.y1 - tall.y0)).toBeCloseTo(1, 5);
+    // A world narrower than the plate's shape keeps its own bounds.
+    const small = fitBox(cropBox([5 * 64 + 5], 64, 64, { w: 64, h: 40 }, 6), 3.6, 64, 64);
+    expect(small.x0).toBeGreaterThanOrEqual(0);
+    expect(small.x1).toBeLessThanOrEqual(64);
+    expect(small.y1).toBeLessThanOrEqual(64);
   });
 });

@@ -7,11 +7,13 @@ import {
   DAYS_PER_YEAR,
   annals,
   eventYear,
+  linkSegments,
   yearText,
   type ContentBundle,
   type Era,
   type Id,
   type LegendIndex,
+  type LegendRef,
   type SimEvent,
   type WorldState,
 } from '../../engine';
@@ -144,15 +146,92 @@ export function eraEvents(index: LegendIndex, civId: Id, from: number, to: numbe
     .filter((e) => eventYear(e) >= from && eventYear(e) <= to);
 }
 
-/** The events a chapter prints: its key events, plus the one the reader came for. */
-export function bodyIds(index: LegendIndex, chapter: Chapter, extra: Id | null): Id[] {
-  const ids = new Set(chapter.keyEvents);
+/** Words in a line of displayed text. */
+export const wordCount = (text: string): number => text.split(/\s+/).filter(Boolean).length;
+
+const escapeRe = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * A chronicle line without the year the paragraph's own label already shows: a leading "Year N: ",
+ * "In Year N," or "In Year N ", a "(Year N)" and a " in Year N". Only the paragraph's own year is
+ * cut, so a line that names another year keeps it.
+ */
+export function stripYear(line: string, year: number): string {
+  const n = escapeRe(yearText(year));
+  const out = line
+    .replace(new RegExp(`^(?:In )?Year ${n}(?:[,:]\\s*|\\s+)`), '')
+    .replace(new RegExp(`\\s*\\(Year ${n}\\)`, 'g'), '')
+    .replace(new RegExp(`\\s+in Year ${n}(?![\\w\u2212-])`, 'g'), '');
+  return out === '' ? out : out[0]!.toUpperCase() + out.slice(1);
+}
+
+/** A drop cap suits a first word of at least four letters ("The" and "At" would split). */
+export function dropCapFits(text: string): boolean {
+  const word = text.match(/^[\p{L}]+/u);
+  return word !== null && word[0].length >= 4;
+}
+
+/** Fewest and most words a chapter's prose runs to (it stops adding at the fewest). */
+export const BODY_WORDS = { min: 150, max: 250 };
+
+export interface BodyOptions {
+  /** The displayed text of an event (its year already stripped). */
+  lineOf: (event: SimEvent) => string;
+  /** True for a death worth printing: a legend, a ruler or another famous figure. */
+  famous: (event: SimEvent) => boolean;
+  min?: number;
+  max?: number;
+}
+
+const WAR_TYPES = new Set(['war_declared', 'peace_made', 'battle']);
+/** Events never printed as prose. */
+const NOT_PROSE = new Set(['year_summary']);
+
+/**
+ * The events a chapter prints, from all the era's events: the highlighted one first, then by
+ * priority (key events, rulers, wars and battles, famous deaths, the rest; the gravest first within
+ * each) until the displayed text runs to `min` words, never past `max`. Oldest first. Key events
+ * are all kept while they fit.
+ */
+export function bodyIds(
+  index: LegendIndex,
+  chapter: Chapter,
+  events: readonly SimEvent[],
+  extra: Id | null,
+  options: BodyOptions,
+): Id[] {
+  const { lineOf, famous, min = BODY_WORDS.min, max = BODY_WORDS.max } = options;
+  const key = new Set(chapter.keyEvents);
   const more = extra === null ? undefined : index.event(extra);
-  if (more && eventYear(more) >= chapter.from && eventYear(more) <= chapter.to) ids.add(more.id);
-  return [...ids]
-    .flatMap((id) => index.event(id) ?? [])
-    .sort((a, b) => a.day - b.day || a.id - b.id)
-    .map((e) => e.id);
+  const forced =
+    more && eventYear(more) >= chapter.from && eventYear(more) <= chapter.to ? more : undefined;
+  const tierOf = (e: SimEvent): number =>
+    key.has(e.id)
+      ? 0
+      : e.type === 'ruler_succeeded'
+        ? 1
+        : WAR_TYPES.has(e.type)
+          ? 2
+          : e.type === 'notable_died' && famous(e)
+            ? 3
+            : 4;
+  const keyEvents = chapter.keyEvents.flatMap((id) => index.event(id) ?? []);
+  const pool = new Map<Id, SimEvent>();
+  for (const e of [...keyEvents, ...events]) if (!NOT_PROSE.has(e.type)) pool.set(e.id, e);
+  const ranked = [...pool.values()]
+    .filter((e) => e.id !== forced?.id)
+    .map((e) => ({ e, tier: tierOf(e) }))
+    .sort((a, b) => a.tier - b.tier || b.e.importance - a.e.importance || a.e.id - b.e.id);
+  const chosen: SimEvent[] = forced ? [forced] : [];
+  let words = forced ? wordCount(lineOf(forced)) : 0;
+  for (const { e, tier } of ranked) {
+    if (tier > 0 && words >= min) break;
+    const w = wordCount(lineOf(e));
+    if (words + w > max) continue;
+    chosen.push(e);
+    words += w;
+  }
+  return chosen.sort((a, b) => a.day - b.day || a.id - b.id).map((e) => e.id);
 }
 
 export interface Paragraph {
@@ -194,11 +273,138 @@ export function summaryOf(from: number, to: number, events: readonly SimEvent[])
   return `${years}. ${parts.length > 0 ? `${parts.join(', ')} and ${last}` : last} on record.`;
 }
 
-/** The sites a set of events names, in order of first mention. */
-export function placesOf(index: LegendIndex, ids: readonly Id[]): Id[] {
+/**
+ * The sites the displayed text names, in order of first mention: a place an event only carries as
+ * data, with no mention in its sentence, is not on the page and is left out.
+ */
+export function placesNamed(
+  index: LegendIndex,
+  events: readonly SimEvent[],
+  lineOf: (event: SimEvent) => string,
+  nameOf: (ref: LegendRef) => string,
+): Id[] {
   const seen = new Set<Id>();
-  for (const id of ids) for (const ref of index.refs(id)) if (ref.kind === 'site') seen.add(ref.id);
+  for (const event of events) {
+    const segments = linkSegments(
+      lineOf(event),
+      index.refs(event.id).map((ref) => ({ ref, name: nameOf(ref) })),
+    );
+    for (const s of segments) if (s.ref?.kind === 'site') seen.add(s.ref.id);
+  }
   return [...seen];
+}
+
+/** The standing town nearest to a cell that is not in `skip`, or undefined for none. */
+export function nearestOther(
+  world: WorldState,
+  cell: number,
+  skip: ReadonlySet<Id>,
+): Id | undefined {
+  const w = world.params.width;
+  let best: Id | undefined;
+  let bestD = Infinity;
+  for (const s of world.sites.values()) {
+    if (skip.has(s.id) || s.ruinedYear !== undefined) continue;
+    const d =
+      ((s.cell % w) - (cell % w)) ** 2 + (Math.floor(s.cell / w) - Math.floor(cell / w)) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = s.id;
+    }
+  }
+  return best;
+}
+
+/** A site's owner and size in one year, from the yearly record; undefined without it. */
+export function siteInYear(
+  world: WorldState,
+  siteId: Id,
+  year: number,
+): { civ: Id | null; pop: number; ruined: boolean } | undefined {
+  const years = world.playback?.years;
+  const row = years?.[Math.max(0, Math.min(years.length - 1, year))]?.sites;
+  if (!row) return undefined;
+  for (let k = 0; k + 3 < row.length; k += 4) {
+    if (row[k] === siteId)
+      return {
+        civ: row[k + 1] === 0 ? null : row[k + 1]!,
+        pop: row[k + 2]!,
+        ruined: row[k + 3] === 1,
+      };
+  }
+  return undefined;
+}
+
+export interface Peril {
+  siteId: Id;
+  name: string;
+  /** People its beasts killed there: raid dead plus the figures they slew. */
+  deaths: number;
+  /** The beasts that hold or haunt it, the deadliest first. */
+  beasts: { name: string; status: 'alive' | 'slain' | 'dead' }[];
+}
+
+/**
+ * Perilous places: the sites near which a dragon or great beast has its lair, or where one raided or
+ * killed, most deaths first. Lairs are cells, so a lair is placed at the town its first sighting
+ * names ("near X"); a beast with no town on record adds no row.
+ */
+export function perilsOf(world: WorldState, content: Pick<ContentBundle, 'creatures'>): Peril[] {
+  const tiers = new Map(content.creatures.map((def) => [def.id, def.tier]));
+  const byCell = new Map<number, Id>();
+  const byName = new Map<string, Id>();
+  for (const s of world.sites.values()) {
+    byCell.set(s.cell, s.id);
+    byName.set(s.name, s.id);
+  }
+  const events = new Map(world.events.map((e) => [e.id, e]));
+  const rows = new Map<Id, Peril & { by: Map<string, number> }>();
+  for (const c of world.creatures.values()) {
+    if (c.dragon === undefined && (tiers.get(c.defId) ?? 'beast') === 'beast') continue;
+    const dead = new Map<Id, number>();
+    const add = (site: Id | undefined, n: number) => {
+      if (site !== undefined) dead.set(site, (dead.get(site) ?? 0) + n);
+    };
+    for (const id of c.deeds) {
+      const e = events.get(id);
+      if (!e) continue;
+      if (typeof e.data.near === 'string') add(byName.get(e.data.near), 0);
+      if (e.type === 'beast_raid' && e.place !== null)
+        add(byCell.get(e.place), Number(e.data.dead) || 0);
+    }
+    for (const victim of c.kills ?? []) {
+      const home = world.people.get(victim)?.siteId;
+      add(home == null ? undefined : home, 1);
+    }
+    const status: Peril['beasts'][number]['status'] =
+      c.died === undefined ? 'alive' : c.slainBy !== undefined ? 'slain' : 'dead';
+    for (const [site, n] of dead) {
+      const s = world.sites.get(site);
+      if (!s) continue;
+      const row = rows.get(site) ?? {
+        siteId: site,
+        name: s.name,
+        deaths: 0,
+        beasts: [] as Peril['beasts'],
+        by: new Map<string, number>(),
+      };
+      row.deaths += n;
+      row.by.set(c.name, n);
+      row.beasts.push({ name: c.name, status });
+      rows.set(site, row);
+    }
+  }
+  return [...rows.values()]
+    .map(({ by, ...row }) => ({
+      ...row,
+      beasts: row.beasts.sort((a, b) => (by.get(b.name) ?? 0) - (by.get(a.name) ?? 0)),
+    }))
+    .sort((a, b) => b.deaths - a.deaths || a.siteId - b.siteId);
+}
+
+/** "Year 12–71" for a life, or "born Year 12" for a person still living (`years` is "12–71" or "12–"). */
+export function lifeSpanText(years: string): string {
+  return years.endsWith('\u2013') ? `born Year ${years.slice(0, -1)}` : `Year ${years}`;
 }
 
 /** The book a bare "Book" press opens: the last one read if it still exists, else the largest. */
@@ -248,6 +454,31 @@ export function cropBox(
   [x0, x1] = grow(x0, x1, width, min.w);
   [y0, y1] = grow(y0, y1, height, min.h);
   return { x0, y0, x1, y1 };
+}
+
+/**
+ * A crop box grown to an aspect ratio (width over height), kept inside the world and around the
+ * same centre; it widens first and only grows taller when the crop is already as wide as the
+ * world. A world too narrow for the shape (a 128-cell world and a 3.6 plate) gives up some of the
+ * crop's height rather than stretch the picture.
+ */
+export function fitBox(
+  box: { x0: number; y0: number; x1: number; y1: number },
+  aspect: number,
+  width: number,
+  height: number,
+): { x0: number; y0: number; x1: number; y1: number } {
+  let w = box.x1 - box.x0;
+  let h = box.y1 - box.y0;
+  if (w / h < aspect) w = Math.min(width, h * aspect);
+  if (w / h < aspect) h = w / aspect;
+  else if (w / h > aspect) h = Math.min(height, w / aspect);
+  if (w / h > aspect) w = h * aspect;
+  const cx = (box.x0 + box.x1) / 2;
+  const cy = (box.y0 + box.y1) / 2;
+  const x0 = Math.max(0, Math.min(width - w, cx - w / 2));
+  const y0 = Math.max(0, Math.min(height - h, cy - h / 2));
+  return { x0, y0, x1: x0 + w, y1: y0 + h };
 }
 
 export interface Hit {

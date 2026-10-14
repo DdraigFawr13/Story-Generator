@@ -277,13 +277,19 @@ export interface Atlas {
   draw: (input: DrawInput) => DrawResult;
 }
 
-/** Builds the terrain layers for a world and returns the canvas and its political drawing. */
-export function createAtlas(cells: WorldCells, biomeIds: readonly string[]): Atlas {
+/** Pixels a cell the Tales map uses for a world this many cells wide. */
+export const defaultScale = (width: number): number => Math.max(4, Math.round(1024 / width));
+
+/**
+ * Builds the terrain layers for a world and returns the canvas and its political drawing.
+ * `scale` (pixels a cell) is for a close-up that needs a sharper plane than the Tales map.
+ */
+export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scale?: number): Atlas {
   const t0 = performance.now();
   const W = cells.width;
   const H = cells.height;
   const N = W * H;
-  const S = Math.max(4, Math.round(1024 / W));
+  const S = scale ?? defaultScale(W);
   const P = W * S;
   /** Symbol sizes are written for 8 pixels a cell. */
   const k = S / 8;
