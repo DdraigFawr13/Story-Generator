@@ -65,6 +65,8 @@ interface Props {
   onOpenOnMap: (cell: number | null, year: number) => void;
   /** Switch to the map tab (narrow layout). */
   onGoMap: () => void;
+  /** Open a realm's book in the Book room. */
+  onBook?: (civId: Id) => void;
   /** A room drawn over the pane that needs the Legends context (the People room). */
   room?: React.ReactNode;
 }
@@ -218,6 +220,7 @@ export function Legends(props: Props) {
     siteActions: props.siteActions,
     onShow: props.onShow,
     onOpenOnMap: props.onOpenOnMap,
+    onBook: props.onBook,
     nameOf,
     titleOf,
     textOf,

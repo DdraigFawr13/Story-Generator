@@ -197,7 +197,8 @@ The terrain layer is drawn once per world. The political layer is redrawn only w
 
 ## Status
 
-- U3: building (2026-10-14).
+- U4: building after U3 merges.
+- U3: built (2026-10-14), in review. `book/data.ts` builds books, chapters and paragraphs from `annals()`; "Read the story" falls back to the Legends event page when no realm's book holds the event. Perilous places list the great beasts and dragons. The contents become a drawer at 800 px or narrower.
 - U2: merged as #111 (2026-10-14). Shared rail in `rooms/`; People room in `people/`. Legends person links open the People page; the Tales card adds "Who is X?"; Follow from a page starts Tales at the person's birth year. Life rows are the events they acted in, with repeats folded; gold marks legend deeds only. The URL names the room, follow and year.
 - U1: merged as #110 (2026-10-14). `HistoryPlayback`, `playback.css` and `playback/player.ts` are gone; the speeds now live in `tales/TalesRoom.tsx`. Town opens the map, the nearest existing entry to the embark flow.
 - U1 review: no dark mode in U1. The Tales map is a parchment map and stays light in either scheme; a dark treatment is a later decision (2026-10-14).

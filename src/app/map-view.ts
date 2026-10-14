@@ -245,8 +245,8 @@ export function buildSiteUrl(link: {
   return `/?${parts.join('&')}`;
 }
 
-/** The rooms a link can name: `?room=tales&follow=12&year=190` or `?room=people`. */
-export const ROOM_LINKS = ['tales', 'people'] as const;
+/** The rooms a link can name: `?room=tales&follow=12&year=190`, `?room=people` or `?room=book`. */
+export const ROOM_LINKS = ['tales', 'people', 'book'] as const;
 export type RoomLink = (typeof ROOM_LINKS)[number];
 
 /** The room and followed person a link names (Tales only follows); null room is the map. */
@@ -261,6 +261,24 @@ export function parseRoomLink(search: string): { room: RoomLink | null; follow: 
   };
 }
 
+/** Where the Book room is open: a realm's book, a chapter (0-based) and an event to highlight. */
+export interface BookLink {
+  civ: number | null;
+  ch: number;
+  ev: number | null;
+}
+
+/** The book a link names (`room=book&book=3&ch=2&ev=881`); null unless the room is the Book. */
+export function parseBookLink(search: string): BookLink | null {
+  const params = new URLSearchParams(search);
+  if (params.has('site') || params.get('room') !== 'book') return null;
+  const whole = (key: string) => {
+    const v = params.get(key);
+    return v !== null && /^\d{1,9}$/.test(v) ? Number(v) : null;
+  };
+  return { civ: whole('book'), ch: whole('ch') ?? 0, ev: whole('ev') };
+}
+
 /** Path and query for a view; zoom 0, no selection and empty Legends state are left out. */
 export function buildViewUrl(
   view: Omit<ViewState, 'seed' | 'year' | 'open' | 'cat' | 'q' | 'site'> &
@@ -269,6 +287,8 @@ export function buildViewUrl(
       /** A room the link opens (`room=`), and for Tales the person followed (`follow=`). */
       room?: RoomLink | null;
       follow?: number | null;
+      /** For `room: 'book'`: the book, chapter and highlighted event. */
+      book?: BookLink | null;
     },
 ): string {
   const parts = [
@@ -281,6 +301,10 @@ export function buildViewUrl(
   if (view.zoom > 0) parts.push(`z=${view.zoom}`);
   if (view.room) parts.push(`room=${view.room}`);
   if (view.room === 'tales' && view.follow != null) parts.push(`follow=${view.follow}`);
+  if (view.room === 'book' && view.book) {
+    if (view.book.civ !== null) parts.push(`book=${view.book.civ}`, `ch=${view.book.ch}`);
+    if (view.book.ev !== null) parts.push(`ev=${view.book.ev}`);
+  }
   if (view.year != null) parts.push(`year=${view.year}`);
   if (view.open) parts.push(`open=${encodeURIComponent(view.open).replace(/%3A/g, ':')}`);
   if (view.cat) parts.push(`cat=${view.cat}`);

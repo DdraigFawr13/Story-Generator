@@ -17,7 +17,7 @@ Detail for every phase lives in [REBOOT_PLAN.md §9](REBOOT_PLAN.md#9-phases); o
 
 ## Build order after Phase 3
 
-Since 2026-10-14 work follows Morgan's ranked list rather than phase order: legends as champions (M5.5, built), site life fixes (built), named battles, annals of each people, dwarven holds, succession wars and dynasties (built), dragons (M5.6, built), religion (built), spellbooks and lineages, court intrigue, story threads, expeditions (history part built), diplomacy, trade between peoples, then the world moving during play. The UI redesign (Four rooms, [spec](phases/UI_ROOMS.md)) runs alongside: the Tales and People rooms are built; Book and Town come next. The full list with value and effort is in [REBOOT_PLAN §9](REBOOT_PLAN.md#build-order-after-phase-3-morgans-ranked-list-2026-10-14).
+Since 2026-10-14 work follows Morgan's ranked list rather than phase order: legends as champions (M5.5, built), site life fixes (built), named battles, annals of each people, dwarven holds, succession wars and dynasties (built), dragons (M5.6, built), religion (built), spellbooks and lineages, court intrigue, story threads, expeditions (history part built), diplomacy, trade between peoples, then the world moving during play. The UI redesign (Four rooms, [spec](phases/UI_ROOMS.md)) runs alongside: the Tales, People and Book rooms are built; Town comes next. The full list with value and effort is in [REBOOT_PLAN §9](REBOOT_PLAN.md#build-order-after-phase-3-morgans-ranked-list-2026-10-14).
 
 ## Deferred decisions (asked when the phase arrives)
 

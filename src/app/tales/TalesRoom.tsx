@@ -56,8 +56,10 @@ interface Props {
   onClose: (year: number) => void;
   /** Tales is at this whole year, following this person (for the address bar). */
   onView?: (year: number, follow: { id: Id; name: string } | null) => void;
-  /** Open an event's page in Legends. */
+  /** Open the story of an event (its chapter in the Book). */
   onOpenEvent: (id: Id) => void;
+  /** Open the Book room; `year` and `follow` say where Tales comes back to. */
+  onBook: (year: number, follow: { id: Id; name: string } | null) => void;
   /** Open the Legends pane, at a category when one is named (Book). */
   onLegends: (category?: LegendCategory) => void;
   /** Open the People room's index; `year` and `follow` say where Tales comes back to. */
@@ -150,6 +152,7 @@ function Room({
   onOpenEvent,
   onLegends,
   onPeople,
+  onBook,
   onOpenPerson,
   initialFollow,
 }: Props & { data: PlaybackData }) {
@@ -576,7 +579,7 @@ function Room({
     onOpenPerson(id, Math.floor(clock.current.t), follow ? { ...follow } : null);
   const onRoom = (room: RoomId) => {
     if (room === 'people') onPeople(Math.floor(clock.current.t), follow ? { ...follow } : null);
-    else if (room === 'book') onLegends('event');
+    else if (room === 'book') onBook(Math.floor(clock.current.t), follow ? { ...follow } : null);
     else if (room === 'world' || room === 'town') finish();
   };
 

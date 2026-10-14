@@ -72,6 +72,8 @@ export interface LegendsCtx {
   /** "Open on the map at Year N": set the slider, centre, switch to the map. */
   onOpenOnMap: (cell: number | null, year: number) => void;
   siteActions: SiteActions;
+  /** Open a realm's book in the Book room (absent where there is no Book room). */
+  onBook?: ((civId: Id) => void) | undefined;
   nameOf: (ref: PageRef) => string;
   titleOf: (event: SimEvent) => string;
   textOf: (event: SimEvent) => string;

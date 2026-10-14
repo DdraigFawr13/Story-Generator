@@ -1087,6 +1087,11 @@ dl.facts dd {
   text-transform: uppercase;
   color: var(--muted);
 }
+.wm-root .lg-sect .lg-booklink {
+  font: inherit;
+  padding: 1px 8px;
+  min-height: 0;
+}
 .wm-root .lg-sect label {
   display: flex;
   align-items: center;

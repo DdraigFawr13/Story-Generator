@@ -55,6 +55,8 @@ import {
 } from './legends-ctx';
 import { VIEWER_LAYER_IDS } from './MapPanels';
 import { SiteView, type SiteLinkParts, type TickListener } from './SiteView';
+import { BookRoom } from './book/BookRoom';
+import { booksOf, chapterOfEvent, pickBook } from './book/data';
 import { PeopleRoom } from './people/PeopleRoom';
 import type { RoomId } from './rooms/Rooms';
 import { TalesRoom } from './tales/TalesRoom';
@@ -66,6 +68,8 @@ import {
   buildSiteUrl,
   siteLinkPoint,
   buildViewUrl,
+  parseBookLink,
+  type BookLink,
   parseRoomLink,
   parseViewUrl,
   type SiteLink,
@@ -237,10 +241,30 @@ export function NextApp() {
     follow: null,
   });
   const talesTimer = useRef(0);
+  /** The Book room (a realm's book, chapter and highlighted event) covers them too while set. */
+  const [book, setBook] = useState<BookLink | null>(() =>
+    initialRoom.room === 'book' ? parseBookLink(window.location.search) : null,
+  );
+  const bookRef = useRef(book);
+  /** The realm whose book was read last, for the rail's Book item. */
+  const lastBook = useRef<Id | null>(book?.civ ?? null);
   const peopleRef = useRef(people);
+  const showBook = (link: BookLink | null) => {
+    bookRef.current = link;
+    setBook(link);
+    if (link) {
+      if (link.civ !== null) lastBook.current = link.civ;
+      peopleRef.current = false;
+      setPeople(false);
+    }
+  };
   const showPeople = (on: boolean) => {
     peopleRef.current = on;
     setPeople(on);
+    if (on) {
+      bookRef.current = null;
+      setBook(null);
+    }
   };
   const playbackKey = useRef(0);
   /** Play the history after a world is generated (a Generate click or a link with no year). */
@@ -331,6 +355,9 @@ export function NextApp() {
     if (latest.current.playback) {
       const { year, follow } = talesRef.current;
       return buildViewUrl({ ...state, ...v, room: 'tales', follow: follow?.id ?? null, year });
+    }
+    if (bookRef.current) {
+      return buildViewUrl({ ...state, ...v, room: 'book', book: bookRef.current });
     }
     if (peopleRef.current && !n.open) return buildViewUrl({ ...state, ...v, room: 'people' });
     return null;
@@ -757,6 +784,7 @@ export function NextApp() {
         setYears(url.years);
         if (place.nav.open) setTab('legends');
         setPlayback(null);
+        showBook(link.room === 'book' ? parseBookLink(window.location.search) : null);
         showPeople(link.room === 'people' || (!place.tales && place.nav.open?.kind === 'person'));
         if (place.tales && world.current.playback) {
           // Back to Tales: play on from the year and person its address names.
@@ -875,6 +903,7 @@ export function NextApp() {
     if (!moved || open === null || (cur.open && sameRef(open, cur.open))) return;
     // Opening a page: show it, and move the map and the slider to it.
     showPeople(open.kind === 'person');
+    showBook(null);
     setTab('legends');
     setPlayback(null);
     const { legend: index, locked: lock } = latest.current;
@@ -895,6 +924,7 @@ export function NextApp() {
   const showTales = (from: number, follow: { id: Id; name: string } | null) => {
     talesRef.current = { year: from, follow };
     showPeople(false);
+    showBook(null);
     setTab('map');
     playbackKey.current += 1;
     setPlayback({ from, key: playbackKey.current, follow });
@@ -904,6 +934,7 @@ export function NextApp() {
   const openPeopleIndex = () => {
     if (peopleRef.current && !latest.current.nav.open) return;
     roomChange(() => {
+      showBook(null);
       setPlayback(null);
       showPeople(true);
       if (latest.current.nav.open) go({ open: null });
@@ -920,24 +951,44 @@ export function NextApp() {
   /** Tales with a person followed, as a new history entry (back returns to their page). */
   const followInTales = (who: { id: Id; name: string }) =>
     roomChange(() => showTales(Math.max(0, world.current.people.get(who.id)?.born ?? 0), who));
-  /** A rail item pressed in the People room. */
+  /** The Book room at a book, chapter and event, as a new history entry. */
+  const openBookRoom = (link: BookLink) =>
+    roomChange(() => {
+      setPlayback(null);
+      showPeople(false);
+      showBook(link);
+    });
+  /** The book and chapter that hold an event, or null when no realm's book does. */
+  const bookLinkOfEvent = (id: Id): BookLink | null => {
+    const event = latest.current.legend.event(id);
+    if (!event) return null;
+    const found = chapterOfEvent(
+      world.current,
+      latest.current.legend,
+      DEFAULT_CONTENT,
+      event,
+      booksOf(world.current, latest.current.legend),
+    );
+    return found ? { civ: found.civId, ch: found.ch, ev: id } : null;
+  };
+  /** A rail item pressed in the People or Book room. */
   const peopleRoom = (room: RoomId) => {
     if (room === 'people') return openPeopleIndex();
     if (room === 'tales') {
       if (state.playback) roomChange(() => showTales(0, null));
       return;
     }
+    if (room === 'book') {
+      if (bookRef.current) return;
+      const civ = pickBook(booksOf(world.current, latest.current.legend), lastBook.current);
+      return openBookRoom({ civ: civ ?? null, ch: 0, ev: null });
+    }
     roomChange(() => {
       showPeople(false);
+      showBook(null);
       setPlayback(null);
-      if (room === 'book') {
-        setSliderYear(null);
-        setTab('legends');
-        go({ cat: 'event', open: null });
-      } else {
-        setTab('map');
-        if (latest.current.nav.open?.kind === 'person') go({ open: null });
-      }
+      setTab('map');
+      if (latest.current.nav.open?.kind === 'person') go({ open: null });
     });
   };
   const hrefOf = (ref: PageRef | null): string => {
@@ -1158,7 +1209,15 @@ export function NextApp() {
                 onView={talesView}
                 onOpenEvent={(id) => {
                   flushTalesUrl();
-                  go({ open: { kind: 'event', id } });
+                  // The story opens in the book, at the chapter that holds the event.
+                  const link = bookLinkOfEvent(id);
+                  if (link) openBookRoom(link);
+                  else go({ open: { kind: 'event', id } });
+                }}
+                onBook={(year, follow) => {
+                  talesRef.current = { year, follow };
+                  const civ = pickBook(booksOf(world.current, legend), lastBook.current);
+                  openBookRoom({ civ: civ ?? null, ch: 0, ev: null });
                 }}
                 onLegends={(category) =>
                   roomChange(() => {
@@ -1240,7 +1299,14 @@ export function NextApp() {
           </div>
           <Legends
             room={
-              people ? (
+              book ? (
+                <BookRoom
+                  link={book}
+                  lastBook={lastBook.current}
+                  onRoom={peopleRoom}
+                  onOpen={(link) => roomChange(() => showBook(link))}
+                />
+              ) : people ? (
                 <PeopleRoom
                   person={nav.open?.kind === 'person' ? nav.open.id : null}
                   onRoom={peopleRoom}
@@ -1274,6 +1340,7 @@ export function NextApp() {
               setFromLegends(true);
               setTab('map');
             }}
+            onBook={(civ) => openBookRoom({ civ, ch: 0, ev: null })}
             onGoMap={() => {
               setFromLegends(false);
               setTab('map');
