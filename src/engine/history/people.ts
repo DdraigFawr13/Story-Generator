@@ -6,7 +6,7 @@ import type { RaceDef } from '../core/content-types';
 import { cultureGivenName } from '../people/names';
 import { rollAptitude } from '../people/aptitude';
 import type { BirthTierId } from '../people/tiers';
-import type { Civ, Id, NotableRole, Person, Site } from '../core/types';
+import type { Civ, Id, NotableRole, Person, SimEvent, Site } from '../core/types';
 import type { HistoryRun } from './state';
 
 /** Share of a lifespan after which a person is an elder. */
@@ -119,6 +119,21 @@ export const FAME_MAX = 100;
 
 export function addDeed(person: Person, event: Id): void {
   if (!person.deeds.includes(event)) person.deeds.push(event);
+}
+
+/** The event with this id (events are in id order), or undefined. */
+export function eventById(run: HistoryRun, id: Id): SimEvent | undefined {
+  const events = run.world.events;
+  let lo = 0;
+  let hi = events.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const at = events[mid]!;
+    if (at.id === id) return at;
+    if (at.id < id) lo = mid + 1;
+    else hi = mid - 1;
+  }
+  return undefined;
 }
 
 /** People who share a parent with the person (full or half), by id. */

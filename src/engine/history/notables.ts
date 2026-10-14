@@ -14,6 +14,7 @@ import type {
   SimEvent,
   Site,
 } from '../core/types';
+import { DAYS_PER_YEAR } from '../core/clock';
 import { cultureGivenName } from '../people/names';
 import { BIRTH_TIER_IDS, TIERS, legendSlotOpen, tierOfPower } from '../people/tiers';
 import { legendFactor, noticeFactor } from './colleges';
@@ -28,6 +29,7 @@ import {
   closeKin,
   createAdult,
   createPerson,
+  eventById,
   isAdult,
   isElder,
   isFertile,
@@ -1503,7 +1505,33 @@ function runCommonerMages(run: HistoryRun): void {
   }
 }
 
-/** Adults of exceptional power may grow legendary, while fewer than the cap are alive. */
+/**
+ * The person's latest deed of renown (`risePhrases`) that they led, within `riseYears`: what makes
+ * the tales count them a legend (REBOOT_PLAN §1B.8, fame comes from deeds, not from power).
+ */
+function renownDeed(run: HistoryRun, person: Person): SimEvent | undefined {
+  const { riseYears, risePhrases } = run.content.notables.deeds;
+  const since = (run.year - riseYears) * DAYS_PER_YEAR;
+  let best: SimEvent | undefined;
+  for (const id of person.deeds) {
+    const event = eventById(run, id);
+    if (!event || event.day < since || event.actors[0] !== person.id) continue;
+    if (risePhrases[event.type] === undefined) continue;
+    if (!best || event.id > best.id) best = event;
+  }
+  return best;
+}
+
+/** The deed's phrase with its own event's names filled in. */
+function deedPhrase(run: HistoryRun, deed: SimEvent): string {
+  const phrase = run.content.notables.deeds.risePhrases[deed.type] ?? '';
+  return phrase.replace(/\{(\w+)\}/g, (_, key: string) => String(deed.data[key] ?? ''));
+}
+
+/**
+ * Adults of exceptional power may grow legendary on the back of a recent deed of renown, while
+ * fewer than the cap are alive; the rise names the deed and is caused by it.
+ */
 function runLegends(run: HistoryRun): void {
   const rules = run.content.notables;
   const rng = run.rng.notables;
@@ -1512,6 +1540,8 @@ function runLegends(run: HistoryRun): void {
   for (const person of livingList(run)) {
     if (person.magic.power < LEGEND_FROM || person.magic.power >= LEGEND_POWER[0]) continue;
     if (!isAdult(run, person) || !legendSlotOpen(alive)) continue;
+    const deed = renownDeed(run, person);
+    if (!deed) continue;
     if (!rng.chance(rules.legendChance * legendFactor(run, person.civId))) continue;
     person.magic.power = rng.between(LEGEND_POWER[0], LEGEND_POWER[1]);
     const school = schoolOf(person);
@@ -1526,10 +1556,11 @@ function runLegends(run: HistoryRun): void {
       type: 'legend_risen',
       actors: [person.id],
       place: placeOf(run, person),
-      causes: person.deeds.slice(-1),
+      causes: [deed.id],
       data: {
         name: person.name,
         school,
+        deed: deedPhrase(run, deed),
         site: siteOf(run, person)?.name ?? 'the wilds',
         civ: civName(civOfPerson(run, person)),
       },

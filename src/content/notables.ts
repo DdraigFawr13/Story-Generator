@@ -151,7 +151,8 @@ export const NOTABLES: NotableRules = {
   mageBirthRate: 0.12,
   mageNotice: 0.1,
   mageStrength: 0.5,
-  legendChance: 0.03,
+  // Yearly, for an exceptional figure within `riseYears` of a deed of renown.
+  legendChance: 0.1,
   disputeChance: 0.6,
   disputeMargin: 5,
   disputeLuck: 15,
@@ -244,5 +245,19 @@ export const NOTABLES: NotableRules = {
       escaped: 'but {enemy} escaped',
     },
     vengeanceKin: ' with {names}',
+    // About a decade: the tales count a figure a legend while the deed is still told.
+    riseYears: 10,
+    risePhrases: {
+      beast_slain: 'slaying {beast}',
+      champion_fought: 'standing as champion of the {civ} at {site}',
+      vengeance_raid: 'avenging {avenged}',
+      spell_cast: 'working a great spell at {site}',
+      mage_came_home: 'coming home from {college} a master of {school}',
+      college_founded: 'opening {college}',
+      book_written: 'writing {item}',
+      expedition_glory: 'beating back {guardians} in {peril}',
+      expedition_treasure: 'bringing {item} out of {peril}',
+      expedition_lore: 'finding {item} in {peril}',
+    },
   },
 };

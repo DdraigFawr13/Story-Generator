@@ -1419,6 +1419,13 @@ export interface DeedRules {
   vengeancePhrases: { slain: string; escaped: string };
   /** `{names}`: the kin who rode with the avenger. */
   vengeanceKin: string;
+  /** A figure of exceptional power grows legendary only within this many years of a deed of renown they led. */
+  riseYears: number;
+  /**
+   * The deeds of renown that can make a legend, by event type, as the phrase `legend_risen` names
+   * ({deed}); placeholders are the deed event's own data keys.
+   */
+  risePhrases: Record<string, string>;
 }
 
 /** A sickness (M2.4b). History uses the yearly fields; Phase 3 reads the per-day ones. */

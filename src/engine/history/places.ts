@@ -24,6 +24,7 @@ import {
 import {
   addDeed,
   createAdult,
+  eventById,
   isAdult,
   isElder,
   livingAt,
@@ -71,21 +72,6 @@ export function openPlaceCells(run: HistoryRun): Set<number> {
   for (const place of run.world.places.values())
     if (place.emptied === undefined) out.add(place.cell);
   return out;
-}
-
-/** The event with this id (events are in id order), or undefined. */
-function eventById(run: HistoryRun, id: Id): SimEvent | undefined {
-  const events = run.world.events;
-  let lo = 0;
-  let hi = events.length - 1;
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    const at = events[mid]!;
-    if (at.id === id) return at;
-    if (at.id < id) lo = mid + 1;
-    else hi = mid - 1;
-  }
-  return undefined;
 }
 
 // --- making places ------------------------------------------------------------------------------
