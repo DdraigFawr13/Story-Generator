@@ -245,10 +245,31 @@ export function buildSiteUrl(link: {
   return `/?${parts.join('&')}`;
 }
 
+/** The rooms a link can name: `?room=tales&follow=12&year=190` or `?room=people`. */
+export const ROOM_LINKS = ['tales', 'people'] as const;
+export type RoomLink = (typeof ROOM_LINKS)[number];
+
+/** The room and followed person a link names (Tales only follows); null room is the map. */
+export function parseRoomLink(search: string): { room: RoomLink | null; follow: number | null } {
+  const params = new URLSearchParams(search);
+  if (params.has('site')) return { room: null, follow: null };
+  const room = ROOM_LINKS.find((r) => r === params.get('room')) ?? null;
+  const follow = params.get('follow');
+  return {
+    room,
+    follow: room === 'tales' && follow !== null && /^\d{1,9}$/.test(follow) ? Number(follow) : null,
+  };
+}
+
 /** Path and query for a view; zoom 0, no selection and empty Legends state are left out. */
 export function buildViewUrl(
   view: Omit<ViewState, 'seed' | 'year' | 'open' | 'cat' | 'q' | 'site'> &
-    Partial<Pick<ViewState, 'year' | 'open' | 'cat' | 'q'>> & { seed: string },
+    Partial<Pick<ViewState, 'year' | 'open' | 'cat' | 'q'>> & {
+      seed: string;
+      /** A room the link opens (`room=`), and for Tales the person followed (`follow=`). */
+      room?: RoomLink | null;
+      follow?: number | null;
+    },
 ): string {
   const parts = [
     `seed=${encodeURIComponent(view.seed)}`,
@@ -258,6 +279,8 @@ export function buildViewUrl(
   if (view.years !== 250) parts.splice(2, 0, `years=${view.years}`);
   if (view.at) parts.push(`at=${view.at.x},${view.at.y}`);
   if (view.zoom > 0) parts.push(`z=${view.zoom}`);
+  if (view.room) parts.push(`room=${view.room}`);
+  if (view.room === 'tales' && view.follow != null) parts.push(`follow=${view.follow}`);
   if (view.year != null) parts.push(`year=${view.year}`);
   if (view.open) parts.push(`open=${encodeURIComponent(view.open).replace(/%3A/g, ':')}`);
   if (view.cat) parts.push(`cat=${view.cat}`);

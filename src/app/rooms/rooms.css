@@ -62,15 +62,10 @@
   font-family: inherit;
   letter-spacing: inherit;
 }
-.rm-root .rm-room i {
+.rm-root .rm-room .rm-ico {
   width: 24px;
   height: 24px;
-  border: 2px solid currentColor;
-  border-radius: 7px;
   display: block;
-}
-.rm-root .rm-room i.round {
-  border-radius: 50%;
 }
 .rm-root .rm-room .soon {
   font-style: normal;
@@ -116,7 +111,7 @@
     letter-spacing: 0.08em;
     border-radius: 6px;
   }
-  .rm-root .rm-room i {
+  .rm-root .rm-room .rm-ico {
     display: none;
   }
   .rm-root .rm-room.on {

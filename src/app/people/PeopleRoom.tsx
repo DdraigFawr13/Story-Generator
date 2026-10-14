@@ -2,7 +2,7 @@
 // inside the Legends context, so every name, town and event links to the same pages Legends uses,
 // and the chronicle is the one Legends shows. It only reads what the history logged.
 
-import { useMemo, useState } from 'react';
+import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { civColor } from '../../content';
 import {
   eventYear,
@@ -24,6 +24,7 @@ import {
   filterRows,
   indexRows,
   lifeRows,
+  type LifeRow,
   rivalsOf,
   watchOf,
   type IndexRow,
@@ -43,8 +44,8 @@ interface Props {
   onIndex: () => void;
 }
 
-/** Index rows shown at a time; a button reveals the next window. */
-const WINDOW = 80;
+/** Index rows shown at a time; scrolling to the end of the list reveals the next page. */
+const PAGE = 80;
 
 export function PeopleRoom({ person, onRoom, onFollow, onIndex }: Props) {
   const { world } = useLegends();
@@ -95,10 +96,28 @@ function PeopleIndex() {
   const rows = useMemo(() => indexRows(world, content), [world, content]);
   const [chips, setChips] = useState<ReadonlySet<PersonFilter>>(new Set());
   const [q, setQ] = useState('');
-  const [limit, setLimit] = useState(WINDOW);
-  const shown = useMemo(() => filterRows(rows, chips, q), [rows, chips, q]);
+  // The list follows the text a moment later, so typing never waits on a long list.
+  const deferred = useDeferredValue(q);
+  const shown = useMemo(() => filterRows(rows, chips, deferred), [rows, chips, deferred]);
+  // How many rows are loaded, for the filter they were loaded under (a new filter starts over).
+  const filterKey = `${deferred}|${[...chips].join(',')}`;
+  const [loaded, setLoaded] = useState({ key: filterKey, count: PAGE });
+  const limit = loaded.key === filterKey ? loaded.count : PAGE;
+  const more = shown.length > limit;
+  const sentinel = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !more || typeof IntersectionObserver === 'undefined') return;
+    const watcher = new IntersectionObserver(
+      (seen) => {
+        if (seen.some((s) => s.isIntersecting)) setLoaded({ key: filterKey, count: limit + PAGE });
+      },
+      { rootMargin: '600px 0px' },
+    );
+    watcher.observe(el);
+    return () => watcher.disconnect();
+  }, [more, limit, filterKey]);
   const toggle = (id: PersonFilter) => {
-    setLimit(WINDOW);
     setChips((old) => {
       const next = new Set(old);
       if (next.has(id)) next.delete(id);
@@ -117,14 +136,11 @@ function PeopleIndex() {
         <input
           type="search"
           className="pp-search"
-          placeholder="Search names, realms and roles"
+          placeholder="Search names, roles, realms, races and faiths"
           aria-label="Search people"
           autoComplete="off"
           value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setLimit(WINDOW);
-          }}
+          onChange={(e) => setQ(e.target.value)}
         />
         <div className="pp-chips" role="group" aria-label="Filters">
           {PERSON_FILTERS.map((f) => (
@@ -146,18 +162,14 @@ function PeopleIndex() {
           {shown.slice(0, limit).map((r) => (
             <Row key={r.id} row={r} />
           ))}
+          {more && <li ref={sentinel} className="pp-sentinel" aria-hidden="true" />}
         </ul>
-      )}
-      {shown.length > limit && (
-        <button type="button" className="pp-more" onClick={() => setLimit(limit + WINDOW)}>
-          Show {WINDOW} more ({limit} of {shown.length})
-        </button>
       )}
     </div>
   );
 }
 
-function Row({ row }: { row: IndexRow }) {
+const Row = memo(function Row({ row }: { row: IndexRow }) {
   return (
     <li>
       <Link to={{ kind: 'person', id: row.id }} className="pp-row">
@@ -165,6 +177,10 @@ function Row({ row }: { row: IndexRow }) {
         <span className="who">
           <b>{row.name}</b>
           <span className="role">{row.role}</span>
+          <span className="meta">
+            {row.years}
+            {row.realm ? ` \u00b7 ${row.realm}` : ''}
+          </span>
         </span>
         <span className="when">
           {row.years}
@@ -173,7 +189,7 @@ function Row({ row }: { row: IndexRow }) {
       </Link>
     </li>
   );
-}
+});
 
 type Tab = 'life' | 'family' | 'deeds' | 'rivals' | 'all';
 
@@ -201,12 +217,13 @@ function PersonPage({
   const roles = useMemo(() => rolesOf(world, person, content).line, [world, person, content]);
   const chips = chipsOf(world, person, content, finalYear);
   const life = useMemo(
-    () => lifeRows(world, person, events, textOf),
-    [world, person, events, textOf],
+    () => lifeRows(world, person, events, textOf, { legend, titleOf }),
+    [world, person, events, textOf, titleOf, legend],
   );
+  const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(new Set());
   const deeds = useMemo(() => deedsOf(events), [events]);
   const family = familyOf(world, person);
-  const rivals = rivalsOf(world, person);
+  const rivals = useMemo(() => rivalsOf(world, person, events), [world, person, events]);
   const watch = watchOf(world, person, siteActions.enabled);
   const tabs: { id: Tab; label: string }[] = [
     { id: 'life', label: 'Life' },
@@ -250,19 +267,7 @@ function PersonPage({
           </button>
         </div>
       </header>
-      <div className="pp-tabs" role="tablist" aria-label="Sections">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <TabStrip tabs={tabs} tab={tab} onTab={setTab} />
       <div className="pp-body">
         <section
           className="pp-panel"
@@ -271,24 +276,48 @@ function PersonPage({
         >
           {tab === 'life' && (
             <ol className="pp-life">
-              {life.map((r, k) => (
-                <li key={r.key} className={r.gold ? 'gold' : undefined}>
-                  <span className="age">
-                    <b>{k === 0 ? `Age ${r.age}` : r.age}</b>
-                    <small>Year {yearText(r.year)}</small>
-                  </span>
-                  <i aria-hidden="true" />
-                  <span className="txt">
-                    {r.eventId === undefined ? (
-                      r.text
-                    ) : (
-                      <Link to={{ kind: 'event', id: r.eventId }} className="pp-ln plain">
-                        {r.text}
-                      </Link>
-                    )}
-                  </span>
-                </li>
-              ))}
+              {life.map((r, k) => {
+                const open = unfolded.has(r.key);
+                const line = (row: LifeRow, first: boolean, sub = false) => (
+                  <li key={row.key} className={`${row.gold ? 'gold' : ''}${sub ? ' sub' : ''}`}>
+                    <span className="age">
+                      <b>{first ? `Age ${row.age}` : row.age}</b>
+                      <small>Year {yearText(row.year)}</small>
+                    </span>
+                    <i aria-hidden="true" />
+                    <span className="txt">
+                      {row.eventId === undefined ? (
+                        row.text
+                      ) : (
+                        <Link to={{ kind: 'event', id: row.eventId }} className="pp-ln plain">
+                          {row.text}
+                        </Link>
+                      )}
+                      {row.members && (
+                        <button
+                          type="button"
+                          className="pp-fold"
+                          aria-expanded={open}
+                          onClick={() =>
+                            setUnfolded((old) => {
+                              const next = new Set(old);
+                              if (next.has(row.key)) next.delete(row.key);
+                              else next.add(row.key);
+                              return next;
+                            })
+                          }
+                        >
+                          {open ? 'Hide' : `Show all ${row.members.length}`}
+                        </button>
+                      )}
+                    </span>
+                  </li>
+                );
+                return [
+                  line(r, k === 0),
+                  ...(open ? (r.members ?? []).map((m) => line(m, false, true)) : []),
+                ];
+              })}
             </ol>
           )}
           {tab === 'family' && <FamilyTab world={world} person={person} />}
@@ -394,7 +423,19 @@ function WatchButton({
       >
         Watch {watch.name}
       </button>
-      {watch.reason && <small className="pp-why">{watch.reason}</small>}
+      {watch.reason && (
+        <small className="pp-why">
+          {watch.reason}
+          {watch.fallen && (
+            <>
+              {' \u00b7 '}
+              <Link to={{ kind: 'site', id: watch.siteId }} className="pp-ln">
+                See {watch.name} in Legends
+              </Link>
+            </>
+          )}
+        </small>
+      )}
     </>
   );
 }
@@ -418,46 +459,114 @@ function PersonLine({ person, note }: { person: Person; note: string }) {
 
 function FamilyTab({ world, person }: { world: WorldState; person: Person }) {
   const family = familyOf(world, person);
-  const groups: [string, Person[]][] = [
-    ['Parents', family.parents],
-    [person.family.spouses.length > 1 ? 'Spouses' : 'Spouse', family.spouses],
-    ['Children', family.children],
+  const kin = (f: Person, m: string, w: string) => (f.sex === 'f' ? w : m);
+  const groups: [string, Person[], (p: Person) => string][] = [
+    ['Parents', family.parents, (p) => kin(p, 'Father', 'Mother')],
+    ['Brothers and sisters', family.siblings, (p) => kin(p, 'Brother', 'Sister')],
+    [
+      person.family.spouses.length > 1 ? 'Spouses' : 'Spouse',
+      family.spouses,
+      (p) => kin(p, 'Husband', 'Wife'),
+    ],
+    ['Children', family.children, (p) => kin(p, 'Son', 'Daughter')],
+    ['Grandchildren', family.grandchildren, (p) => kin(p, 'Grandson', 'Granddaughter')],
   ];
-  if (groups.every(([, list]) => list.length === 0)) {
+  const { line } = family;
+  if (groups.every(([, list]) => list.length === 0) && !line) {
     return <p className="pp-empty">No family on record.</p>;
   }
   return (
     <>
+      {line && (
+        <div className="pp-group">
+          <h2>House</h2>
+          <p className="pp-house">
+            <Link to={{ kind: 'dynasty', id: line.id }} className="pp-ln big">
+              {line.name}
+            </Link>
+            <small>
+              Founded in Year {yearText(line.founded)}
+              {line.founder && line.founder.id !== person.id && (
+                <>
+                  {' by '}
+                  <Link to={{ kind: 'person', id: line.founder.id }} className="pp-ln">
+                    {line.founder.name}
+                  </Link>
+                </>
+              )}
+              {line.founder?.id === person.id && ` by ${person.sex === 'f' ? 'her' : 'him'}`}{' '}
+              {'\u00b7'} {line.members} {plural(line.members, 'person', 'people')} on record
+            </small>
+          </p>
+        </div>
+      )}
       {groups.map(
-        ([label, list]) =>
+        ([label, list, note]) =>
           list.length > 0 && (
             <div key={label} className="pp-group">
               <h2>{label}</h2>
               <ul className="pp-people">
                 {list.map((p) => (
-                  <PersonLine
-                    key={p.id}
-                    person={p}
-                    note={
-                      label === 'Children'
-                        ? p.sex === 'f'
-                          ? 'Daughter'
-                          : 'Son'
-                        : label === 'Parents'
-                          ? p.sex === 'f'
-                            ? 'Mother'
-                            : 'Father'
-                          : p.sex === 'f'
-                            ? 'Wife'
-                            : 'Husband'
-                    }
-                  />
+                  <PersonLine key={p.id} person={p} note={note(p)} />
                 ))}
               </ul>
             </div>
           ),
       )}
     </>
+  );
+}
+
+const SCROLL_PAD = 24;
+
+/** The section tabs. On a phone they scroll: a fade marks more to the right, and the active tab stays in view. */
+function TabStrip({
+  tabs,
+  tab,
+  onTab,
+}: {
+  tabs: { id: Tab; label: string }[];
+  tab: Tab;
+  onTab: (tab: Tab) => void;
+}) {
+  const strip = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState(false);
+  const measure = () => {
+    const el = strip.current;
+    if (el) setMore(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  };
+  useEffect(() => {
+    const el = strip.current;
+    const on = el?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (el && on) {
+      const left = on.offsetLeft - SCROLL_PAD;
+      const right = on.offsetLeft + on.offsetWidth + SCROLL_PAD - el.clientWidth;
+      if (left < el.scrollLeft) el.scrollLeft = Math.max(0, left);
+      else if (right > el.scrollLeft) el.scrollLeft = right;
+    }
+    measure();
+  }, [tab]);
+  useEffect(() => {
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+  return (
+    <div className={`pp-tabwrap${more ? ' more' : ''}`}>
+      <div className="pp-tabs" role="tablist" aria-label="Sections" ref={strip} onScroll={measure}>
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => onTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

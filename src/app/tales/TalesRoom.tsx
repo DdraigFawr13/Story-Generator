@@ -54,6 +54,8 @@ interface Props {
   startYear: number;
   /** Back to the normal map at a year. */
   onClose: (year: number) => void;
+  /** Tales is at this whole year, following this person (for the address bar). */
+  onView?: (year: number, follow: { id: Id; name: string } | null) => void;
   /** Open an event's page in Legends. */
   onOpenEvent: (id: Id) => void;
   /** Open the Legends pane, at a category when one is named (Book). */
@@ -144,6 +146,7 @@ function Room({
   textOf,
   startYear,
   onClose,
+  onView,
   onOpenEvent,
   onLegends,
   onPeople,
@@ -184,6 +187,11 @@ function Room({
   const fill = useRef<HTMLDivElement>(null);
   const live = useRef({ kinds, follow, speed, mode });
   live.current = { kinds, follow, speed, mode };
+  // The address bar follows the year and the person followed.
+  useEffect(() => {
+    onView?.(year, follow);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, follow]);
 
   // Build the terrain once per world.
   useEffect(() => {
@@ -923,7 +931,16 @@ function Room({
             {follow && (
               <div className="tr-lane">
                 <b>
-                  <button type="button" className="tr-who" onClick={() => openPerson(follow.id)}>
+                  <button
+                    type="button"
+                    className="tr-who"
+                    style={
+                      laneSpan && parseFloat(laneSpan.left) > 65
+                        ? { right: 0 }
+                        : { left: laneSpan?.left ?? 0 }
+                    }
+                    onClick={() => openPerson(follow.id)}
+                  >
                     {follow.name}
                   </button>
                 </b>

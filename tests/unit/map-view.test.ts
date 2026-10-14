@@ -10,6 +10,7 @@ import {
   clampZoom,
   formatReadout,
   maxZoom,
+  parseRoomLink,
   parseViewUrl,
   rampPosition,
   rampTicks,
@@ -260,5 +261,37 @@ describe('readout', () => {
     expect(elevation[0]).toBe('0 m');
     expect(elevation).not.toContain('400 m');
     expect(elevation[elevation.length - 1]).toBe('6000 m');
+  });
+});
+
+describe('room links', () => {
+  const base = {
+    seed: 'S1',
+    size: 256 as const,
+    years: 250 as const,
+    layer: 'elevation',
+    at: null,
+    zoom: 0,
+  };
+  it('builds and parses Tales with a followed person and a year', () => {
+    const url = buildViewUrl({ ...base, room: 'tales', follow: 3068, year: 190 });
+    expect(url).toBe('/?seed=S1&size=256&layer=elevation&room=tales&follow=3068&year=190');
+    expect(parseRoomLink(url.slice(2))).toEqual({ room: 'tales', follow: 3068 });
+    expect(parseViewUrl(url.slice(2), IDS).year).toBe(190);
+  });
+  it('builds and parses the People index, which follows nobody', () => {
+    const url = buildViewUrl({ ...base, room: 'people', follow: 5 });
+    expect(url).toBe('/?seed=S1&size=256&layer=elevation&room=people');
+    expect(parseRoomLink(url.slice(2))).toEqual({ room: 'people', follow: null });
+  });
+  it('keeps a person page as open=person:id and the map as no room', () => {
+    const url = buildViewUrl({ ...base, open: 'person:3068' });
+    expect(url).toContain('open=person:3068');
+    expect(parseRoomLink(url.slice(2))).toEqual({ room: null, follow: null });
+  });
+  it('ignores bad rooms, bad follow ids and site links', () => {
+    expect(parseRoomLink('?room=nope&follow=3')).toEqual({ room: null, follow: null });
+    expect(parseRoomLink('?room=tales&follow=x1')).toEqual({ room: 'tales', follow: null });
+    expect(parseRoomLink('?room=tales&follow=1&site=4')).toEqual({ room: null, follow: null });
   });
 });

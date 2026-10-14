@@ -51,6 +51,7 @@
 .pp-root .pp-back,
 .pp-root .pp-btn,
 .pp-root .pp-linkbtn,
+.pp-root .pp-fold,
 .pp-root .pp-more {
   font: inherit;
   background: none;
@@ -76,6 +77,7 @@
 .pp-root .pp-tabs button,
 .pp-root .pp-back,
 .pp-root .pp-btn,
+.pp-root .pp-fold,
 .pp-root .pp-more {
   font-family: inherit;
   letter-spacing: inherit;
@@ -164,6 +166,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.pp-root .pp-row .meta {
+  display: none;
+  color: var(--soft);
+  font-size: 14px;
 }
 .pp-root .pp-row .when {
   flex: none;
@@ -302,9 +309,28 @@
   font-size: 13.5px;
   text-align: center;
 }
-.pp-root .pp-tabs {
+.pp-root .pp-tabwrap {
+  position: relative;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
+}
+/* A fade at the right edge says the strip scrolls. */
+.pp-root .pp-tabwrap::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 44px;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(251, 248, 241, 0), var(--paper) 85%);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.pp-root .pp-tabwrap.more::after {
+  opacity: 1;
+}
+.pp-root .pp-tabs {
   display: flex;
   gap: 4px;
   padding: 0 24px;
@@ -374,6 +400,29 @@
 .pp-root .pp-life .txt {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+.pp-root .pp-life .pp-fold {
+  margin-left: 10px;
+  color: var(--red);
+  font-size: 15px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.pp-root .pp-life li.sub {
+  padding-left: 18px;
+  font-size: 17px;
+  color: var(--soft);
+}
+.pp-root .pp-house {
+  margin: 0;
+}
+.pp-root .pp-house small {
+  display: block;
+  color: var(--soft);
+  font-size: 15px;
+}
+.pp-root .pp-sentinel {
+  height: 1px;
 }
 .pp-root .pp-group {
   margin-bottom: 22px;
@@ -482,6 +531,16 @@
   }
   .pp-root .pp-row .when {
     display: none;
+  }
+  /* The years and realm go under the name; the role wraps to two lines. */
+  .pp-root .pp-row .meta {
+    display: block;
+  }
+  .pp-root .pp-row .role {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
   .pp-root .pp-back {
     margin: 12px 16px 0;

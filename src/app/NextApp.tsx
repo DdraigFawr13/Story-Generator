@@ -66,6 +66,7 @@ import {
   buildSiteUrl,
   siteLinkPoint,
   buildViewUrl,
+  parseRoomLink,
   parseViewUrl,
   type SiteLink,
   type ViewState,
@@ -124,6 +125,8 @@ const EMPTY_NAV: LegendNav = {
   scroll: 0,
 };
 /** Pages kept in the breadcrumb trail. */
+/** The address bar follows Tales at most this often (browsers throttle history writes). */
+const TALES_URL_MS = 800;
 const MAX_TRAIL = 12;
 
 /** What `go` may change: the open page (and its trail), list category, search, "every event". */
@@ -139,10 +142,6 @@ interface EntryState {
   trail?: string[];
   all?: boolean;
   scroll?: number;
-  /** The People room is open on this entry. */
-  people?: boolean;
-  /** Tales was playing here (year and followed person), so back from a page restores it. */
-  tales?: { from: number; follow: { id: Id; name: string } | null } | undefined;
 }
 /** The slider year and Legends place a world is shown with. */
 interface Restore {
@@ -150,6 +149,8 @@ interface Restore {
   nav: LegendNav;
   /** A watched site to go straight into (a link with `site=`). */
   site?: SiteLink | null;
+  /** Tales at this year with this person followed (a link with `room=tales`). */
+  tales?: { from: number; follow: Id | null } | undefined;
 }
 
 /** What the site view is showing: the site, and what to restore from a link. */
@@ -201,6 +202,7 @@ function cellOfPage(state: WorldState, ref: PageRef): number | null {
 
 export function NextApp() {
   const [initial] = useState(() => parseViewUrl(window.location.search, VIEWER_LAYER_IDS));
+  const [initialRoom] = useState(() => parseRoomLink(window.location.search));
   const [seedInput, setSeedInput] = useState(initial.seed ?? DEFAULT_SEED);
   const [size, setSize] = useState<WorldSize>(initial.size);
   const [years, setYears] = useState<HistoryLength>(initial.years);
@@ -223,7 +225,18 @@ export function NextApp() {
     follow?: { id: Id; name: string } | null;
   } | null>(null);
   /** The People room (index or a person's page) covers the map and Legends while set. */
-  const [people, setPeople] = useState(initial.open?.startsWith('person:') ?? false);
+  const [people, setPeople] = useState(
+    initialRoom.room !== 'tales' &&
+      (initial.open?.startsWith('person:') === true || initialRoom.room === 'people'),
+  );
+  /** A room change (rail press, Follow) adds its history entry through the URL effect. */
+  const [roomTick, setRoomTick] = useState(0);
+  /** Where Tales is (whole year) and who it follows, for its URL and for coming back to it. */
+  const talesRef = useRef<{ year: number; follow: { id: Id; name: string } | null }>({
+    year: 0,
+    follow: null,
+  });
+  const talesTimer = useRef(0);
   const peopleRef = useRef(people);
   const showPeople = (on: boolean) => {
     peopleRef.current = on;
@@ -271,9 +284,18 @@ export function NextApp() {
   );
 
   // Handlers outlive renders (popstate, debounce), so they read the latest state through refs.
-  const latest = useRef({ view, sliderYear, nav, locked, legend, finalYear: 0, playHistory });
+  const latest = useRef({
+    view,
+    sliderYear,
+    nav,
+    locked,
+    legend,
+    finalYear: 0,
+    playHistory,
+    playback,
+  });
   const finalYear = finalHistoryYear(world.current);
-  latest.current = { view, sliderYear, nav, locked, legend, finalYear, playHistory };
+  latest.current = { view, sliderYear, nav, locked, legend, finalYear, playHistory, playback };
   /** The next URL write adds a history entry (a page or list change) instead of editing one. */
   const pushNext = useRef(false);
 
@@ -293,10 +315,46 @@ export function NextApp() {
     });
   const writeUrl = (mode: 'push' | 'replace', v: View, n: LegendNav, y: number | null) => {
     if (!shown.current || watchingRef.current) return;
-    const entry: EntryState = { trail: n.trail.map(openOf), all: n.all, people: peopleRef.current };
-    const url = urlFor(shown.current, v, n, y);
-    if (mode === 'push') window.history.pushState(entry, '', url);
+    const entry: EntryState = { trail: n.trail.map(openOf), all: n.all };
+    const url = roomUrl(shown.current, v) ?? urlFor(shown.current, v, n, y);
+    // A push to the address already shown (a room pressed twice) edits that entry instead.
+    const here = window.location.pathname + window.location.search;
+    if (mode === 'push' && url !== here) window.history.pushState(entry, '', url);
     else window.history.replaceState({ ...window.history.state, ...entry }, '', url);
+  };
+  /** The URL of Tales (year, followed person) or the People index; null for any other view. */
+  const roomUrl = (
+    state: { seed: string; size: WorldSize; years: HistoryLength },
+    v: View,
+    n: LegendNav = latest.current.nav,
+  ): string | null => {
+    if (latest.current.playback) {
+      const { year, follow } = talesRef.current;
+      return buildViewUrl({ ...state, ...v, room: 'tales', follow: follow?.id ?? null, year });
+    }
+    if (peopleRef.current && !n.open) return buildViewUrl({ ...state, ...v, room: 'people' });
+    return null;
+  };
+  /** Write the exact Tales address onto the current entry, before leaving Tales for a new one. */
+  const flushTalesUrl = () => {
+    window.clearTimeout(talesTimer.current);
+    talesTimer.current = 0;
+    if (!shown.current || watchingRef.current || !latest.current.playback) return;
+    const url = roomUrl(shown.current, latest.current.view);
+    if (url) window.history.replaceState(window.history.state, '', url);
+  };
+  /** Tales reports its year and follow; the address follows at most about once a second. */
+  const talesView = (year: number, follow: { id: Id; name: string } | null) => {
+    talesRef.current = { year, follow };
+    if (talesTimer.current) return;
+    talesTimer.current = window.setTimeout(flushTalesUrl, TALES_URL_MS);
+  };
+  /** A room change: the old room keeps its exact address, the new one gets its own entry. */
+  const roomChange = (apply: () => void) => {
+    flushTalesUrl();
+    pushNext.current = true;
+    apply();
+    setRoomTick((n) => n + 1);
   };
 
   /** Generate in the worker; the old map stays (dimmed) until the new world arrives. */
@@ -353,8 +411,17 @@ export function NextApp() {
         );
         setProgress(null);
         setRevision((n) => n + 1);
-        if (autoPlay && latest.current.playHistory && !place.site && generated.playback) {
+        if (place.tales && !place.site && generated.playback) {
+          const who =
+            place.tales.follow === null ? undefined : generated.people.get(place.tales.follow);
+          const follow = who ? { id: who.id, name: who.name } : null;
+          talesRef.current = { year: place.tales.from, follow };
           playbackKey.current += 1;
+          setPlayback({ from: place.tales.from, key: playbackKey.current, follow });
+          showPeople(false);
+        } else if (autoPlay && latest.current.playHistory && !place.site && generated.playback) {
+          playbackKey.current += 1;
+          talesRef.current = { year: 0, follow: null };
           setPlayback({ from: 0, key: playbackKey.current });
         } else setPlayback(null);
         if (place.site) {
@@ -662,18 +729,27 @@ export function NextApp() {
         zoom: initial.zoom,
       },
       'replace',
-      { year: initial.year, nav: navFromUrl(initial, window.history.state, 0), site: initial.site },
-      // Links with a year, an open page or a watched site never auto-play.
-      initial.year === null && !initial.open && !initial.site,
+      {
+        year: initialRoom.room === 'tales' ? null : initial.year,
+        nav: navFromUrl(initial, window.history.state, 0),
+        site: initial.site,
+        tales:
+          initialRoom.room === 'tales'
+            ? { from: initial.year ?? 0, follow: initialRoom.follow }
+            : undefined,
+      },
+      // Links with a year, an open page, a room or a watched site never auto-play.
+      initial.year === null && !initial.open && !initial.site && initialRoom.room === null,
     );
     const popstate = () => {
-      const entry = (window.history.state ?? null) as EntryState | null;
       const url = parseViewUrl(window.location.search, VIEWER_LAYER_IDS);
       const next = { layer: url.layer, at: url.at, zoom: url.zoom };
       const seed = url.seed ?? DEFAULT_SEED;
-      const place = {
-        year: url.year,
+      const link = parseRoomLink(window.location.search);
+      const place: Restore = {
+        year: link.room === 'tales' ? null : url.year,
         nav: navFromUrl(url, window.history.state, latest.current.nav.rev + 1),
+        tales: link.room === 'tales' ? { from: url.year ?? 0, follow: link.follow } : undefined,
       };
       const apply = () => {
         setSeedInput(seed);
@@ -681,18 +757,16 @@ export function NextApp() {
         setYears(url.years);
         if (place.nav.open) setTab('legends');
         setPlayback(null);
-        showPeople(entry?.people === true || place.nav.open?.kind === 'person');
-        if (entry?.tales) {
-          // Back from a page opened out of Tales: play on from where the reader left.
+        showPeople(link.room === 'people' || (!place.tales && place.nav.open?.kind === 'person'));
+        if (place.tales && world.current.playback) {
+          // Back to Tales: play on from the year and person its address names.
+          const who =
+            place.tales.follow === null ? undefined : world.current.people.get(place.tales.follow);
+          const follow = who ? { id: who.id, name: who.name } : null;
+          talesRef.current = { year: place.tales.from, follow };
           playbackKey.current += 1;
-          setPlayback({
-            from: entry.tales.from,
-            key: playbackKey.current,
-            follow: entry.tales.follow,
-          });
-          showPeople(false);
+          setPlayback({ from: place.tales.from, key: playbackKey.current, follow });
           setTab('map');
-          window.history.replaceState({ ...entry, tales: undefined }, '');
         }
         if (
           shown.current?.seed === seed &&
@@ -744,7 +818,7 @@ export function NextApp() {
     pushNext.current = false;
     writeUrl(mode, view, nav, sliderYear);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, sliderYear, nav]);
+  }, [view, sliderYear, nav, roomTick]);
 
   const changeView = (change: ViewChange) => setView((v) => ({ ...v, ...change }));
   const copyLink = async () => {
@@ -817,46 +891,54 @@ export function NextApp() {
     }
   };
 
-  /** Remember where Tales was, so back from the next page plays on from there. */
-  const parkTales = (year: number, follow: { id: Id; name: string } | null) => {
-    window.history.replaceState({ ...window.history.state, tales: { from: year, follow } }, '');
-    setPlayback(null);
-  };
-  /** The People room's index, as a new history entry. */
-  const openPeopleIndex = () => {
-    if (!peopleRef.current) {
-      window.history.pushState({ people: true }, '', window.location.href);
-      showPeople(true);
-    }
-    if (latest.current.nav.open?.kind === 'person') go({ open: null });
-  };
-  /** Tales with a person followed, as a new history entry (back returns to their page). */
-  const followInTales = (who: { id: Id; name: string }) => {
-    const born = world.current.people.get(who.id)?.born ?? 0;
-    window.history.pushState({}, '', window.location.href);
+  /** Show Tales from a year, following a person or no one, with no page left open behind it. */
+  const showTales = (from: number, follow: { id: Id; name: string } | null) => {
+    talesRef.current = { year: from, follow };
     showPeople(false);
     setTab('map');
     playbackKey.current += 1;
-    setPlayback({ from: Math.max(0, born), key: playbackKey.current, follow: who });
+    setPlayback({ from, key: playbackKey.current, follow });
+    setNav((n) => (n.open ? { ...n, open: null, trail: [], rev: n.rev + 1, scroll: 0 } : n));
   };
+  /** The People room's index, as a new history entry. */
+  const openPeopleIndex = () => {
+    if (peopleRef.current && !latest.current.nav.open) return;
+    roomChange(() => {
+      setPlayback(null);
+      showPeople(true);
+      if (latest.current.nav.open) go({ open: null });
+    });
+  };
+  /** A person's page, as a new history entry (Tales keeps its own entry behind it). */
+  const openPersonPage = (id: Id) =>
+    roomChange(() => {
+      setPlayback(null);
+      showPeople(true);
+      setTab('legends');
+      go({ open: { kind: 'person', id } });
+    });
+  /** Tales with a person followed, as a new history entry (back returns to their page). */
+  const followInTales = (who: { id: Id; name: string }) =>
+    roomChange(() => showTales(Math.max(0, world.current.people.get(who.id)?.born ?? 0), who));
   /** A rail item pressed in the People room. */
   const peopleRoom = (room: RoomId) => {
     if (room === 'people') return openPeopleIndex();
-    if (room === 'tales' && state.playback) {
-      window.history.pushState({}, '', window.location.href);
-      showPeople(false);
-      setTab('map');
-      playbackKey.current += 1;
-      setPlayback({ from: 0, key: playbackKey.current });
+    if (room === 'tales') {
+      if (state.playback) roomChange(() => showTales(0, null));
       return;
     }
-    showPeople(false);
-    setPlayback(null);
-    if (room === 'book') {
-      setSliderYear(null);
-      setTab('legends');
-      go({ cat: 'event', open: null });
-    } else setTab('map');
+    roomChange(() => {
+      showPeople(false);
+      setPlayback(null);
+      if (room === 'book') {
+        setSliderYear(null);
+        setTab('legends');
+        go({ cat: 'event', open: null });
+      } else {
+        setTab('map');
+        if (latest.current.nav.open?.kind === 'person') go({ open: null });
+      }
+    });
   };
   const hrefOf = (ref: PageRef | null): string => {
     if (!shown.current) return '#';
@@ -1067,25 +1149,33 @@ export function NextApp() {
                 titleOf={titleOf}
                 textOf={(event) => narrator.renderEvent(event)}
                 startYear={playback.from}
-                onClose={(year) => {
-                  setPlayback(null);
-                  setSliderYear(year >= finalYear ? null : year);
+                onClose={(year) =>
+                  roomChange(() => {
+                    setPlayback(null);
+                    setSliderYear(year >= finalYear ? null : year);
+                  })
+                }
+                onView={talesView}
+                onOpenEvent={(id) => {
+                  flushTalesUrl();
+                  go({ open: { kind: 'event', id } });
                 }}
-                onOpenEvent={(id) => go({ open: { kind: 'event', id } })}
-                onLegends={(category) => {
-                  setPlayback(null);
-                  showPeople(false);
-                  setSliderYear(null);
-                  setTab('legends');
-                  if (category) go({ cat: category, open: null });
-                }}
+                onLegends={(category) =>
+                  roomChange(() => {
+                    setPlayback(null);
+                    showPeople(false);
+                    setSliderYear(null);
+                    setTab('legends');
+                    if (category) go({ cat: category, open: null });
+                  })
+                }
                 onPeople={(year, follow) => {
-                  parkTales(year, follow);
+                  talesRef.current = { year, follow };
                   openPeopleIndex();
                 }}
                 onOpenPerson={(id, year, follow) => {
-                  parkTales(year, follow);
-                  go({ open: { kind: 'person', id } });
+                  talesRef.current = { year, follow };
+                  openPersonPage(id);
                 }}
                 initialFollow={playback.follow}
               />

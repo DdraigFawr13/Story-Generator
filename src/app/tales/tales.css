@@ -726,6 +726,8 @@
 }
 .tr-root .tr-lane b {
   display: block;
+  position: relative;
+  height: 16px;
   margin: 0 8px 2px;
   font-family: 'Alegreya Sans SC', sans-serif;
   letter-spacing: 0.08em;
@@ -733,6 +735,20 @@
   color: var(--red);
   font-weight: 500;
   text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The name starts where the life's bar starts. */
+.tr-root .tr-lane b .tr-who {
+  padding: 0;
+  border: 0;
+  background: none;
+  min-height: 0;
+  line-height: 16px;
+  position: absolute;
+  top: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

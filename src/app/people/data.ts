@@ -2,6 +2,7 @@
 // chips, life rows, family, rivals and deeds. Pure functions over the world and its event log; no
 // DOM and no rules of their own (the history already decided everything shown here).
 
+import { pauseKindOf } from '../tales/pauses';
 import {
   eventYear,
   tierOfPower,
@@ -15,8 +16,12 @@ import {
 
 type NameContent = Pick<ContentBundle, 'races' | 'schools' | 'biographies'>;
 
-/** Events at this importance or more are drawn gold on the life line (a legend's deeds). */
-export const GOLD_IMPORTANCE = 8;
+/** Legend-deed event types beyond the 'legend' pause kind (a legend founding, a champion's stand). */
+const LEGEND_DEEDS = new Set(['legend_founded', 'champion_fought']);
+/** A gold dot: a legend's deed, never importance alone. */
+export function isLegendDeed(event: SimEvent): boolean {
+  return LEGEND_DEEDS.has(event.type) || pauseKindOf(event.type, event.importance) === 'legend';
+}
 /** Life rows show events of at least this importance. */
 export const LIFE_MIN_IMPORTANCE = 4;
 /** Event types that never make a life row. */
@@ -153,6 +158,8 @@ export interface IndexRow {
   fame: number;
   living: boolean;
   roles: Roles;
+  /** Lower-case text the search looks in: name, role, realm, race and faith. */
+  haystack: string;
 }
 
 const yearsText = (born: number, died: number | undefined) =>
@@ -166,6 +173,8 @@ export function indexRows(world: WorldState, content: NameContent): IndexRow[] {
     if (person.title === undefined && !legends.has(person.id)) continue;
     const civ = person.civId == null ? undefined : world.civs.get(person.civId);
     const roles = rolesOf(world, person, content);
+    const race = content.races.find((r) => r.id === person.raceId)?.name ?? person.raceId;
+    const faith = faithOf(world, person)?.name ?? '';
     rows.push({
       id: person.id,
       name: person.name,
@@ -177,6 +186,7 @@ export function indexRows(world: WorldState, content: NameContent): IndexRow[] {
       fame: person.fame,
       living: person.died === undefined,
       roles,
+      haystack: [person.name, roles.line, civ?.name ?? '', race, faith].join(' ').toLowerCase(),
     });
   }
   return rows.sort((a, b) => b.fame - a.fame || a.id - b.id);
@@ -188,7 +198,8 @@ export function filterRows(
   chips: ReadonlySet<PersonFilter>,
   needle: string,
 ): IndexRow[] {
-  const q = needle.trim().toLowerCase();
+  // Every word must appear somewhere, in any order.
+  const words = needle.toLowerCase().split(/\s+/).filter(Boolean);
   return rows.filter((r) => {
     if (chips.has('legends') && !r.legend) return false;
     if (chips.has('rulers') && !r.roles.ruler) return false;
@@ -196,31 +207,56 @@ export function filterRows(
     if (chips.has('heroes') && !r.roles.hero) return false;
     if (chips.has('priests') && !r.roles.priest && !r.roles.prophet) return false;
     if (chips.has('living') && !r.living) return false;
-    return q === '' || `${r.name} ${r.realm} ${r.role}`.toLowerCase().includes(q);
+    return words.every((w) => r.haystack.includes(w));
   });
 }
 
 export interface LifeRow {
   key: string;
   year: number;
+  /** Last year of a collapsed run; absent for a single line. */
+  yearEnd?: number;
   /** Years since birth, never below 0. */
   age: number;
   text: string;
   /** Drawn gold: a legend's deed. */
   gold: boolean;
-  /** The event this row came from; none for birth. */
+  /** The event this row came from; none for birth and for a collapsed run. */
   eventId?: Id;
+  /** The lines a collapsed run stands for. */
+  members?: LifeRow[];
 }
 
+/** Did the person act in this event, or is it about them by name? */
+function actedIn(person: Person, event: SimEvent): boolean {
+  if (event.actors.includes(person.id)) return true;
+  const { name, hero, enemy } = event.data;
+  return event.actors.length === 0 && [name, hero, enemy].includes(person.name);
+}
+
+/** The side a person fought for in a battle line: the realm they fought against. */
+function foeOf(person: Person, event: SimEvent): string {
+  const { attackerLead, civ, enemy } = event.data;
+  return String(attackerLead === person.name ? enemy : (civ ?? enemy ?? ''));
+}
+
+/** Runs of the same event type within one war, or each within this many years of the last. */
+const RUN_GAP_YEARS = 5;
+/** Lines that stand alone: a death, a marriage, a founding. */
+const NO_FOLD = new Set(['notable_died', 'marriage', 'dynasty_founded', 'legend_risen']);
+
 /**
- * The life line: birth, then the person's events of note in order, each with the age and the year.
- * `events` are the person's own events, oldest first; `textOf` renders a chronicle line.
+ * The life line: birth, then the events the person acted in, in order, each with the age and the
+ * year. Runs of the same type within one war or five years fold into one line that lists its
+ * members. `events` are the person's own events, oldest first; `textOf` renders a chronicle line
+ * and `titleOf` names an event type for a folded run.
  */
 export function lifeRows(
   world: WorldState,
   person: Person,
   events: readonly SimEvent[],
   textOf: (event: SimEvent) => string,
+  options: { legend?: boolean; titleOf?: (event: SimEvent) => string } = {},
 ): LifeRow[] {
   const site = [...world.sites.values()].find((s) => s.cell === person.birthplaceCell);
   const rows: LifeRow[] = [
@@ -234,16 +270,70 @@ export function lifeRows(
       gold: false,
     },
   ];
-  for (const event of events) {
-    if (NOT_LIFE.has(event.type) || event.importance < LIFE_MIN_IMPORTANCE) continue;
+  const own = events.filter(
+    (e) => !NOT_LIFE.has(e.type) && e.importance >= LIFE_MIN_IMPORTANCE && actedIn(person, e),
+  );
+  const lines = own.map((event) => {
     const year = eventYear(event);
+    return {
+      event,
+      row: {
+        key: `e${event.id}`,
+        year,
+        age: Math.max(0, year - person.born),
+        text: textOf(event),
+        gold: options.legend === true && isLegendDeed(event),
+        eventId: event.id,
+      } satisfies LifeRow,
+    };
+  });
+  // A run is one type of event within one war, or each within five years of the last. Other lines
+  // may fall between its members; the run stands where it began.
+  type Line = (typeof lines)[number];
+  const runs: { items: Line[]; last: number }[] = [];
+  const latest = new Map<string, (typeof runs)[number]>();
+  for (const line of lines) {
+    const { type, data } = line.event;
+    // Battles fold by the foe, so two wars never read as one.
+    const key = type === 'battle' ? `${type}|${foeOf(person, line.event)}` : type;
+    const run = NO_FOLD.has(type) ? undefined : latest.get(key);
+    const war = run?.items[0]!.event.data.war;
+    if (
+      run &&
+      ((war !== undefined && data.war === war) || line.row.year - run.last <= RUN_GAP_YEARS)
+    ) {
+      run.items.push(line);
+      run.last = line.row.year;
+      continue;
+    }
+    const fresh = { items: [line], last: line.row.year };
+    runs.push(fresh);
+    latest.set(key, fresh);
+  }
+  for (const { items } of runs) {
+    const first = items[0]!;
+    if (items.length < 2) {
+      rows.push(first.row);
+      continue;
+    }
+    const last = items[items.length - 1]!.row;
+    const span =
+      last.year === first.row.year
+        ? `Year ${first.row.year}`
+        : `Years ${first.row.year}\u2013${last.year}`;
+    const title = options.titleOf?.(first.event) ?? first.event.type.replace(/_/g, ' ');
+    const text =
+      first.event.type === 'battle'
+        ? `Fought in ${items.length} battles against the ${foeOf(person, first.event)}, ${span}`
+        : `${title}, ${items.length} times, ${span}`;
     rows.push({
-      key: `e${event.id}`,
-      year,
-      age: Math.max(0, year - person.born),
-      text: textOf(event),
-      gold: event.importance >= GOLD_IMPORTANCE,
-      eventId: event.id,
+      key: `r${first.event.id}`,
+      year: first.row.year,
+      yearEnd: last.year,
+      age: first.row.age,
+      text,
+      gold: items.some((r) => r.row.gold),
+      members: items.map((r) => r.row),
     });
   }
   return rows;
@@ -253,41 +343,110 @@ export interface FamilyGroups {
   parents: Person[];
   spouses: Person[];
   children: Person[];
+  /** Other children of their parents. */
+  siblings: Person[];
+  /** Children of their children. */
+  grandchildren: Person[];
+  /** The house they belong to, with its founder and how many of its people are on record. */
+  line:
+    | { id: Id; name: string; founder: Person | undefined; founded: number; members: number }
+    | undefined;
 }
 
-/** Parents, spouses and children who are on record. */
+/** Parents, siblings, spouses, children, grandchildren and house who are on record. */
 export function familyOf(world: WorldState, person: Person): FamilyGroups {
-  const pick = (ids: readonly Id[]) =>
-    ids.flatMap((id) => {
+  const pick = (ids: readonly Id[], skip: ReadonlySet<Id> = new Set()) => {
+    const seen = new Set<Id>();
+    return ids.flatMap((id) => {
       const found = world.people.get(id);
-      return found ? [found] : [];
+      if (!found || skip.has(id) || seen.has(id)) return [];
+      seen.add(id);
+      return [found];
     });
+  };
+  const parents = pick(person.family.parents);
+  const children = pick(person.family.children);
+  const dynasty =
+    person.dynastyId === undefined ? undefined : world.dynasties.get(person.dynastyId);
+  let line: FamilyGroups['line'];
+  if (dynasty) {
+    let members = 0;
+    for (const p of world.people.values()) if (p.dynastyId === dynasty.id) members += 1;
+    line = {
+      id: dynasty.id,
+      name: dynasty.name,
+      founder: world.people.get(dynasty.founderId),
+      founded: dynasty.founded,
+      members,
+    };
+  }
   return {
-    parents: pick(person.family.parents),
+    parents,
     spouses: pick(person.family.spouses),
-    children: pick(person.family.children),
+    children,
+    siblings: pick(
+      parents.flatMap((p) => p.family.children),
+      new Set([person.id]),
+    ),
+    grandchildren: pick(children.flatMap((c) => c.family.children)),
+    line,
   };
 }
 
 export interface Rival {
   person: Person;
-  /** Why: "rival", "sworn enemy", "killed them" or "killed by them". */
+  /** Why: "rival", "sworn enemy", "slew Brokli" or "slain by Brokli". */
   why: string;
 }
 
-/** Rivals, sworn enemies, their killer and those they killed, each once. */
-export function rivalsOf(world: WorldState, person: Person): Rival[] {
+/** Event types that end a life at a named hand, and the actor slots of killer and victim. */
+function killPair(event: SimEvent): { killer: Id; victim: Id } | undefined {
+  const [a, b] = event.actors;
+  if (a === undefined || b === undefined) return undefined;
+  const text = (key: string) => String(event.data[key] ?? '');
+  switch (event.type) {
+    // actors: the dead, then the killer ("in battle, slain by Brokli").
+    case 'notable_died':
+      return /\b(slain|killed) by\b/.test(text('cause')) ? { killer: b, victim: a } : undefined;
+    // actors: winner, loser; the loser died when the outcome says so.
+    case 'legend_duel':
+      return /\bkilled\b/.test(text('outcome')) ? { killer: a, victim: b } : undefined;
+    // actors: avenger, enemy.
+    case 'vengeance_raid':
+      return /\b(slain|killed)\b/.test(text('outcome')) ? { killer: a, victim: b } : undefined;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Rivals, sworn enemies, their killer and those they killed, each once. Kills come from the
+ * person's own events (a duel, a battle, a raid) as well as the `killerId` of the record.
+ */
+export function rivalsOf(
+  world: WorldState,
+  person: Person,
+  events: readonly SimEvent[] = [],
+): Rival[] {
   const out = new Map<Id, Rival>();
   const add = (id: Id | undefined, why: string) => {
     const found = id === undefined ? undefined : world.people.get(id);
     if (found && found.id !== person.id && !out.has(found.id))
       out.set(found.id, { person: found, why });
   };
-  add(person.killerId, 'killed them');
+  add(person.killerId, `slew ${person.name}`);
+  for (const e of events) {
+    const pair = killPair(e);
+    if (pair?.victim === person.id) add(pair.killer, `slew ${person.name}`);
+  }
   for (const id of person.rivals ?? []) add(id, 'rival');
   for (const id of person.enemies ?? []) add(id, 'sworn enemy');
+  for (const e of events) {
+    const pair = killPair(e);
+    if (pair?.killer === person.id) add(pair.victim, `slain by ${person.name}`);
+  }
   for (const other of world.people.values()) {
-    if (other.killerId === person.id) add(other.id, 'killed by them');
+    if (other.killerId === person.id) add(other.id, `slain by ${person.name}`);
   }
   return [...out.values()];
 }
@@ -418,6 +577,8 @@ export interface WatchState {
   name: string;
   /** Why watching is unavailable; undefined when it can start. */
   reason: string | undefined;
+  /** The town has fallen, so its Legends page is the way to it. */
+  fallen: boolean;
 }
 
 /** The town to watch for a person (their home, else the birthplace) and whether it can be. */
@@ -432,5 +593,5 @@ export function watchOf(
   let reason: string | undefined;
   if (site.ruinedYear !== undefined) reason = `Town fell in Year ${site.ruinedYear}`;
   else if (!enabled) reason = 'Watch is available at the present year';
-  return { siteId: site.id, name: site.name, reason };
+  return { siteId: site.id, name: site.name, reason, fallen: site.ruinedYear !== undefined };
 }
