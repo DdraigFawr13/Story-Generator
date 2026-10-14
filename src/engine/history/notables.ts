@@ -112,6 +112,59 @@ function foundDynasty(run: HistoryRun, founder: Person, causes: Id[]): Dynasty {
   return dynasty;
 }
 
+/**
+ * A ruler takes the seat: one from outside the old line founds a new house, and the house that
+ * held the seat long enough gets its ending in the record. `prior` is undefined for a new realm.
+ */
+export function seatHouse(
+  run: HistoryRun,
+  civ: Civ,
+  ruler: Person,
+  prior: Person | undefined,
+  cause: Id,
+): void {
+  const before = prior?.dynastyId;
+  const old = before === undefined ? undefined : run.world.dynasties.get(before);
+  if (ruler.dynastyId === undefined || (prior !== undefined && ruler.dynastyId !== before)) {
+    foundDynasty(run, ruler, [cause]);
+  }
+  if (!prior) {
+    civ.houseSince = run.year;
+    civ.houseRulers = 1;
+    return;
+  }
+  if (!old || ruler.dynastyId === old.id) {
+    civ.houseRulers = (civ.houseRulers ?? 0) + 1;
+    return;
+  }
+  const rules = run.rules.civilWar;
+  const years = run.year - (civ.houseSince ?? 0);
+  const rulers = civ.houseRulers ?? 1;
+  if (years >= rules.houseYears || rulers >= rules.houseRulers) {
+    const event = run.emit({
+      type: 'dynasty_ended',
+      actors: [prior.id, ruler.id],
+      place: capitalOf(run, civ)?.cell ?? null,
+      causes: [cause],
+      data: {
+        dynasty: old.name,
+        house: dynastyName(run, ruler),
+        civ: civ.name,
+        years,
+        rulers,
+        reign: rules.phrases.reign
+          .replace('{years}', String(years))
+          .replace('{rulers}', rulers === 1 ? rules.phrases.oneRuler : `${rulers} rulers`),
+        ruler: ruler.name,
+        prior: prior.name,
+      },
+    });
+    addDeed(ruler, event.id);
+  }
+  civ.houseSince = run.year;
+  civ.houseRulers = 1;
+}
+
 /** The dynasty a child belongs to: the more famous parent's (father on ties); that parent founds one if needed. */
 function dynastyFor(run: HistoryRun, mother: Person, father: Person): Id {
   const [first, second] = father.fame >= mother.fame ? [father, mother] : [mother, father];
@@ -163,6 +216,8 @@ export function initNotables(run: HistoryRun): void {
     civ.rulerId = ruler.id;
     const origin = logOf(run, capital.id).origin;
     const dynasty = foundDynasty(run, ruler, origin === undefined ? [] : [origin]);
+    civ.houseSince = 0;
+    civ.houseRulers = 1;
     const [mother, father] = ruler.sex === 'f' ? [ruler, spouse] : [spouse, ruler];
     const children = rng.between(0, START_CHILDREN);
     for (let n = 0; n < children; n += 1) {
@@ -1045,6 +1100,8 @@ function succeed(run: HistoryRun, civ: Civ, dead: Person, death: SimEvent): void
       .replace('{rival}', loser.name);
     heir = winner;
     causes.push(dispute.id);
+    // The beaten claimant may raise part of the realm (civil-war.ts, later this year).
+    run.claims.push({ civ: civ.id, claimant: loser.id, ruler: winner.id, dispute: dispute.id });
   }
   if (!heir) {
     phrase = rules.noHeirPhrase;
@@ -1079,10 +1136,7 @@ function succeed(run: HistoryRun, civ: Civ, dead: Person, death: SimEvent): void
     data: { ruler: heir.name, prior: dead.name, civ: civ.name, rule: phrase },
   });
   addDeed(heir, event.id);
-  // A ruler from outside the old line founds a new dynasty.
-  if (heir.dynastyId === undefined || heir.dynastyId !== dead.dynastyId) {
-    foundDynasty(run, heir, [event.id]);
-  }
+  seatHouse(run, civ, heir, dead, event.id);
 }
 
 // --- marriage and children ----------------------------------------------------------------------

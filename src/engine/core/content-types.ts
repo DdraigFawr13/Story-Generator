@@ -1853,6 +1853,8 @@ export interface HistoryRules {
   colleges: CollegeRules;
   /** Free cities (playtest add-on): at the start, by breaking away, and their pacts. */
   cityStates: CityStateRules;
+  /** Succession wars and dynasties: a disputed throne can become a civil war. */
+  civilWar: CivilWarRules;
 }
 
 /** A spell a college master or legend can work on a site's trouble (colleges.ts). */
@@ -1947,6 +1949,45 @@ export interface CityStateRules {
     /** Grievance the attacker gains against the ally who came. */
     grievance: number;
   };
+}
+
+/** Succession wars (civil-war.ts): when a beaten claimant raises part of the realm, and how it ends. */
+export interface CivilWarRules {
+  /** Chance a beaten claimant rises, before the culture's war value (/ 10). */
+  chance: number;
+  /** The realm needs this many live sites for a claimant to raise part of it. */
+  minSites: number;
+  /** Share of the realm's adults that follow the claimant, by renown against the ruler's: least and most. */
+  share: [min: number, max: number];
+  /** Chance the loser of a decided war dies at the victor's order; otherwise they flee abroad. */
+  executeChance: number;
+  /** Breakaway odds multiplier for a far town of a realm torn by civil war. */
+  breakaway: number;
+  /** Grievance a realm holds against the half that split from it for good. */
+  splitGrievance: number;
+  /** A ruling house's end is told only when it held the seat this long, or for this many rulers. */
+  houseYears: number;
+  houseRulers: number;
+  /** Who rose with the claimant (`{site}` their seat, `{n}` the other towns), and the beaten side's fate (`{name}`). */
+  phrases: {
+    alone: string;
+    one: string;
+    many: string;
+    executed: string;
+    exiled: string;
+    /** How long a civil war ran: one year, and `{n}` years. */
+    oneYear: string;
+    years: string;
+    /** A house's time on the seat: `{years}` and `{rulers}` ("3 rulers", or oneRuler). */
+    reign: string;
+    oneRuler: string;
+  };
+  /** A civil war undecided after this many years ends with the realm split. */
+  maxYears: number;
+  /** Battle luck in a civil war, times the usual (soldiers change sides on the field). */
+  luck: number;
+  /** Prefixes for a claimant's realm whose name an earlier one used ("Second"). */
+  ordinals: string[];
 }
 
 /** One kind of evening interaction between two residents (M3.6). Numbers are tunables in content/interactions.ts. */

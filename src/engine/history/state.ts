@@ -96,6 +96,17 @@ export interface War {
   defenderCaptain?: Id | undefined;
   /** Champions already named in this war: later battles add fame without another line. */
   champions?: Id[];
+  /** A succession war: the attacker is the claimant's realm, risen from the defender. */
+  civil?: boolean;
+}
+
+/** A beaten claimant from this year's successions, who may raise part of the realm (civil-war.ts). */
+export interface Claim {
+  civ: Id;
+  claimant: Id;
+  ruler: Id;
+  /** The succession_disputed event. */
+  dispute: Id;
 }
 
 /** A college of magic at a site (colleges.ts); the events are the record. */
@@ -179,6 +190,7 @@ export interface HistoryRun {
     notables: RngStream;
     magic: RngStream;
     cityStates: RngStream;
+    civilWar: RngStream;
   };
   /** Current year, 1..historyYears. */
   year: number;
@@ -220,6 +232,15 @@ export interface HistoryRun {
   studied: Set<Id>;
   /** Pacts of defence, live ones only. */
   pacts: Pact[];
+  /** Beaten claimants waiting to rise or yield, cleared each year. */
+  claims: Claim[];
+}
+
+/** The civil war a civ is fighting, on either side. */
+export function civilWarOf(run: HistoryRun, civId: Id): War | undefined {
+  return run.wars.find(
+    (w) => w.civil && w.ended === undefined && (w.attacker === civId || w.defender === civId),
+  );
 }
 
 /** Key for an unordered pair of civs. */
@@ -332,6 +353,7 @@ export function createRun(
       notables: streamFor(world, 'history.notables'),
       magic: streamFor(world, 'history.magic'),
       cityStates: streamFor(world, 'history.cityStates'),
+      civilWar: streamFor(world, 'history.civilWar'),
     },
     year: 0,
     logs: new Map(),
@@ -372,6 +394,7 @@ export function createRun(
     students: new Map(),
     studied: new Set(),
     pacts: [],
+    claims: [],
   };
   for (const site of world.sites.values()) {
     run.siteAtCell.set(site.cell, site.id);

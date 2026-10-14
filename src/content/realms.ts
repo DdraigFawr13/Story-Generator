@@ -1,7 +1,7 @@
 // Colleges of magic and free cities (playtest add-on). Tune the numbers here; the engine reads
 // only these tables (engine/history/colleges.ts and city-states.ts).
 
-import type { CityStateRules, CollegeRules, FreeCityRules } from '../engine';
+import type { CityStateRules, CivilWarRules, CollegeRules, FreeCityRules } from '../engine';
 
 export const COLLEGES: CollegeRules = {
   // A town of a few hundred: a college needs people to feed and teach.
@@ -81,4 +81,38 @@ export const CITY_STATES: CityStateRules = {
     graceYears: 20,
   },
   pact: { chance: 0.8, maxGrievance: 1, aidShare: 0.3, grievance: 0.5 },
+};
+
+export const CIVIL_WARS: CivilWarRules = {
+  // About two beaten claimants in three rise in a people of war value 10; one in four at 4.
+  chance: 0.7,
+  // A realm of a capital and two towns can tear itself in two; smaller ones only quarrel.
+  minSites: 3,
+  // The claimant's seat and the towns nearer to it than to the throne, until they hold a third to
+  // three fifths of the realm's grown people.
+  share: [0.35, 0.6],
+  executeChance: 0.5,
+  // Shorter than a war abroad (8): neither half can keep its levy in the field for long.
+  maxYears: 5,
+  // Luck of +-25% becomes +-50%: a weaker claimant can win a battle, and one win turns a war.
+  luck: 2,
+  // A realm at war with itself loses its far towns more easily than one at war abroad (war 2).
+  breakaway: 3,
+  // Above the war threshold for a warlike people: the old realm wants its half back.
+  splitGrievance: 4,
+  // A house that held the seat two generations, or for three rulers, gets an ending in the record.
+  houseYears: 50,
+  houseRulers: 3,
+  phrases: {
+    alone: '{site} alone',
+    one: '{site} and the town nearest it',
+    many: '{site} and the {n} towns nearest it',
+    executed: '{name} was put to death',
+    exiled: '{name} fled abroad',
+    oneYear: 'a year',
+    years: '{n} years',
+    reign: '{years} years and {rulers}',
+    oneRuler: 'a single ruler',
+  },
+  ordinals: ['Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh'],
 };

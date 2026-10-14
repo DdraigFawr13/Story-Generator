@@ -54,6 +54,30 @@ export const PLAYBACK_EFFECTS: Record<string, PlaybackEffect> = {
     beat: true,
     fast: true,
   },
+  civil_war_began: {
+    fx: 'shock',
+    colour: WAR,
+    label: 'civil war',
+    big: 'Civil war',
+    beat: true,
+    fast: true,
+  },
+  throne_seized: {
+    fx: 'crown',
+    colour: GOLD,
+    label: 'throne seized',
+    big: 'Throne seized',
+    beat: true,
+    fast: true,
+  },
+  realm_split: {
+    fx: 'wipe',
+    colour: GOLD,
+    label: 'realm split',
+    big: 'A realm splits',
+    beat: true,
+    fast: true,
+  },
   battle: { fx: 'battle', colour: WAR, label: 'battle', fast: true },
   peace_made: { fx: 'peace', colour: [240, 240, 230], label: 'peace', big: 'Peace', beat: true },
   site_razed: {
@@ -162,6 +186,9 @@ export const PLAYBACK_TAGS: Record<string, PlaybackTag> = {
   famine: { text: 'Famine at {site}' },
   plague: { text: 'Plague at {site}' },
   succession_disputed: { text: 'Throne disputed' },
+  civil_war_began: { text: 'Civil war' },
+  throne_seized: { text: 'Throne seized' },
+  realm_split: { text: '{civ} stands apart', plain: 'Realm split' },
 };
 
 /**
@@ -177,6 +204,9 @@ export const PLAYBACK_STORY: Record<string, string[]> = {
   site_razed: ['Smoke over {site} for a week.', '{site} burns; {dead|many} do not see spring.'],
   site_conquered: ["{site} wakes under {civ}'s banner."],
   succession_disputed: ['Two claimants, one throne, and the hall divided.'],
+  civil_war_began: ['{name|A claimant} will not kneel; {from} turns its spears on itself.'],
+  throne_seized: ['{name|The claimant} sits the throne {prior|the old ruler} lost.'],
+  realm_split: ['Neither half could win: {from} and {civ} go their own ways.'],
   legend_risen: ['Songs will carry the name {name}.'],
   artifact_made: ['{maker|A master} makes {item}, and it will outlive them.'],
   item_stolen: ['{item} vanishes from {site} in the night.'],
