@@ -619,7 +619,7 @@ const RULERS_SHOWN = 12;
 
 /** The eras, rulers, wars and summary of a people (M4.9), all read from the record. */
 function AnnalsSection({ civId }: { civId: Id }) {
-  const { world, index, content, titleOf } = useLegends();
+  const { world, index, content, titleOf, onBook } = useLegends();
   const book = useMemo(
     () => annals(world, index, content, civId),
     [world, index, content, civId, world.events.length],
@@ -631,6 +631,11 @@ function AnnalsSection({ civId }: { civId: Id }) {
         <span>
           Annals · Year {yearText(book.from)} to {yearText(book.to)}
         </span>
+        {onBook && (
+          <button type="button" className="lg-booklink" onClick={() => onBook(civId)}>
+            Read the book
+          </button>
+        )}
       </div>
       <ol className="lg-annals">
         {book.eras.map((era) => (

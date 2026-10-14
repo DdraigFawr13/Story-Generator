@@ -10,6 +10,7 @@ import {
   clampZoom,
   formatReadout,
   maxZoom,
+  parseBookLink,
   parseRoomLink,
   parseViewUrl,
   rampPosition,
@@ -293,5 +294,19 @@ describe('room links', () => {
     expect(parseRoomLink('?room=nope&follow=3')).toEqual({ room: null, follow: null });
     expect(parseRoomLink('?room=tales&follow=x1')).toEqual({ room: 'tales', follow: null });
     expect(parseRoomLink('?room=tales&follow=1&site=4')).toEqual({ room: null, follow: null });
+  });
+  it('builds and parses a book link with its chapter and highlighted event', () => {
+    const url = buildViewUrl({ ...base, room: 'book', book: { civ: 4, ch: 2, ev: 881 } });
+    expect(url).toBe('/?seed=S1&size=256&layer=elevation&room=book&book=4&ch=2&ev=881');
+    expect(parseRoomLink(url.slice(2))).toEqual({ room: 'book', follow: null });
+    expect(parseBookLink(url.slice(2))).toEqual({ civ: 4, ch: 2, ev: 881 });
+  });
+  it('leaves a bare Book room and bad book fields safe', () => {
+    const bare = buildViewUrl({ ...base, room: 'book', book: { civ: null, ch: 0, ev: null } });
+    expect(bare).toBe('/?seed=S1&size=256&layer=elevation&room=book');
+    expect(parseBookLink(bare.slice(2))).toEqual({ civ: null, ch: 0, ev: null });
+    expect(parseBookLink('?room=book&book=x&ch=-1&ev=2.5')).toEqual({ civ: null, ch: 0, ev: null });
+    expect(parseBookLink('?room=people&book=3')).toBeNull();
+    expect(parseBookLink('?room=book&book=3&site=1')).toBeNull();
   });
 });

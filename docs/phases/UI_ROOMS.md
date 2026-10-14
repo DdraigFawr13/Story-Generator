@@ -17,7 +17,7 @@ The build has three steps. Each step is one PR, gets one coordinator review, and
 
 1. **U1 Tales room** (this spec): the storybook map, its map modes, the pause-and-ask playback and the time ribbon.
 2. **U2 People room and Follow:** personal pages reached from Legends and from the pause card.
-3. **U3 Book and Town rooms:** the Town room needs a calmer site drawing.
+3. **U3 Book room** and **U4 Town room** (split in two PRs on 2026-10-14; each is as large as a room).
 
 ## U1 Tales room
 
@@ -134,8 +134,71 @@ The terrain layer is drawn once per world. The political layer is redrawn only w
 - unit tests for building a person's life rows and roles from the world;
 - the browser smoke opens a person from the index and from a Tales card, then follows them back into Tales.
 
+## U3 Book room
+
+**Where it lives:** `src/app/book/`. It uses the shared rail. The layout follows the mock-up's Book screen (`rooms-r4d`).
+
+**Contents** (left column):
+- **Books of the realms:** one book per realm, largest first, with its years. Its chapters are the realm's annal eras (`annals()`, M4.9), with their engine names and years.
+- **Lives:** legends and other famous figures, each linking to People.
+- **Perilous places:** each linking to its Legends page.
+- A search box finds names, places and years.
+
+**Page:**
+- **Chapter heading:** the chapter number and the book's title, the era name as the chapter title, and its years.
+- **Summary:** one line that names its wars, rulers and deaths, built only from the era's own events.
+- **Body:** the era's key events rendered as prose paragraphs with the existing chronicle text. Events of the same year form one paragraph. A drop cap and small-caps years give it the bookish look.
+- **Plate:** a small map of only the places the chapter names, drawn by the Tales atlas in Plain mode.
+- **Navigation:** previous and next chapter, with a progress bar.
+
+**Margin notes:**
+- Clicking a name opens a note in the right margin instead of leaving the page.
+  - A person's note has their role and life, with "Read their life" (People) and "Watch them in X" (the watch action).
+  - A place's note has its size and owner, and links to its page.
+- On a phone, notes open as a bottom sheet.
+
+**Book rules:** no invented facts or titles. Every sentence comes from event templates or engine fields. A chapter title is the engine's era name.
+
+**Entry points:**
+- The rail's Book item.
+- Legends realm pages, which get a "Read the book" link.
+- The Tales card's "Read the story" button opens the chapter that holds that event, with the event highlighted.
+
+**Tests:**
+- unit tests for building chapters from annals (years cover the history without gaps, and every event's chapter is found);
+- the browser smoke opens a chapter from Tales and a margin note.
+
+## U4 Town room
+
+**Where it lives:** `src/app/town/`. It is a calmer drawing of the watched site, made from the same site state that `site-render.ts` reads. It replaces the coloured-letter tiles for the Town room only; the old site view stays under World. The layout follows the mock-up's Town screen (`rooms-r5d`):
+- soft ground and paths;
+- fields as striped beds;
+- buildings as paper blocks with names on the ones that have a purpose: hall, alehouse, smithy, shrine, bakehouse, well;
+- people as small dots that ease between places. A followed person is an orange dot with a name tag.
+
+**Header:** the town's name, and a line with its kind, realm, people and how many can be followed. A card shows the time of day, the date, the weather and the temperature.
+
+**Side panel:**
+- **Following:** the person's role, age and mood word, what they are doing now and earlier, and needs bars. "Their whole life" links to People.
+- **With them:** the people who share their building.
+- **Tales told here:** recent world events that reached this town, from existing site and world links. No invented tales.
+
+**Controls:** pause and play, and the speed (the existing day speeds). "Hall of records" opens the town's Book or Legends page, and "Leave for the world" returns to Tales.
+
+**Entry points:**
+- The rail's Town item opens the last watched town, or a picker of towns that can be watched.
+- Watch from People and from the Book.
+
+**Phone:** the map fills the top, the panel becomes a sheet, and the tab bar sits at the bottom.
+
+**Tests:**
+- unit tests for the scene model (which buildings are labelled, who shares a room);
+- the browser smoke watches a town from People and plays a day.
+
 ## Status
 
-- U2: built, in review (2026-10-14). Shared rail in `rooms/`; People room in `people/`. Legends person links open the People page; the Tales card adds "Who is X?"; Follow from a page starts Tales at the person's birth year. Life rows are events of importance 4 or more (8 or more in gold).
+- U4: building after U3 merges.
+- U3: built (2026-10-14); coordinator review applied (12 bugs, 9 design items; the double "the" in some engine era names is left for an engine follow-up). Chapters draw from all the era's events by priority (key events, rulers, wars, famous deaths) to about 150–250 words; the year shows once per paragraph; realm, person and place names open margin notes; the plate marks only places the text names and is drawn at screen resolution. Perilous places list the towns near beast and dragon lairs, sorted by deaths. "Read the story" falls back to the Legends event page when no realm's book holds the event.
+- U2: merged as #111 (2026-10-14). Shared rail in `rooms/`; People room in `people/`. Legends person links open the People page; the Tales card adds "Who is X?"; Follow from a page starts Tales at the person's birth year. Life rows are the events they acted in, with repeats folded; gold marks legend deeds only. The URL names the room, follow and year.
 - U1: merged as #110 (2026-10-14). `HistoryPlayback`, `playback.css` and `playback/player.ts` are gone; the speeds now live in `tales/TalesRoom.tsx`. Town opens the map, the nearest existing entry to the embark flow.
 - U1 review: no dark mode in U1. The Tales map is a parchment map and stays light in either scheme; a dark treatment is a later decision (2026-10-14).
