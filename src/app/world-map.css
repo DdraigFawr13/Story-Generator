@@ -1238,6 +1238,30 @@ dl.facts dd {
   white-space: nowrap;
   cursor: pointer;
 }
+.wm-root .lg-annals {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 2px;
+  padding: 0;
+  list-style: none;
+  max-width: 62ch;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.wm-root .lg-annals.plain {
+  gap: 3px;
+}
+.wm-root .lg-annals ul {
+  margin: 2px 0 0;
+  padding-left: 14px;
+  list-style: none;
+  color: var(--muted);
+}
+.wm-root .lg-annals .yrs {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
 .wm-root .lg-beats {
   display: grid;
   gap: 4px;

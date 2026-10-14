@@ -3,6 +3,8 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import {
+  annals,
+  battleOf,
   biography,
   eventTitle,
   eventYear,
@@ -568,6 +570,7 @@ function EntityPage({
       </div>
       {bio.summary.length > 0 && <p className="lg-summary">{cap(bio.summary.join(' '))}</p>}
       <Facts facts={facts} />
+      {page.kind === 'civ' && <AnnalsSection civId={page.id} />}
       {cell !== null && (
         <div className="lg-actions">
           <button type="button" onClick={() => onShow(cell)}>
@@ -612,6 +615,103 @@ function EntityPage({
   );
 }
 
+const RULERS_SHOWN = 12;
+
+/** The eras, rulers, wars and summary of a people (M4.9), all read from the record. */
+function AnnalsSection({ civId }: { civId: Id }) {
+  const { world, index, content, titleOf } = useLegends();
+  const book = useMemo(
+    () => annals(world, index, content, civId),
+    [world, index, content, civId, world.events.length],
+  );
+  if (!book) return null;
+  return (
+    <>
+      <div className="lg-sect">
+        <span>
+          Annals · Year {yearText(book.from)} to {yearText(book.to)}
+        </span>
+      </div>
+      <ol className="lg-annals">
+        {book.eras.map((era) => (
+          <li key={era.from}>
+            <div className="era">
+              <strong>{cap(era.name)}</strong>{' '}
+              <span className="yrs">
+                {yearText(era.from)}–{yearText(era.to)}
+              </span>
+            </div>
+            <ul>
+              {era.keyEvents.map((id) => {
+                const event = index.event(id);
+                return event ? (
+                  <li key={id}>
+                    <EventLink id={id}>{yearText(eventYear(event))}</EventLink> {titleOf(event)}
+                  </li>
+                ) : null;
+              })}
+            </ul>
+          </li>
+        ))}
+      </ol>
+      {book.rulers.length > 0 && (
+        <>
+          <div className="lg-sect">
+            <span>Rulers · {book.rulers.length}</span>
+          </div>
+          <ol className="lg-annals plain">
+            {book.rulers.slice(0, RULERS_SHOWN).map((ruler, k) => (
+              <li key={k}>
+                {ruler.personId === undefined ? (
+                  ruler.name
+                ) : (
+                  <Link to={{ kind: 'person', id: ruler.personId }}>{ruler.name}</Link>
+                )}{' '}
+                <span className="yrs">
+                  {yearText(ruler.from)}–{yearText(ruler.to)}
+                </span>
+              </li>
+            ))}
+            {book.rulers.length > RULERS_SHOWN && (
+              <li className="lg-empty flush">and {book.rulers.length - RULERS_SHOWN} more</li>
+            )}
+          </ol>
+        </>
+      )}
+      {book.wars.length > 0 && (
+        <>
+          <div className="lg-sect">
+            <span>Wars · {book.wars.length}</span>
+          </div>
+          <ul className="lg-annals plain">
+            {book.wars.map((war) => (
+              <li key={war.eventId}>
+                {war.enemyId === undefined ? (
+                  war.enemy
+                ) : (
+                  <Link to={{ kind: 'civ', id: war.enemyId }}>{war.enemy}</Link>
+                )}{' '}
+                <span className="yrs">
+                  {yearText(war.from)}–{yearText(war.to)}
+                </span>{' '}
+                · {war.result}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <div className="lg-sect">
+        <span>In brief</span>
+      </div>
+      <ul className="lg-annals plain">
+        {book.summary.map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
 function Beats({ beats }: { beats: string[] }) {
   return (
     <ol className="lg-beats">
@@ -649,13 +749,14 @@ function EventPage({ id }: { id: Id }) {
   const deepCauses = causes.some((c) => (index.event(c)?.causes.length ?? 0) > 0);
   const def = content.eventTypes.find((d) => d.id === event.type);
   const refs = index.refs(event.id);
+  const battle = event.type === 'battle' ? battleOf(world, content, event.id) : undefined;
   return (
     <>
       <div>
         <div className="lg-kind">
           Year {yearText(when)} · {typeLabel(event.type)}
         </div>
-        <h3>{eventTitle(event, def)}</h3>
+        <h3>{battle ? cap(battle.name) : eventTitle(event, def)}</h3>
       </div>
       <p className="lg-summary">
         <EventText event={event} />
@@ -674,6 +775,26 @@ function EventPage({ id }: { id: Id }) {
             <dt>Importance</dt>
             <dd>
               <Stars importance={event.importance} />
+            </dd>
+          </>
+        )}
+        {battle && battle.lost > 0 && (
+          <>
+            <dt>Fallen</dt>
+            <dd>{count(battle.lost)} soldiers</dd>
+          </>
+        )}
+        {battle && battle.fallen.length > 0 && (
+          <>
+            <dt>Champions who fell</dt>
+            <dd>
+              <LinkList
+                refs={battle.fallen.map((id) => ({
+                  to: { kind: 'person' as const, id },
+                  label: world.people.get(id)?.name ?? '?',
+                }))}
+                limit={MEMBERS_SHOWN}
+              />
             </dd>
           </>
         )}

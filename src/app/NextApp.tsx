@@ -10,6 +10,8 @@ import {
   RngStream,
   advance,
   applySiteSnapshot,
+  battleOf,
+  battleRecords,
   biography,
   buildLegendIndex,
   createWorld,
@@ -71,6 +73,7 @@ import {
   type SiteTab,
   type PersonSection,
 } from './map-view';
+import { cap } from './format';
 import { nameSaysWhen } from './site-saves';
 import './world-map.css';
 import './site-view.css';
@@ -810,11 +813,16 @@ export function NextApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [past, revision, yearShown < finalYear],
   );
-  const titleOf = (event: SimEvent) =>
-    eventTitle(
-      event,
-      DEFAULT_CONTENT.eventTypes.find((d) => d.id === event.type),
-    );
+  const titleOf = (event: SimEvent) => {
+    const battle =
+      event.type === 'battle' ? battleOf(world.current, DEFAULT_CONTENT, event.id) : undefined;
+    return battle
+      ? cap(battle.name)
+      : eventTitle(
+          event,
+          DEFAULT_CONTENT.eventTypes.find((d) => d.id === event.type),
+        );
+  };
   // While an entity page is open its sites are ringed on the map and the rest dim.
   const highlight = useMemo(() => {
     const page = nav.open;
@@ -1003,6 +1011,7 @@ export function NextApp() {
                   sites={state.sites}
                   civs={state.civs}
                   creatures={state.creatures}
+                  battles={battleRecords(state, DEFAULT_CONTENT)}
                   people={state.people}
                   dynasties={state.dynasties}
                   year={Math.floor(state.day / DAYS_PER_YEAR)}
