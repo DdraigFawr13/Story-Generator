@@ -539,7 +539,7 @@ export class HistoryPlayer {
   }
   private addFx(f: Fx) {
     const tag = PLAYBACK_TAGS[f.e.type];
-    if (tag) f.tag = this.tagText(f.e, tag);
+    if (tag) f.tag = f.e.battleName ?? this.tagText(f.e, tag);
     if (this.fx.length >= PLAYBACK_MAX_ON_MAP && f.kind !== 'wonder' && !isBig(f.e)) return;
     if (this.liveCost() + f.cost > PLAYBACK_POOL) this.pending.push(f);
     else this.fx.push(f);

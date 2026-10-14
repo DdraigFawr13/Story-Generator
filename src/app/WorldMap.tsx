@@ -9,6 +9,8 @@ import {
   renderLayer,
   cellDistance,
   sitePopulation,
+  yearText,
+  type BattleRecord,
   type Civ,
   type ContentBundle,
   type Creature,
@@ -50,6 +52,8 @@ interface Props {
   sites: ReadonlyMap<Id, Site>;
   civs: ReadonlyMap<Id, Civ>;
   creatures: ReadonlyMap<Id, Creature>;
+  /** Every battle of the history, named; great ones get a marker (M4.8). */
+  battles: readonly BattleRecord[];
   /** Notables and their dynasties; `year` is the history year their ages count to. */
   people: ReadonlyMap<Id, Person>;
   dynasties: ReadonlyMap<Id, Dynasty>;
@@ -109,6 +113,13 @@ const SEA_LANE_DASH = [6, 5];
 /** Site names show from this cell scale for capitals and for other sites. */
 const CAPITAL_LABEL_SCALE = 2;
 const SITE_LABEL_SCALE = 4;
+/** Great-battle marker: radius (px) of the crossed swords and its offset up-right of the site. */
+const BATTLE_RADIUS = 5;
+/** Crossed swords ink: dark, unlike the grey cross of a ruin or the red of a lair. */
+const BATTLE_COLOR = '#1b1b1b';
+const BATTLE_OFFSET = 9;
+/** Most battles named in the site tooltip. */
+const TIP_BATTLES = 3;
 /** Site glyph radius (px) = base + sqrt(pop) / divisor, capped. */
 const SITE_RADIUS_BASE = 3;
 const SITE_RADIUS_DIVISOR = 6;
@@ -250,6 +261,41 @@ function drawLair(ctx: CanvasRenderingContext2D, x: number, y: number, legendary
   ctx.fill();
 }
 
+/** Two crossed blades, dark ink on a white halo; calm and still. */
+function drawBattleMarker(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  const r = BATTLE_RADIUS;
+  const g = r * 0.45;
+  // Two swords crossed point-up: blade from hilt (bottom corner) to tip (opposite top corner), a
+  // crossguard square to the blade near the hilt. A white halo first, then dark ink; the guards keep
+  // the mark from reading as the grey cross of a ruin.
+  const swords: [number, number][] = [
+    [-1, 1],
+    [1, 1],
+  ];
+  ctx.lineCap = 'round';
+  for (const [width, color] of [
+    [4, '#fff'],
+    [1.7, BATTLE_COLOR],
+  ] as const) {
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    for (const [sx, sy] of swords) {
+      const hx = x + sx * r;
+      const hy = y + sy * r;
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(x - sx * r, y - sy * r);
+      // Guard: centred a third of the way up the blade, across it.
+      const gx = hx - sx * r * 0.6;
+      const gy = hy - sy * r * 0.6;
+      ctx.moveTo(gx - sy * g, gy + sx * g);
+      ctx.lineTo(gx + sy * g, gy - sx * g);
+    }
+    ctx.stroke();
+  }
+  ctx.lineCap = 'butt';
+}
+
 interface Cache {
   cells: WorldCells | null;
   bitmaps: Map<string, HTMLCanvasElement>;
@@ -265,6 +311,7 @@ export function WorldMap({
   sites,
   civs,
   creatures,
+  battles,
   people,
   dynasties,
   year,
@@ -310,6 +357,7 @@ export function WorldMap({
     sites,
     civs,
     creatures,
+    battles,
     content,
     layer,
     overlays,
@@ -327,6 +375,7 @@ export function WorldMap({
     sites,
     civs,
     creatures,
+    battles,
     content,
     layer,
     overlays,
@@ -513,7 +562,49 @@ export function WorldMap({
     }
     ctx.globalAlpha = 1;
     drawLairs(ctx, c, scale, ox, oy, width, height, taken);
+    drawBattles(ctx, c, scale, ox, oy, width, height, taken);
     return taken;
+  }
+
+  /** Draws a crossed-swords marker by each site with a great battle on or before the shown year. */
+  function drawBattles(
+    ctx: CanvasRenderingContext2D,
+    c: WorldCells,
+    scale: number,
+    ox: number,
+    oy: number,
+    width: number,
+    height: number,
+    taken: [number, number, number, number][],
+  ) {
+    const { battles: records, history: past } = latest.current;
+    // One marker per cell, named for the latest great battle there.
+    const byCell = new Map<number, BattleRecord>();
+    for (const battle of records) {
+      if (!battle.great || battle.cell === null) continue;
+      if (past && battle.year > past.year) continue;
+      byCell.set(battle.cell, battle);
+    }
+    for (const [cell, battle] of byCell) {
+      const sx = ox + ((cell % c.width) + 0.5) * scale + BATTLE_OFFSET;
+      const sy = oy + (Math.floor(cell / c.width) + 0.5) * scale - BATTLE_OFFSET;
+      if (sx < -20 || sy < -20 || sx > width + 20 || sy > height + 20) continue;
+      drawBattleMarker(ctx, sx, sy);
+      const r = BATTLE_RADIUS;
+      taken.push([sx - r - 1, sy - r - 1, r * 2 + 2, r * 2 + 2]);
+      if (scale < SITE_LABEL_SCALE) continue;
+      ctx.font = 'italic 10px system-ui, sans-serif';
+      const w = ctx.measureText(battle.name).width;
+      const ty = sy + r + 8;
+      const box: [number, number, number, number] = [sx - w / 2 - 2, ty - 6, w + 4, 12];
+      if (taken.some((other, k) => k < taken.length - 1 && boxesOverlap(box, other))) continue;
+      taken.push(box);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.strokeText(battle.name, sx, ty);
+      ctx.fillStyle = '#1b1b1b';
+      ctx.fillText(battle.name, sx, ty);
+    }
   }
 
   /** Draws the lairs of living beasts, named at the same zoom as ordinary sites. */
@@ -879,6 +970,11 @@ export function WorldMap({
           ruined: tipSite.ruinedYear !== undefined,
         }
     : undefined;
+  const tipBattles = tipSite
+    ? battles
+        .filter((b) => b.cell === tipSite.cell && (!history || b.year <= history.year))
+        .slice(0, TIP_BATTLES)
+    : [];
   const digest = useMemo(() => (cells ? cellsDigest(cells) : undefined), [cells]);
 
   return (
@@ -975,6 +1071,12 @@ export function WorldMap({
               ? 'ruin'
               : `${(tipState.civId != null && civs.get(tipState.civId)?.name) || 'no people'} · population ${tipState.pop.toLocaleString('en-US')}`}
           </span>
+          {tipBattles.length > 0 && (
+            <span>
+              Battles here:{' '}
+              {tipBattles.map((b) => `${b.name} (Year ${yearText(b.year)})`).join(', ')}
+            </span>
+          )}
         </div>
       )}
       {onBackToLegends && (

@@ -2,9 +2,16 @@
 // year, trade by decade, and the yearly borders, sites and seats. No DOM and no rules here; it only
 // reads what the history logged.
 
-import { MAP_LAYERS, PLAYBACK_EFFECTS, REALM_TITLES, civColor } from '../../content';
+import {
+  DEFAULT_CONTENT,
+  MAP_LAYERS,
+  PLAYBACK_EFFECTS,
+  REALM_TITLES,
+  civColor,
+} from '../../content';
 import {
   DAYS_PER_YEAR,
+  battleOf,
   decodeTerritory,
   renderLayer,
   type Id,
@@ -12,6 +19,7 @@ import {
   type SimEvent,
   type WorldState,
 } from '../../engine';
+import { cap } from '../format';
 import { finalHistoryYear } from '../YearSlider';
 
 export interface PlaybackSite {
@@ -36,6 +44,8 @@ export interface PlaybackEvent {
   /** Map cell, or null. */
   place: number | null;
   title: string;
+  /** The name of a great battle, shown beside its effect instead of the generic word (M4.8). */
+  battleName?: string;
   data: SimEvent['data'];
 }
 /** A site in one year. */
@@ -140,6 +150,7 @@ export function buildPlayback(
     if (event.place === null && event.actors.length === 0) continue;
     const y = Math.floor(event.day / DAYS_PER_YEAR);
     if (y > last) continue;
+    const battle = event.type === 'battle' ? battleOf(world, DEFAULT_CONTENT, event.id) : undefined;
     const row: PlaybackEvent = {
       id: event.id,
       y,
@@ -147,6 +158,7 @@ export function buildPlayback(
       importance: event.importance,
       place: event.place,
       title: titleOf(event),
+      ...(battle?.great ? { battleName: cap(battle.name) } : {}),
       data: event.data,
     };
     events.push(row);

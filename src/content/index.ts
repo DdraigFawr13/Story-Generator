@@ -14,6 +14,8 @@ import { INTERACTIONS, SOCIAL, SOCIAL_EVENTS } from './interactions';
 import { SOCIETY, SOCIETY_EVENTS, SOCIETY_MEMORIES } from './society';
 import { THREATS, THREAT_EVENTS, THREAT_MEMORIES } from './threats';
 import { LORE, LORE_EVENTS, LORE_MEMORIES } from './lore';
+import { ANNALS } from './annals';
+import { BATTLES } from './battles';
 import { AWAKENINGS } from './awakenings';
 import { CHRONICLE, CHRONICLE_EVENTS } from './chronicle';
 import { PLAY_BY_PLAY } from './playbyplay';
@@ -93,8 +95,12 @@ export const DEFAULT_CONTENT: ContentBundle = {
   politics: POLITICS,
   chronicle: CHRONICLE,
   playByPlay: PLAY_BY_PLAY,
+  battles: BATTLES,
+  annals: ANNALS,
 };
 
+export * from './annals';
+export * from './battles';
 export * from './biographies';
 export * from './chronicle';
 export * from './biomes';
