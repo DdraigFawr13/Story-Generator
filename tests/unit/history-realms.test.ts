@@ -109,3 +109,73 @@ describe('colleges and spells', () => {
     }
   });
 });
+
+describe('succession wars', () => {
+  const D = DEFAULT_CONTENT;
+  const cw = D.history.civilWar;
+  // Every beaten claimant rises; CW-13 has a throne seized, a revolt crushed and a split.
+  const RESTLESS = {
+    ...D,
+    history: { ...D.history, civilWar: { ...cw, chance: 1, minSites: 2 } },
+  };
+  let restless: WorldState | undefined;
+  const w = () =>
+    (restless ??= generateWorld('CW-13', { width: 64, height: 64, historyYears: 250 }, RESTLESS));
+  const of = (type: string) => w().events.filter((e) => e.type === type);
+  const find = (id: number) => w().events.find((e) => e.id === id);
+  const named = (name: unknown) => [...w().civs.values()].find((c) => c.name === name);
+  const endings = () => [...of('throne_seized'), ...of('revolt_crushed'), ...of('realm_split')];
+
+  it('start from a disputed succession, with the claimant ruling the towns that rose', () => {
+    expect(of('civil_war_began').length).toBeGreaterThan(0);
+    for (const e of of('civil_war_began')) {
+      expect(e.causes.map(find).some((c) => c?.type === 'succession_disputed')).toBe(true);
+      const rebel = named(e.data.civ)!;
+      expect(rebel.rebelOf).toBe(named(e.data.from)!.id);
+      expect(w().people.get(e.actors[0]!)?.deeds).toContain(e.id);
+    }
+  });
+
+  it('end with the throne seized, the revolt crushed or the realm split, within the limit', () => {
+    expect(of('throne_seized').length).toBeGreaterThan(0);
+    expect(of('revolt_crushed').length).toBeGreaterThan(0);
+    expect(of('realm_split').length).toBeGreaterThan(0);
+    for (const e of of('civil_war_began')) {
+      const rebels = e.data.civ;
+      const end = endings().find((x) => (x.data.rebels ?? x.data.civ) === rebels && x.id > e.id);
+      if (!end) {
+        expect(yearOf(e)).toBeGreaterThan(250 - cw.maxYears);
+        continue;
+      }
+      expect(yearOf(end) - yearOf(e)).toBeLessThanOrEqual(cw.maxYears);
+      const rebel = named(rebels)!;
+      // A reunited realm folds the claimant's back in; a split leaves it standing (until a later war).
+      if (end.type === 'realm_split') expect(rebel.fell ?? Infinity).toBeGreaterThan(yearOf(end));
+      else expect(rebel.fell).toBe(yearOf(end));
+    }
+  });
+
+  it('never burn a town, and hand a seized throne to the claimant', () => {
+    const civilBattles = new Set(
+      of('battle')
+        .filter((b) => b.data.civil === 1)
+        .map((b) => b.id),
+    );
+    expect(civilBattles.size).toBeGreaterThan(0);
+    expect(of('site_razed').filter((r) => r.causes.some((c) => civilBattles.has(c)))).toEqual([]);
+    for (const e of of('throne_seized')) {
+      const victor = w().people.get(e.actors[0]!)!;
+      expect(victor.name).toBe(e.data.name);
+      expect(victor.deeds).toContain(e.id);
+    }
+  });
+
+  it('end a ruling house only when another house takes the seat', () => {
+    expect(of('dynasty_ended').length).toBeGreaterThan(0);
+    for (const e of of('dynasty_ended')) {
+      expect(e.data.house).not.toBe(e.data.dynasty);
+      const held = Number(e.data.years) >= cw.houseYears || Number(e.data.rulers) >= cw.houseRulers;
+      expect(held).toBe(true);
+    }
+  });
+});
