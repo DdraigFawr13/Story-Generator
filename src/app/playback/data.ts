@@ -39,7 +39,11 @@ export interface PlaybackEvent {
   id: Id;
   /** History year. */
   y: number;
+  /** The year with the day as a fraction (`day / DAYS_PER_YEAR`). */
+  t: number;
   type: string;
+  /** Person ids who took part. */
+  actors: Id[];
   importance: number;
   /** Map cell, or null. */
   place: number | null;
@@ -154,7 +158,9 @@ export function buildPlayback(
     const row: PlaybackEvent = {
       id: event.id,
       y,
+      t: event.day / DAYS_PER_YEAR,
       type: event.type,
+      actors: event.actors,
       importance: event.importance,
       place: event.place,
       title: titleOf(event),

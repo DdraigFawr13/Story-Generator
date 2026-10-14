@@ -1,0 +1,77 @@
+import { describe, expect, it } from 'vitest';
+import { roadPath, pointAlong } from '../../src/app/tales/march';
+import {
+  DEFAULT_PAUSES,
+  pauseKindOf,
+  pausesLabel,
+  pickPause,
+  shouldPause,
+  type PauseKind,
+} from '../../src/app/tales/pauses';
+
+const ev = (type: string, importance = 8, actors: number[] = []) => ({ type, importance, actors });
+
+describe('pause filter', () => {
+  it('pauses on legends, wars and new realms by default', () => {
+    expect([...DEFAULT_PAUSES].sort()).toEqual(['legend', 'realm', 'war']);
+    expect(pausesLabel(DEFAULT_PAUSES)).toBe('legends, wars, new realms');
+    expect(shouldPause(ev('legend_risen'), DEFAULT_PAUSES, null)).toBe(true);
+    expect(shouldPause(ev('war_declared'), DEFAULT_PAUSES, null)).toBe(true);
+    expect(shouldPause(ev('civ_founded'), DEFAULT_PAUSES, null)).toBe(true);
+    expect(shouldPause(ev('battle'), DEFAULT_PAUSES, null)).toBe(false);
+    expect(shouldPause(ev('throne_seized'), DEFAULT_PAUSES, null)).toBe(false);
+    expect(shouldPause(ev('famine'), DEFAULT_PAUSES, null)).toBe(false);
+  });
+
+  it('classifies the optional kinds and honours least importance', () => {
+    expect(pauseKindOf('battle', 3)).toBe('battle');
+    expect(pauseKindOf('throne_seized', 9)).toBe('ruler');
+    expect(pauseKindOf('item_stolen', 9)).toBe('treasure');
+    expect(pauseKindOf('item_stolen', 5)).toBeNull();
+    expect(pauseKindOf('prophet_rose', 6)).toBe('faith');
+    expect(pauseKindOf('faith_schism', 6)).toBe('faith');
+    expect(pauseKindOf('beast_slain', 7)).toBeNull();
+    expect(pauseKindOf('beast_slain', 9)).toBe('legend');
+    const withBattles = new Set<PauseKind>([...DEFAULT_PAUSES, 'battle']);
+    expect(shouldPause(ev('battle'), withBattles, null)).toBe(true);
+  });
+
+  it('follows one person: only their events pause, whatever the kind', () => {
+    expect(shouldPause(ev('legend_risen', 9, [7]), DEFAULT_PAUSES, 7)).toBe(true);
+    expect(shouldPause(ev('marriage', 6, [7, 8]), DEFAULT_PAUSES, 7)).toBe(true);
+    expect(shouldPause(ev('legend_risen', 9, [8]), DEFAULT_PAUSES, 7)).toBe(false);
+    expect(shouldPause(ev('war_declared', 9, []), DEFAULT_PAUSES, 7)).toBe(false);
+    expect(shouldPause(ev('marriage', 2, [7]), DEFAULT_PAUSES, 7)).toBe(false);
+  });
+
+  it('picks the most important pausing event of a year', () => {
+    const list = [ev('battle', 9), ev('civ_founded', 6), ev('war_declared', 8)];
+    expect(pickPause(list, DEFAULT_PAUSES, null)).toBe(list[2]);
+    expect(pickPause([ev('famine')], DEFAULT_PAUSES, null)).toBeNull();
+  });
+});
+
+describe('armies on the road', () => {
+  // A 7x3 grid with a road along the middle row.
+  const width = 7;
+  const roads = new Uint8Array(width * 3);
+  for (let x = 1; x < 6; x += 1) roads[width + x] = 1;
+
+  it('walks the road from one end to the other', () => {
+    const path = roadPath({ width, height: 3, roads }, 0, 20, 1);
+    expect(path[0]).toBe(0);
+    expect(path[path.length - 1]).toBe(20);
+    expect(path.slice(1, -1).every((c) => roads[c]! > 0)).toBe(true);
+  });
+
+  it('falls back to a straight line when roads do not connect', () => {
+    expect(roadPath({ width, height: 3, roads: new Uint8Array(21) }, 0, 20)).toEqual([0, 20]);
+  });
+
+  it('finds a point along a path', () => {
+    const mid = pointAlong([7, 8, 9], width, 0.5);
+    expect(mid.x).toBeCloseTo(1.5);
+    expect(mid.y).toBeCloseTo(1.5);
+    expect(pointAlong([7, 8, 9], width, 1).upTo.length).toBe(3);
+  });
+});

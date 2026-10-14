@@ -43,7 +43,6 @@ import {
 } from '../platform/save-store';
 import { createSiteHost, type SiteHost } from '../platform/site-host';
 import { generateInWorker, type WorldgenJob } from '../platform/worldgen-host';
-import { HistoryPlayback } from './HistoryPlayback';
 import { Legends } from './Legends';
 import {
   openOf,
@@ -56,6 +55,7 @@ import {
 } from './legends-ctx';
 import { VIEWER_LAYER_IDS } from './MapPanels';
 import { SiteView, type SiteLinkParts, type TickListener } from './SiteView';
+import { TalesRoom } from './tales/TalesRoom';
 import { WorldMap, type ViewChange } from './WorldMap';
 import { YearSlider, finalHistoryYear } from './YearSlider';
 import {
@@ -987,15 +987,17 @@ export function NextApp() {
         <div className="wm-main" data-tab={tab}>
           <div className="wm-mapcol">
             {playback ? (
-              <HistoryPlayback
+              <TalesRoom
                 key={playback.key}
                 world={state}
                 titleOf={titleOf}
+                textOf={(event) => narrator.renderEvent(event)}
                 startYear={playback.from}
                 onClose={(year) => {
                   setPlayback(null);
                   setSliderYear(year >= finalYear ? null : year);
                 }}
+                onOpenEvent={(id) => go({ open: { kind: 'event', id } })}
                 onLegends={() => {
                   setPlayback(null);
                   setSliderYear(null);
