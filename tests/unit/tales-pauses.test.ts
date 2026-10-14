@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { roadPath, pointAlong } from '../../src/app/tales/march';
 import {
   DEFAULT_PAUSES,
+  DEFAULT_SHOWN,
   pauseAllowed,
   pauseKindOf,
   pausesLabel,
@@ -35,6 +36,19 @@ describe('pause filter', () => {
     expect(pauseKindOf('beast_slain', 9)).toBe('legend');
     const withBattles = new Set<PauseKind>([...DEFAULT_PAUSES, 'battle']);
     expect(shouldPause(ev('battle'), withBattles, null)).toBe(true);
+  });
+
+  it('files the map-tag events under a kind, so the event filter covers them', () => {
+    expect(pauseKindOf('peace_made', 6)).toBe('war');
+    expect(pauseKindOf('site_razed', 6)).toBe('town');
+    expect(pauseKindOf('site_conquered', 6)).toBe('town');
+    expect(pauseKindOf('famine', 7)).toBe('hardship');
+    expect(pauseKindOf('plague', 6)).toBeNull();
+    // Shown by default: the paused kinds; the busy kinds stay off the ribbon.
+    expect([...DEFAULT_SHOWN].sort()).toEqual(['legend', 'realm', 'war']);
+    // A peace is shown with the wars but never stops the playback.
+    expect(shouldPause(ev('peace_made', 9), DEFAULT_PAUSES, null)).toBe(false);
+    for (const kind of DEFAULT_PAUSES) expect(DEFAULT_SHOWN.has(kind)).toBe(true);
   });
 
   it('follows one person: only their events pause, whatever the kind', () => {

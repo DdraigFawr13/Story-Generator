@@ -28,7 +28,17 @@ test('a person opens from the index, Follow returns to Tales, and back returns t
   // Follow opens Tales with this person followed.
   await pageEl.getByRole('button', { name: /^Follow (his|her) story$/ }).click();
   await expect(page.getByTestId('tales-stage')).toBeVisible();
-  await expect(page.locator('.tr-chip.following')).toContainText(name!);
+  const chip = page.locator('.tr-chip.following');
+  await expect(chip).toContainText(name!);
+  // Following does not pause the first play: it runs to the present without a card.
+  await expect(chip).toContainText('no pauses on the first play');
+  await page.getByLabel('Years a second').selectOption('60');
+  const playing = page.getByRole('button', { name: 'Play history' });
+  if (await playing.count()) await playing.click();
+  await expect(page.getByRole('dialog', { name: 'The present day' })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.getByRole('dialog', { name: 'History paused' })).toHaveCount(0);
   // Back returns to the person's page.
   await page.goBack();
   await expect(page.getByTestId('person-page').getByRole('heading', { level: 1 })).toHaveText(
@@ -41,6 +51,9 @@ test('a Tales card opens the person, and the page fits a phone', async ({ page }
   await page.goto('/?seed=SMOKE&size=128');
   await expect(page.getByTestId('tales-stage')).toBeVisible({ timeout: 30_000 });
   await page.getByLabel('Years a second').selectOption('60');
+  // The first play runs to the present without pausing; a replay pauses to ask.
+  const present = page.getByRole('dialog', { name: 'The present day' });
+  await present.getByRole('button', { name: 'Replay' }).click({ timeout: 30_000 });
   const card = page.getByRole('dialog', { name: 'History paused' });
   const who = card.getByRole('button', { name: /^Who is / });
   // Cards come and go on their own; take the first that names a person.

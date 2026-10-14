@@ -16,7 +16,7 @@ import {
   type PlaybackEvent,
 } from '../playback/data';
 import { RoomShell, type RoomId } from '../rooms/Rooms';
-import { createAtlas, type Atlas, type MapMode, type Town } from './atlas';
+import { TINT, createAtlas, type Atlas, type MapMode, type Town } from './atlas';
 import {
   RACE_FILL,
   assignHues,
@@ -29,15 +29,17 @@ import {
 } from './colours';
 import { settleLabels } from './labels';
 import { PHONE_MAX, cardSide, fitMap, nearestCell } from './layout';
-import { Capitals, Marks, type Clock, type Recent } from './markers';
+import { Capitals, MAX_TAGS, Marks, type Clock, type Recent } from './markers';
 import { buildModel } from './model';
 import {
   DEFAULT_PAUSES,
+  DEFAULT_SHOWN,
   FOLLOW_MIN_IMPORTANCE,
   PAUSE_KINDS,
   dotColour,
   kickerOf,
   pauseAllowed,
+  pauseKindOf,
   pickPause,
   pausesLabel,
   type PauseKind,
@@ -77,8 +79,8 @@ export const SPEEDS = [0.5, 1, 2, 4, 8, 15, 30, 60] as const;
 export const DEFAULT_SPEED = 4;
 
 const MODES: { id: MapMode; label: string }[] = [
-  { id: 'land', label: 'Land' },
   { id: 'realms', label: 'Realms' },
+  { id: 'land', label: 'Land' },
   { id: 'peoples', label: 'Peoples' },
   { id: 'faiths', label: 'Faiths' },
   { id: 'plain', label: 'Plain' },
@@ -89,6 +91,29 @@ const RECENT_MS = 2600;
 const TAG_SPEED = 8;
 /** Events that draw a short tag as they play, at this importance or more. */
 const TAG_MIN_IMPORTANCE = 6;
+/** Rows of realms, peoples or faiths the map key lists before "and N more". */
+const KEY_ROWS = 4;
+/** A biome joins the Land key when it covers this share of the land. */
+const KEY_BIOME_SHARE = 0.03;
+
+/** Worlds whose history has played to the present once: later plays pause to ask. */
+const playedThrough = new WeakSet<WorldState>();
+/** The event filter outlives a visit to another room and a reload (per browser tab). */
+const FILTER_KEY = 'tales-events';
+
+function readFilter(): { shown: Set<PauseKind>; paused: Set<PauseKind> } | null {
+  try {
+    const raw = window.sessionStorage.getItem(FILTER_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as { shown?: unknown; paused?: unknown };
+    const ids = new Set<string>(PAUSE_KINDS.map((k) => k.id));
+    const pick = (v: unknown) =>
+      new Set((Array.isArray(v) ? v : []).filter((k): k is PauseKind => ids.has(String(k))));
+    return { shown: pick(saved.shown), paused: pick(saved.paused) };
+  } catch {
+    return null;
+  }
+}
 
 export function TalesRoom(props: Props) {
   // The log is read once per world; a new title function each render does not rebuild it.
@@ -167,8 +192,25 @@ function Room({
     [world],
   );
 
-  const [mode, setMode] = useState<MapMode>('land');
-  const [kinds, setKinds] = useState<ReadonlySet<PauseKind>>(DEFAULT_PAUSES);
+  const [mode, setMode] = useState<MapMode>('realms');
+  const [kinds, setKinds] = useState<ReadonlySet<PauseKind>>(
+    () => readFilter()?.paused ?? DEFAULT_PAUSES,
+  );
+  const [shown, setShown] = useState<ReadonlySet<PauseKind>>(
+    () => readFilter()?.shown ?? DEFAULT_SHOWN,
+  );
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(
+        FILTER_KEY,
+        JSON.stringify({ shown: [...shown], paused: [...kinds] }),
+      );
+    } catch {
+      // Storage may be off; the filter then lasts for this visit only.
+    }
+  }, [shown, kinds]);
+  // The first play of a world runs to the present without stopping; later plays pause to ask.
+  const [firstRun, setFirstRun] = useState(() => !playedThrough.has(world));
   const [chooser, setChooser] = useState(false);
   const [follow, setFollow] = useState<{ id: Id; name: string } | null>(initialFollow ?? null);
   const [speed, setSpeed] = useState<number>(DEFAULT_SPEED);
@@ -191,8 +233,18 @@ function Room({
   const wrapEl = useRef<HTMLDivElement>(null);
   const thumb = useRef<HTMLDivElement>(null);
   const fill = useRef<HTMLDivElement>(null);
-  const live = useRef({ kinds, follow, speed, mode });
-  live.current = { kinds, follow, speed, mode };
+  /** Kinds that stop the playback: switched on to pause, and shown. */
+  const pausing = useMemo(
+    () => (firstRun ? new Set<PauseKind>() : new Set([...kinds].filter((k) => shown.has(k)))),
+    [firstRun, kinds, shown],
+  );
+  const live = useRef({ kinds: pausing, shown, follow, speed, mode, firstRun });
+  live.current = { kinds: pausing, shown, follow, speed, mode, firstRun };
+  useEffect(() => {
+    if (!ended) return;
+    playedThrough.add(world);
+    setFirstRun(false);
+  }, [ended, world]);
   // The address bar follows the year and the person followed.
   useEffect(() => {
     onView?.(year, follow);
@@ -289,12 +341,19 @@ function Room({
     const step = (now: number) => {
       const dt = Math.max(0, Math.min(0.1, (now - prev) / 1000));
       prev = now;
-      const { kinds: on, follow: who, speed: perSecond } = live.current;
+      const {
+        kinds: on,
+        shown: seen,
+        follow: who,
+        speed: perSecond,
+        firstRun: first,
+      } = live.current;
       const c = clock.current;
       const next = c.t + dt * perSecond;
       const lo = Math.floor(c.t) + 1;
       const hi = Math.min(Math.floor(next), data.last);
-      for (let y = lo; y <= hi; y += 1) {
+      // The first play never stops, not even for a followed person.
+      for (let y = lo; !first && y <= hi; y += 1) {
         if (
           !pauseAllowed(y, lastPause.current, performance.now(), closedAt.current, who !== null)
         ) {
@@ -317,6 +376,8 @@ function Room({
           for (const e of data.eventsByYear.get(y) ?? []) {
             if (e.place === null || e.importance < TAG_MIN_IMPORTANCE) continue;
             if (!(e.type in PLAYBACK_TAGS)) continue;
+            const kind = pauseKindOf(e.type, e.importance);
+            if (!kind || !seen.has(kind)) continue;
             fresh.push({
               key: `ev:${e.id}`,
               type: e.type,
@@ -405,13 +466,14 @@ function Room({
     setPlaying(false);
     setEnded(true);
   };
-  const togglePause = (kind: PauseKind) =>
-    setKinds((old) => {
-      const next = new Set(old);
-      if (next.has(kind)) next.delete(kind);
-      else next.add(kind);
-      return next;
-    });
+  const flip = (old: ReadonlySet<PauseKind>, kind: PauseKind) => {
+    const next = new Set(old);
+    if (next.has(kind)) next.delete(kind);
+    else next.add(kind);
+    return next;
+  };
+  const togglePause = (kind: PauseKind) => setKinds((old) => flip(old, kind));
+  const toggleShown = (kind: PauseKind) => setShown((old) => flip(old, kind));
 
   // Keep the map's text clear of itself: one collision pass after every render, and a few times a
   // second while things glide. Counts of named realms are left on the stage for the tests.
@@ -447,17 +509,32 @@ function Room({
   const W = atlas?.width ?? data.width;
   const H = atlas?.height ?? data.height;
   // A beast's mark stands on drawn land: its lair's cell, or the nearest cell that is.
+  // Armies march in wars and battles; great figures are the legends.
+  const armies = shown.has('war') || shown.has('battle');
+  const legends = shown.has('legend');
   const model = useMemo(() => {
-    if (!atlas) return baseModel;
+    const marches = armies ? baseModel.marches : [];
+    const figures = legends ? baseModel.figures : [];
+    if (!atlas) return { ...baseModel, marches, figures };
     const ok = (c: number) => atlas.inland[c] === 1;
     return {
       ...baseModel,
+      marches,
+      figures,
       beasts: baseModel.beasts.map((b) => ({
         ...b,
         cell: nearestCell(b.cell, atlas.width, atlas.height, ok),
       })),
     };
-  }, [baseModel, atlas]);
+  }, [baseModel, atlas, armies, legends]);
+  /** Key rows for marks only while the map can draw them in the shown year. */
+  const keyMarks = useMemo(
+    () => ({
+      figure: model.figures.some((f) => f.from <= year + 1 && year <= f.to),
+      beast: model.beasts.some((b) => b.from <= year + 1 && year <= b.to),
+    }),
+    [model, year],
+  );
   const pct = (cell: number) => ({
     left: `${(((cell % W) + 0.5) / W) * 100}%`,
     top: `${((Math.floor(cell / W) + 0.5) / H) * 100}%`,
@@ -485,6 +562,22 @@ function Room({
   );
 
   const now = useMemo(() => census(data, year), [data, year]);
+  /** Each land biome's share of the land, biggest first, for the Land key. */
+  const biomeShare = useMemo(() => {
+    const cells = world.cells!;
+    const count = new Map<number, number>();
+    let land = 0;
+    for (let i = 0; i < cells.biome.length; i += 1) {
+      if (cells.water[i] === 2 || cells.water[i] === 3) continue;
+      const b = cells.biome[i]!;
+      if (b <= 1) continue;
+      count.set(b, (count.get(b) ?? 0) + 1);
+      land += 1;
+    }
+    return [...count]
+      .map(([b, n]) => [b, n / Math.max(1, land)] as [number, number])
+      .sort((a, b) => b[1] - a[1] || a[0] - b[0]);
+  }, [world]);
   const ring = card?.event.place ?? null;
   const ringSide = useMemo((): 'left' | 'right' | 'mid' => {
     if (ring === null || !layout || !atlas) return 'left';
@@ -525,14 +618,40 @@ function Room({
   const ticks = useMemo(() => {
     const out: { key: number; year: number; colour: string; kind: string; title: string }[] = [];
     for (const e of data.events) {
-      if (!kinds.size) break;
-      const colour = dotColour(e.type, e.importance);
-      const kind = colour && PAUSE_KINDS.find((k) => k.colour === colour);
-      if (!colour || !kind || !kinds.has(kind.id)) continue;
-      out.push({ key: e.id, year: e.y, colour, kind: kind.id, title: `Year ${e.y} · ${e.title}` });
+      if (!shown.size) break;
+      const kind = pauseKindOf(e.type, e.importance);
+      if (!kind || !shown.has(kind)) continue;
+      const colour = PAUSE_KINDS.find((k) => k.id === kind)!.colour;
+      out.push({ key: e.id, year: e.y, colour, kind, title: `Year ${e.y} · ${e.title}` });
     }
     return out;
-  }, [data, kinds]);
+  }, [data, shown]);
+  // The dots are built once per filter: rebuilding a few hundred of them every frame of play
+  // slowed each render enough to trip React's nested-update guard.
+  const tickDots = useMemo(
+    () =>
+      ticks.map((tick) => (
+        <i
+          key={tick.key}
+          data-kind={tick.kind}
+          style={{
+            left: `${(tick.year / Math.max(1, data.last)) * 100}%`,
+            background: tick.colour,
+          }}
+          title={tick.title}
+        />
+      )),
+    [ticks, data],
+  );
+  /** Events of each kind in the whole history: the dots a kind puts on the ribbon. */
+  const kindCount = useMemo(() => {
+    const out = new Map<PauseKind, number>();
+    for (const e of data.events) {
+      const kind = pauseKindOf(e.type, e.importance);
+      if (kind) out.set(kind, (out.get(kind) ?? 0) + 1);
+    }
+    return out;
+  }, [data]);
   const lane = useMemo(
     () =>
       follow
@@ -576,6 +695,78 @@ function Room({
       ] as [string, number][],
     };
   }, [data]);
+
+  // The map key's top part: what the colours of this mode mean, for what the map shows now.
+  const legend = useMemo(() => {
+    type Row = { key: string; label: string; fill: string; edge?: string };
+    const css = ([r, g, b]: Rgb3, a = 1) => `rgba(${r},${g},${b},${a})`;
+    // The same strength the fills lie over the land with (atlas.ts FILL_STRENGTH).
+    const soft = (c: Rgb3) => css(c, 0.42);
+    const held = [...labels]
+      .filter(([, c]) => c.n > 0)
+      .sort((a, b) => b[1].n - a[1].n || a[0] - b[0]);
+    const cut = (rows: Row[], title: string) => ({
+      title,
+      rows: rows.slice(0, KEY_ROWS),
+      more: Math.max(0, rows.length - KEY_ROWS),
+    });
+    if (mode === 'realms') {
+      const rows: Row[] = [];
+      for (const [civ] of held) {
+        const info = data.civById.get(civ);
+        if (!info) continue;
+        const hue = palette.hue.get(civ) ?? 0;
+        rows.push({
+          key: `r${civ}`,
+          label: info.name,
+          fill: soft(fillColour(hue)),
+          edge: css(borderColour(hue)),
+        });
+      }
+      return cut(rows, `Realms in year ${year}`);
+    }
+    if (mode === 'peoples') {
+      const size = new Map<string, number>();
+      for (const [civ, c] of held) {
+        const race = realmOf.get(civ);
+        if (race) size.set(race, (size.get(race) ?? 0) + c.n);
+      }
+      const rows: Row[] = [...size]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([race]) => ({
+          key: `p${race}`,
+          label: DEFAULT_CONTENT.races.find((r) => r.id === race)?.name ?? race,
+          fill: soft(RACE_FILL[race] ?? [236, 228, 210]),
+        }));
+      return cut(rows, 'Peoples of the realms');
+    }
+    if (mode === 'faiths') {
+      const size = new Map<number, number>();
+      for (const [civ, c] of held) {
+        const f = palette.faithOf(civ);
+        if (f !== undefined) size.set(f, (size.get(f) ?? 0) + c.n);
+      }
+      const rows: Row[] = [...size]
+        .sort((a, b) => b[1] - a[1] || a[0] - b[0])
+        .map(([f]) => ({
+          key: `f${f}`,
+          label: world.faiths.get(f)?.name ?? 'a faith',
+          fill: soft(fillColour(palette.faithHue.get(f) ?? 0)),
+        }));
+      return cut(rows, 'Faiths of the realms');
+    }
+    if (mode === 'land') {
+      const rows: Row[] = [];
+      for (const [biome, share] of biomeShare) {
+        const def = DEFAULT_CONTENT.biomes[biome];
+        const tint = def && TINT[def.id];
+        if (!def || !tint || share < KEY_BIOME_SHARE) continue;
+        rows.push({ key: `b${def.id}`, label: def.name.toLowerCase(), fill: css(tint) });
+      }
+      return { title: 'The land', rows, more: 0 };
+    }
+    return null;
+  }, [mode, labels, data, palette, realmOf, world, year, biomeShare]);
 
   const finish = () => onClose(ended ? data.last : Math.floor(clock.current.t));
   const openPerson = (id: Id) =>
@@ -666,6 +857,7 @@ function Room({
                 width={W}
                 height={H}
                 followId={follow?.id ?? null}
+                maxTags={stage.w <= PHONE_MAX ? 1 : MAX_TAGS}
                 recent={recent}
               />
             )}
@@ -690,7 +882,9 @@ function Room({
                   {follow.name}
                 </button>
               </b>
-              <small>pauses only on their story</small>
+              <small>
+                {firstRun ? 'no pauses on the first play' : 'pauses only on their story'}
+              </small>
               <button type="button" aria-label="Stop following" onClick={() => setFollow(null)}>
                 ✕
               </button>
@@ -703,21 +897,51 @@ function Room({
                 aria-expanded={chooser}
                 onClick={() => setChooser((o) => !o)}
               >
-                <small>Pauses on</small> <span>{pausesLabel(kinds)}</span> ▾
+                {firstRun ? (
+                  <>
+                    <small>First play</small> <span>no pauses</span>
+                  </>
+                ) : (
+                  <>
+                    <small>Pauses on</small> <span>{pausesLabel(pausing)}</span>
+                  </>
+                )}{' '}
+                ▾
               </button>
               {chooser && (
-                <div className="tr-chooser" role="group" aria-label="Pauses on">
+                <div className="tr-chooser" role="group" aria-label="Events">
+                  <div className="head" aria-hidden="true">
+                    <span>Events</span>
+                    <span>Show</span>
+                    <span>Pause</span>
+                  </div>
                   {PAUSE_KINDS.map((k) => (
-                    <label key={k.id}>
+                    <div key={k.id} className="row">
+                      <span className="name">
+                        <i style={{ background: k.colour }} />
+                        {k.label}
+                        <small>{kindCount.get(k.id) ?? 0}</small>
+                      </span>
                       <input
                         type="checkbox"
-                        checked={kinds.has(k.id)}
+                        aria-label={`Show ${k.label}`}
+                        checked={shown.has(k.id)}
+                        onChange={() => toggleShown(k.id)}
+                      />
+                      <input
+                        type="checkbox"
+                        aria-label={`Pause on ${k.label}`}
+                        checked={shown.has(k.id) && kinds.has(k.id)}
+                        disabled={!shown.has(k.id)}
                         onChange={() => togglePause(k.id)}
                       />
-                      <i style={{ background: k.colour }} />
-                      {k.label}
-                    </label>
+                    </div>
                   ))}
+                  <p>
+                    {firstRun
+                      ? 'The first play runs to the present (or until you skip) without pausing. Replays pause on the ticked events.'
+                      : 'Shown events are marked on the map and the ribbon; paused ones stop to ask. Peace is shown with wars but never pauses.'}
+                  </p>
                 </div>
               )}
             </div>
@@ -761,31 +985,60 @@ function Room({
             aria-hidden={helpOpen ? undefined : 'true'}
             data-hidden={card ? 'true' : 'false'}
             onClick={() => setHelpOpen(false)}
+            data-testid="tales-key"
           >
+            {legend && (
+              <section className="tr-legend" data-legend={mode}>
+                <h3>{legend.title}</h3>
+                {legend.rows.map((row) => (
+                  <div key={row.key}>
+                    <i
+                      className="sw"
+                      style={{
+                        background: row.fill,
+                        borderColor: row.edge ?? 'rgba(70,62,52,0.35)',
+                      }}
+                    />
+                    <span>{row.label}</span>
+                  </div>
+                ))}
+                {legend.more > 0 && (
+                  <small>
+                    and {legend.more} more{mode === 'realms' ? ', named on the map' : ''}
+                  </small>
+                )}
+              </section>
+            )}
             <div>
               <i className="town" />
               town
             </div>
-            <div>
-              <FlagKey />
-              army
-            </div>
+            {armies && (
+              <div>
+                <FlagKey />
+                army
+              </div>
+            )}
             <div>
               <i className="capital" />
               capital
             </div>
-            <div>
-              <StarKey />
-              great figure
-            </div>
+            {keyMarks.figure && (
+              <div>
+                <StarKey />
+                great figure
+              </div>
+            )}
             <div>
               <i className="road" />
               road
             </div>
-            <div>
-              <BeastKey />
-              great beast
-            </div>
+            {keyMarks.beast && (
+              <div>
+                <BeastKey />
+                great beast
+              </div>
+            )}
             <div>
               <i className="wild" />
               wild land
@@ -903,7 +1156,7 @@ function Room({
             )}
           </div>
           <div className="tr-keyrow">
-            {PAUSE_KINDS.filter((k) => kinds.has(k.id)).map((k) => (
+            {PAUSE_KINDS.filter((k) => shown.has(k.id)).map((k) => (
               <span key={k.id}>
                 <i style={{ background: k.colour }} />
                 {k.label}
@@ -916,14 +1169,7 @@ function Room({
             </div>
             <div className="tr-line">
               <div className="tr-fill" ref={fill} style={{ width: lastPct(clock.current.t) }} />
-              {ticks.map((tick) => (
-                <i
-                  key={tick.key}
-                  data-kind={tick.kind}
-                  style={{ left: lastPct(tick.year), background: tick.colour }}
-                  title={tick.title}
-                />
-              ))}
+              {tickDots}
               <div className="tr-thumb" ref={thumb} style={{ left: lastPct(clock.current.t) }} />
               <input
                 type="range"

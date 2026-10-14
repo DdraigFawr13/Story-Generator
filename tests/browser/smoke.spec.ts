@@ -39,20 +39,24 @@ test('the world map generates, inspects, saves, reloads and advances', async ({ 
   const stage = page.getByTestId('tales-stage');
   await expect(stage).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId('tales-year')).toHaveText(/^Year \d+$/);
-  // The storybook map draws, its modes switch, and at speed the history pauses to ask.
+  // The storybook map draws in Realms mode; the first play runs to the present without pausing,
+  // and a replay at speed pauses to ask.
   await expect(stage.locator('canvas')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Realms', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Realms', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',
   );
   await page.getByLabel('Years a second').selectOption('60');
+  const present = page.getByRole('dialog', { name: 'The present day' });
+  await expect(present).toBeVisible({ timeout: 30_000 });
   const card = page.getByRole('dialog', { name: 'History paused' });
+  await expect(card).toHaveCount(0);
+  await present.getByRole('button', { name: 'Replay' }).click();
   await expect(card).toBeVisible({ timeout: 30_000 });
   await card.getByRole('button', { name: 'Keep playing' }).click();
   await expect(card).toHaveCount(0);
   await page.getByRole('button', { name: 'Skip to the present' }).click();
-  await expect(page.getByRole('dialog', { name: 'The present day' })).toBeVisible();
+  await expect(present).toBeVisible();
   await page.getByRole('button', { name: 'Explore the map' }).click();
   await expect(stage).toHaveCount(0);
   const map = page.getByTestId('world-map');

@@ -33,6 +33,9 @@ export function useFading<T extends { key: string }>(
   ms = 600,
 ): (T & { leaving?: boolean; until?: number })[] {
   const [out, setOut] = useState<(T & { leaving?: boolean; until?: number })[]>([...items]);
+  // A list rebuilt with the same contents (every year of play) sets no state: during long fast play
+  // an update from this effect on every frame trips React's nested-update guard.
+  const text = JSON.stringify(items);
   useEffect(() => {
     const now = performance.now();
     setOut((prev) => {
@@ -48,7 +51,9 @@ export function useFading<T extends { key: string }>(
       ms + 40,
     );
     return () => window.clearTimeout(timer);
-  }, [items, ms]);
+    // `text` stands for `items`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, ms]);
   return out;
 }
 
@@ -94,10 +99,20 @@ interface MarksProps {
   height: number;
   followId: number | null;
   recent: readonly Recent[];
+  /** Tags at once (3 by default; phones show 1). */
+  maxTags?: number;
 }
 
 /** Beasts, figures, armies and tags; re-renders when the clock moves by a fiftieth of a year. */
-export function Marks({ model, clock, width, height, followId, recent }: MarksProps) {
+export function Marks({
+  model,
+  clock,
+  width,
+  height,
+  followId,
+  recent,
+  maxTags = MAX_TAGS,
+}: MarksProps) {
   const [t, setT] = useState(clock.current.t);
   useEffect(() => {
     let raf = 0;
@@ -120,7 +135,7 @@ export function Marks({ model, clock, width, height, followId, recent }: MarksPr
     top: `${((p.y + 0.5) / height) * 100}%`,
   });
 
-  let budget = MAX_TAGS;
+  let budget = maxTags;
   const take = (want = true): boolean => {
     if (!want || budget <= 0) return false;
     budget -= 1;

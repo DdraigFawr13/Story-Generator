@@ -1,4 +1,5 @@
-// The Tales room on a phone: the stage never scrolls sideways and the key sits behind a "?" button.
+// The Tales room on a phone: the stage never scrolls sideways, the event filter opens from the
+// chip and the key (with the mode's legend) sits behind a "?" button.
 import { expect, test } from '@playwright/test';
 
 test('the Tales stage stays put on a phone and the key opens from the ? button', async ({
@@ -13,7 +14,11 @@ test('the Tales stage stays put on a phone and the key opens from the ? button',
     await page.getByRole('button', { name: mode, exact: true }).click();
   }
   await page.locator('.tr-chooser-btn').click();
-  await expect(page.getByRole('group', { name: 'Pauses on' })).toBeVisible();
+  const events = page.getByRole('group', { name: 'Events' });
+  await expect(events).toBeVisible();
+  // Hiding an event kind also stops it pausing.
+  await events.getByLabel('Show wars').uncheck();
+  await expect(events.getByLabel('Pause on wars')).toBeDisabled();
   expect(await stage.evaluate((el) => el.scrollLeft)).toBe(0);
 
   // The key is hidden until the "?" is tapped.
@@ -21,4 +26,5 @@ test('the Tales stage stays put on a phone and the key opens from the ? button',
   await expect(key).toBeHidden();
   await page.getByRole('button', { name: 'Map key' }).click();
   await expect(key).toBeVisible();
+  await expect(key.locator('[data-legend="land"]')).toBeVisible();
 });
