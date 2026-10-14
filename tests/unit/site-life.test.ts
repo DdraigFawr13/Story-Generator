@@ -99,6 +99,21 @@ describe('daily life', () => {
     }
   });
 
+  it('brings water to the sick in bed and holds their purpose', () => {
+    // An old resident abed went without water and fell idle, then stole from the stores every
+    // fortnight for a year (S3 site play, 2026-10-14).
+    const world = copy();
+    const active = embark(world, C, biggest(world).id);
+    const p = world.people.get(active.residents[0]!)!;
+    const purpose = p.detail!.needs.purpose!;
+    for (let b = 0; b < 4 * 6; b += 1) {
+      p.detail!.abed = true;
+      stepBlock(world, C);
+    }
+    expect(p.detail!.needs.water).toBeGreaterThan(30);
+    expect(p.detail!.needs.purpose).toBeGreaterThanOrEqual(Math.min(purpose, 90) - 10);
+  });
+
   it('fades memories linearly and drops them when they expire', () => {
     const memory = { moodDelta: -8, createdDay: 10, decayDays: 4 };
     expect(memoryMood(memory, 10)).toBe(-8);

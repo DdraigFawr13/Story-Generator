@@ -32,7 +32,7 @@ export type SiteRequest =
       daysPerSecond: SiteSpeed;
       stopOn?: readonly string[];
       /** M3.12: run as fast as the worker can until an event this important, or `maxDays` pass. */
-      until?: { minImportance: number; maxDays: number };
+      until?: { minImportance: number; maxDays: number; ignore: string[] };
     }
   /** M3.12: the world as it stands, serialized and gzipped for a save. */
   | { type: 'save' }
@@ -91,7 +91,7 @@ let sentPeople = -1;
 /** Days run since the window began, in blocks. */
 let windowBlocks = 0;
 /** The running "Next notable": the importance that stops it and the last day it may run to. */
-let until: { minImportance: number; lastDay: number } | null = null;
+let until: { minImportance: number; lastDay: number; ignore: Set<string> } | null = null;
 
 function stop(): void {
   if (timer !== undefined) clearTimeout(timer);
@@ -119,7 +119,11 @@ function slice(): void {
       while (speed !== 0 && performance.now() - now < UNTIL_SLICE_MS) {
         for (const e of stepBlock(world, content)) {
           events.push(e);
-          if (e.importance >= until.minImportance || stopOn.has(e.type)) speed = 0;
+          if (
+            (e.importance >= until.minImportance && !until.ignore.has(e.type)) ||
+            stopOn.has(e.type)
+          )
+            speed = 0;
         }
         blocks += 1;
         if (speed === 0) stopped = 'notable';
@@ -224,6 +228,7 @@ self.addEventListener('message', (event: MessageEvent<SiteRequest>) => {
           ? {
               minImportance: request.until.minImportance,
               lastDay: world.day + request.until.maxDays,
+              ignore: new Set(request.until.ignore),
             }
           : null;
       restart();

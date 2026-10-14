@@ -40,6 +40,8 @@ export const NEEDS: NeedDef[] = [
       shelter: 15,
       flee: 25,
     },
+    // The household brings water to the sick in bed.
+    abed: 15,
     awayShare: 1,
     lowAt: 30,
     moodAtZero: -30,
@@ -112,7 +114,11 @@ export const NEEDS: NeedDef[] = [
     name: 'Purpose',
     decayPerDay: 8,
     // Elders work one block and pass the afternoon in company, which also keeps them useful.
-    restore: { work: 6, errand: 4, play: 6, socialise: 6, fight: 6, defend: 6 },
+    // Housework and errands keep a person as useful as work does; an elder who keeps the shrine
+    // in the afternoons is not idle either.
+    restore: { work: 6, errand: 6, play: 6, socialise: 6, fight: 6, defend: 6, worship: 4 },
+    // Nobody abed is expected to work: illness holds the need where it is (a day's loss over four blocks).
+    abed: 2,
     awayShare: 1,
     lowAt: 30,
     moodAtZero: -12,
@@ -279,6 +285,8 @@ export const LIFE: LifeRules = {
       dark: { home: 3, visit: 2, alehouse: 3, doorstep: 1, green: 0.5, shrine: 1.5 },
       // A tradesman's late morning: about the house and the street before work.
       late: { home: 2, doorstep: 2, visit: 1.5, green: 1, shrine: 0.5 },
+      // A grown-up with no trade outside sowing and harvest: about the house, the well and the neighbours.
+      chores: { house: 5, doorstep: 2, visit: 1.5, well: 0.75 },
       // A holy day: the people gather on the green on purpose.
       holy: { green: 8, shrine: 5, alehouse: 1.5, visit: 1, doorstep: 0.5, home: 0.5 },
     },
@@ -341,12 +349,15 @@ export const LIFE: LifeRules = {
         'farm',
       ],
       lateEvery: 2,
-      // The bakers light the ovens before dawn one day in two, and sleep that afternoon.
-      earlyJobs: ['cook'],
+      // The bakers light the ovens before dawn one day in two, and sleep that afternoon; fishers and
+      // hunters go out at first light the same way.
+      earlyJobs: ['cook', 'fish', 'hunt'],
       earlyEvery: 2,
       // A mother (else the household adult who carries the little ones) keeps house one morning in two.
       childUnder: 7,
       houseEvery: 2,
+      // Sowing (Seedmonth, Bloommonth) and harvest (Goldmonth, Harvestmonth) need every hand in the fields.
+      fieldMonths: [1, 2, 4, 5],
     },
     where: {
       house: 'keeping house',

@@ -86,6 +86,26 @@ describe('village routines', () => {
     expect(leaves.size).toBeGreaterThan(20);
   });
 
+  it('keeps grown-ups with no trade about the house outside sowing and harvest', () => {
+    // They used to stand in a bare field all year, all setting off together.
+    const world = copy();
+    const active = embark(world, C, biggest(world).id);
+    expect(R.shifts.fieldMonths).not.toContain(0);
+    let idle = 0;
+    let chores = 0;
+    for (let i = 0; i < 4 * 7; i += 1) {
+      stepBlock(world, C);
+      for (const id of active.residents) {
+        const detail = world.people.get(id)!.detail!;
+        if (detail.jobId !== undefined || detail.with !== undefined) continue;
+        if (detail.activity === 'work') idle += 1;
+        if (detail.where === R.where.house || detail.where === R.where.well) chores += 1;
+      }
+    }
+    expect(idle).toBe(0);
+    expect(chores).toBeGreaterThan(0);
+  });
+
   it('puts the craft workers on the square on market day, still working', () => {
     const world = copy();
     const active = embark(world, C, biggest(world).id);

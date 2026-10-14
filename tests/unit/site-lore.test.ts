@@ -7,6 +7,7 @@ import {
   refreshWork,
   sitePopulation,
   stepSite,
+  voiceOf,
   type ActiveSite,
   type ContentBundle,
   type Id,
@@ -113,6 +114,20 @@ describe('lore', () => {
     run(lost.world, lost.content, 40);
     expect(lost.child.knownAbilities).toEqual([]);
     expect(lost.child.detail!.lore!.learning).toBeUndefined();
+  });
+
+  it('lends a book for its story, not because of its last return', () => {
+    // A book lent and returned week after week made the drama report's longest cause chain.
+    const { world, active, content, parent, child } = fresh();
+    const book = addBook(world, active, parent.id);
+    const { emit, label } = voiceOf(world, content, active);
+    const before = emit({ type: C.lore.events.lost, place: label.cell, data: {} });
+    const back = emit({ type: C.lore.events.returned, place: label.cell, data: {} });
+    book.deeds.push(before.id, back.id);
+    run(world, content, 14);
+    const lent = world.events.find((e) => e.type === C.lore.events.lent);
+    expect(lent?.actors).toEqual([parent.id, child.id]);
+    expect(lent!.causes).toEqual([before.id]);
   });
 
   it("mends the mender's own worn home, one use a day", () => {

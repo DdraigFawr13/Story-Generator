@@ -193,7 +193,7 @@ export function runEnvironmentDay(
   const { emit, label } = voiceOf(world, content, active);
   rollWeather(world, content, active, emit, label);
   const harvested = dailyCrops(world, content, active, emit, label);
-  spoilStock(active, content, active.weather.tempC);
+  spoilStock(active, content, active.weather.tempC, world.day);
   reportSpoilage(content, active, emit, label, world.day);
   burnFirewood(world, content, active, emit, label);
   const fire = igniteDaily(world, content, active, emit, label);

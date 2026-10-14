@@ -89,7 +89,8 @@ export const SITE: SiteRules = {
   },
   // "Next notable" runs flat out until an event this important (a death is 6; an outbreak, a
   // threat's warning sign, an exile 5; a breakdown 3) or, with nothing notable, for a year.
-  notable: { minImportance: 5, maxDays: 336 },
+  // The year's recap is a summary, not news: it never stops the run.
+  notable: { minImportance: 5, maxDays: 336, ignore: ['site_year_recap'] },
   // Autosave once a month of play (28 days).
   autosaveDays: 28,
 };

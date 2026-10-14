@@ -4,6 +4,7 @@ import {
   GOODS,
   deserializeWorld,
   embark,
+  foodDaysLeft,
   foundOutpost,
   generateWorld,
   householdLabel,
@@ -162,6 +163,17 @@ describe('leaving', () => {
         expect(skills).toEqual(oldSkills);
       }
     }
+  });
+
+  it('starts a town with no stores left with the rest of last harvest and its seed', () => {
+    // History's stores are what is left after the year's eating; three of nine test towns used to
+    // start with no food at all and starve before their first harvest.
+    const world = copy();
+    const site = biggest(world);
+    site.goods.food = 0;
+    embark(world, C, site.id);
+    const harvest = C.environment.crop.harvestMonths[0]! * 28;
+    expect(foodDaysLeft(world, C)).toBeGreaterThanOrEqual(harvest - 1);
   });
 
   it('carries the stock change back into goods', () => {

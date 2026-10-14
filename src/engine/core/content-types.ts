@@ -467,6 +467,8 @@ export interface NeedDef {
   missing: string;
   /** Only people whose culture values faith at least this much have the need. */
   minCultureFaith?: number;
+  /** Points restored per block abed at home, where the household tends them (instead of `restore`). */
+  abed?: number;
 }
 
 /** A personality trait (M3.2). People get one or two at promotion. */
@@ -511,6 +513,7 @@ export const ROUTINE_PLACES = [
   'nearHome',
   'well',
   'along',
+  'house',
 ] as const;
 export type RoutinePlace = (typeof ROUTINE_PLACES)[number];
 export type RoutineWeights = Partial<Record<RoutinePlace, number>>;
@@ -569,9 +572,11 @@ export interface RoutineRules {
     /** In a household with a child under `childUnder`, the child's carer keeps house one morning in `houseEvery`. */
     childUnder: number;
     houseEvery: number;
+    /** Outside these months (0-11) a grown-up with no trade spends work blocks on the `chores` table, not in the fields. */
+    fieldMonths: number[];
   };
   /** Inspector phrases for `PersonDetail.where`; `{name}` is the person visited or helped. */
-  where: Record<RoutinePlace | 'market' | 'house', string>;
+  where: Record<RoutinePlace | 'market', string>;
 }
 
 export interface LifeRules {
@@ -1156,8 +1161,8 @@ export interface SiteRules {
   travelCostPerDay: number;
   /** Event type ids that pause play, per category. */
   autoPause: Record<'deaths' | 'breakdowns' | 'fires' | 'threats' | 'magic' | 'arrivals', string[]>;
-  /** M3.12: "Next notable" runs until an event of at least this importance, or this many days. */
-  notable: { minImportance: number; maxDays: number };
+  /** M3.12: "Next notable" runs until an event of at least this importance (not one of `ignore`), or this many days. */
+  notable: { minImportance: number; maxDays: number; ignore: string[] };
   /** M3.12: days of play between autosaves. */
   autosaveDays: number;
 }

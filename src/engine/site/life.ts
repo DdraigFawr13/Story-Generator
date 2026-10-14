@@ -9,7 +9,7 @@
 // day, at the first block, the steward (work.ts) hands out the day's jobs.
 
 import { clamp, manhattan, sortedById } from '../core/math';
-import { DAYS_PER_YEAR } from '../core/clock';
+import { DAYS_PER_YEAR, dateOf } from '../core/clock';
 import { createEmitter, type EmitInput } from '../core/context';
 import {
   ACTIVITIES,
@@ -779,7 +779,7 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
         : place === 'nearHome'
           ? p.band === 'child'
           : place === 'well'
-            ? p.well >= 0 && p.band === 'child'
+            ? p.well >= 0
             : place === 'along'
               ? p.band === 'child' && alongParent(p) !== undefined
               : true;
@@ -875,6 +875,8 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
         return { activity: idle, to: nearHome(p), where: phrase(place) };
       case 'well':
         return { activity: 'errand', to: p.well, where: phrase(place) };
+      case 'house':
+        return { activity: 'errand', to: p.home, where: phrase(place) };
       case 'along':
         // The parent's work tile is known once the grown-ups have moved: see `along` below.
         return { activity: 'errand', to: p.step, where: phrase(place) };
@@ -920,6 +922,7 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       });
     }
   }
+  const fieldMonth = routines.shifts.fieldMonths.includes(dateOf(day).month);
   // Who keeps house this morning: the carer of a household's young child, one morning in `houseEvery`.
   const keepers = new Set<Profile>();
   if (block === 1) {
@@ -1034,6 +1037,9 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
         )
           table = 'late';
       }
+      // A grown-up with no trade keeps to the house and the neighbours outside sowing and harvest,
+      // each on their own draw, rather than standing in a bare field with everyone else.
+      if (activity === 'work' && !p.job && table === undefined && !fieldMonth) table = 'chores';
     }
     // Someone too ill or hurt to work stays in bed through the day (they still eat in the evening).
     if (detail.abed && BED_REST.has(activity)) activity = 'sleep';
@@ -1294,6 +1300,8 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       checkStores();
     }
     const restoreRow = cache.restore.get(activity)!;
+    // Abed at home the household tends them: a need with an `abed` rate gets at least that.
+    const tended = detail.abed === true && atHome;
     for (let j = 0; j < nNeeds; j += 1) {
       const need = content.needs[j]!;
       let value = needs[need.id];
@@ -1301,7 +1309,13 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
       value -= decays[j]! * p.rates[j]! * (need.id === 'warmth' ? warmthMul : 1);
       // Standing to arms is tiring.
       if (activity === 'defend' && need.id === 'rest') value -= content.threats.combat.defendRest;
-      const restore = restoreRow[j]!;
+      const normal = restoreRow[j]!;
+      const restore =
+        tended && need.abed !== undefined
+          ? normal === normal
+            ? Math.max(normal, need.abed)
+            : need.abed
+          : normal;
       if (restore === restore && (need.id !== 'food' || fed)) {
         let gain =
           !need.needsCompany || hasCompany(p) ? restore * (atHome ? 1 : need.awayShare) : 0;
