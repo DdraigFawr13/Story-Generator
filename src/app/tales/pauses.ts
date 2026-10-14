@@ -1,30 +1,39 @@
-// Which events stop the Tales playback to ask. Pure: event kinds, the "Pauses on" filter and the
-// Follow filter. A kind is a group of event types the reader switches on and off together.
+// Which events the Tales playback shows and which stop it to ask. Pure: event kinds, the event
+// filter (shown and paused kinds) and the Follow filter. A kind is a group of event types the
+// reader switches on and off together.
 
-export type PauseKind = 'legend' | 'war' | 'realm' | 'battle' | 'ruler' | 'treasure' | 'faith';
+export type PauseKind =
+  'legend' | 'war' | 'realm' | 'battle' | 'ruler' | 'town' | 'hardship' | 'treasure' | 'faith';
 
 export interface PauseKindInfo {
   id: PauseKind;
-  /** Words in the "Pauses on" chip and the key under the ribbon. */
+  /** Words in the event filter, the "Pauses on" chip and the key under the ribbon. */
   label: string;
   /** Ribbon dot colour. */
   colour: string;
-  /** On until the reader changes it. */
+  /** Pauses the playback until the reader changes it. */
   on: boolean;
+  /** Shown on the map and the ribbon until the reader changes it. */
+  shown: boolean;
 }
 
 export const PAUSE_KINDS: readonly PauseKindInfo[] = [
-  { id: 'legend', label: 'legends', colour: '#c99a18', on: true },
-  { id: 'war', label: 'wars', colour: '#a0442c', on: true },
-  { id: 'realm', label: 'new realms', colour: '#6d675c', on: true },
-  { id: 'battle', label: 'battles', colour: '#6b2d22', on: false },
-  { id: 'ruler', label: 'new rulers', colour: '#7a58a8', on: false },
-  { id: 'treasure', label: 'treasure', colour: '#2f8a5c', on: false },
-  { id: 'faith', label: 'faith', colour: '#3e7ca6', on: false },
+  { id: 'legend', label: 'legends', colour: '#c99a18', on: true, shown: true },
+  { id: 'war', label: 'wars', colour: '#a0442c', on: true, shown: true },
+  { id: 'realm', label: 'new realms', colour: '#6d675c', on: true, shown: true },
+  { id: 'battle', label: 'battles', colour: '#6b2d22', on: false, shown: false },
+  { id: 'ruler', label: 'new rulers', colour: '#7a58a8', on: false, shown: false },
+  { id: 'town', label: 'towns taken', colour: '#8a5a3c', on: false, shown: true },
+  { id: 'hardship', label: 'famine and plague', colour: '#8f8a3a', on: false, shown: false },
+  { id: 'treasure', label: 'treasure', colour: '#2f8a5c', on: false, shown: false },
+  { id: 'faith', label: 'faith', colour: '#3e7ca6', on: false, shown: false },
 ];
 
 export const DEFAULT_PAUSES: ReadonlySet<PauseKind> = new Set(
   PAUSE_KINDS.filter((k) => k.on).map((k) => k.id),
+);
+export const DEFAULT_SHOWN: ReadonlySet<PauseKind> = new Set(
+  PAUSE_KINDS.filter((k) => k.shown).map((k) => k.id),
 );
 
 /** Event types by kind, with the least importance that counts. */
@@ -34,6 +43,7 @@ const KIND_OF: Record<string, { kind: PauseKind; min?: number }> = {
   legend_duel: { kind: 'legend', min: 6 },
   war_declared: { kind: 'war' },
   civil_war_began: { kind: 'war' },
+  peace_made: { kind: 'war' },
   civ_founded: { kind: 'realm' },
   realm_split: { kind: 'realm' },
   civ_fell: { kind: 'realm' },
@@ -42,6 +52,10 @@ const KIND_OF: Record<string, { kind: PauseKind; min?: number }> = {
   throne_seized: { kind: 'ruler' },
   succession_disputed: { kind: 'ruler' },
   ruler_succeeded: { kind: 'ruler', min: 7 },
+  site_razed: { kind: 'town' },
+  site_conquered: { kind: 'town' },
+  famine: { kind: 'hardship', min: 7 },
+  plague: { kind: 'hardship', min: 7 },
   artifact_made: { kind: 'treasure', min: 8 },
   item_stolen: { kind: 'treasure', min: 9 },
   expedition_treasure: { kind: 'treasure' },
@@ -77,6 +91,11 @@ const KICKER: Record<string, string> = {
   holy_war_proclaimed: 'Holy war',
   faith_schism: 'A schism',
   holy_city_taken: 'A holy city taken',
+  peace_made: 'Peace',
+  site_razed: 'A town burns',
+  site_conquered: 'A town taken',
+  famine: 'Famine',
+  plague: 'Plague',
 };
 
 /** Words above a pause card: the type's own, else the effect's label, else plain words for the id. */

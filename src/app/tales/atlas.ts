@@ -37,8 +37,8 @@ export interface DrawResult {
 const PAPER: Rgb3 = [242, 235, 218];
 const SEA: Rgb3 = [199, 213, 215];
 const INK: Rgb3 = [84, 74, 62];
-/** Soft ground tint per biome id. */
-const TINT: Record<string, Rgb3> = {
+/** Soft ground tint per biome id (the map key reads it too). */
+export const TINT: Record<string, Rgb3> = {
   'temperate-forest': [204, 218, 176],
   taiga: [196, 212, 190],
   jungle: [186, 208, 160],
@@ -62,6 +62,8 @@ const THIN_MODES: readonly MapMode[] = ['land', 'peoples'];
 /** Political layers kept, so scrubbing back and forth redraws nothing. */
 const LAYER_CACHE = 6;
 const FILL_MODES: readonly MapMode[] = ['realms', 'peoples', 'faiths'];
+/** How strongly a realm, people or faith fill lies over the land, so biomes and marks show through. */
+const FILL_STRENGTH = 0.42;
 
 const hash = (i: number, salt: number): number => {
   let h = (Math.imul(i + 1, 0x9e3779b1) ^ Math.imul(salt + 7, 0x85ebca6b)) >>> 0;
@@ -1007,7 +1009,7 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scal
     }
     const fills = FILL_MODES.includes(mode);
     dctx.globalAlpha = 1;
-    dctx.drawImage(mode === 'land' ? landBase : paperBase, 0, 0);
+    dctx.drawImage(mode === 'plain' ? paperBase : landBase, 0, 0);
     const centres = new Map<number, { x: number; y: number; n: number }>();
     if (mode !== 'plain') {
       // Ownership with each lake given to the realm round most of its shore.
@@ -1097,13 +1099,14 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scal
         centres.set(civ, { x: a.sx / a.n + 0.5, y: a.sy / a.n + 0.5, n: a.n });
       }
       if (fills) {
+        dctx.globalAlpha = FILL_STRENGTH;
         for (const [key, civ, shape] of live) {
           const colour = input.fillOf(civ);
           if (colour)
             dctx.drawImage(tintOf(`${key}|f`, shape.fill, shape, colour), shape.x0, shape.y0);
         }
       }
-      dctx.globalAlpha = fills ? 0.55 : 1;
+      dctx.globalAlpha = fills ? 0.8 : 1;
       dctx.drawImage(symbols, 0, 0);
       dctx.globalAlpha = 1;
       dctx.drawImage(rivers, 0, 0);

@@ -41,6 +41,9 @@ test('a Tales card opens the person, and the page fits a phone', async ({ page }
   await page.goto('/?seed=SMOKE&size=128');
   await expect(page.getByTestId('tales-stage')).toBeVisible({ timeout: 30_000 });
   await page.getByLabel('Years a second').selectOption('60');
+  // The first play runs to the present without pausing; a replay pauses to ask.
+  const present = page.getByRole('dialog', { name: 'The present day' });
+  await present.getByRole('button', { name: 'Replay' }).click({ timeout: 30_000 });
   const card = page.getByRole('dialog', { name: 'History paused' });
   const who = card.getByRole('button', { name: /^Who is / });
   // Cards come and go on their own; take the first that names a person.
