@@ -37,6 +37,7 @@ export function playByPlay(
     return fillTemplate(template, vars);
   };
   if (event.type === 'battle') return battle(world, rules, index, event, effects, say);
+  if (event.type === 'legend_duel' && text(event, 'war') === '') return duel(rules, event, say);
   if (
     event.type === 'beast_slain' ||
     event.type === 'beast_fought' ||
@@ -78,13 +79,20 @@ function battle(
   )
     return [];
   const champions = effects.filter((e) => e.type === 'champion_fought');
-  // Deaths caused by the battle or by one of its champions' fights.
+  const duels = effects.filter((e) => e.type === 'legend_duel');
+  // Deaths caused by the battle or by one of its champions' fights (a duel's death has its line).
   const reached = new Set([event.id, ...champions.map((c) => c.id)]);
   const deaths = [
     ...effects,
     ...champions.flatMap((c) => index.effects(c.id).flatMap((id) => index.event(id) ?? [])),
   ].filter((e) => e.type === 'notable_died' && e.causes.some((c) => reached.has(c)));
-  if (lost < rules.battleLostAtLeast && champions.length === 0 && deaths.length === 0) return [];
+  if (
+    lost < rules.battleLostAtLeast &&
+    champions.length === 0 &&
+    duels.length === 0 &&
+    deaths.length === 0
+  )
+    return [];
 
   const civ = text(event, 'civ');
   const enemy = text(event, 'enemy');
@@ -121,13 +129,25 @@ function battle(
     }),
   );
 
+  const duelLines = duels.map((d) =>
+    say('duelInBattle', {
+      name: text(d, 'name'),
+      enemy: text(d, 'enemy'),
+      outcome: text(d, 'outcome'),
+    }),
+  );
+
   const attackerWon = winner === civ;
   const effectiveDefence = (defenders * walls) / 100;
   const fewer = attackerWon ? army < effectiveDefence : effectiveDefence < army;
   const gap = Math.abs(attackForce - defendForce);
   const biggest = Math.max(attackForce, defendForce);
   const even = gap * 100 <= biggest * rules.evenWithinPercent;
-  beats.turn = say(fewer ? 'turnUpset' : even ? 'turnEven' : 'turnWeight', base);
+  // A legend's broken host that changed who won is the turn of the day.
+  const turner = champions.find((c) => num(c, 'turned') === 1);
+  beats.turn = turner
+    ? say('turnLegend', { ...base, name: text(turner, 'name') })
+    : say(fewer ? 'turnUpset' : even ? 'turnEven' : 'turnWeight', base);
 
   const championNames = new Set(champions.map((c) => text(c, 'name')));
   const names = [...new Set(deaths.map((d) => text(d, 'name')))].filter(
@@ -146,9 +166,15 @@ function battle(
   else if (taken) ending.push(say('endingTaken', { site, civ: text(taken, 'civ') }));
 
   // Drop Ground, then Leaders, to fit the cap; then trim champions.
-  let lines = [muster, ground, leaders, ...championLines, beats.turn, ending.join(' ')].flatMap(
-    (l) => (l ? [l] : []),
-  );
+  let lines = [
+    muster,
+    ground,
+    leaders,
+    ...duelLines,
+    ...championLines,
+    beats.turn,
+    ending.join(' '),
+  ].flatMap((l) => (l ? [l] : []));
   const drop = (line: string | undefined) => {
     if (lines.length > rules.maxBeats && line) lines = lines.filter((l) => l !== line);
   };
@@ -156,6 +182,33 @@ function battle(
   drop(leaders);
   while (lines.length > rules.maxBeats) lines.splice(lines.indexOf(beats.turn!) - 1, 1);
   return lines;
+}
+
+/** A duel of two legends outside any battle: the meeting, the odds, the clash and its end. */
+function duel(rules: PlayContent['playByPlay'], event: SimEvent, say: Say): string[] {
+  const odds = num(event, 'odds');
+  if (odds === undefined) return [];
+  const vars: Vars = {
+    name: text(event, 'name'),
+    enemy: text(event, 'enemy'),
+    civ: text(event, 'civ'),
+    enemyCiv: text(event, 'enemyCiv'),
+    site: text(event, 'site'),
+    odds,
+  };
+  const oddsBeat =
+    odds < rules.longOdds
+      ? 'duelOddsLong'
+      : odds > rules.favouredOdds
+        ? 'duelOddsFavoured'
+        : 'duelOddsEven';
+  const slain = text(event, 'outcome').includes('killed');
+  return [
+    say('duelMeet', vars),
+    say(oddsBeat, vars),
+    say('duelClash', vars),
+    say(slain ? 'duelSlain' : 'duelFled', vars),
+  ];
 }
 
 function joinNames(names: string[]): string {

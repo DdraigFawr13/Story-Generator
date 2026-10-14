@@ -374,6 +374,7 @@ const HISTORY_EVENT_IDS = [
   'oath_sworn',
   'legend_risen',
   'champion_fought',
+  'legend_duel',
   'vengeance_raid',
   'legend_founded',
   'beast_hunt_failed',

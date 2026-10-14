@@ -664,6 +664,20 @@ export const eventTypes: EventTypeDef[] = [
     ],
   },
   {
+    id: 'legend_duel',
+    baseImportance: 7,
+    title: '{name} fought {enemy}',
+    category: 'politics',
+    precision: 'year',
+    links: { civ: 'civ', enemyCiv: 'civ', site: 'site' },
+    dataKeys: ['civ', 'enemyCiv', 'war', 'again'],
+    templates: [
+      'In {date} {name} of the {civ} met {enemy} of the {enemyCiv}{again} in single combat at {site}{war}, {outcome}.',
+      '{date}: at {site}{war} {name} of the {civ} fought {enemy} of the {enemyCiv}{again} and won, {outcome}.',
+      'Two legends met{again} at {site}{war} in {date}: {name} of the {civ} overcame {enemy} of the {enemyCiv}, {outcome}.',
+    ],
+  },
+  {
     id: 'vengeance_raid',
     baseImportance: 5,
     title: '{name} took vengeance on {enemy}',

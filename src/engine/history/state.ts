@@ -147,6 +147,10 @@ export interface NotableState {
   avenged: Set<Id>;
   /** Year of each figure's latest deed (rising, slaying, battle, founding, raid, hunt). */
   lastDeed: Map<Id, number>;
+  /** Year each legend last spent their day of power (a broken host or a duel): once a year. */
+  spent: Map<Id, number>;
+  /** Pairs of legends (`pairKey`) who have duelled; such a pair never feuds again. */
+  feuds: Set<string>;
   /** Cache of the odds a birth is strong or better, by `${raceId}:${highAura}`. */
   mageOdds: Map<string, number>;
 }
@@ -360,6 +364,8 @@ export function createRun(
       raiders: new Map(),
       avenged: new Set(),
       lastDeed: new Map(),
+      spent: new Map(),
+      feuds: new Set(),
       mageOdds: new Map(),
     },
     colleges: [],

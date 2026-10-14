@@ -42,6 +42,7 @@ import {
   isLive,
   liveSites,
   logOf,
+  pairKey,
   type HistoryRun,
   type War,
 } from './state';
@@ -66,6 +67,8 @@ const LEGEND_POWER: [number, number] = [17, 20];
 const MAGE_POWER = 7;
 
 const civName = (civ: Civ | undefined) => civ?.name ?? 'no people';
+/** 1000 -> "1,000", as the chronicle writes numbers. */
+const thousands = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 function capitalOf(run: HistoryRun, civ: Civ): Site | undefined {
   const site = run.world.sites.get(civ.capital);
@@ -387,20 +390,23 @@ export function createFounder(run: HistoryRun, site: Site): Person | undefined {
 }
 
 /**
- * A non-ruler legend of the mother site who will lead the settlers of a new site, with
- * `legendFounds`; they replace the made-up founder.
+ * A non-ruler legend of the mother site's people, living there or within `foundRange` cells of it,
+ * who will lead the settlers of a new site, with `legendFounds`; they replace the made-up founder.
  */
 export function foundingLegend(run: HistoryRun, source: Site): Person | undefined {
   const civ = source.civId === null ? undefined : run.world.civs.get(source.civId);
   if (!civ) return undefined;
-  const legend = livingAt(run, source.id).find(
-    (p) =>
-      p.civId === civ.id &&
-      p.id !== civ.rulerId &&
-      p.magic.power >= LEGEND_POWER[0] &&
-      isAdult(run, p) &&
-      !isElder(run, p),
-  );
+  const range = run.content.notables.deeds.foundRange;
+  const legend = livingList(run).find((p) => {
+    if (p.civId !== civ.id || p.id === civ.rulerId || !isLegend(p)) return false;
+    if (!isAdult(run, p) || isElder(run, p) || p.siteId == null) return false;
+    const home = run.world.sites.get(p.siteId);
+    return (
+      home !== undefined &&
+      isLive(home) &&
+      cellDistance(run.cells.width, home.cell, source.cell) <= range
+    );
+  });
   if (!legend || !run.rng.notables.chance(run.content.notables.deeds.legendFounds))
     return undefined;
   return legend;
@@ -589,12 +595,39 @@ export function battleOutcome(
   return livingPerson(run, winner?.id) ?? undefined;
 }
 
-/** The civ's strongest living figure of champion power (power, then fame, then lowest id). */
-function championOf(run: HistoryRun, civ: Civ): Person | undefined {
-  const min = run.content.notables.deeds.championPower;
+/** A legend: power in the Legendary range (R-24). */
+export function isLegend(person: Person): boolean {
+  return person.magic.power >= LEGEND_POWER[0];
+}
+
+/**
+ * Soldiers one day of a legend's power breaks: the Legendary tier (500 at power 17 to 1,000 at
+ * 20), scaled by `mageStrength` as a figure's strength is for their civ.
+ */
+export function legendBreaks(run: HistoryRun, person: Person): number {
+  const [low, high] = TIERS.legendary.soldiers;
+  const [from, to] = LEGEND_POWER;
+  const t = Math.min(1, Math.max(0, (person.magic.power - from) / (to - from)));
+  return (low + (high - low) * t) * run.content.notables.mageStrength;
+}
+
+/** A legend who has not yet spent their day of power this year. */
+export function canSpend(run: HistoryRun, person: Person): boolean {
+  return isLegend(person) && run.notables.spent.get(person.id) !== run.year;
+}
+
+/**
+ * The civ's strongest living figure of champion power whose home lies within `championRange`
+ * cells of the field (power, then fame, then lowest id).
+ */
+function championOf(run: HistoryRun, civ: Civ, field: Site): Person | undefined {
+  const { championPower, championRange } = run.content.notables.deeds;
   let best: Person | undefined;
   for (const person of livingList(run)) {
-    if (person.civId !== civ.id || person.magic.power < min || !isAdult(run, person)) continue;
+    if (person.civId !== civ.id || person.magic.power < championPower || !isAdult(run, person))
+      continue;
+    const home = person.siteId == null ? undefined : run.world.sites.get(person.siteId);
+    if (!home || cellDistance(run.cells.width, home.cell, field.cell) > championRange) continue;
     if (
       !best ||
       person.magic.power > best.magic.power ||
@@ -605,10 +638,97 @@ function championOf(run: HistoryRun, civ: Civ): Person | undefined {
   return best;
 }
 
+/** Each side's champion for a battle at `field`: [attacker's, defender's]. */
+export function pickChampions(
+  run: HistoryRun,
+  attacker: Civ,
+  defender: Civ,
+  field: Site,
+): readonly [Person | undefined, Person | undefined] {
+  return [championOf(run, attacker, field), championOf(run, defender, field)];
+}
+
+/** Two legends meet: who wins, at what odds (the winner's, 0-1), and whether the loser dies. */
+export interface DuelResult {
+  winner: Person;
+  loser: Person;
+  odds: number;
+  dies: boolean;
+}
+
+/** Rolls a duel between two legends; the stronger's odds rise by `duelEdge` a point of power. */
+export function rollDuel(run: HistoryRun, a: Person, b: Person): DuelResult {
+  const deeds = run.content.notables.deeds;
+  const rng = run.rng.notables;
+  const [lo, hi] = deeds.duelOdds;
+  const oddsA = Math.min(hi, Math.max(lo, 0.5 + (a.magic.power - b.magic.power) * deeds.duelEdge));
+  const aWins = rng.chance(oddsA);
+  const dies = rng.chance(deeds.duelDeath);
+  return aWins
+    ? { winner: a, loser: b, odds: oddsA, dies }
+    : { winner: b, loser: a, odds: 1 - oddsA, dies };
+}
+
+/** A duel happened: `legend_duel`, fame, both legends spent for the year, and the loser may die. */
+export function emitDuel(
+  run: HistoryRun,
+  duel: DuelResult,
+  site: Site,
+  causes: Id[],
+  inBattle: boolean,
+): SimEvent {
+  const phrases = run.content.notables.deeds.duelPhrases;
+  const { winner, loser } = duel;
+  // A pair that met before says so; a duelled pair never feuds again.
+  const pair = pairKey(winner.id, loser.id);
+  const again = run.notables.feuds.has(pair);
+  run.notables.feuds.add(pair);
+  const event = run.emit({
+    type: 'legend_duel',
+    actors: [winner.id, loser.id],
+    place: site.cell,
+    causes,
+    data: {
+      name: winner.name,
+      enemy: loser.name,
+      civ: civName(civOfPerson(run, winner)),
+      enemyCiv: civName(civOfPerson(run, loser)),
+      site: site.name,
+      war: inBattle ? phrases.inBattle : '',
+      again: again ? phrases.again : '',
+      outcome: (duel.dies ? phrases.slain : phrases.fled).replace('{enemy}', loser.name),
+      odds: Math.round(duel.odds * 100),
+    },
+  });
+  winner.fame = Math.min(FAME_MAX, winner.fame + run.content.notables.fame.victory);
+  for (const person of [winner, loser]) {
+    addDeed(person, event.id);
+    markDeed(run, person);
+    run.notables.spent.set(person.id, run.year);
+  }
+  if (duel.dies) {
+    killNotable(run, loser, { cause: 'duel', killer: winner, causes: [event.id], at: site });
+  }
+  return event;
+}
+
+/** What legends did in a battle before it was settled: a duel, or soldiers broken per side. */
+export interface LegendPlay {
+  duel?: DuelResult | undefined;
+  /** Soldiers each side's legend broke: [attacker's, defender's]. */
+  broke: [number, number];
+  /** The host a legend faced was bigger than they could break. */
+  overmatched: [boolean, boolean];
+  /** The break changed who won. */
+  turned: boolean;
+}
+
 /**
  * Each side's champion fights in the battle: fame on victory, and the captains' odds of falling.
- * `champion_fought` names them in their first battle of the war and in the one they fall in. A
- * champion who led the side was already judged by `battleOutcome`; they get no second roll.
+ * `champion_fought` names them in their first battle of the war and in the one they fall in; a
+ * legend who breaks a host is named every time, and dies at `legendDeath` or, overmatched,
+ * `bigHostDeath`. Two legends duel instead (`legend_duel`). A champion who led the side was
+ * already judged by `battleOutcome`; they get no second roll.
  */
 export function battleChampions(
   run: HistoryRun,
@@ -620,12 +740,15 @@ export function battleChampions(
     battle: Id;
     war: War;
     leads: readonly (Person | undefined)[];
+    champions: readonly [Person | undefined, Person | undefined];
+    legends: LegendPlay;
   },
 ): void {
-  const { attacker, defender, attackerWins, site, battle, war, leads } = options;
+  const { attacker, defender, attackerWins, site, battle, war, leads, champions, legends } =
+    options;
   const rules = run.content.notables;
   const rng = run.rng.notables;
-  const champions = [championOf(run, attacker), championOf(run, defender)] as const;
+  if (legends.duel) emitDuel(run, legends.duel, site, [battle], true);
   const sides = [
     { civ: attacker, enemy: defender, won: attackerWins },
     { civ: defender, enemy: attacker, won: !attackerWins },
@@ -633,20 +756,37 @@ export function battleChampions(
   sides.forEach((side, index) => {
     const champion = champions[index];
     if (!champion || champion.died !== undefined) return;
+    // Duellists spent their day on each other; the duel is their deed.
+    if (legends.duel && [legends.duel.winner.id, legends.duel.loser.id].includes(champion.id))
+      return;
     const other = champions[1 - index];
+    const broke = legends.broke[index]!;
     const led = leads.some((p) => p?.id === champion.id);
     markDeed(run, champion);
-    const dies = !led && rng.chance(side.won ? rules.captainDeathWin : rules.captainDeath);
+    let deathChance = side.won ? rules.captainDeathWin : rules.captainDeath;
+    if (broke > 0) {
+      run.notables.spent.set(champion.id, run.year);
+      deathChance = legends.overmatched[index] ? rules.deeds.bigHostDeath : rules.deeds.legendDeath;
+    }
+    const dies = !led && rng.chance(deathChance);
     if (side.won && !led) champion.fame = Math.min(FAME_MAX, champion.fame + rules.fame.victory);
     const named = (war.champions ??= []).includes(champion.id);
-    if (named && !dies) return;
+    // Named again only when it matters: a broken host that turned the day, or a fall.
+    if (named && !dies && !(broke > 0 && legends.turned)) return;
     // A champion of a side that already had one steps up in their place.
     const replacing = war.champions.some(
       (id) => id !== champion.id && run.world.people.get(id)?.civId === side.civ.id,
     );
     if (!named) war.champions.push(champion.id);
     const phrases = rules.deeds.championPhrases;
-    const stand = named ? phrases.again : replacing ? phrases.replaced : phrases.first;
+    const stand =
+      broke > 0
+        ? rules.deeds.brokeStand.replace('{broke}', thousands(broke))
+        : named
+          ? phrases.again
+          : replacing
+            ? phrases.replaced
+            : phrases.first;
     const result = side.won ? phrases.won : phrases.lost;
     const fill = (text: string) =>
       text
@@ -667,6 +807,8 @@ export function battleChampions(
         outcome: fill(
           dies ? `${result}, ${side.won ? phrases.fellWon : phrases.fellLost}` : result,
         ),
+        broke,
+        turned: broke > 0 && legends.turned ? 1 : 0,
       },
     });
     addDeed(champion, event.id);
@@ -675,6 +817,55 @@ export function battleChampions(
       killNotable(run, champion, { cause: 'battle', killer, causes: [event.id], at: site });
     }
   });
+}
+
+/**
+ * Two living legends of peoples with a grievance of `feudGrievance` between them, not at war, homes within
+ * `feudRange` cells: with `feudChance` a year they duel at the home of the one challenged. The
+ * challenger is the legend whose people hold the larger grievance. The loser's people take it as
+ * an insult.
+ */
+export function legendFeuds(run: HistoryRun): void {
+  const deeds = run.content.notables.deeds;
+  if (deeds.feudChance <= 0) return;
+  const rng = run.rng.notables;
+  const ready = livingList(run).filter(
+    (p) =>
+      canSpend(run, p) &&
+      isAdult(run, p) &&
+      !isElder(run, p) &&
+      p.civId != null &&
+      p.siteId != null,
+  );
+  for (let i = 0; i < ready.length; i += 1) {
+    for (let j = i + 1; j < ready.length; j += 1) {
+      const a = ready[i]!;
+      const b = ready[j]!;
+      if (!canSpend(run, a) || !canSpend(run, b) || a.died !== undefined || b.died !== undefined)
+        continue;
+      if (a.civId === b.civId || atWar(run, a.civId!, b.civId!)) continue;
+      if (run.notables.feuds.has(pairKey(a.id, b.id))) continue;
+      const civA = run.world.civs.get(a.civId!);
+      const civB = run.world.civs.get(b.civId!);
+      if (!civA || !civB || civA.fell !== undefined || civB.fell !== undefined) continue;
+      const grudgeA = civA.grievances.get(civB.id) ?? 0;
+      const grudgeB = civB.grievances.get(civA.id) ?? 0;
+      if (Math.max(grudgeA, grudgeB) < deeds.feudGrievance) continue;
+      const homeA = run.world.sites.get(a.siteId!);
+      const homeB = run.world.sites.get(b.siteId!);
+      if (!homeA || !homeB || !isLive(homeA) || !isLive(homeB)) continue;
+      if (cellDistance(run.cells.width, homeA.cell, homeB.cell) > deeds.feudRange) continue;
+      if (!rng.chance(deeds.feudChance)) continue;
+      const [challenger, challenged, field] = grudgeA >= grudgeB ? [a, b, homeB] : [b, a, homeA];
+      const duel = rollDuel(run, challenger, challenged);
+      const cause = challenger.deeds[challenger.deeds.length - 1];
+      const event = emitDuel(run, duel, field, cause === undefined ? [] : [cause], false);
+      const loserCiv = civOfPerson(run, duel.loser);
+      const winnerCiv = civOfPerson(run, duel.winner);
+      if (loserCiv && winnerCiv && loserCiv.fell === undefined)
+        addGrievance(run, loserCiv.id, winnerCiv.id, run.rules.grievance.insult, event.id);
+    }
+  }
 }
 
 /** A declared war's captains: created or chosen before the event, so it can name them. */
