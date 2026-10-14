@@ -998,10 +998,11 @@ export function NextApp() {
                   setSliderYear(year >= finalYear ? null : year);
                 }}
                 onOpenEvent={(id) => go({ open: { kind: 'event', id } })}
-                onLegends={() => {
+                onLegends={(category) => {
                   setPlayback(null);
                   setSliderYear(null);
                   setTab('legends');
+                  if (category) go({ cat: category, open: null });
                 }}
               />
             ) : (

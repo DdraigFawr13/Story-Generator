@@ -3,9 +3,10 @@
 // by atlas.ts, the marks over it by markers.tsx; this file holds the clock, the controls and the
 // pause card. It only shows what the history logged.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_CONTENT, PLAYBACK_EFFECTS, PLAYBACK_TAGS } from '../../content';
 import type { Id, SimEvent, WorldState } from '../../engine';
+import type { LegendCategory } from '../map-view';
 import {
   buildPlayback,
   census,
@@ -25,6 +26,8 @@ import {
   type Neighbours,
   type Rgb3,
 } from './colours';
+import { settleLabels } from './labels';
+import { PHONE_MAX, cardSide, fitMap, nearestCell } from './layout';
 import { Capitals, Marks, type Clock, type Recent } from './markers';
 import { buildModel } from './model';
 import {
@@ -33,6 +36,7 @@ import {
   PAUSE_KINDS,
   dotColour,
   kickerOf,
+  pauseAllowed,
   pickPause,
   pausesLabel,
   type PauseKind,
@@ -51,8 +55,8 @@ interface Props {
   onClose: (year: number) => void;
   /** Open an event's page in Legends. */
   onOpenEvent: (id: Id) => void;
-  /** Open the Legends pane (People and Book). */
-  onLegends: () => void;
+  /** Open the Legends pane, at a category when one is named (People and Book). */
+  onLegends: (category?: LegendCategory) => void;
 }
 
 /** Years a second the clock can run at. */
@@ -66,8 +70,6 @@ const MODES: { id: MapMode; label: string }[] = [
   { id: 'faiths', label: 'Faiths' },
   { id: 'plain', label: 'Plain' },
 ];
-/** Years between two pauses at the least, so a busy decade does not stop at every turn. */
-const PAUSE_GAP = 2;
 const AUTO_RESUME_MS = 8000;
 const RECENT_MS = 2600;
 /** Event tags show at this speed or slower. */
@@ -139,7 +141,7 @@ function Room({
   onLegends,
 }: Props & { data: PlaybackData }) {
   const palette = useMemo(() => buildPalette(world, data), [world, data]);
-  const model = useMemo(() => buildModel(world, data, DEFAULT_CONTENT), [world, data]);
+  const baseModel = useMemo(() => buildModel(world, data, DEFAULT_CONTENT), [world, data]);
   const eventById = useMemo(() => new Map(world.events.map((e) => [e.id, e])), [world]);
   const realmOf = useMemo(
     () => new Map([...world.civs.values()].map((c) => [c.id, c.raceId])),
@@ -158,10 +160,13 @@ function Room({
   const [recent, setRecent] = useState<(Recent & { until: number })[]>([]);
   const [atlas, setAtlas] = useState<Atlas | null>(null);
   const [stage, setStage] = useState({ w: 0, h: 0 });
+  const [helpOpen, setHelpOpen] = useState(false);
   const [labels, setLabels] = useState<Map<number, { x: number; y: number; n: number }>>(new Map());
 
   const clock = useRef<Clock>({ t: startYear });
   const lastPause = useRef(-99);
+  /** When the last card closed (ms), for the real-time gap between cards. */
+  const closedAt = useRef<number | null>(null);
   const cardKey = useRef(0);
   const stageEl = useRef<HTMLDivElement>(null);
   const wrapEl = useRef<HTMLDivElement>(null);
@@ -266,7 +271,11 @@ function Room({
       const lo = Math.floor(c.t) + 1;
       const hi = Math.min(Math.floor(next), data.last);
       for (let y = lo; y <= hi; y += 1) {
-        if (y - lastPause.current < PAUSE_GAP) continue;
+        if (
+          !pauseAllowed(y, lastPause.current, performance.now(), closedAt.current, who !== null)
+        ) {
+          continue;
+        }
         const picked = pickPause(data.eventsByYear.get(y) ?? [], on, who?.id ?? null);
         if (picked) {
           c.t = picked.t;
@@ -336,6 +345,7 @@ function Room({
   }, [card]);
 
   const resume = () => {
+    closedAt.current = performance.now();
     setCard(null);
     setPlaying(true);
   };
@@ -345,6 +355,7 @@ function Room({
     setEnded(false);
     sync();
     if (card) {
+      closedAt.current = performance.now();
       setCard(null);
       setPlaying(true);
     }
@@ -357,11 +368,13 @@ function Room({
   const replay = () => {
     clock.current.t = 0;
     lastPause.current = -99;
+    closedAt.current = null;
     setEnded(false);
     sync();
     setPlaying(true);
   };
   const skip = () => {
+    closedAt.current = performance.now();
     setCard(null);
     clock.current.t = data.last;
     sync();
@@ -376,60 +389,101 @@ function Room({
       return next;
     });
 
+  // Keep the map's text clear of itself: one collision pass after every render, and a few times a
+  // second while things glide. Counts of named realms are left on the stage for the tests.
+  useLayoutEffect(() => {
+    settle();
+  });
+  useEffect(() => {
+    const timer = window.setInterval(settle, 160);
+    return () => window.clearInterval(timer);
+  }, []);
+  function settle() {
+    const el = stageEl.current;
+    if (!el) return;
+    const report = settleLabels(el);
+    if (el.dataset.realmsNamed !== String(report.named))
+      el.dataset.realmsNamed = String(report.named);
+    if (el.dataset.realmsTotal !== String(report.realms))
+      el.dataset.realmsTotal = String(report.realms);
+  }
+
   // ---- layout ------------------------------------------------------------------------------
   const layout = useMemo(() => {
     if (!atlas || !stage.w || !stage.h) return null;
     const S = atlas.scale;
-    const cw = (atlas.box.x1 - atlas.box.x0) * S;
-    const ch = (atlas.box.y1 - atlas.box.y0) * S;
-    const s = Math.min(stage.w / cw, stage.h / ch);
-    return {
-      size: atlas.size * s,
-      left: (stage.w - cw * s) / 2 - atlas.box.x0 * S * s,
-      // On a phone the map sits high, clear of the sheet that rises under it.
-      top: (stage.w <= 600 ? 96 : (stage.h - ch * s) / 2) - atlas.box.y0 * S * s,
-    };
+    const { x0, y0, x1, y1 } = atlas.box;
+    const fit = fitMap(
+      stage,
+      { x0: x0 * S, y0: y0 * S, w: (x1 - x0) * S, h: (y1 - y0) * S },
+      atlas.size,
+    );
+    return { size: fit.size, left: fit.left, top: fit.top };
   }, [atlas, stage]);
   const W = atlas?.width ?? data.width;
   const H = atlas?.height ?? data.height;
+  // A beast's mark stands on drawn land: its lair's cell, or the nearest cell that is.
+  const model = useMemo(() => {
+    if (!atlas) return baseModel;
+    const ok = (c: number) => atlas.inland[c] === 1;
+    return {
+      ...baseModel,
+      beasts: baseModel.beasts.map((b) => ({
+        ...b,
+        cell: nearestCell(b.cell, atlas.width, atlas.height, ok),
+      })),
+    };
+  }, [baseModel, atlas]);
   const pct = (cell: number) => ({
     left: `${(((cell % W) + 0.5) / W) * 100}%`,
     top: `${((Math.floor(cell / W) + 0.5) / H) * 100}%`,
   });
 
-  // Realm names in Realms mode: biggest first, and a name that would overlap one already placed
-  // or run off the screen is left out (the realm still has its colour and border).
-  const nameFor = (name: string) => (stage.w <= 600 ? shortRealm(name) : name);
+  // Realm names in Realms mode, biggest first. Only a realm of under 14 cells goes unnamed; the
+  // collision pass (labels.ts) picks the full or short name and a nudge for the rest.
   const realmLabels = useMemo(() => {
-    if (mode !== 'realms' || !layout) return [];
-    const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
+    if (mode !== 'realms') return [];
     const out: { civ: number; c: { x: number; y: number; n: number }; info: PlaybackCiv }[] = [];
     for (const [civ, c] of [...labels].sort((a, b) => b[1].n - a[1].n || a[0] - b[0])) {
       const info = data.civById.get(civ);
-      if (!info || c.n < 14) continue;
-      const x = layout.left + (c.x / W) * layout.size;
-      const y = layout.top + (c.y / H) * layout.size;
-      // Width of 10.5 px capitals with 0.16 em spacing: about 9.2 px a letter, plus a margin.
-      const half = (nameFor(info.name).length * 9.2) / 2 + 4;
-      const box = { x0: x - half, x1: x + half, y0: y - 9, y1: y + 9 };
-      if (box.x0 < 4 || box.x1 > stage.w - 4) continue;
-      if (placed.some((p) => p.x0 < box.x1 && box.x0 < p.x1 && p.y0 < box.y1 && box.y0 < p.y1)) {
-        continue;
-      }
-      placed.push(box);
-      out.push({ civ, c, info });
+      if (info && c.n >= 14) out.push({ civ, c, info });
     }
     return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, layout, labels, data, W, H, stage.w]);
+  }, [mode, labels, data]);
+  const holySeats = useMemo(
+    () =>
+      new Set(
+        [...world.faiths.values()].flatMap((f) =>
+          f.seatSiteId === undefined ? [] : [f.seatSiteId],
+        ),
+      ),
+    [world],
+  );
 
   const now = useMemo(() => census(data, year), [data, year]);
   const ring = card?.event.place ?? null;
-  const ringSide = (() => {
-    if (ring === null || !layout) return 'left';
-    const x = layout.left + (((ring % W) + 0.5) / W) * layout.size;
-    return x > stage.w / 2 ? 'left' : 'right';
-  })();
+  const ringSide = useMemo((): 'left' | 'right' | 'mid' => {
+    if (ring === null || !layout || !atlas) return 'left';
+    const at = {
+      x: layout.left + (((ring % W) + 0.5) / W) * layout.size,
+      y: layout.top + ((Math.floor(ring / W) + 0.5) / H) * layout.size,
+    };
+    if (stage.w <= PHONE_MAX) return 'left';
+    // Land share under a pixel rectangle of the stage, from the atlas's land mask.
+    let total = 0;
+    for (let i = 0; i < atlas.inland.length; i += 1) total += atlas.inland[i]!;
+    const landUnder = (x0: number, y0: number, x1: number, y1: number) => {
+      let n = 0;
+      for (let i = 0; i < atlas.inland.length; i += 1) {
+        if (!atlas.inland[i]) continue;
+        const x = layout.left + (((i % W) + 0.5) / W) * layout.size;
+        const y = layout.top + ((Math.floor(i / W) + 0.5) / H) * layout.size;
+        if (x >= x0 && x < x1 && y >= y0 && y < y1) n += 1;
+      }
+      return total ? n / total : 0;
+    };
+    return cardSide(stage, landUnder, at);
+  }, [ring, layout, atlas, stage, W, H]);
   const cardPerson = card
     ? card.event.actors.map((id) => world.people.get(id)).find((p) => p !== undefined)
     : undefined;
@@ -445,13 +499,13 @@ function Room({
   }, [world]);
 
   const ticks = useMemo(() => {
-    const out: { key: number; year: number; colour: string; title: string }[] = [];
+    const out: { key: number; year: number; colour: string; kind: string; title: string }[] = [];
     for (const e of data.events) {
       if (!kinds.size) break;
       const colour = dotColour(e.type, e.importance);
       const kind = colour && PAUSE_KINDS.find((k) => k.colour === colour);
       if (!colour || !kind || !kinds.has(kind.id)) continue;
-      out.push({ key: e.id, year: e.y, colour, title: `Year ${e.y} · ${e.title}` });
+      out.push({ key: e.id, year: e.y, colour, kind: kind.id, title: `Year ${e.y} · ${e.title}` });
     }
     return out;
   }, [data, kinds]);
@@ -500,7 +554,7 @@ function Room({
   }, [data]);
 
   const finish = () => onClose(ended ? data.last : Math.floor(clock.current.t));
-  const rail = (id: string, label: string, onClick: () => void, current = false) => (
+  const rail = (id: string, label: string, onClick: () => void, current = false, soon = false) => (
     <button
       key={id}
       type="button"
@@ -510,6 +564,7 @@ function Room({
     >
       <i className={id === 'world' ? 'round' : ''} />
       <span>{label}</span>
+      {soon && <em className="soon">soon</em>}
     </button>
   );
 
@@ -518,9 +573,9 @@ function Room({
       <nav className="tr-rail" aria-label="Rooms">
         <b className="tr-logo">S1</b>
         {rail('tales', 'Tales', () => undefined, true)}
-        {rail('people', 'People', onLegends)}
-        {rail('book', 'Book', onLegends)}
-        {rail('town', 'Town', finish)}
+        {rail('people', 'People', () => onLegends('person'))}
+        {rail('book', 'Book', () => onLegends('event'))}
+        {rail('town', 'Town', finish, false, true)}
         <span className="tr-grow" />
         {rail('world', 'World', finish)}
       </nav>
@@ -542,7 +597,7 @@ function Room({
                 if (!site || data.sitesAt(data.last).get(site.id)?.ruined) return null;
                 return (
                   <div key={`faith:${f.id}`} className="tr-cp faith" style={pct(site.cell)}>
-                    <span>{f.name}</span>
+                    <span data-lbl="faith">{f.name}</span>
                   </div>
                 );
               })}
@@ -552,6 +607,7 @@ function Room({
                 <div
                   key={`rg:${r.id}`}
                   className={`tr-rg${r.kind === 'sea' ? ' sea' : ''}`}
+                  data-lbl="region"
                   style={pct(r.anchor)}
                 >
                   {r.name}
@@ -560,22 +616,33 @@ function Room({
             {mode === 'realms' &&
               realmLabels.map(({ civ, c, info }) => {
                 const [r, g, b] = labelColour(palette.hue.get(civ) ?? 0);
+                const short = shortRealm(info.name);
                 return (
                   <div
                     key={`realm:${civ}`}
                     className="tr-rg realm"
+                    data-lbl="realm"
+                    data-form="full"
                     style={{
                       left: `${(c.x / W) * 100}%`,
                       top: `${(c.y / H) * 100}%`,
                       color: `rgb(${r},${g},${b})`,
                     }}
                   >
-                    {nameFor(info.name)}
+                    <span className="full">{info.name}</span>
+                    {short !== info.name && <span className="short">{short}</span>}
                   </div>
                 );
               })}
             {mode !== 'plain' && (
-              <Capitals data={data} year={year} width={W} height={H} hidden={mode === 'realms'} />
+              <Capitals
+                data={data}
+                year={year}
+                width={W}
+                height={H}
+                hidden={mode === 'realms'}
+                only={mode === 'faiths' ? holySeats : null}
+              />
             )}
             {mode !== 'plain' && (
               <Marks
@@ -648,7 +715,10 @@ function Room({
               </button>
             ))}
           </div>
-          <div className="tr-year">
+          {mode === 'faiths' && (
+            <p className="tr-note">Faiths are shown as they stood when history ended.</p>
+          )}
+          <div className={`tr-year${mode === 'faiths' ? ' lower' : ''}`}>
             <div data-testid="tales-year" aria-live="off">
               Year {year}
             </div>
@@ -656,11 +726,22 @@ function Room({
               {now.realms} realms · {now.people.toLocaleString('en-GB')} people
             </small>
           </div>
-          {mode === 'faiths' && (
-            <p className="tr-note">Faiths are shown as they stood when history ended.</p>
-          )}
 
-          <div className="tr-key" aria-hidden="true" data-hidden={card ? 'true' : 'false'}>
+          <button
+            type="button"
+            className="tr-help"
+            aria-label="Map key"
+            aria-expanded={helpOpen}
+            onClick={() => setHelpOpen((o) => !o)}
+          >
+            ?
+          </button>
+          <div
+            className={`tr-key${helpOpen ? ' open' : ''}`}
+            aria-hidden={helpOpen ? undefined : 'true'}
+            data-hidden={card ? 'true' : 'false'}
+            onClick={() => setHelpOpen(false)}
+          >
             <div>
               <i className="town" />
               town
@@ -752,7 +833,7 @@ function Room({
                 <button type="button" className="p" onClick={finish}>
                   Explore the map
                 </button>
-                <button type="button" onClick={onLegends}>
+                <button type="button" onClick={() => onLegends()}>
                   Open legends
                 </button>
                 <button type="button" onClick={replay}>
@@ -813,6 +894,7 @@ function Room({
               {ticks.map((tick) => (
                 <i
                   key={tick.key}
+                  data-kind={tick.kind}
                   style={{ left: lastPct(tick.year), background: tick.colour }}
                   title={tick.title}
                 />

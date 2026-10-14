@@ -142,3 +142,24 @@ export function dotColour(type: string, importance: number): string | null {
   const kind = pauseKindOf(type, importance);
   return kind ? PAUSE_KINDS.find((k) => k.id === kind)!.colour : null;
 }
+
+/** History years between two cards at the least (a followed person's story: just a short gap). */
+export const PAUSE_GAP_YEARS = 20;
+export const FOLLOW_GAP_YEARS = 2;
+/** Real time between a card closing and the next one opening, so the map is never left alone for less. */
+export const PAUSE_GAP_MS = 4000;
+
+/**
+ * May a card open at `year`? Not within the year gap of the last card, and not within the real-time
+ * gap of the last card closing (`closedAt`, a clock reading in ms; null before the first card).
+ */
+export function pauseAllowed(
+  year: number,
+  lastYear: number,
+  nowMs: number,
+  closedAt: number | null,
+  following: boolean,
+): boolean {
+  if (year - lastYear < (following ? FOLLOW_GAP_YEARS : PAUSE_GAP_YEARS)) return false;
+  return closedAt === null || nowMs - closedAt >= PAUSE_GAP_MS;
+}

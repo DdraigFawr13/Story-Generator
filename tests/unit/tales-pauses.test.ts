@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { roadPath, pointAlong } from '../../src/app/tales/march';
 import {
   DEFAULT_PAUSES,
+  pauseAllowed,
   pauseKindOf,
   pausesLabel,
   pickPause,
@@ -73,5 +74,19 @@ describe('armies on the road', () => {
     expect(mid.x).toBeCloseTo(1.5);
     expect(mid.y).toBeCloseTo(1.5);
     expect(pointAlong([7, 8, 9], width, 1).upTo.length).toBe(3);
+  });
+});
+
+describe('calmer pauses', () => {
+  it('waits 20 history years and 4 seconds between cards', () => {
+    expect(pauseAllowed(100, 85, 10_000, null, false)).toBe(false);
+    expect(pauseAllowed(105, 85, 10_000, null, false)).toBe(true);
+    expect(pauseAllowed(105, 85, 10_000, 8_000, false)).toBe(false);
+    expect(pauseAllowed(105, 85, 12_000, 8_000, false)).toBe(true);
+  });
+
+  it('keeps the 4 seconds for a followed person but not the 20 years', () => {
+    expect(pauseAllowed(90, 85, 20_000, 10_000, true)).toBe(true);
+    expect(pauseAllowed(90, 85, 11_000, 10_000, true)).toBe(false);
   });
 });

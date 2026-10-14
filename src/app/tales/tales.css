@@ -78,6 +78,17 @@
 .tr-root .tr-room i.round {
   border-radius: 50%;
 }
+.tr-root .tr-room .soon {
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 99px;
+  background: #efe6d4;
+  color: var(--soft);
+  text-transform: lowercase;
+}
 .tr-root .tr-room.on {
   background: #efe6d4;
   color: var(--ink);
@@ -92,12 +103,14 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  overflow: clip;
 }
 .tr-root .tr-stage {
   position: relative;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  /* clip, not hidden: a hidden box can still be scrolled sideways by focus or a stray marker. */
+  overflow: clip;
   background: #c7d5d7;
 }
 .tr-root .tr-map {
@@ -246,13 +259,18 @@
   font-family: 'Alegreya Sans SC', sans-serif;
   margin-top: 2px;
 }
+.tr-root .tr-year.lower {
+  top: 88px;
+}
 .tr-root .tr-note {
   position: absolute;
-  left: 28px;
-  bottom: 22px;
+  right: 20px;
+  top: 58px;
+  max-width: 330px;
+  text-align: right;
   margin: 0;
   font-style: italic;
-  font-size: 14px;
+  font-size: 12.5px;
   color: #5c5546;
   text-shadow:
     0 0 4px #e9eeee,
@@ -280,6 +298,12 @@
   display: flex;
   align-items: center;
   gap: 6px;
+}
+.tr-root .tr-help {
+  display: none;
+}
+.tr-root [data-hide='1'] {
+  visibility: hidden;
 }
 .tr-root .tr-key i {
   display: block;
@@ -329,21 +353,28 @@
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
 }
+/* The mark is its icon: the name hangs off the icon's right, so a hidden name never shifts the icon
+   off its cell (a centred flex row put the icon half a label to the left, out at sea). */
 .tr-root .tr-mk {
   position: absolute;
   transform: translate(-50%, -50%);
-  display: flex;
-  align-items: center;
-  gap: 5px;
+  display: block;
+  line-height: 0;
   white-space: nowrap;
   font-size: 13px;
   pointer-events: none;
 }
 .tr-root .tr-mk svg {
-  flex: none;
+  display: block;
   overflow: visible;
 }
 .tr-root .tr-mk span {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  margin-left: 5px;
+  margin-top: -0.65em;
+  line-height: 1.3;
   text-shadow:
     0 0 3px #f6f1e4,
     0 0 3px #f6f1e4,
@@ -370,7 +401,7 @@
 }
 .tr-root .tr-tag {
   position: absolute;
-  transform: translate(10px, -50%);
+  transform: translate(calc(10px + var(--dx, 0px)), calc(-50% + var(--dy, 0px)));
   background: var(--paper);
   border-radius: 4px;
   padding: 4px 9px;
@@ -421,7 +452,9 @@
 }
 .tr-root .tr-cp.faith {
   color: #60461e;
-  font-weight: 700;
+  font-weight: 400;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
 }
 .tr-root .tr-cp.faith span {
   transform: translate(0, 16px);
@@ -453,6 +486,7 @@
   text-shadow: none;
 }
 .tr-root .tr-rg.realm {
+  transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px)));
   font-size: 10.5px;
   letter-spacing: 0.16em;
   font-style: normal;
@@ -460,6 +494,13 @@
   opacity: 0.9;
   text-shadow: 0 0 3px rgba(255, 255, 255, 0.7);
   animation: tr-fade 0.6s ease both;
+}
+.tr-root .tr-rg.realm .short,
+.tr-root .tr-rg.realm[data-form='short'] .full {
+  display: none;
+}
+.tr-root .tr-rg.realm[data-form='short'] .short {
+  display: inline;
 }
 .tr-root .tr-ring {
   position: absolute;
@@ -498,6 +539,10 @@
 }
 .tr-root .tr-ask.right {
   right: 28px;
+}
+.tr-root .tr-ask.mid {
+  left: 50%;
+  margin-left: -180px;
 }
 .tr-root .tr-ask.end {
   left: 50%;
@@ -735,19 +780,14 @@
   cursor: pointer;
 }
 .tr-root .tr-lane {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 6px;
-  height: 22px;
+  margin-top: 4px;
 }
 .tr-root .tr-lane b {
-  flex: none;
-  width: 90px;
-  text-align: right;
+  display: block;
+  margin: 0 8px 2px;
   font-family: 'Alegreya Sans SC', sans-serif;
   letter-spacing: 0.08em;
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--red);
   font-weight: 500;
   text-transform: uppercase;
@@ -755,11 +795,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The same margins as .tr-line, so a life's ticks sit exactly under the ribbon's years. */
 .tr-root .tr-lane .track {
   position: relative;
-  flex: 1;
   height: 5px;
-  margin-right: 8px;
+  margin: 6px 8px 4px;
 }
 .tr-root .tr-lane .bar {
   position: absolute;
@@ -862,21 +902,80 @@
     top: auto;
     bottom: 40px;
   }
-  .tr-root .tr-key,
+  .tr-root .tr-room .soon {
+    margin-left: 5px;
+  }
+  .tr-root .tr-room {
+    align-items: center;
+  }
+  /* The double frame stays, thinner; the key moves behind a small "?" button. */
   .tr-root .tr-frame {
+    inset: 5px;
+    border-width: 0.75px;
+  }
+  .tr-root .tr-frame::after {
+    inset: 3px;
+    border-width: 0.5px;
+  }
+  .tr-root .tr-frame i {
+    width: 11px;
+    height: 11px;
+    border-width: 1px;
+  }
+  .tr-root .tr-frame i:nth-child(1) {
+    left: -6px !important;
+    top: -6px !important;
+  }
+  .tr-root .tr-frame i:nth-child(2) {
+    right: -6px !important;
+    top: -6px !important;
+  }
+  .tr-root .tr-frame i:nth-child(3) {
+    left: -6px !important;
+    bottom: -6px !important;
+  }
+  .tr-root .tr-frame i:nth-child(4) {
+    right: -6px !important;
+    bottom: -6px !important;
+  }
+  .tr-root .tr-help {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    z-index: 3;
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--paper);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    font-size: 15px;
+    color: var(--soft);
+  }
+  .tr-root .tr-key {
     display: none;
+    right: 14px;
+    bottom: 52px;
+    z-index: 4;
+  }
+  .tr-root .tr-key.open {
+    display: grid;
   }
   .tr-root .tr-note {
-    left: 14px;
-    bottom: 50px;
-    font-size: 13px;
+    right: 12px;
+    top: 46px;
+    max-width: 200px;
+    font-size: 11px;
   }
   .tr-root .tr-ask,
   .tr-root .tr-ask.left,
-  .tr-root .tr-ask.right {
+  .tr-root .tr-ask.right,
+  .tr-root .tr-ask.mid {
     position: fixed;
     left: 0;
     right: 0;
+    margin-left: 0;
     bottom: calc(50px + env(safe-area-inset-bottom));
     width: auto;
     border-radius: 18px 18px 0 0;
@@ -914,8 +1013,17 @@
   .tr-root .tr-track {
     padding-top: 18px;
   }
-  .tr-root .tr-lane b {
-    width: 64px;
+  .tr-root .tr-rg.realm {
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+  }
+  /* Only legends and wars on the ribbon, as thin dots on a 4 px track. */
+  .tr-root .tr-line > i {
+    width: 6px;
+    height: 6px;
+  }
+  .tr-root .tr-line > i:not([data-kind='legend'], [data-kind='war']) {
+    display: none;
   }
   .tr-root .tr-mk {
     font-size: 12px;

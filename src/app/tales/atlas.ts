@@ -16,7 +16,7 @@ export interface Town {
 
 export interface DrawInput {
   mode: MapMode;
-  /** Equal keys mean equal owner grids (the border year). */
+  /** Equal keys mean equal owner grids, towns and colours (the border year). */
   key: number;
   /** Civ id per cell, 0 for nobody; not changed here. */
   owner: Uint16Array;
@@ -50,13 +50,17 @@ const TINT: Record<string, Rgb3> = {
   alpine: [224, 218, 208],
   grassland: [230, 230, 198],
 };
+/** Border opacity by mode; Land and Peoples keep theirs light and thin (Realms is the political view). */
 const MODE_STRENGTH: Record<MapMode, number> = {
-  land: 0.55,
+  land: 0.35,
   realms: 0.55,
-  peoples: 0.5,
-  faiths: 0.55,
+  peoples: 0.35,
+  faiths: 0.5,
   plain: 0,
 };
+const THIN_MODES: readonly MapMode[] = ['land', 'peoples'];
+/** Political layers kept, so scrubbing back and forth redraws nothing. */
+const LAYER_CACHE = 6;
 const FILL_MODES: readonly MapMode[] = ['realms', 'peoples', 'faiths'];
 
 const hash = (i: number, salt: number): number => {
@@ -250,6 +254,10 @@ interface Shape {
   fill: Uint8Array;
   /** Soft band just inside its edge (alpha 0-255). */
   band: Uint8Array;
+  /** The same band, thinner, for the light modes. */
+  thin: Uint8Array;
+  /** Pixels (box index) where either band is set, so tinting visits only those. */
+  edge: Uint32Array;
 }
 
 export interface Atlas {
@@ -262,6 +270,8 @@ export interface Atlas {
   height: number;
   /** The land's bounding box in cells, with a margin. */
   box: { x0: number; y0: number; x1: number; y1: number };
+  /** Per cell: 1 where drawn land holds a mark clear of the shore (no beast floats at sea). */
+  inland: Uint8Array;
   /** Milliseconds the terrain layers took. */
   terrainMs: number;
   draw: (input: DrawInput) => DrawResult;
@@ -772,6 +782,13 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[]): Atl
     y1: Math.min(H, by1 + 1 + margin),
   };
 
+  // Cells whose centre is drawn land, a couple of pixels in from the shore.
+  const inland = new Uint8Array(N);
+  for (let i = 0; i < N; i += 1) {
+    const p = (Math.floor(i / W) * S + (S >> 1)) * P + (i % W) * S + (S >> 1);
+    if (isLand[i] && landPx[p] && coastPx(p) >= 0.5 * S) inland[i] = 1;
+  }
+
   // Lakes: each lake belongs to the realm round most of its shore, so no ring is drawn round it.
   const lakeOf = new Int32Array(N).fill(-1);
   const lakes: number[][] = [];
@@ -809,6 +826,19 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[]): Atl
   const tinted = new Map<string, HTMLCanvasElement>();
   let wildCache: { key: string; canvas: HTMLCanvasElement } | null = null;
   const bandWidth = 0.75 * S;
+  const thinWidth = 0.45 * S;
+  // Pixel offsets (dx, dy, cost in thirds of a pixel) a band can reach in from an edge pixel.
+  const reachOffsets: number[] = [];
+  {
+    const limit = bandWidth + 0.5;
+    const R = Math.ceil(limit);
+    for (let dy = -R; dy <= R; dy += 1) {
+      for (let dx = -R; dx <= R; dx += 1) {
+        const cost = Math.round(3 * Math.hypot(dx, dy)) + 3;
+        if (cost < limit * 3) reachOffsets.push(dx, dy, cost);
+      }
+    }
+  }
   const nearCoast = 0.4 * S;
 
   function shapeOf(
@@ -850,42 +880,67 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[]): Atl
         } else if (lakePx[p]) mask[q] = 1;
       }
     }
-    const inside = distanceTo(
-      Uint8Array.from(mask, (v) => (v ? 0 : 1)),
-      pw,
-      ph,
-    );
-    const band = new Uint8Array(pw * ph);
-    for (let y = 0; y < ph; y += 1) {
-      for (let x = 0; x < pw; x += 1) {
+    // Distance (thirds of a pixel) from the mask's edge, only where a band can reach: seed from the
+    // edge pixels and spread a few pixels in, which is far cheaper than a whole-box distance pass.
+    const near = new Uint8Array(pw * ph);
+    const touched: number[] = [];
+    for (let y = 1; y < ph - 1; y += 1) {
+      for (let x = 1; x < pw - 1; x += 1) {
         const q = y * pw + x;
-        if (!mask[q]) continue;
-        const d = inside[q]! / 3;
-        let a = Math.max(0, Math.min(1, bandWidth + 0.5 - d));
-        if (a <= 0) continue;
-        const c = coastPx((ry + y) * P + rx + x);
-        a *= Math.max(0, Math.min(1, c - nearCoast + 1));
-        band[q] = Math.round(a * 255);
+        if (!mask[q] || (mask[q - 1] && mask[q + 1] && mask[q - pw] && mask[q + pw])) continue;
+        for (let o = 0; o < reachOffsets.length; o += 3) {
+          const nx = x + reachOffsets[o]!;
+          const ny = y + reachOffsets[o + 1]!;
+          if (nx < 0 || ny < 0 || nx >= pw || ny >= ph) continue;
+          const r = ny * pw + nx;
+          if (!mask[r]) continue;
+          const cost = reachOffsets[o + 2]!;
+          const old = near[r]!;
+          if (old === 0) {
+            touched.push(r);
+            near[r] = cost;
+          } else if (cost < old) near[r] = cost;
+        }
       }
     }
-    return { x0: rx, y0: ry, w: pw, h: ph, fill, band };
+    const band = new Uint8Array(pw * ph);
+    const thin = new Uint8Array(pw * ph);
+    for (const q of touched) {
+      const d = near[q]! / 3;
+      const y = Math.floor(q / pw);
+      const c = coastPx((ry + y) * P + rx + (q - y * pw));
+      const k2 = Math.max(0, Math.min(1, c - nearCoast + 1));
+      const wide = Math.max(0, Math.min(1, bandWidth + 0.5 - d)) * k2;
+      const slim = Math.max(0, Math.min(1, thinWidth + 0.5 - d)) * k2;
+      if (wide > 0) band[q] = Math.round(wide * 255);
+      if (slim > 0) thin[q] = Math.round(slim * 255);
+    }
+    return { x0: rx, y0: ry, w: pw, h: ph, fill, band, thin, edge: Uint32Array.from(touched) };
   }
 
-  const tintOf = (key: string, plane: Uint8Array, shape: Shape, colour: Rgb3) => {
+  const tintOf = (
+    key: string,
+    plane: Uint8Array,
+    shape: Shape,
+    colour: Rgb3,
+    only?: Uint32Array,
+  ) => {
     const id = `${key}|${colour.join(',')}`;
     let canvas = tinted.get(id);
     if (canvas) return canvas;
     canvas = canvasOf(shape.w, shape.h);
     const ctx = ctxOf(canvas);
     const img = ctx.createImageData(shape.w, shape.h);
-    for (let q = 0; q < plane.length; q += 1) {
+    const paint = (q: number) => {
       const a = plane[q]!;
-      if (!a) continue;
+      if (!a) return;
       img.data[q * 4] = colour[0];
       img.data[q * 4 + 1] = colour[1];
       img.data[q * 4 + 2] = colour[2];
       img.data[q * 4 + 3] = a;
-    }
+    };
+    if (only) for (let i = 0; i < only.length; i += 1) paint(only[i]!);
+    else for (let q = 0; q < plane.length; q += 1) paint(q);
     ctx.putImageData(img, 0, 0);
     if (tinted.size > 160) tinted.clear();
     tinted.set(id, canvas);
@@ -929,9 +984,21 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[]): Atl
 
   const terrainMs = performance.now() - t0;
 
+  /** Finished political layers, oldest first, by mode and border year. */
+  const layers = new Map<string, { canvas: HTMLCanvasElement; centres: DrawResult['centres'] }>();
+
   function draw(input: DrawInput): DrawResult {
     const start = performance.now();
     const { mode, owner } = input;
+    const layerKey = `${mode}|${input.key}`;
+    const kept = layers.get(layerKey);
+    if (kept) {
+      layers.delete(layerKey);
+      layers.set(layerKey, kept);
+      dctx.globalAlpha = 1;
+      dctx.drawImage(kept.canvas, 0, 0);
+      return { ms: performance.now() - start, centres: kept.centres };
+    }
     const fills = FILL_MODES.includes(mode);
     dctx.globalAlpha = 1;
     dctx.drawImage(mode === 'land' ? landBase : paperBase, 0, 0);
@@ -1036,9 +1103,16 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[]): Atl
       dctx.drawImage(rivers, 0, 0);
       if (wildCount > 0) dctx.drawImage(wildCanvas(`${wildHash}:${wildCount}`, own), 0, 0);
       dctx.globalAlpha = MODE_STRENGTH[mode];
+      const slim = THIN_MODES.includes(mode);
       for (const [key, civ, shape] of live) {
         dctx.drawImage(
-          tintOf(`${key}|b`, shape.band, shape, input.borderOf(civ)),
+          tintOf(
+            `${key}|${slim ? 't' : 'b'}`,
+            slim ? shape.thin : shape.band,
+            shape,
+            input.borderOf(civ),
+            shape.edge,
+          ),
           shape.x0,
           shape.y0,
         );
@@ -1089,6 +1163,18 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[]): Atl
       }
     }
     dctx.drawImage(coast, 0, 0);
+    // Keep a copy for the next visit (the caller's key stands for the towns and colours too).
+    let spare: HTMLCanvasElement;
+    if (layers.size >= LAYER_CACHE) {
+      const oldest = layers.keys().next().value!;
+      spare = layers.get(oldest)!.canvas;
+      layers.delete(oldest);
+    } else spare = canvasOf(P, P);
+    const sctx = ctxOf(spare);
+    sctx.globalAlpha = 1;
+    sctx.clearRect(0, 0, P, P);
+    sctx.drawImage(display, 0, 0);
+    layers.set(layerKey, { canvas: spare, centres });
     return { ms: performance.now() - start, centres };
   }
 
@@ -1099,6 +1185,7 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[]): Atl
     width: W,
     height: H,
     box,
+    inland,
     terrainMs,
     draw,
   };

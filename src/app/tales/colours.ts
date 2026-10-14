@@ -96,7 +96,8 @@ export function touching(
 
 /**
  * One hue per id. Biggest first, each takes the hue farthest from its already-coloured
- * neighbours (ties: the least used hue, then the earliest in the list). Deterministic.
+ * neighbours; ties go to the hue farthest from its neighbours' neighbours, then the least used
+ * hue, then the earliest in the list. Deterministic.
  */
 export function assignHues(
   ids: readonly number[],
@@ -107,21 +108,34 @@ export function assignHues(
   const hue = new Map<number, number>();
   const used = new Map<number, number>();
   const order = [...ids].sort((a, b) => (size.get(b) ?? 0) - (size.get(a) ?? 0) || a - b);
+  const coloured = (set: Iterable<number>, skip: ReadonlySet<number>): number[] => {
+    const out: number[] = [];
+    for (const n of set) {
+      const h = skip.has(n) ? undefined : hue.get(n);
+      if (h !== undefined) out.push(h);
+    }
+    return out;
+  };
   for (const id of order) {
-    const near = [...(neighbours.get(id) ?? [])]
-      .map((n) => hue.get(n))
-      .filter((h): h is number => h !== undefined);
+    const first = neighbours.get(id) ?? new Set<number>();
+    const near = coloured(first, new Set());
+    const far: number[] = [];
+    const skip = new Set<number>([id, ...first]);
+    for (const n of first) far.push(...coloured(neighbours.get(n) ?? [], skip));
+    const gapOf = (h: number, list: number[]) =>
+      list.length ? Math.min(...list.map((n) => hueGap(h, n))) : 999;
     let best = hues[0]!;
-    let bestKey: [number, number, number] | null = null;
+    let bestKey: number[] | null = null;
     hues.forEach((h, index) => {
-      const gap = near.length ? Math.min(...near.map((n) => hueGap(h, n))) : 999;
-      const key: [number, number, number] = [gap, -(used.get(h) ?? 0), -index];
-      if (
-        !bestKey ||
-        key[0] > bestKey[0] ||
-        (key[0] === bestKey[0] &&
-          (key[1] > bestKey[1] || (key[1] === bestKey[1] && key[2] > bestKey[2])))
-      ) {
+      const key = [gapOf(h, near), gapOf(h, far), -(used.get(h) ?? 0), -index];
+      let better = !bestKey;
+      for (let i = 0; bestKey && i < key.length; i += 1) {
+        if (key[i]! !== bestKey[i]!) {
+          better = key[i]! > bestKey[i]!;
+          break;
+        }
+      }
+      if (better) {
         bestKey = key;
         best = h;
       }

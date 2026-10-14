@@ -99,3 +99,4 @@ The terrain layer is drawn once per world. The political layer is redrawn only w
 ## Status
 
 - U1: built, awaiting review (2026-10-14). `HistoryPlayback`, `playback.css` and `playback/player.ts` are gone; the speeds now live in `tales/TalesRoom.tsx`. Town opens the map, the nearest existing entry to the embark flow.
+- U1 review: no dark mode in U1. The Tales map is a parchment map and stays light in either scheme; a dark treatment is a later decision (2026-10-14).

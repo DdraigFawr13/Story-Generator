@@ -201,7 +201,9 @@ export function Marks({ model, clock, width, height, followId, recent }: MarksPr
           data-testid="mark-beast"
         >
           <BeastIcon />
-          <span className={beastTag.has(b.id) ? '' : 'off'}>{b.name}</span>
+          <span data-lbl="tag" className={beastTag.has(b.id) ? '' : 'off'}>
+            {b.name}
+          </span>
         </div>
       ))}
       {figures.map(({ f, opacity }) => (
@@ -213,7 +215,9 @@ export function Marks({ model, clock, width, height, followId, recent }: MarksPr
           data-testid="mark-figure"
         >
           <StarIcon />
-          <span className={followed.has(f.id) || figureTag.has(f.id) ? '' : 'off'}>{f.name}</span>
+          <span data-lbl="tag" className={followed.has(f.id) || figureTag.has(f.id) ? '' : 'off'}>
+            {f.name}
+          </span>
         </div>
       ))}
       {armies.map((a) => (
@@ -225,11 +229,13 @@ export function Marks({ model, clock, width, height, followId, recent }: MarksPr
           data-testid="mark-army"
         >
           <FlagIcon />
-          <span className={armyTag.has(a.key) ? '' : 'off'}>{shortRealm(a.civ)} host</span>
+          <span data-lbl="tag" className={armyTag.has(a.key) ? '' : 'off'}>
+            {shortRealm(a.civ)} host
+          </span>
         </div>
       ))}
       {recentShown.map((r) => (
-        <div key={r.key} className="tr-tag" style={css(at(r.place))}>
+        <div key={r.key} className="tr-tag" data-lbl="tag" style={css(at(r.place))}>
           {tagText(r.type, r.data)}
         </div>
       ))}
@@ -244,19 +250,22 @@ interface CapitalsProps {
   height: number;
   /** A realm's own name is written across it instead (Realms mode). */
   hidden: boolean;
+  /** Only these sites are named (Faiths mode: the holy cities); null names every capital. */
+  only?: ReadonlySet<number> | null;
 }
 
 /** Capital names at the year shown; a capital that moves glides, a new or lost one fades. */
-export function Capitals({ data, year, width, height, hidden }: CapitalsProps) {
+export function Capitals({ data, year, width, height, hidden, only }: CapitalsProps) {
   const items = useMemo(() => {
     const out: { key: string; name: string; cell: number }[] = [];
     if (hidden) return out;
     for (const [civ, siteId] of data.seatsAt(year)) {
       const site = data.sites.get(siteId);
+      if (only && !only.has(siteId)) continue;
       if (site) out.push({ key: `cap:${civ}`, name: site.name, cell: site.cell });
     }
     return out;
-  }, [data, year, hidden]);
+  }, [data, year, hidden, only]);
   const shown = useFading(items, 500);
   return (
     <>
@@ -269,7 +278,7 @@ export function Capitals({ data, year, width, height, hidden }: CapitalsProps) {
             top: `${((Math.floor(c.cell / width) + 0.5) / height) * 100}%`,
           }}
         >
-          <span>{c.name}</span>
+          <span data-lbl="cap">{c.name}</span>
         </div>
       ))}
     </>

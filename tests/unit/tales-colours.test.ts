@@ -20,7 +20,7 @@ describe('realm colours', () => {
     }
     // Neighbours are kept well apart on the wheel, not just different.
     for (const [a, set] of neighbours) {
-      for (const b of set) expect(hueGap(hue.get(a)!, hue.get(b)!)).toBeGreaterThanOrEqual(28);
+      for (const b of set) expect(hueGap(hue.get(a)!, hue.get(b)!)).toBeGreaterThanOrEqual(60);
     }
     for (const h of hue.values()) expect(HUES).toContain(h);
   });
