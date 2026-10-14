@@ -100,7 +100,10 @@ function battle(
   const winner = text(event, 'winner');
   const base: Vars = { civ, enemy, site, winner };
   const beats: Record<string, string | undefined> = {};
-  const muster = say('muster', { ...base, ...nums({ army, defenders }) });
+  const muster = say(num(event, 'civil') === 1 ? 'musterCivil' : 'muster', {
+    ...base,
+    ...nums({ army, defenders }),
+  });
   const ground = walls >= rules.wallsAtLeast ? say('ground', base) : undefined;
 
   // Which captain led which side, by the civ each belongs to.
@@ -113,8 +116,9 @@ function battle(
     }
     return undefined;
   };
-  const attackerLead = leadOf(civ);
-  const defenderLead = leadOf(enemy);
+  // The battle names its captains; older records fall back on the captains' realms now.
+  const attackerLead = text(event, 'attackerLead') || leadOf(civ);
+  const defenderLead = text(event, 'defenderLead') || leadOf(enemy);
   let leaders: string | undefined;
   if (attackerLead && defenderLead)
     leaders = say('leadersBoth', { ...base, attackerLead, defenderLead });

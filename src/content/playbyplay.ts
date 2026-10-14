@@ -22,6 +22,11 @@ export const PLAY_BY_PLAY: PlayByPlayRules = {
       'About {army} soldiers of the {civ} came to {site}, and {defenders} of the {enemy} stood against them.',
       'The {enemy} held {site} with {defenders}, and the {civ} came with about {army}.',
     ],
+    // A civil war's battle: one people on both sides.
+    musterCivil: [
+      'Kin against kin: the {civ} came to {site} with about {army} soldiers, and {defenders} of the {enemy} met them.',
+      'One people on both sides: about {army} of the {civ} marched on {site}, held by {defenders} of the {enemy}.',
+    ],
     ground: [
       'The defences of {site} made each defender count for more.',
       '{site} was hard to take, and each of the {enemy} who held it counted for more.',

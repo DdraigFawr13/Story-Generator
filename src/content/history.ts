@@ -3,7 +3,7 @@
 // Tune the numbers here; the history stage in engine/history/ reads only this table.
 
 import type { HistoryRules } from '../engine';
-import { CITY_STATES, COLLEGES } from './realms';
+import { CITY_STATES, CIVIL_WARS, COLLEGES } from './realms';
 
 export const HISTORY: HistoryRules = {
   harvestVariance: 0.1,
@@ -156,4 +156,5 @@ export const HISTORY: HistoryRules = {
   peaceYears: 30,
   colleges: COLLEGES,
   cityStates: CITY_STATES,
+  civilWar: CIVIL_WARS,
 };

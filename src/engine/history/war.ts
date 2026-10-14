@@ -22,6 +22,7 @@ import {
 } from './notables';
 import { civLosesSite, evacuate } from './abandon';
 import { allyAid, pactStrength } from './city-states';
+import { decideCivilWar, splitRealm } from './civil-war';
 import { bandCount, removePeople, removeProportional, stochasticRound, totalPop } from './pop';
 import { cellDistance } from './settle';
 import {
@@ -269,13 +270,21 @@ function raze(
   return fell;
 }
 
-/** The defender's live site linked to an attacker site and nearest to the attacker's capital. */
+/**
+ * The defender's live site linked to an attacker site and nearest to the attacker's capital; a
+ * claimant marches on the throne city whenever a road reaches it.
+ */
 function pickTarget(run: HistoryRun, attacker: Civ, defender: Civ): Site | undefined {
   const capital = run.world.sites.get(attacker.capital);
   if (!capital) return undefined;
+  const sites = reachable(run, attacker, defender);
+  if (attacker.rebelOf === defender.id) {
+    const throne = sites.find((s) => s.id === defender.capital);
+    if (throne) return throne;
+  }
   let best: Site | undefined;
   let bestDistance = Infinity;
-  for (const site of reachable(run, attacker, defender)) {
+  for (const site of sites) {
     const distance = cellDistance(run.cells.width, capital.cell, site.cell);
     if (distance < bestDistance) {
       best = site;
@@ -285,16 +294,20 @@ function pickTarget(run: HistoryRun, attacker: Civ, defender: Civ): Site | undef
   return best;
 }
 
-/** One year's campaign: a battle, then conquest or razing if the attacker won. */
-function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ): void {
+/**
+ * One year's campaign: a battle, then conquest or razing if the attacker won. `flipped` is set
+ * when the war's defender marches this year (a civil war's stronger side).
+ */
+function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ, flipped = false): void {
   const { rules, rng } = run;
   const target = pickTarget(run, attacker, defender);
   if (!target) return;
   const attackStrength = civStrength(run, attacker);
   const defendStrength =
     civStrength(run, defender) + allyAid(run, war, attacker, defender, (c) => civStrength(run, c));
-  const luck = () =>
-    1 - rules.battleLuck + (2 * rules.battleLuck * rng.war.between(0, 1000)) / 1000;
+  // Between kin, soldiers change sides on the field: luck swings a civil war's battles further.
+  const swing = war.civil ? rules.battleLuck * run.rules.civilWar.luck : rules.battleLuck;
+  const luck = () => 1 - swing + (2 * swing * rng.war.between(0, 1000)) / 1000;
   // A legend who has not spent their day of power this year fights in the open: their share of
   // the civ's strength leaves the ranks and they break soldiers instead (M5.5).
   const champions = pickChampions(run, attacker, defender, target);
@@ -348,11 +361,11 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ): void
     theirs.filter((s) => s.id !== target.id),
     wanted - defenderKilled,
   );
-  war.attackerDead += attackerKilled;
-  war.defenderDead += defenderKilled;
+  war.attackerDead += flipped ? defenderKilled : attackerKilled;
+  war.defenderDead += flipped ? attackerKilled : defenderKilled;
   war.dead += attackerKilled + defenderKilled;
-  const attackerLead = warCaptain(run, war, 'attacker', attacker);
-  const defenderLead = warCaptain(run, war, 'defender', defender);
+  const attackerLead = warCaptain(run, war, flipped ? 'defender' : 'attacker', attacker);
+  const defenderLead = warCaptain(run, war, flipped ? 'attacker' : 'defender', defender);
   const battle = run.emit({
     type: 'battle',
     place: target.cell,
@@ -376,6 +389,10 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ): void
       defendForce: Math.round(defendForce),
       attackerBroke: legends.broke[0],
       defenderBroke: legends.broke[1],
+      // The captains by name: in a civil war a claimant can change realms after the battle.
+      attackerLead: attackerLead?.name ?? '',
+      defenderLead: defenderLead?.name ?? '',
+      ...(war.civil ? { civil: 1 } : {}),
     },
   });
   war.lastEvent = battle.id;
@@ -392,6 +409,16 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ): void
     legends,
   });
   if (!attackerWins) return;
+  // Kin do not burn their own towns. A civil war ends when the claimant takes the throne city or
+  // the claimant's last town falls; a lost seat short of that moves to the next town.
+  if (war.civil) {
+    const decisive =
+      target.id === defender.capital &&
+      (defender.rebelOf === undefined || civSites(run, defender).length === 1);
+    if (decisive) decideCivilWar(run, war, attacker, defender, battle.id);
+    else conquer(run, war, target, attacker, defender, battle.id, lead);
+    return;
+  }
   const differ = run.races.get(attacker.raceId) !== run.races.get(defender.raceId);
   const razeChance = Math.min(1, rules.razeChance * (differ ? 2 : 1));
   if (rng.war.chance(razeChance)) raze(run, war, target, attacker, defender, battle.id, lead);
@@ -401,7 +428,8 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ): void
 function endWar(run: HistoryRun, war: War, attacker: Civ | undefined, defender: Civ | undefined) {
   war.ended = run.year;
   const fell = attacker === undefined || defender === undefined;
-  if (!fell) {
+  if (!fell && war.civil) splitRealm(run, war, attacker, defender);
+  else if (!fell) {
     run.emit({
       type: 'peace_made',
       place: run.world.sites.get(attacker.capital)?.cell ?? null,
@@ -426,13 +454,21 @@ function fightWars(run: HistoryRun): void {
     if (war.ended !== undefined) continue;
     const attacker = liveCiv(run, war.attacker);
     const defender = liveCiv(run, war.defender);
-    if (attacker && defender) campaign(run, war, attacker, defender);
+    // A claimant marches first; after that the stronger half of a civil war marches each year.
+    if (attacker && defender) {
+      const first = war.civil && run.year === war.started + 1;
+      if (war.civil && !first && civStrength(run, defender) > civStrength(run, attacker)) {
+        campaign(run, war, defender, attacker, true);
+      } else campaign(run, war, attacker, defender);
+    }
     const a = liveCiv(run, war.attacker);
     const d = liveCiv(run, war.defender);
     const weary =
       war.attackerDead > rules.wearyShare * war.attackerAdults ||
       war.defenderDead > rules.wearyShare * war.defenderAdults;
-    if (!a || !d || weary || run.year - war.started >= rules.maxWarYears) endWar(run, war, a, d);
+    // A ruler who cannot end a civil war in a few years has to live with a split realm.
+    const most = war.civil ? run.rules.civilWar.maxYears : rules.maxWarYears;
+    if (!a || !d || weary || run.year - war.started >= most) endWar(run, war, a, d);
   }
 }
 

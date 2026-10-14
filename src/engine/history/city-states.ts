@@ -11,6 +11,7 @@ import { streamFor } from '../core/rng';
 import type { Civ, Id, Person, SimEvent, Site, WorldState } from '../core/types';
 import { culturePlaceName } from '../people/names';
 import { emptyGoods } from './goods';
+import { seatHouse } from './notables';
 import { createAdult, isAdult, livingAt } from './people';
 import { bandCount, totalPop } from './pop';
 import {
@@ -25,6 +26,7 @@ import {
   addGrievance,
   atWar,
   causesOf,
+  civilWarOf,
   cultureOf,
   isLive,
   liveSites,
@@ -180,13 +182,14 @@ function freeCount(run: HistoryRun): number {
   return n;
 }
 
-/** Each decade: a far town of a large realm may throw off its rule. */
-function runBreakaways(run: HistoryRun): void {
+/** Each decade (each year in a civil war): a far town of a large realm may throw off its rule. */
+function runBreakaways(run: HistoryRun, tornOnly: boolean): void {
   const rules = run.rules.cityStates.secede;
   const rng = run.rng.cityStates;
   const { width } = run.cells;
   for (const civ of [...run.world.civs.values()]) {
     if (civ.fell !== undefined || civ.free || freeCount(run) >= rules.maxFree) continue;
+    if (tornOnly && !civilWarOf(run, civ.id)) continue;
     const sites = liveSites(run).filter((s) => s.civId === civ.id);
     if (sites.length < rules.minSites) continue;
     const capital = run.world.sites.get(civ.capital);
@@ -195,6 +198,8 @@ function runBreakaways(run: HistoryRun): void {
     const atWarNow = run.wars.find(
       (w) => w.ended === undefined && (w.attacker === civ.id || w.defender === civ.id),
     );
+    // A realm at war with itself loses far towns more easily than one at war abroad.
+    const torn = civilWarOf(run, civ.id);
     const dispute = recent(run, 'succession_disputed', civ.name);
     for (const site of sites) {
       if (site.id === civ.capital || totalPop(site) < rules.minPop) continue;
@@ -205,10 +210,10 @@ function runBreakaways(run: HistoryRun): void {
         rules.chance *
         freedom *
         (hungry ? rules.famine : 1) *
-        (atWarNow ? rules.war : 1) *
+        (torn ? run.rules.civilWar.breakaway : atWarNow ? rules.war : 1) *
         (dispute !== undefined ? rules.dispute : 1);
       if (!rng.chance(odds)) continue;
-      breakAway(run, civ, site, causesOf(hungry?.event, atWarNow?.lastEvent, dispute));
+      breakAway(run, civ, site, causesOf(hungry?.event, (torn ?? atWarNow)?.lastEvent, dispute));
       break;
     }
   }
@@ -262,6 +267,7 @@ function breakAway(run: HistoryRun, old: Civ, site: Site, causes: Id[]): void {
     data: { site: site.name, civ: civ.name, from: old.name, name: leader.name },
   });
   leader.deeds.push(event.id);
+  seatHouse(run, civ, leader, undefined, event.id);
   addGrievance(run, old.id, civ.id, rules.secede.grievance, event.id);
   // The old realm needs time to gather its spears; the city uses it to look for a friend.
   run.truce.set(pairKey(old.id, civ.id), run.year + rules.secede.graceYears);
@@ -321,7 +327,7 @@ function swearPacts(run: HistoryRun): void {
 }
 
 /** The free city swears a pact with its strongest linked neighbour that bears it no grudge, with `pact.chance`. */
-function swearPact(run: HistoryRun, civ: Civ): void {
+export function swearPact(run: HistoryRun, civ: Civ): void {
   const rules = run.rules.cityStates.pact;
   const rng = run.rng.cityStates;
   let partner: Civ | undefined;
@@ -401,10 +407,16 @@ export function allyAid(
   return total;
 }
 
-/** Yearly: pacts end with a fall or a war; each decade, towns break away and free cities swear pacts. */
+/**
+ * Yearly: pacts end with a fall or a war, and far towns of a realm in civil war may break away;
+ * each decade, towns of any realm may break away and free cities swear pacts.
+ */
 export function runCityStates(run: HistoryRun): void {
   keepPacts(run);
-  if (run.year % DECADE !== 0) return;
-  runBreakaways(run);
+  if (run.year % DECADE !== 0) {
+    runBreakaways(run, true);
+    return;
+  }
+  runBreakaways(run, false);
   swearPacts(run);
 }

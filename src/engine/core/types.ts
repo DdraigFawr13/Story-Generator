@@ -554,6 +554,11 @@ export interface Civ {
   grievances: Map<Id, number>;
   /** A free city: one city ruling itself, at the start or after breaking away. */
   free?: boolean;
+  /** A pretender's realm (succession wars): the realm it rose against. */
+  rebelOf?: Id;
+  /** Year the ruling house took the seat, and how many of its rulers have held it since. */
+  houseSince?: number;
+  houseRulers?: number;
 }
 
 /** The goods a site stocks (M2.4): food plus four traded materials. */

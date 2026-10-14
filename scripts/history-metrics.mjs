@@ -55,6 +55,13 @@ export function notableMetrics(world, n, DAYS_PER_YEAR) {
     books: items.filter((i) => i.kind === 'book').length,
     itemsLost: n.item_lost ?? 0,
     itemsStolen: n.item_stolen ?? 0,
+    // Succession wars and dynasties.
+    civilWars: n.civil_war_began ?? 0,
+    thronesSeized: n.throne_seized ?? 0,
+    revoltsCrushed: n.revolt_crushed ?? 0,
+    realmSplits: n.realm_split ?? 0,
+    dynastiesEnded: n.dynasty_ended ?? 0,
+    citiesFreed: n.city_freed ?? 0,
   };
 }
 

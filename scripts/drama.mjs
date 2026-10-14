@@ -497,6 +497,18 @@ for (const r of rows) {
   );
 }
 
+process.stdout.write(
+  '\nsuccession wars: seed | disputed | civil wars | throne seized / revolt crushed / split | dynasties ended | towns broke free\n',
+);
+for (const r of rows) {
+  const h = r.history;
+  process.stdout.write(
+    `${r.seed.padEnd(4)} | ${String(h.disputed).padStart(3)} | ${String(h.civilWars).padStart(3)} | ` +
+      `${String(h.thronesSeized).padStart(2)} / ${String(h.revoltsCrushed).padStart(2)} / ${String(h.realmSplits).padStart(2)} | ` +
+      `${String(h.dynastiesEnded).padStart(3)} | ${String(h.citiesFreed).padStart(3)}\n`,
+  );
+}
+
 if (siteMode) {
   process.stdout.write(
     `\nsite tier (${siteYears} years of site play after ${years} of history):\n`,

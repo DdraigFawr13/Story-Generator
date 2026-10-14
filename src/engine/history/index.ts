@@ -10,6 +10,7 @@ import type { WorldState } from '../core/types';
 import { runAbandonment } from './abandon';
 import { runBeasts } from './beasts';
 import { runClimate } from './climate';
+import { runCivilWars } from './civil-war';
 import { runCityStates } from './city-states';
 import { runColleges } from './colleges';
 import { runDiseases } from './disease';
@@ -90,6 +91,7 @@ export function runHistory(
     runExpansion(run);
     runWar(run);
     runNotables(run);
+    runCivilWars(run);
     runColleges(run);
     runCityStates(run);
     if (year % DECADE === 0) runItems(run);
