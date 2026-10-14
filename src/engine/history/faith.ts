@@ -6,7 +6,7 @@
 
 import { CULTURE_VALUES, type CultureValue, type FaithDef } from '../core/content-types';
 import type { Civ, Faith, Id, Person, SimEvent, Site } from '../core/types';
-import { addDeed, createAdult, livingList, livingPerson } from './people';
+import { addDeed, createAdult, eventById, livingList, livingPerson } from './people';
 import { bandCount, totalPop } from './pop';
 import { cellDistance } from './settle';
 import { cultureValue } from './values';
@@ -74,20 +74,6 @@ function priestPhrase(run: HistoryRun, faith: Faith, priest: Person | undefined)
   return priest
     ? `the ${defOf(run, faith).priestTitle} ${priest.name} of ${faith.name}`
     : `the priests of ${faith.name}`;
-}
-
-function eventById(run: HistoryRun, id: Id): SimEvent | undefined {
-  const events = run.world.events;
-  let lo = 0;
-  let hi = events.length - 1;
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    const at = events[mid]!;
-    if (at.id === id) return at;
-    if (at.id < id) lo = mid + 1;
-    else hi = mid - 1;
-  }
-  return undefined;
 }
 
 /** Live sites of live realms, each keeping the faith. */

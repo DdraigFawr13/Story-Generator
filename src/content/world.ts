@@ -890,9 +890,9 @@ export const eventTypes: EventTypeDef[] = [
     precision: 'year',
     links: { site: 'site', civ: 'civ' },
     templates: [
-      'In {date} {name} of {site} grew into a legend of {school}, and the {civ} spoke of nothing else.',
-      '{date}: {name} of the {civ} reached a power of {school} that the old tales would not have doubted.',
-      'By {date} {name} of {site} was counted among the legends of {school}, and the {civ} told of it.',
+      'In {date}, after {deed}, {name} of {site} grew into a legend of {school}, and the {civ} spoke of nothing else.',
+      '{date}: after {deed}, {name} of the {civ} was spoken of as a legend of {school}, a power the old tales would not have doubted.',
+      'By {date}, after {deed}, {name} of {site} was counted among the legends of {school}, and the {civ} told of it.',
     ],
   },
   {
