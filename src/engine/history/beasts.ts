@@ -28,6 +28,7 @@ import {
   wakeDragon,
 } from './dragons';
 import { addDeed } from './people';
+import { beastParts, carryOff, lairAbandoned } from './places';
 import { bandCount, removePeople, stochasticRound, totalPop } from './pop';
 import { cellDistance } from './settle';
 import { causesOf, civName, cultureOf, isLive, liveSites, logOf, type HistoryRun } from './state';
@@ -105,7 +106,7 @@ export function findLair(
  * rolled one with the next free ordinal ("Cawr of Mariuk the Second"). A reader takes a beast's
  * name as who it is, so a dead beast's name never walks again.
  */
-function freshName(run: HistoryRun, def: CreatureDef, rolled: string, near: string): string {
+export function freshName(run: HistoryRun, def: CreatureDef, rolled: string, near: string): string {
   const used = new Set<string>();
   for (const creature of run.world.creatures.values()) used.add(creature.name);
   const fill = (template: string) => template.replace('{near}', near);
@@ -244,6 +245,7 @@ function trySlay(
     if (slayer) creditSlaying(run, slayer, def.danger, event.id);
     else addDeed(notable, event.id);
     claimHoard(run, creature, notable, event.id);
+    beastParts(run, def, creature, notable, site, event.id);
   }
   return true;
 }
@@ -311,6 +313,7 @@ function raid(run: HistoryRun, creature: Creature, def: CreatureDef): void {
   creature.deeds.push(event.id);
   logOf(run, site.id).raided = { year: run.year, event: event.id };
   beastRaidDeaths(run, site, event.id, creature, def.danger);
+  carryOff(run, creature, def, site, event.id);
   if (creature.dragon) creature.dragon.hoard.plunder += 1;
   if (!trySlay(run, creature, def, site, event.id) && creature.dragon)
     burnAfterRaid(run, creature, def, site, event.id);
@@ -364,6 +367,7 @@ export function fightHunt(
     prey.deeds.push(event.id);
     creditSlaying(run, hunter, def.danger, event.id);
     claimHoard(run, prey, hunter, event.id);
+    beastParts(run, def, prey, hunter, home, event.id);
     return;
   }
   const dies = rng.chance(beastKillChance(run, hunter, def.danger));
@@ -481,6 +485,7 @@ export function runBeasts(run: HistoryRun): void {
     if (!def) continue;
     if (run.year - creature.born >= creature.lifespan) {
       creature.died = run.year;
+      lairAbandoned(run, creature, def);
       continue;
     }
     // A sleeping dragon neither roams nor raids; its temper sets how often it raids (dragons.ts).

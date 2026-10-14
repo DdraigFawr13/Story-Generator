@@ -23,6 +23,7 @@ import { buildLinks, createLinkSearch } from './links';
 import { runExpansion, runMigration } from './migration';
 import { initNotables, runNotables } from './notables';
 import { runItems } from './items';
+import { initPlaces, runExpeditions, runPlaces } from './places';
 import { runCivRaids, runDiplomacy } from './raids';
 import { buildSettlePlaces, buildSettleSearch, computeTerritory } from './settle';
 import { takeSnapshot } from './snapshots';
@@ -70,6 +71,7 @@ export function runHistory(
   const links = buildLinks(cells, [...world.sites.values()], content.history, linkSearch);
   const run = createRun(world, content, search, linkSearch, links);
   initNotables(run);
+  initPlaces(run);
   world.snapshots = [takeSnapshot(world, cells, 0)];
   world.playback = null;
   const recorder = createPlaybackRecorder();
@@ -91,12 +93,14 @@ export function runHistory(
     runExpansion(run);
     runWar(run);
     runNotables(run);
+    runExpeditions(run);
     runCivilWars(run);
     runColleges(run);
     runCityStates(run);
     if (year % DECADE === 0) runItems(run);
     runKinds(run);
     runAbandonment(run);
+    runPlaces(run);
     for (const site of world.sites.values()) {
       if (isLive(site)) site.peakPop = Math.max(site.peakPop, totalPop(site));
     }

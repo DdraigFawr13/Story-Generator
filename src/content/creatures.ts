@@ -116,6 +116,21 @@ export const creatures: CreatureDef[] = [
     names: ['Draig Goch of {near}', 'the Draig of {near}', 'Ysgythr the Draig'],
   },
   {
+    id: 'restless-dead',
+    // Woken by a robbed barrow (places.ts), never by the decade roll; a host of wights, not a lone beast.
+    name: 'host of the restless dead',
+    tier: 'great',
+    biomes: ['temperate-forest', 'taiga', 'grassland', 'steppe'],
+    minWildness: 40,
+    danger: 30,
+    maxAlive: 3,
+    spawnChance: 0,
+    lifespan: [40, 80],
+    raidChance: 0.1,
+    raidRange: 14,
+    names: ['the Restless Dead of {near}', 'the Wights of {near}'],
+  },
+  {
     id: 'ceffyl-dwr',
     name: 'water horse',
     tier: 'legendary',

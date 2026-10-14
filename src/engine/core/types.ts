@@ -16,6 +16,7 @@ export const ENTITY_KINDS = [
   'creature',
   'item',
   'dynasty',
+  'place',
 ] as const;
 export type EntityKind = (typeof ENTITY_KINDS)[number];
 
@@ -281,6 +282,8 @@ export const DEATH_CAUSES = [
   'execution',
   // M5.5: killed by another legend in single combat.
   'duel',
+  // M4.7: died in a perilous place on an expedition.
+  'peril',
 ] as const;
 export type DeathCause = (typeof DEATH_CAUSES)[number];
 
@@ -308,6 +311,36 @@ export interface Item {
   /** Cell where it was lost, while lost. */
   lostAt?: number;
   /** Event ids of its making, inheritance, loss, theft and finding. */
+  deeds: Id[];
+}
+
+/** A perilous place (M4.7): a ruin, old mine, barrow, empty lair or aura place in the wild. */
+export interface PerilousPlace {
+  id: Id;
+  /** A `PlaceKindDef` id. */
+  kind: string;
+  /** Unique among places. */
+  name: string;
+  cell: number;
+  /** History year it became a place (0 for the ancient ones). */
+  since: number;
+  /** Like a creature's danger: adults needed = danger * slayAdultsPerDanger. */
+  danger: number;
+  /** Treasures or lore still to be found besides the items lying there. */
+  finds: number;
+  /** The ruined site, for ruins and old mines. */
+  siteId?: Id;
+  /** The beast whose lair it was. */
+  creatureId?: Id;
+  /** The ruler buried in a barrow. */
+  personId?: Id;
+  /** The civ that raised a barrow. */
+  civId?: Id;
+  /** Year of the latest expedition. */
+  lastVisit?: number;
+  /** Year nothing was left to find. */
+  emptied?: number;
+  /** Event ids, oldest first. */
   deeds: Id[];
 }
 
@@ -628,6 +661,8 @@ export interface Creature {
   kills?: Id[];
   /** Set for the world's dragon (M5.6). */
   dragon?: DragonState;
+  /** Items a non-dragon great or legendary beast holds (M4.7); dragons keep `dragon.hoard.items`. */
+  hoard?: Id[];
   deeds: Id[];
 }
 
@@ -1153,6 +1188,8 @@ export interface WorldState {
   sites: Map<Id, Site>;
   /** Beasts, living and dead, filled by the history stage (M2.4). */
   creatures: Map<Id, Creature>;
+  /** Perilous places (M4.7): ruins, old mines, barrows, empty lairs and aura places. Items lying in one have no holder and `lostAt` at its cell. */
+  places: Map<Id, PerilousPlace>;
   /** Notables, living and dead (M2.5); everyone else is a count in `Site.pop`. */
   people: Map<Id, Person>;
   dynasties: Map<Id, Dynasty>;

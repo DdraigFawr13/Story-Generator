@@ -78,6 +78,11 @@ export const THREATS: ThreatRules = {
         'a herd was found burnt to the bone',
         'the sky to the {dir} glowed red at dusk',
       ],
+      'restless-dead': [
+        'cold lights were seen moving on the barrow-downs to the {dir}',
+        'the dogs of {site} howled at the {dir} all night and would not be called off',
+        'a shepherd came home from the {dir} hills grey-haired and silent',
+      ],
       'ceffyl-dwr': [
         'a pale horse was seen standing in the water to the {dir}',
         'the ponies of {site} would not go near the water',
@@ -92,6 +97,7 @@ export const THREATS: ThreatRules = {
       wyvern: 'W',
       giant: 'G',
       draig: 'D',
+      'restless-dead': 'R',
       'ceffyl-dwr': 'H',
     },
     // A beast does not return for a third of a year.

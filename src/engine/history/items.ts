@@ -17,6 +17,7 @@ import {
   siteOf,
 } from './people';
 import { hoardedItems } from './dragons';
+import { openPlaceCells } from './places';
 import { liveSites, type HistoryRun } from './state';
 
 const cap = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
@@ -35,7 +36,7 @@ const NUMERALS = ['II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
  * Candidates are the picked pattern first, then the other patterns in content order; when all
  * are taken, the picked one gets a numeral. Draws no randomness.
  */
-function uniqueName(run: HistoryRun, candidates: string[]): string {
+export function uniqueName(run: HistoryRun, candidates: string[]): string {
   const taken = new Set<string>();
   for (const item of run.world.items.values()) taken.add(item.name);
   const free = candidates.find((name) => !taken.has(name));
@@ -47,13 +48,13 @@ function uniqueName(run: HistoryRun, candidates: string[]): string {
 }
 
 /** Fills each pattern, the picked one first. */
-function fill(patterns: readonly string[], picked: string, values: Record<string, string>) {
+export function fill(patterns: readonly string[], picked: string, values: Record<string, string>) {
   return [picked, ...patterns.filter((p) => p !== picked)].map((pattern) =>
     Object.entries(values).reduce((text, [key, value]) => text.replace(`{${key}}`, value), pattern),
   );
 }
 
-function newItem(
+export function newItem(
   run: HistoryRun,
   spec: Pick<Item, 'kind' | 'name' | 'form' | 'makerId' | 'holder'>,
 ) {
@@ -182,8 +183,11 @@ function writeBooks(run: HistoryRun): void {
 function findLost(run: HistoryRun): void {
   const { world, rng } = run;
   const hoarded = hoardedItems(run);
+  // Only an expedition finds what lies in a perilous place (places.ts).
+  const perilous = openPlaceCells(run);
   for (const item of world.items.values()) {
     if (item.holder !== null || item.lostAt === undefined || hoarded.has(item.id)) continue;
+    if (perilous.has(item.lostAt)) continue;
     if (!rng.notables.chance(run.content.notables.itemFindChance)) continue;
     const owner = run.cells.territory[item.lostAt]!;
     const finder = owner === 0 ? undefined : mostFamous(run, owner);

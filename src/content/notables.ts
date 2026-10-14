@@ -89,6 +89,7 @@ export const NOTABLES: NotableRules = {
     childbirth: 'in childbirth',
     execution: 'by the executioner',
     duel: 'in single combat',
+    peril: 'in {peril}',
   },
   successionPhrases: {
     'kin-elected': 'by the choice of the kin',

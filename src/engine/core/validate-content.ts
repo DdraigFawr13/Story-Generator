@@ -11,7 +11,7 @@ import {
   MAX_CREATURE_DANGER,
   PUNISHMENTS,
 } from './content-types';
-import { ATTRIBUTE_KEYS, GOODS, REGION_KINDS } from './types';
+import { ATTRIBUTE_KEYS, GOODS, REGION_KINDS, SITE_KINDS } from './types';
 import { BIRTH_TIER_IDS, TIERS, TIER_IDS, tierOfPower } from '../people/tiers';
 
 /** Every event type needs this many template variants (§2B). */
@@ -98,6 +98,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...settlementProblems(content));
   problems.push(...creatureProblems(content));
   problems.push(...dragonProblems(content));
+  problems.push(...placeProblems(content));
   problems.push(...diseaseProblems(content));
   problems.push(...notableProblems(content));
   problems.push(...siteProblems(content));
@@ -242,6 +243,72 @@ export function dragonProblems(content: ContentBundle): string[] {
   }
   for (const key of ['tributeShare', 'seekerMax'] as const) {
     if (!(rules[key] >= 0 && rules[key] <= 1)) problems.push(`Dragons: ${key} must be 0-1.`);
+  }
+  return problems;
+}
+
+/** Perilous places (M4.7): ranges run low to high, chances are 0-1, names fill, known creature and kinds. */
+export function placeProblems(content: ContentBundle): string[] {
+  const rules = content.places;
+  if (!rules) return ['Content has no place rules.'];
+  const problems: string[] = [];
+  const seen = new Set<string>();
+  for (const kind of rules.kinds) {
+    const where = `Place kind ${kind.id}`;
+    if (seen.has(kind.id)) problems.push(`Duplicate place kind "${kind.id}".`);
+    seen.add(kind.id);
+    if (kind.names.length === 0) problems.push(`${where}: no names.`);
+    if (kind.guardians.length === 0) problems.push(`${where}: no guardians.`);
+    if (!(kind.danger[0] >= 1 && kind.danger[0] <= kind.danger[1]))
+      problems.push(`${where}: danger needs 1 <= min <= max.`);
+    if (!(kind.finds[0] >= 0 && kind.finds[0] <= kind.finds[1]))
+      problems.push(`${where}: finds needs 0 <= min <= max.`);
+    for (const key of ['loreChance', 'treasureChance'] as const) {
+      if (!(kind[key] >= 0 && kind[key] <= 1)) problems.push(`${where}: ${key} must be 0-1.`);
+    }
+    if (kind.names.some((n) => n.includes('{adj}')) && (kind.adjectives ?? []).length === 0)
+      problems.push(`${where}: names use {adj} but there are no adjectives.`);
+  }
+  for (const id of [...rules.ancientKinds, 'barrow', 'lair', 'ruin', 'old-mine']) {
+    if (!seen.has(id)) problems.push(`Places: unknown place kind "${id}".`);
+  }
+  if (new Set(rules.elderNames).size !== rules.elderNames.length)
+    problems.push('Places: duplicate elder names.');
+  if (!(rules.cellsPerAncient >= 1 && rules.ancientTries >= 1))
+    problems.push('Places: cellsPerAncient and ancientTries must be at least 1.');
+  const [reachLow, reachHigh] = rules.barrow.reach;
+  if (!(reachLow >= 1 && reachLow <= reachHigh))
+    problems.push('Places: barrow reach needs 1 <= min <= max.');
+  const ex = rules.expedition;
+  if (!(ex.partyMin >= 1 && ex.partyMin <= ex.partyMax))
+    problems.push('Places: expedition party needs 1 <= partyMin <= partyMax.');
+  for (const key of [
+    'chance',
+    'partyShare',
+    'successBase',
+    'successMax',
+    'failLoss',
+    'winLoss',
+    'wakeDeadChance',
+  ] as const) {
+    if (!(ex[key] >= 0 && ex[key] <= 1)) problems.push(`Places: expedition ${key} must be 0-1.`);
+  }
+  for (const key of ['chance'] as const) {
+    if (!(rules.barrow[key] >= 0 && rules.barrow[key] <= 1))
+      problems.push(`Places: barrow ${key} must be 0-1.`);
+  }
+  if (!(rules.raidCarryOff >= 0 && rules.raidCarryOff <= 1))
+    problems.push('Places: raidCarryOff must be 0-1.');
+  if (!(rules.parts.craftChance >= 0 && rules.parts.craftChance <= 1))
+    problems.push('Places: parts craftChance must be 0-1.');
+  if (rules.parts.items.length === 0) problems.push('Places: no beast part items.');
+  if (ex.treasureNames.length === 0 || ex.loreNames.length === 0)
+    problems.push('Places: no names for finds.');
+  if (!content.creatures.some((c) => c.id === ex.restlessDeadId))
+    problems.push(`Places: unknown creature "${ex.restlessDeadId}".`);
+  const sites = new Set<string>(SITE_KINDS);
+  for (const kind of [...rules.ruinFrom, ...rules.mineSiteKinds]) {
+    if (!sites.has(kind)) problems.push(`Places: unknown site kind "${kind}".`);
   }
   return problems;
 }
