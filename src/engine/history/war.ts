@@ -184,7 +184,7 @@ function siteDefence(run: HistoryRun, site: Site, defender: Civ): number {
   for (const feature of site.features) {
     bonus *= feature === 'heights' ? worn(table[feature] ?? 1) : (table[feature] ?? 1);
   }
-  if (site.kind === 'fortress') bonus *= worn(table.fortress ?? 1);
+  bonus *= worn(table[site.kind] ?? 1);
   if (defender.capital === site.id) bonus *= table.capital ?? 1;
   if (defender.free) bonus *= worn(table.freeCity ?? 1);
   return bonus;

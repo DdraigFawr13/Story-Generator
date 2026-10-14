@@ -1739,6 +1739,8 @@ export interface SettlementRules {
   kindByPop: [number, SiteKind][];
   /** Culture id to the kind of its capital, instead of the size kind. */
   capitalKind: Record<string, SiteKind>;
+  /** Hold rule: a new site of these races on a cell with the `needs` feature is a hold (a mountain settlement). */
+  holds: { races: string[]; needs: SiteFeature };
   /** Civ name templates per government; `{n}` is the capital's name. */
   civNames: Record<GovernmentKind, string>;
   /** Cost cap (summed travel cost) of a site's territory. */
@@ -1848,6 +1850,8 @@ export interface HistoryRules {
   famineShunYears: number;
   /** A site above this share of capacity may found a new site. */
   expandAt: number;
+  /** Per site kind, a lower crowding share at which settlers leave (holds carve new halls early). */
+  expandAtKind: Partial<Record<SiteKind, number>>;
   /** Years between expansions from one site. */
   expandCooldown: number;
   expandChance: number;

@@ -478,6 +478,9 @@ export function settlementProblems(content: ContentBundle): string[] {
       if (!raceIds.has(id)) problems.push(`Settlement capacity.${key}: unknown race "${id}".`);
     }
   }
+  for (const id of rules.holds.races) {
+    if (!raceIds.has(id)) problems.push(`Settlement holds: unknown race "${id}".`);
+  }
   const eventIds = new Set(content.eventTypes.map((e) => e.id));
   for (const id of HISTORY_EVENT_IDS) {
     if (!eventIds.has(id)) problems.push(`Settlement needs event type "${id}".`);

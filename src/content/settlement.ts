@@ -12,7 +12,7 @@ export const SETTLEMENT: SettlementRules = {
   // A map draws its peoples from the roster: humans are common, giants rare. A culture's weight
   // also scales with its home-ground share of the land, full at 15%; under 2% it stays away.
   peoples: {
-    weight: { gwyllion: 0.6, fomori: 0.8, hollin: 0.8, cewri: 0.35 },
+    weight: { dvergar: 2, gwyllion: 0.6, fomori: 0.8, hollin: 0.8, cewri: 0.35 },
     fitFull: 0.15,
     fitMin: 0.02,
   },
@@ -48,9 +48,9 @@ export const SETTLEMENT: SettlementRules = {
     ford: 1.1,
     road: 1.1,
     foreignBiome: 0.5,
-    // Dvergar trade ore and stone for food, so deposits in reach feed them.
+    // Dvergar trade ore and stone for food, so deposits in reach feed them; holds on heights and passes trade it down the passes.
     raceFeature: {
-      dvergar: { deposit: 3 },
+      dvergar: { deposit: 3, heights: 1.5, pass: 1.2 },
       // Fomori raid and fish the hard coasts, a modest boost.
       fomori: { coast: 1.2 },
     },
@@ -71,7 +71,9 @@ export const SETTLEMENT: SettlementRules = {
     [500, 'village'],
     [2000, 'town'],
   ],
-  capitalKind: { dvergar: 'fortress' },
+  capitalKind: { dvergar: 'hold' },
+  // Dvergar sites on heights are holds: carved under the range, mining ore and trading it down the passes.
+  holds: { races: ['dvergar'], needs: 'heights' },
   civNames: {
     chieftaincy: 'Chieftaincy of {n}',
     jarldom: 'Jarldom of {n}',

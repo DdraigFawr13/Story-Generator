@@ -511,6 +511,7 @@ export const SITE_KINDS = [
   'town',
   'city',
   'fortress',
+  'hold',
   'mine',
   'temple',
   'port',

@@ -73,8 +73,8 @@ const dvergar: RaceDef = {
   affinityWeights: { earth: 5, fire: 2 },
   lifespanYears: 130,
   maturityYears: 24,
-  // The approved sketch value; balance comes from ore-dependent capacity (settlement.capacity.raceWithout).
-  fertility: 0.5,
+  // 0.5 in the approved sketch; 0.6 since mountain holds (Morgan, 2026-10-14) so holds fill and dwarves reach about a tenth.
+  fertility: 0.6,
   foodNeed: 1.4,
   preferredBiomes: ['alpine', 'tundra', 'taiga'],
   dependencies: [

@@ -32,6 +32,8 @@ export const HISTORY: HistoryRules = {
   famineShunYears: 5,
   // Below the crowding at which births fall (0.6-1), so slow-breeding races still send settlers.
   expandAt: 0.65,
+  // A hold sends clansfolk to carve a new hold along the range long before it is full.
+  expandAtKind: { hold: 0.3 },
   expandCooldown: 15,
   expandChance: 0.2,
   expandRange: [4, 12],
@@ -145,7 +147,15 @@ export const HISTORY: HistoryRules = {
   warThreshold: 0.8,
   campaignShare: 0.5,
   // freeCity: a free city lives or dies by its walls, so it keeps them high (halved without timber).
-  defence: { fortress: 1.5, heights: 1.25, pass: 1.4, ford: 1.2, capital: 1.2, freeCity: 1.5 },
+  defence: {
+    fortress: 1.5,
+    hold: 1.6,
+    heights: 1.25,
+    pass: 1.4,
+    ford: 1.2,
+    capital: 1.2,
+    freeCity: 1.5,
+  },
   battleLuck: 0.25,
   loserLoss: 0.3,
   winnerLoss: 0.1,

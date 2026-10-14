@@ -13,6 +13,7 @@ import {
   nearestAuraSpot,
   popBands,
   siteCapacity,
+  isHoldSite,
   sizeKind,
 } from './settle';
 import { dragonLairs } from './dragons';
@@ -94,6 +95,7 @@ function newSiteKind(
   const { cells, content, world } = run;
   const rules = content.settlement;
   if (features.includes('harbour')) return 'port';
+  if (isHoldSite(rules, civ.raceId, features)) return 'hold';
   if (features.includes('aura')) {
     const spot = nearestAuraSpot(cells, cell, rules.featureRadius.aura);
     if (spot >= 0 && !run.templeSpots.has(`${civ.id}:${spot}`)) return 'temple';
@@ -251,7 +253,8 @@ export function runMigration(run: HistoryRun): void {
 export function runExpansion(run: HistoryRun): void {
   const { rules, rng } = run;
   for (const site of liveSites(run)) {
-    if (totalPop(site) <= rules.expandAt * site.capacity) continue;
+    const at = rules.expandAtKind[site.kind] ?? rules.expandAt;
+    if (totalPop(site) <= at * site.capacity) continue;
     const last = run.lastExpansion.get(site.id);
     if (last !== undefined && run.year - last < rules.expandCooldown) continue;
     if (!rng.expansion.chance(rules.expandChance)) continue;
