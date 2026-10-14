@@ -96,7 +96,46 @@ The terrain layer is drawn once per world. The political layer is redrawn only w
 - unit tests for the colouring (no two neighbouring realms share a hue) and for the pause filter;
 - the Chromium smoke drives the Tales room where it drove the playback.
 
+## U2 People room and Follow
+
+**Where it lives:** `src/app/rooms/` holds the shared rail and room shell, taken out of the Tales room so that every room uses the same ones. `src/app/people/` holds the People room. The look matches Tales: paper colours, Alegreya type, and the same rail and phone tab bar. The layout follows the mock-up's People screen (`rooms-r3d`, `rooms-r3p`).
+
+**People index** (the rail's People):
+- A search box and filter chips: Legends, Rulers, Mages, Heroes, Priests and prophets, and Living.
+- One row per notable figure: an initial disc in the colour of their realm, a gold dot for a legend, their name, a one-line role, their years, and their realm.
+- Rows are sorted by fame. On a phone the list is a single column.
+
+**Personal page:**
+- **Header:**
+  - name;
+  - role line: tier, aptitude, office and realm;
+  - chips: race, birth year and place, age or death, line or house, fame, faith.
+- **Actions:**
+  - **Watch \<home town\>** uses the existing watch-a-site action. It is greyed out, with a reason, when that action is unavailable.
+  - **Follow their story** opens Tales with this person followed.
+- **Tabs:**
+  - **Life:** age and year on the left, with a dot for each event (gold for legend deeds).
+  - **Family:** spouses, children and parents, as links.
+  - **Deeds:** spells, battles, duels, works and treasures.
+  - **Rivals.**
+  - **All records:** the existing chronicle.
+- **Side panel:** family, rivals, and "Lives at X" with that town's people and race and a Watch link.
+- **Links:** every name links to its own page. Realms, towns, events and items open the existing Legends pages until the Book room takes them over.
+
+**Entry points:**
+- The Legends person links open the People page.
+- The Tales card's Follow button and its lane chip link to the person.
+- URLs use `?open=person:<id>` (the existing parse).
+- Browser back returns to where the reader came from.
+
+**Faith:** the faith chip shows the person's faith, taken from their town or their realm. A high priest or prophet has that role in the role line, and their page lists their preaching and schisms under Deeds.
+
+**Tests:**
+- unit tests for building a person's life rows and roles from the world;
+- the browser smoke opens a person from the index and from a Tales card, then follows them back into Tales.
+
 ## Status
 
-- U1: built, awaiting review (2026-10-14). `HistoryPlayback`, `playback.css` and `playback/player.ts` are gone; the speeds now live in `tales/TalesRoom.tsx`. Town opens the map, the nearest existing entry to the embark flow.
+- U2: built, in review (2026-10-14). Shared rail in `rooms/`; People room in `people/`. Legends person links open the People page; the Tales card adds "Who is X?"; Follow from a page starts Tales at the person's birth year. Life rows are events of importance 4 or more (8 or more in gold).
+- U1: merged as #110 (2026-10-14). `HistoryPlayback`, `playback.css` and `playback/player.ts` are gone; the speeds now live in `tales/TalesRoom.tsx`. Town opens the map, the nearest existing entry to the embark flow.
 - U1 review: no dark mode in U1. The Tales map is a parchment map and stays light in either scheme; a dark treatment is a later decision (2026-10-14).

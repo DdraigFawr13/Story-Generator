@@ -1,0 +1,128 @@
+/* The shared room shell: the rail (a tab bar on a phone) used by Tales and People. */
+.rm-root {
+  --ink: #2d2a25;
+  --soft: #6d675c;
+  --paper: #fbf8f1;
+  --red: #a0442c;
+  --line: #e4dccb;
+  display: flex;
+  color: var(--ink);
+  font-family: 'Alegreya', Georgia, serif;
+}
+.rm-root :is(button, select) {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  min-height: 0;
+  box-shadow: none;
+}
+
+/* ---- rail ---- */
+.rm-root .rm-rail {
+  flex: none;
+  width: 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 0 12px;
+  background: #fbf8f1;
+  border-right: 1px solid var(--line);
+  z-index: 4;
+  font-family: 'Alegreya Sans SC', sans-serif;
+  letter-spacing: 0.06em;
+  font-size: 12px;
+  color: var(--soft);
+}
+.rm-root .rm-logo {
+  font-family: 'Alegreya', serif;
+  font-size: 18px;
+  color: var(--ink);
+  margin-bottom: 12px;
+  letter-spacing: 0;
+}
+.rm-root .rm-grow {
+  flex: 1;
+}
+.rm-root .rm-room {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  width: 64px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--soft);
+  font-family: inherit;
+  letter-spacing: inherit;
+}
+.rm-root .rm-room .rm-ico {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+.rm-root .rm-room .soon {
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 99px;
+  background: #efe6d4;
+  color: var(--soft);
+  text-transform: lowercase;
+}
+.rm-root .rm-room.on {
+  background: #efe6d4;
+  color: var(--ink);
+}
+.rm-root .rm-room:hover {
+  color: var(--ink);
+}
+
+@media (max-width: 600px) {
+  .rm-root {
+    flex-direction: column-reverse;
+  }
+  .rm-root .rm-rail {
+    width: auto;
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 4px 8px calc(6px + env(safe-area-inset-bottom));
+    border-right: 0;
+    border-top: 1px solid var(--line);
+    gap: 0;
+  }
+  .rm-root .rm-logo,
+  .rm-root .rm-grow {
+    display: none;
+  }
+  .rm-root .rm-room {
+    flex-direction: row;
+    width: auto;
+    padding: 10px 8px;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    border-radius: 6px;
+  }
+  .rm-root .rm-room .rm-ico {
+    display: none;
+  }
+  .rm-root .rm-room.on {
+    background: none;
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .rm-root .rm-room .soon {
+    margin-left: 5px;
+  }
+  .rm-root .rm-room {
+    align-items: center;
+  }
+}

@@ -15,6 +15,7 @@ import {
   type PlaybackData,
   type PlaybackEvent,
 } from '../playback/data';
+import { RoomShell, type RoomId } from '../rooms/Rooms';
 import { createAtlas, type Atlas, type MapMode, type Town } from './atlas';
 import {
   RACE_FILL,
@@ -53,10 +54,18 @@ interface Props {
   startYear: number;
   /** Back to the normal map at a year. */
   onClose: (year: number) => void;
+  /** Tales is at this whole year, following this person (for the address bar). */
+  onView?: (year: number, follow: { id: Id; name: string } | null) => void;
   /** Open an event's page in Legends. */
   onOpenEvent: (id: Id) => void;
-  /** Open the Legends pane, at a category when one is named (People and Book). */
+  /** Open the Legends pane, at a category when one is named (Book). */
   onLegends: (category?: LegendCategory) => void;
+  /** Open the People room's index; `year` and `follow` say where Tales comes back to. */
+  onPeople: (year: number, follow: { id: Id; name: string } | null) => void;
+  /** Open a person's page; `year` and `follow` say where to come back to. */
+  onOpenPerson: (id: Id, year: number, follow: { id: Id; name: string } | null) => void;
+  /** A person to follow from the start (Follow on their page). */
+  initialFollow?: { id: Id; name: string } | null | undefined;
 }
 
 /** Years a second the clock can run at. */
@@ -137,8 +146,12 @@ function Room({
   textOf,
   startYear,
   onClose,
+  onView,
   onOpenEvent,
   onLegends,
+  onPeople,
+  onOpenPerson,
+  initialFollow,
 }: Props & { data: PlaybackData }) {
   const palette = useMemo(() => buildPalette(world, data), [world, data]);
   const baseModel = useMemo(() => buildModel(world, data, DEFAULT_CONTENT), [world, data]);
@@ -151,7 +164,7 @@ function Room({
   const [mode, setMode] = useState<MapMode>('land');
   const [kinds, setKinds] = useState<ReadonlySet<PauseKind>>(DEFAULT_PAUSES);
   const [chooser, setChooser] = useState(false);
-  const [follow, setFollow] = useState<{ id: Id; name: string } | null>(null);
+  const [follow, setFollow] = useState<{ id: Id; name: string } | null>(initialFollow ?? null);
   const [speed, setSpeed] = useState<number>(DEFAULT_SPEED);
   const [playing, setPlaying] = useState(true);
   const [ended, setEnded] = useState(false);
@@ -174,6 +187,11 @@ function Room({
   const fill = useRef<HTMLDivElement>(null);
   const live = useRef({ kinds, follow, speed, mode });
   live.current = { kinds, follow, speed, mode };
+  // The address bar follows the year and the person followed.
+  useEffect(() => {
+    onView?.(year, follow);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, follow]);
 
   // Build the terrain once per world.
   useEffect(() => {
@@ -554,32 +572,22 @@ function Room({
   }, [data]);
 
   const finish = () => onClose(ended ? data.last : Math.floor(clock.current.t));
-  const rail = (id: string, label: string, onClick: () => void, current = false, soon = false) => (
-    <button
-      key={id}
-      type="button"
-      className={`tr-room${current ? ' on' : ''}`}
-      aria-current={current ? 'page' : undefined}
-      onClick={onClick}
-    >
-      <i className={id === 'world' ? 'round' : ''} />
-      <span>{label}</span>
-      {soon && <em className="soon">soon</em>}
-    </button>
-  );
+  const openPerson = (id: Id) =>
+    onOpenPerson(id, Math.floor(clock.current.t), follow ? { ...follow } : null);
+  const onRoom = (room: RoomId) => {
+    if (room === 'people') onPeople(Math.floor(clock.current.t), follow ? { ...follow } : null);
+    else if (room === 'book') onLegends('event');
+    else if (room === 'world' || room === 'town') finish();
+  };
 
   return (
-    <div className="tr-root" data-testid="tales" data-mode={mode}>
-      <nav className="tr-rail" aria-label="Rooms">
-        <b className="tr-logo">S1</b>
-        {rail('tales', 'Tales', () => undefined, true)}
-        {rail('people', 'People', () => onLegends('person'))}
-        {rail('book', 'Book', () => onLegends('event'))}
-        {rail('town', 'Town', finish, false, true)}
-        <span className="tr-grow" />
-        {rail('world', 'World', finish)}
-      </nav>
-
+    <RoomShell
+      current="tales"
+      onRoom={onRoom}
+      className="tr-root"
+      data-testid="tales"
+      data-mode={mode}
+    >
       <div className="tr-main">
         <div className="tr-stage" ref={stageEl} data-testid="tales-stage">
           <div
@@ -669,7 +677,12 @@ function Room({
 
           {follow ? (
             <div className="tr-chip following">
-              <b>Following {follow.name}</b>
+              <b>
+                Following{' '}
+                <button type="button" className="tr-who" onClick={() => openPerson(follow.id)}>
+                  {follow.name}
+                </button>
+              </b>
               <small>pauses only on their story</small>
               <button type="button" aria-label="Stop following" onClick={() => setFollow(null)}>
                 ✕
@@ -795,6 +808,11 @@ function Room({
                 <button type="button" className="p" onClick={() => onOpenEvent(card.event.id)}>
                   Read the story
                 </button>
+                {cardPerson && (
+                  <button type="button" onClick={() => openPerson(cardPerson.id)}>
+                    Who is {cardPerson.name}?
+                  </button>
+                )}
                 {cardPerson && follow?.id !== cardPerson.id && (
                   <button
                     type="button"
@@ -912,7 +930,20 @@ function Room({
             </div>
             {follow && (
               <div className="tr-lane">
-                <b>{follow.name}</b>
+                <b>
+                  <button
+                    type="button"
+                    className="tr-who"
+                    style={
+                      laneSpan && parseFloat(laneSpan.left) > 65
+                        ? { right: 0 }
+                        : { left: laneSpan?.left ?? 0 }
+                    }
+                    onClick={() => openPerson(follow.id)}
+                  >
+                    {follow.name}
+                  </button>
+                </b>
                 <div className="track">
                   <div className="bar" style={laneSpan} />
                   {lane.map((tick) => (
@@ -935,7 +966,7 @@ function Room({
           </div>
         </section>
       </div>
-    </div>
+    </RoomShell>
   );
 }
 

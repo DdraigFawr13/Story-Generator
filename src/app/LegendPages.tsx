@@ -223,7 +223,7 @@ function EventLine({
 }
 
 /** Every event of an entity, by decade, with type dots and folded runs of minor repeats. */
-function AllEvents({ ids }: { ids: readonly Id[] }) {
+export function AllEvents({ ids }: { ids: readonly Id[] }) {
   const { index, content, titleOf, year, locked } = useLegends();
   const [group, setGroup] = useState('');
   const [limit, setLimit] = useState(CHRONICLE_WINDOW);
