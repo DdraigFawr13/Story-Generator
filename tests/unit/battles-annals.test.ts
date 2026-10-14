@@ -26,7 +26,10 @@ describe('named battles', () => {
       const place = r.name.replace(/^the (\w+ )?Battle of /, '');
       const nth = (places.get(place) ?? 0) + 1;
       places.set(place, nth);
-      if (nth > 1) expect(r.name).toMatch(/^the (Second|Third|Fourth|Fifth|Sixth|\d+th) Battle/);
+      if (nth > 1)
+        expect(r.name).toMatch(
+          /^the (Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth|\d+(st|nd|rd|th)) Battle/,
+        );
       else expect(r.name).toMatch(/^the Battle of /);
     }
     const great = records.filter((r) => r.great);
