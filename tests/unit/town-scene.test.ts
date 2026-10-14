@@ -1,18 +1,33 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
-import { embark, type Building, type SimEvent } from '../../src/engine';
+import { embark, sitePopulation, type Building, type SimEvent } from '../../src/engine';
 import {
   alongPath,
+  boxesHit,
   buildingOf,
+  clampView,
+  crowds,
   defaultFollow,
   frameOf,
+  glideAlpha,
   glideAt,
   glideDone,
   isLabelled,
+  keepInside,
+  labelRank,
+  leaveDelay,
+  pacing,
+  pathLength,
+  peopleLine,
+  placeLabels,
   placeName,
   recentTales,
   sharedRoom,
+  snapSheet,
   townBuildings,
+  walkMs,
+  zoomAt,
+  type LabelAsk,
   type Resident,
 } from '../../src/app/town/scene';
 import { biggest, copy } from './helpers/site-fixture';
@@ -184,5 +199,176 @@ describe('town scene: easing', () => {
     expect(alongPath(path, 1)).toEqual({ x: 4, y: 4 });
     const g = { fx: 0, fy: 0, tx: 4, ty: 4, start: 0, duration: 100, path };
     expect(glideAt(g, 50)).toEqual({ x: 4, y: 0 });
+  });
+});
+
+describe('town scene: honest counts', () => {
+  it('never offers more people to follow than there are', () => {
+    expect(peopleLine(12, 36)).toEqual({ people: 36, followed: 36, all: true });
+    expect(peopleLine(1064, 150)).toEqual({ people: 1064, followed: 150, all: false });
+    expect(peopleLine(0, 0)).toEqual({ people: 0, followed: 0, all: true });
+    for (const total of [0, 3, 12, 150, 1064]) {
+      for (const drawn of [0, 1, 12, 36, 150, 2000]) {
+        const line = peopleLine(total, drawn);
+        expect(line.followed).toBeLessThanOrEqual(line.people);
+      }
+    }
+  });
+
+  it('keeps the followable count within the people of a real embarked town', () => {
+    const world = copy();
+    const site = biggest(world);
+    const active = embark(world, DEFAULT_CONTENT, site.id);
+    const line = peopleLine(sitePopulation(site), active.residents.length);
+    expect(line.followed).toBeLessThanOrEqual(line.people);
+    expect(line.followed).toBe(active.residents.length);
+  });
+});
+
+describe('town scene: labels', () => {
+  const ask = (key: string, rank: number, x: number, y: number, w = 60, h = 20): LabelAsk => ({
+    key,
+    rank,
+    x,
+    y,
+    w,
+    h,
+  });
+
+  it('ranks the hall, then the alehouse, then the shrine, then the rest', () => {
+    expect(
+      ['smithy', 'shrine', 'alehouse', 'hall', 'well'].sort((a, b) => labelRank(a) - labelRank(b)),
+    ).toEqual(['hall', 'alehouse', 'shrine', 'smithy', 'well']);
+  });
+
+  it('keeps the higher-ranked label and skips the one that overlaps it', () => {
+    const { kept, skipped } = placeLabels([
+      ask('well', 3, 0, 0),
+      ask('hall', 0, 30, 5),
+      ask('shrine', 2, 200, 0),
+    ]);
+    expect(kept).toEqual(['hall', 'shrine']);
+    expect(skipped).toEqual(['well']);
+  });
+
+  it('never keeps two labels that overlap, however crowded', () => {
+    const asks: LabelAsk[] = [];
+    for (let i = 0; i < 40; i += 1) {
+      asks.push(ask(`b${i}`, i % 4, (i * 37) % 200, (i * 53) % 120, 40 + (i % 5) * 10, 18));
+    }
+    const { kept, skipped } = placeLabels(asks);
+    expect(kept.length + skipped.length).toBe(asks.length);
+    const boxes = kept.map((k) => asks.find((a) => a.key === k)!);
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (let j = i + 1; j < boxes.length; j += 1) {
+        expect(boxesHit(boxes[i]!, boxes[j]!)).toBe(false);
+      }
+    }
+    // The first label asked for at the best rank is always kept.
+    expect(kept).toContain('b0');
+  });
+
+  it('lets boxes that only touch both stay', () => {
+    expect(boxesHit({ x: 0, y: 0, w: 10, h: 10 }, { x: 10, y: 0, w: 10, h: 10 })).toBe(false);
+  });
+
+  it('keeps a label inside a 390 px canvas, shifting it sideways', () => {
+    const left = keepInside({ x: -30, y: 100, w: 70, h: 20 }, 390, 600, 3);
+    expect(left.x).toBe(3);
+    const right = keepInside({ x: 370, y: 100, w: 70, h: 20 }, 390, 600, 3);
+    expect(right.x + right.w).toBe(387);
+    const low = keepInside({ x: 100, y: 610, w: 70, h: 20 }, 390, 600, 3);
+    expect(low.y + low.h).toBe(597);
+  });
+});
+
+describe('town scene: pace and stagger', () => {
+  it('gives each person their own delay inside part of the block, steady for an id', () => {
+    const spread = pacing(0.25).spreadMs;
+    expect(spread).toBeGreaterThan(0);
+    const delays = Array.from({ length: 200 }, (_, id) => leaveDelay(id + 1, spread));
+    for (const d of delays) {
+      expect(d).toBeGreaterThanOrEqual(0);
+      expect(d).toBeLessThanOrEqual(spread);
+    }
+    expect(new Set(delays).size).toBeGreaterThan(100);
+    expect(leaveDelay(77, spread)).toBe(leaveDelay(77, spread));
+    // Nobody leaves on the beat: not more than a few of 200 have no delay.
+    expect(delays.filter((d) => d === 0).length).toBeLessThan(5);
+  });
+
+  it('spreads departures over less than a block, and fades instead of walking at fast speeds', () => {
+    for (const speed of [0.125, 0.25, 0.5, 1]) {
+      const pace = pacing(speed);
+      expect(pace.fade).toBe(false);
+      expect(pace.spreadMs).toBeLessThan((250 / speed) * 0.5);
+      expect(pace.spreadMs).toBeGreaterThan(0);
+    }
+    for (const speed of [4, 16]) {
+      expect(pacing(speed)).toMatchObject({ fade: true, spreadMs: 0 });
+    }
+  });
+
+  it('never lets a walk exceed the on-screen speed cap', () => {
+    const tiles = 40;
+    const px = 10;
+    const ms = walkMs(260, tiles, px);
+    expect((tiles * px * 1000) / ms).toBeLessThanOrEqual(200 + 1e-9);
+    expect(walkMs(900, 1, px)).toBe(900);
+    expect(
+      pathLength([
+        [0, 0],
+        [3, 4],
+        [3, 6],
+      ]),
+    ).toBe(7);
+  });
+
+  it('fades a dot out where it was and in where it is going', () => {
+    const g = { fx: 0, fy: 0, tx: 9, ty: 9, start: 100, duration: 200, fade: true };
+    expect(glideAt(g, 120)).toEqual({ x: 0, y: 0 });
+    expect(glideAt(g, 250)).toEqual({ x: 9, y: 9 });
+    expect(glideAlpha(g, 100)).toBe(1);
+    expect(glideAlpha(g, 200)).toBeLessThan(0.3);
+    expect(glideAlpha(g, 300)).toBe(1);
+    expect(glideAlpha({ ...g, fade: false }, 200)).toBe(1);
+  });
+
+  it('holds a dot at its start until its delayed departure', () => {
+    const g = { fx: 1, fy: 1, tx: 5, ty: 5, start: 500, duration: 200 };
+    expect(glideAt(g, 100)).toEqual({ x: 1, y: 1 });
+    expect(glideDone(g, 100)).toBe(false);
+  });
+});
+
+describe('town scene: crowds, zoom and sheet', () => {
+  it('counts a building only past three people', () => {
+    const inside = [1, 1, 1, 2, 2, 2, 2, 3, null, null, null, null, null];
+    expect([...crowds(inside)]).toEqual([[2, 4]]);
+  });
+
+  it('keeps a zoomed town covering the canvas', () => {
+    const frame = { x: 12, y: 100, w: 366, h: 300 };
+    expect(clampView({ k: 1, x: 40, y: 40 }, frame, 390, 600)).toEqual({ k: 1, x: 0, y: 0 });
+    const far = clampView({ k: 3, x: 5000, y: -5000 }, frame, 390, 600);
+    expect(far.k).toBe(3);
+    // Left edge at or left of the canvas edge, right edge at or past the other.
+    expect(frame.x * 3 + far.x).toBeLessThanOrEqual(0);
+    const away = clampView({ k: 3, x: -5000, y: -5000 }, frame, 390, 600);
+    expect((frame.x + frame.w) * 3 + away.x).toBeGreaterThanOrEqual(390);
+    expect(clampView({ k: 99, x: 0, y: 0 }, frame, 390, 600).k).toBe(5);
+  });
+
+  it('zooms about a point so it stays under the finger', () => {
+    const v = zoomAt({ k: 1, x: 0, y: 0 }, 2, 100, 50);
+    expect(v).toEqual({ k: 2, x: -100, y: -50 });
+    expect(zoomAt(v, 0.1, 0, 0).k).toBe(1);
+  });
+
+  it('snaps a dragged sheet to peek or open', () => {
+    expect(snapSheet(300, 190, 557, 0)).toBe('peek');
+    expect(snapSheet(400, 190, 557, 0)).toBe('open');
+    expect(snapSheet(250, 190, 557, -0.9)).toBe('open');
+    expect(snapSheet(500, 190, 557, 0.9)).toBe('peek');
   });
 });

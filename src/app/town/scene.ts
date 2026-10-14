@@ -157,6 +157,8 @@ export interface Glide {
   duration: number;
   /** The route walked, as tile-centre points from `fx, fy` to `tx, ty`; absent for a straight glide. */
   path?: readonly (readonly [number, number])[] | undefined;
+  /** At fast speeds the dot dims where it was and returns where it is going, instead of racing there. */
+  fade?: boolean | undefined;
 }
 
 /** The point a share `t` (0-1) of the way along a polyline, by length. */
@@ -190,9 +192,26 @@ export function alongPath(
 /** Where the dot is at time `now`: eased along its route, never jumping past the end. */
 export function glideAt(g: Glide, now: number): { x: number; y: number } {
   if (g.duration <= 0) return { x: g.tx, y: g.ty };
+  if (g.fade) return now - g.start < g.duration / 2 ? { x: g.fx, y: g.fy } : { x: g.tx, y: g.ty };
   const t = ease((now - g.start) / g.duration);
   if (g.path && g.path.length >= 2) return alongPath(g.path, t);
   return { x: g.fx + (g.tx - g.fx) * t, y: g.fy + (g.ty - g.fy) * t };
+}
+
+/** How solid a dot is drawn: 1, except for a fading dot, which dims half way and comes back. */
+export function glideAlpha(g: Glide, now: number): number {
+  if (!g.fade || g.duration <= 0) return 1;
+  const t = Math.max(0, Math.min(1, (now - g.start) / g.duration));
+  return 0.2 + 0.8 * Math.abs(2 * t - 1);
+}
+
+/** The length of a route in tiles. */
+export function pathLength(path: readonly (readonly [number, number])[]): number {
+  let total = 0;
+  for (let i = 1; i < path.length; i += 1) {
+    total += Math.hypot(path[i]![0] - path[i - 1]![0], path[i]![1] - path[i - 1]![1]);
+  }
+  return total;
 }
 
 /** Whether the glide has reached its end by `now`. */
@@ -229,3 +248,188 @@ export const BLOCK_TINT: Record<string, string | null> = {
   afternoon: null,
   evening: 'rgba(196, 112, 58, 0.12)',
 };
+
+// ---- counts ----
+
+/**
+ * The header's people line. `total` is the town's people by the world's record and `drawn` the
+ * simulated residents on the map; the town has at least as many people as it draws, so a count
+ * can never promise more people to follow than there are.
+ */
+export function peopleLine(
+  total: number,
+  drawn: number,
+): { people: number; followed: number; all: boolean } {
+  const followed = Math.max(0, Math.round(drawn));
+  const people = Math.max(Math.round(total), followed);
+  return { people, followed, all: followed >= people };
+}
+
+// ---- pace and stagger ----
+
+/** Days a second at or above which dots fade between places instead of walking. */
+export const FADE_FROM_SPEED = 4;
+/** The fastest a dot may walk on the screen, in pixels a second. */
+export const MAX_WALK_PX_S = 200;
+/** The slowest and fastest a walk takes at the slow speeds (ms). */
+const GLIDE_MIN_MS = 260;
+const GLIDE_MAX_MS = 1400;
+
+/** How long one block of the day lasts on the screen at a speed, in ms (four blocks a day). */
+export function blockMs(speed: number): number {
+  return speed > 0 ? 250 / speed : 250;
+}
+
+/**
+ * How dots move at a speed: the walk's base time, the span over which people leave for their next
+ * place (each after a personal delay), and whether to fade instead of walk. People spread across
+ * part of a block so no one moves on the beat; at fast speeds there is no room, so they fade.
+ */
+export function pacing(speed: number): { glideMs: number; spreadMs: number; fade: boolean } {
+  if (speed >= FADE_FROM_SPEED) return { glideMs: 240, spreadMs: 0, fade: true };
+  if (speed <= 0) return { glideMs: GLIDE_MIN_MS, spreadMs: 0, fade: false };
+  const block = blockMs(speed);
+  return {
+    glideMs: Math.max(GLIDE_MIN_MS, Math.min(GLIDE_MAX_MS, block * 0.45)),
+    spreadMs: block * 0.4,
+    fade: false,
+  };
+}
+
+/** A steady number from 0 up to but not including 1 for an id. */
+export function unitHash(id: number): number {
+  let h = Math.imul(id | 0, 0x9e3779b1) ^ 0x85ebca6b;
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
+  h = Math.imul(h ^ (h >>> 12), 0x297a2d39);
+  return ((h ^ (h >>> 15)) >>> 0) / 4294967296;
+}
+
+/** How long after the block's beat a person sets off, in ms: a share of `spreadMs` from their id. */
+export function leaveDelay(id: number, spreadMs: number): number {
+  return Math.round(unitHash(id) * spreadMs);
+}
+
+/** A walk's duration: at least the base time, and long enough that the dot never exceeds the speed cap. */
+export function walkMs(baseMs: number, tiles: number, pixelsPerTile: number): number {
+  return Math.max(baseMs, (tiles * pixelsPerTile * 1000) / MAX_WALK_PX_S);
+}
+
+// ---- crowds ----
+
+/** A house with more people than this draws a count instead of their dots. */
+export const CROWD_OVER = 3;
+
+/** The buildings holding more than `CROWD_OVER` of the given (arrived) people, with their counts. */
+export function crowds(inside: readonly (Id | null)[]): Map<Id, number> {
+  const counts = new Map<Id, number>();
+  for (const b of inside) if (b !== null) counts.set(b, (counts.get(b) ?? 0) + 1);
+  for (const [b, n] of [...counts]) if (n <= CROWD_OVER) counts.delete(b);
+  return counts;
+}
+
+// ---- labels ----
+
+/** A box on the screen, in pixels. */
+export interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Whether two boxes overlap (touching edges do not count). */
+export const boxesHit = (a: Box, b: Box): boolean =>
+  a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+/** Label order: the hall first, then the alehouse and the shrine, then the rest. */
+const LABEL_FIRST = ['hall', 'alehouse', 'shrine'];
+
+/** The rank of a building's name when two would overlap: lower is placed first. */
+export function labelRank(defId: string): number {
+  const i = LABEL_FIRST.indexOf(defId);
+  return i === -1 ? LABEL_FIRST.length : i;
+}
+
+export interface LabelAsk extends Box {
+  key: Id | string;
+  rank: number;
+}
+
+/**
+ * One pass over the labels in rank order (ties by order given): a label is kept unless its box
+ * hits one already kept. Returns the keys kept, in the order they were placed, and the keys skipped.
+ */
+export function placeLabels(asks: readonly LabelAsk[]): {
+  kept: (Id | string)[];
+  skipped: (Id | string)[];
+} {
+  const order = asks.map((a, i) => ({ a, i })).sort((p, q) => p.a.rank - q.a.rank || p.i - q.i);
+  const placed: LabelAsk[] = [];
+  const skipped: (Id | string)[] = [];
+  for (const { a } of order) {
+    if (placed.some((p) => boxesHit(p, a))) skipped.push(a.key);
+    else placed.push(a);
+  }
+  return { kept: placed.map((p) => p.key), skipped };
+}
+
+/** Moves a box sideways and up or down so it lies inside a `w` by `h` canvas with `margin` to spare. */
+export function keepInside(box: Box, w: number, h: number, margin: number): Box {
+  const x = Math.max(margin, Math.min(w - margin - box.w, box.x));
+  const y = Math.max(margin, Math.min(h - margin - box.h, box.y));
+  return { ...box, x, y };
+}
+
+// ---- zoom and pan ----
+
+/** The picture's zoom (1 is the whole town) and shift in pixels, applied on top of the fitted view. */
+export interface View {
+  k: number;
+  x: number;
+  y: number;
+}
+
+export const IDENTITY_VIEW: View = { k: 1, x: 0, y: 0 };
+export const MAX_ZOOM = 5;
+
+/**
+ * Keeps the view inside the town: `frame` is the town's box on the screen at zoom 1 and `w`, `h`
+ * the canvas. A zoomed town never leaves a gap at the canvas edge on an axis where it is bigger
+ * than the canvas, and stays on the canvas on an axis where it is smaller.
+ */
+export function clampView(view: View, frame: Box, w: number, h: number): View {
+  const k = Math.max(1, Math.min(MAX_ZOOM, view.k));
+  if (k < 1.001) return IDENTITY_VIEW;
+  const axis = (shift: number, from: number, size: number, extent: number) => {
+    // Left edge `from * k + shift` and right edge `(from + size) * k + shift` stay on the canvas's
+    // sides (bigger than the canvas) or inside it (smaller).
+    const a = -from * k;
+    const b = extent - (from + size) * k;
+    return Math.max(Math.min(a, b), Math.min(Math.max(a, b), shift));
+  };
+  return { k, x: axis(view.x, frame.x, frame.w, w), y: axis(view.y, frame.y, frame.h, h) };
+}
+
+/** Zooms by `factor` keeping the point (`px`, `py`) of the canvas where it is. */
+export function zoomAt(view: View, factor: number, px: number, py: number): View {
+  const k = Math.max(1, Math.min(MAX_ZOOM, view.k * factor));
+  const f = k / view.k;
+  return { k, x: px - (px - view.x) * f, y: py - (py - view.y) * f };
+}
+
+/** Whether the view differs from the whole-town fit. */
+export const isZoomed = (v: View): boolean =>
+  v.k > 1.001 || Math.abs(v.x) > 0.5 || Math.abs(v.y) > 0.5;
+
+// ---- the sheet ----
+
+/** Where a dragged sheet settles: open when pulled past half way or flicked up, else peek. */
+export function snapSheet(
+  height: number,
+  peek: number,
+  open: number,
+  velocity: number,
+): 'peek' | 'open' {
+  if (Math.abs(velocity) > 0.5) return velocity < 0 ? 'open' : 'peek';
+  return height > (peek + open) / 2 ? 'open' : 'peek';
+}

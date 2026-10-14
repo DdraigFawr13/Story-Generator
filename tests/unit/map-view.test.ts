@@ -302,6 +302,13 @@ describe('room links', () => {
     expect(parseRoomLink(url.slice(2))).toEqual({ room: 'book', follow: null });
     expect(parseBookLink(url.slice(2))).toEqual({ civ: 4, ch: 2, ev: 881 });
   });
+  it('keeps the open margin note in the book link', () => {
+    const book = { civ: 4, ch: 2, ev: null, note: { kind: 'person', id: 3737 } } as const;
+    const url = buildViewUrl({ ...base, room: 'book', book });
+    expect(url).toBe('/?seed=S1&size=256&layer=elevation&room=book&book=4&ch=2&note=person:3737');
+    expect(parseBookLink(url.slice(2))).toEqual(book);
+    expect(parseBookLink('?room=book&note=ship:9')).toEqual({ civ: null, ch: 0, ev: null });
+  });
   it('leaves a bare Book room and bad book fields safe', () => {
     const bare = buildViewUrl({ ...base, room: 'book', book: { civ: null, ch: 0, ev: null } });
     expect(bare).toBe('/?seed=S1&size=256&layer=elevation&room=book');

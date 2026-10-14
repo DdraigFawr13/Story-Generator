@@ -19,8 +19,11 @@ import {
 } from '../engine';
 import { compress, headerOf, type SaveHeader } from './save-store';
 
-/** Days a second; ½ is the default when play starts (village life: one block every half second). */
-export type SiteSpeed = 0 | 0.5 | 1 | 4 | 16;
+/**
+ * Days a second. The clock ticks in day blocks (four a day), so ⅛ runs a block every two seconds and
+ * ¼ one a second; the Town room plays at ¼ by default.
+ */
+export type SiteSpeed = 0 | 0.125 | 0.25 | 0.5 | 1 | 4 | 16;
 
 export type SiteRequest =
   | { type: 'embark'; world: WorldState; content: SiteContent; siteId: Id }
@@ -135,9 +138,10 @@ function slice(): void {
       if (speed === 0) until = null;
     } else {
       // Blocks owed since the last slice (speed days a second, four blocks a day); capped at one
-      // second's worth so a stall never causes a burst.
+      // second's worth (and never under one block, so ⅛ day a second still steps) so a stall never
+      // causes a burst.
       const perSecond = speed * BLOCKS_PER_DAY;
-      owed = Math.min(owed + ((now - lastSlice) * perSecond) / 1000, perSecond);
+      owed = Math.min(owed + ((now - lastSlice) * perSecond) / 1000, Math.max(1, perSecond));
       lastSlice = now;
       blocks = Math.floor(owed);
       owed -= blocks;

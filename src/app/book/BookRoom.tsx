@@ -47,6 +47,8 @@ interface Props {
   onRoom: (room: RoomId) => void;
   /** Open another book or chapter, as a new history entry. */
   onOpen: (link: BookLink) => void;
+  /** The margin note opened or closed: the address follows, on the same history entry. */
+  onNote: (note: Note | null) => void;
 }
 
 type Note = { kind: 'person' | 'place' | 'civ'; id: Id };
@@ -79,7 +81,7 @@ function useNarrow(): boolean {
   return narrow;
 }
 
-export function BookRoom({ link, lastBook, onRoom, onOpen }: Props) {
+export function BookRoom({ link, lastBook, onRoom, onOpen, onNote }: Props) {
   const { world, index } = useLegends();
   const books = useMemo(() => booksOf(world, index), [world, index]);
   const civId = books.some((b) => b.civId === link.civ) ? link.civ! : pickBook(books, lastBook);
@@ -93,7 +95,9 @@ export function BookRoom({ link, lastBook, onRoom, onOpen }: Props) {
           books={books}
           ch={link.ch}
           ev={link.ev}
+          note={link.note ?? null}
           onOpen={onOpen}
+          onNote={onNote}
         />
       ) : (
         <main className="bk-main">
@@ -109,13 +113,17 @@ function BookView({
   books,
   ch,
   ev,
+  note: linkNote,
   onOpen,
+  onNote,
 }: {
   book: BookInfo;
   books: readonly BookInfo[];
   ch: number;
   ev: Id | null;
+  note: Note | null;
   onOpen: (link: BookLink) => void;
+  onNote: (note: Note | null) => void;
 }) {
   const { world, index, content, textOf, nameOf, titleOf, finalYear, siteActions } = useLegends();
   const chapters = useMemo(
@@ -127,12 +135,13 @@ function BookView({
   const found = evEvent ? chapterAt(chapters, eventYear(evEvent)) : -1;
   const at = Math.max(0, Math.min(chapters.length - 1, found >= 0 ? found : ch));
   const chapter = chapters[at];
-  const [note, setNote] = useState<Note | null>(null);
+  const [note, setNote] = useState<Note | null>(linkNote);
   const [tocOpen, setTocOpen] = useState(false);
   const [moreBooks, setMoreBooks] = useState(false);
   const [q, setQ] = useState('');
   const narrow = useNarrow();
   const pageEl = useRef<HTMLDivElement>(null);
+  const shownAt = useRef(`${at}|${ev}|${book.civId}`);
 
   const rows = useMemo(() => indexRows(world, content), [world, content]);
   const lives = useMemo(() => {
@@ -181,8 +190,15 @@ function BookView({
     const mark = el.querySelector('.bk-hl');
     if (ev !== null && mark) mark.scrollIntoView({ block: 'center' });
     else el.scrollTop = 0;
-    setNote(null);
+    // A new page closes the note; the page the address was opened on keeps the one it names.
+    if (shownAt.current !== `${at}|${ev}|${book.civId}`) setNote(null);
+    shownAt.current = `${at}|${ev}|${book.civId}`;
   }, [at, ev, book.civId]);
+  // The note is part of the address, so Back from the Town room restores it.
+  useEffect(() => {
+    if (note?.kind !== linkNote?.kind || note?.id !== linkNote?.id) onNote(note);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note]);
 
   // Escape closes the note (and the contents drawer) at every width.
   useEffect(() => {
@@ -633,8 +649,8 @@ function PersonNote({
             onClick={() => siteActions.watchTown(watch.siteId, id)}
           >
             {person.died === undefined
-              ? `Watch ${person.sex === 'f' ? 'her' : 'him'} in ${watch.name} (leaves the book)`
-              : `Watch ${watch.name} (leaves the book)`}
+              ? `Watch ${person.sex === 'f' ? 'her' : 'him'} in ${watch.name}`
+              : `Watch ${watch.name}`}
           </button>
           {watch.reason && (
             <small className="bk-why">

@@ -2,7 +2,16 @@
 // on the same site worker and snapshots as the old site view, so the clock, weather, needs and
 // activities are the engine's own; this room only draws them and puts the words around them.
 
-import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MutableRefObject,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import {
   DAYS_PER_YEAR,
   DAY_BLOCKS,
@@ -10,11 +19,15 @@ import {
   bandOfAge,
   residentNames,
   eventYear,
+  rollWeather,
   yearText,
+  type ActiveSite,
+  type BlockSpent,
   type ContentBundle,
   type Id,
   type LegendIndex,
   type Narrator,
+  type SimEvent,
   type WorldState,
 } from '../../engine';
 import type { SiteHost } from '../../platform/site-host';
@@ -37,10 +50,13 @@ import {
 import '../tales/fonts.css';
 import { TownPainter } from './paint';
 import {
-  buildingOf,
   defaultFollow,
+  leaveDelay,
+  pacing,
+  peopleLine,
   recentTales,
   sharedRoom,
+  snapSheet,
   townBuildings,
   type Resident,
 } from './scene';
@@ -69,21 +85,21 @@ interface Props {
   onLink: (parts: { day: number; block: number | null; follow: Id | null }) => void;
 }
 
-/** The speeds on offer, in days per second (the site worker's own). */
+/** The speeds on offer, in days per second (the site worker's own); the number keys pick them. */
 const SPEEDS: [SiteSpeed, string, string][] = [
+  [0.125, '⅛×', 'An eighth of a day a second'],
+  [0.25, '¼×', 'A quarter of a day a second'],
   [0.5, '½×', 'Half a day a second'],
   [1, '1×', 'One day a second'],
   [4, '4×', 'Four days a second'],
   [16, '16×', 'Sixteen days a second'],
 ];
-const SPEED_WORDS: Record<number, string> = {
-  0.5: 'Half a day a second',
-  1: 'One day a second',
-  4: 'Four days a second',
-  16: 'Sixteen days a second',
-};
-/** How long a dot takes to reach its new place, by speed (a snapshot comes at most every 100 ms). */
-const GLIDE_MS: Record<number, number> = { 0: 260, 0.5: 520, 1: 320, 4: 180, 16: 100 };
+const SPEED_WORDS: Record<number, string> = Object.fromEntries(SPEEDS.map(([v, , t]) => [v, t]));
+/** The speed play starts at: slow enough to read a routine. */
+const DEFAULT_SPEED: SiteSpeed = 0.25;
+/** The collapsed sheet's height on a phone (px), and the open sheet's share of the screen. */
+const SHEET_PEEK = 190;
+const SHEET_OPEN = 0.56;
 /** Event types that stop the clock: fires and threats, so a danger is never played past. */
 const PAUSE_CATEGORIES = ['fires', 'threats'] as const;
 /** Rows listed under "With them" before "and N more". */
@@ -95,7 +111,10 @@ export function TownRoom(props: Props) {
   const { world, content, host, onRoom } = props;
   const active = world.activeSite!;
   const base = useMemo(
-    () => createSiteModel(world, content, props.index, props.narrator),
+    () => {
+      showTodaysWeather(world, content, active);
+      return createSiteModel(world, content, props.index, props.narrator);
+    },
     // Built once per watched site.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [world, content],
@@ -105,6 +124,11 @@ export function TownRoom(props: Props) {
   const [speed, setSpeedState] = useState<SiteSpeed>(0);
   const [notice, setNotice] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
+  /** The sheet's height while a finger drags the handle (px); null when it rests. */
+  const [dragH, setDragH] = useState<number | null>(null);
+  const [zoomed, setZoomed] = useState(false);
+  /** Counts the moments the panel catches up with the snapshot (see `held`). */
+  const [panelTick, setPanelTick] = useState(0);
   const [followId, setFollowId] = useState<Id | null>(() =>
     props.follow !== null && active.residents.includes(props.follow)
       ? props.follow
@@ -116,8 +140,25 @@ export function TownRoom(props: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
+  const sideRef = useRef<HTMLElement>(null);
+  const measureRef = useRef<() => void>(() => undefined);
+  const handle = useRef<{
+    y0: number;
+    h0: number;
+    moved: boolean;
+    y: number;
+    t: number;
+    v: number;
+  } | null>(null);
+  /** What the panel keeps showing for the followed person until their dot sets off. */
+  const held = useRef<Held | null>(null);
+  const holdTimer = useRef(0);
+  const taps = useRef<{ follow: (id: Id) => void; closeSheet: () => void }>({
+    follow: () => undefined,
+    closeSheet: () => undefined,
+  });
   const painter = useRef<TownPainter | null>(null);
-  const resume = useRef<SiteSpeed>(1);
+  const resume = useRef<SiteSpeed>(DEFAULT_SPEED);
   const [painted, setPainted] = useState(false);
 
   // The people as the panel names them: rebuilt after each snapshot so newcomers have names.
@@ -132,8 +173,8 @@ export function TownRoom(props: Props) {
   );
 
   const pauseTypes = () => PAUSE_CATEGORIES.flatMap((c) => content.site.autoPause[c]);
-  const latest = useRef({ speed, m, nameOf });
-  latest.current = { speed, m, nameOf };
+  const latest = useRef({ speed, m, nameOf, followId });
+  latest.current = { speed, m, nameOf, followId };
 
   const setSpeed = useCallback(
     (next: SiteSpeed) => {
@@ -166,12 +207,31 @@ export function TownRoom(props: Props) {
       const bottom = bar ? box.bottom - bar.getBoundingClientRect().top + 10 : 0;
       p.setPads(top, bottom);
     };
+    measureRef.current = measure;
     const relayout = () => {
       measure();
       p.resize();
-      p.refresh(world, 0, latest.current.nameOf);
+      p.refresh(world, pacing(0), latest.current.nameOf);
       p.request();
     };
+    p.onTap = (x, y) => {
+      const id = p.pick(x, y);
+      if (id !== null) return taps.current.follow(id);
+      p.showName(p.buildingAt(x, y)?.id ?? null);
+      taps.current.closeSheet();
+    };
+    p.onHover = (x, y) => {
+      if (x === null) {
+        p.setHover(null);
+        p.setHoverBuilding(null);
+        return;
+      }
+      const id = p.pick(x, y);
+      p.setHover(id);
+      p.setHoverBuilding(id === null ? (p.buildingAt(x, y)?.id ?? null) : null);
+      canvas.style.cursor = id === null ? 'default' : 'pointer';
+    };
+    p.onZoomed = setZoomed;
     relayout();
     const observer = new ResizeObserver(() => {
       measure();
@@ -182,13 +242,16 @@ export function TownRoom(props: Props) {
     if (barRef.current) observer.observe(barRef.current);
     return () => {
       observer.disconnect();
+      window.clearTimeout(holdTimer.current);
+      holdTimer.current = 0;
       p.dispose();
       painter.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base]);
 
-  // The followed person's building is outlined, and the picture knows the time of day.
+  // The panel's view of who is where. It catches up when the followed dot sets off, not on the
+  // beat of the snapshot, so the words and the dot change together.
   const shown = shownBlock(m);
   const blockName = DAY_BLOCKS[shown.block]!;
   const followed = followId === null ? undefined : world.people.get(followId);
@@ -199,13 +262,13 @@ export function TownRoom(props: Props) {
         return { id, pos: d?.pos, placeId: d?.placeId };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [snapshots, base],
+    [panelTick, base],
   );
   const blocks = useMemo(
     () =>
       townBuildings(active.buildings.values(), content.site.buildings, base.ruleWord === 'jarl'),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [snapshots, base],
+    [panelTick, base],
   );
   const room = useMemo(
     () => (followId === null ? null : sharedRoom(residents, blocks, followId)),
@@ -214,10 +277,12 @@ export function TownRoom(props: Props) {
   useEffect(() => {
     const p = painter.current;
     if (!p) return;
-    const me = residents.find((r) => r.id === followId);
-    p.setFollowed(followId, me ? (buildingOf(me, blocks)?.id ?? null) : null);
+    p.setFollowed(followId);
     p.setBlock(blockName);
-  }, [followId, residents, blocks, blockName, painted]);
+  }, [followId, blockName, painted]);
+  useEffect(() => {
+    painter.current?.setSlow(speed <= 1);
+  }, [speed]);
 
   // ---- the clock ----
 
@@ -226,10 +291,37 @@ export function TownRoom(props: Props) {
       const { speed: current, m: model } = latest.current;
       world.day = nextDay;
       if (snapshot) {
+        const who = latest.current.followId;
+        // Keep showing what the followed person was doing until their dot sets off.
+        if (who !== null && !holdTimer.current) {
+          const p = world.people.get(who);
+          held.current = p
+            ? {
+                id: who,
+                spent: lastSpent(p),
+                today: p.detail?.today,
+                block: shownBlock(model).block,
+              }
+            : null;
+        }
         applySiteSnapshot(world, snapshot);
         base.clock.day = snapshot.day;
-        painter.current?.refresh(world, GLIDE_MS[current] ?? 260, latest.current.nameOf);
+        const pace = pacing(current);
+        painter.current?.refresh(world, pace, latest.current.nameOf);
         setSnapshots((n) => n + 1);
+        const delay = who === null ? 0 : leaveDelay(who, pace.spreadMs);
+        if (delay > 0 && held.current) {
+          if (!holdTimer.current) {
+            holdTimer.current = window.setTimeout(() => {
+              holdTimer.current = 0;
+              held.current = null;
+              setPanelTick((n) => n + 1);
+            }, delay);
+          }
+        } else {
+          held.current = null;
+          setPanelTick((n) => n + 1);
+        }
       }
       setDay(nextDay);
       if (stopped) setSpeedState(0);
@@ -265,28 +357,111 @@ export function TownRoom(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [point.day, point.block, followId]);
 
-  // Space plays and pauses; the number keys pick a speed.
+  // Space plays and pauses anywhere in the room (not while typing); the number keys pick a speed.
   useEffect(() => {
-    const listener = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement;
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
-      if (target.matches?.('input,textarea,select,button,a')) return;
+    const typing = (target: EventTarget | null) =>
+      Boolean((target as HTMLElement | null)?.closest?.('input,textarea,select,[contenteditable]'));
+    const keydown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || typing(event.target)) return;
       if (event.key === ' ') {
+        // A focused button would also be pressed by the space; this key is the room's.
         event.preventDefault();
+        if (event.repeat) return;
         if (latest.current.speed !== 0) setSpeed(0);
         else setSpeed(resume.current);
+        return;
+      }
+      const speed = /^[1-9]$/.test(event.key) ? SPEEDS[Number(event.key) - 1] : undefined;
+      if (speed) {
+        event.preventDefault();
+        setSpeed(speed[0]);
       }
     };
-    document.addEventListener('keydown', listener);
-    return () => document.removeEventListener('keydown', listener);
+    const keyup = (event: KeyboardEvent) => {
+      if (event.key === ' ' && !typing(event.target)) event.preventDefault();
+    };
+    document.addEventListener('keydown', keydown);
+    document.addEventListener('keyup', keyup);
+    return () => {
+      document.removeEventListener('keydown', keydown);
+      document.removeEventListener('keyup', keyup);
+    };
   }, [setSpeed]);
 
   // ---- following ----
 
   const follow = (id: Id) => {
+    window.clearTimeout(holdTimer.current);
+    holdTimer.current = 0;
+    held.current = null;
     setFollowId(id);
     setAnnounce(`Following ${nameOf(id)}`);
   };
+  taps.current = { follow, closeSheet: () => setSheet(false) };
+  // Someone asked for who is not here: a Book note or a link named a person who has died, or who
+  // lives elsewhere at the end of history. The town opens on someone else; say so.
+  const asked =
+    props.follow !== null && !active.residents.includes(props.follow)
+      ? world.people.get(props.follow)
+      : undefined;
+  const askedLine = (() => {
+    if (!asked) return null;
+    const year = `Year ${yearText(Math.floor(active.enteredDay / DAYS_PER_YEAR))}`;
+    if (asked.died !== undefined) {
+      return `${asked.name} died in Year ${yearText(asked.died)}; this is ${m.site.name} in ${year}.`;
+    }
+    const elsewhere = asked.siteId == null ? undefined : world.sites.get(asked.siteId)?.name;
+    return elsewhere && elsewhere !== m.site.name
+      ? `${asked.name} lives in ${elsewhere} in ${year}; this is ${m.site.name}.`
+      : `${asked.name} is not in ${m.site.name} in ${year}.`;
+  })();
+
+  // The sheet's handle: a tap opens or closes it, a drag follows the finger and snaps to peek or open.
+  const sheetOpenPx = () => Math.round(window.innerHeight * SHEET_OPEN);
+  const handleDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const h = sideRef.current?.getBoundingClientRect().height ?? SHEET_PEEK;
+    handle.current = {
+      y0: event.clientY,
+      h0: h,
+      moved: false,
+      y: event.clientY,
+      t: event.timeStamp,
+      v: 0,
+    };
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // No capture for a synthetic pointer; the drag still works while it stays on the handle.
+    }
+  };
+  const handleMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const d = handle.current;
+    if (!d) return;
+    if (Math.abs(event.clientY - d.y0) > 6) d.moved = true;
+    const dt = Math.max(1, event.timeStamp - d.t);
+    d.v = (event.clientY - d.y) / dt;
+    d.y = event.clientY;
+    d.t = event.timeStamp;
+    if (d.moved) {
+      setDragH(Math.max(SHEET_PEEK, Math.min(sheetOpenPx(), d.h0 + d.y0 - event.clientY)));
+    }
+  };
+  const handleUp = () => {
+    const d = handle.current;
+    handle.current = null;
+    if (!d) return;
+    if (!d.moved) setSheet((o) => !o);
+    else {
+      const h = Math.max(SHEET_PEEK, Math.min(sheetOpenPx(), d.h0 + d.y0 - d.y));
+      setSheet(snapSheet(h, SHEET_PEEK, sheetOpenPx(), d.v) === 'open');
+    }
+    setDragH(null);
+  };
+  // The picture keeps clear of the bar, which rides on top of the sheet; measure once it settles.
+  useEffect(() => {
+    const timer = window.setTimeout(() => measureRef.current(), 260);
+    return () => window.clearTimeout(timer);
+  }, [sheet]);
   const tales = useMemo(
     () =>
       recentTales(
@@ -310,34 +485,34 @@ export function TownRoom(props: Props) {
   const chip = weatherChip({ world, active, content }, false);
   const date = dayText(shown.day);
   const civName = m.civ ? ` of the ${m.civ.name}` : '';
-  const sub = `${cap(m.site.kind)}${civName} · ${count(m.total)} people · ${count(active.residents.length)} you can follow`;
+  const drawn = useMemo(
+    () => active.residents.filter((id) => world.people.get(id)?.detail?.pos).length,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [snapshots, base],
+  );
+  const counts = peopleLine(m.total, drawn);
+  const sub = `${cap(m.site.kind)}${civName} · ${
+    counts.all
+      ? `${count(counts.people)} people · all can be followed`
+      : `${count(counts.followed)} followed of ${count(counts.people)} people`
+  }`;
+  const mainStyle = {
+    '--sheet': dragH !== null ? `${dragH}px` : sheet ? `${SHEET_OPEN * 100}dvh` : `${SHEET_PEEK}px`,
+  } as CSSProperties;
 
   return (
     <RoomShell current="town" onRoom={onRoom} className="tw-root" data-testid="town">
-      <div className={`tw-main${sheet ? ' sheet-open' : ''}`}>
+      <div
+        className={`tw-main${sheet ? ' sheet-open' : ''}${dragH !== null ? ' dragging' : ''}`}
+        style={mainStyle}
+      >
         <div className="tw-stage" ref={stageRef}>
           <canvas
             ref={canvasRef}
             className="tw-canvas"
             data-testid="town-canvas"
             data-state={painted ? 'ready' : 'drawing'}
-            aria-label={`${m.site.name}, drawn from above. Click a dot to follow that person.`}
-            onPointerMove={(event) => {
-              const p = painter.current;
-              if (!p || event.pointerType === 'touch') return;
-              const box = canvasRef.current!.getBoundingClientRect();
-              const id = p.pick(event.clientX - box.left, event.clientY - box.top);
-              p.setHover(id);
-              canvasRef.current!.style.cursor = id === null ? 'default' : 'pointer';
-            }}
-            onPointerLeave={() => painter.current?.setHover(null)}
-            onClick={(event) => {
-              const p = painter.current;
-              if (!p) return;
-              const box = canvasRef.current!.getBoundingClientRect();
-              const id = p.pick(event.clientX - box.left, event.clientY - box.top);
-              if (id !== null) follow(id);
-            }}
+            aria-label={`${m.site.name}, drawn from above. Click a dot to follow that person; drag to move the view; pinch or scroll to zoom.`}
           />
           <div className="tw-head" ref={headRef}>
             <div className="tw-title">
@@ -350,6 +525,16 @@ export function TownRoom(props: Props) {
               <br />
               <span className={chip.warn ? 'warn' : undefined}>{chip.text}</span>
             </div>
+            {zoomed && (
+              <button
+                type="button"
+                className="tw-pill tw-reset"
+                data-testid="town-reset"
+                onClick={() => painter.current?.resetView()}
+              >
+                Reset view
+              </button>
+            )}
           </div>
           {notice && (
             <div className="tw-notice" role="status">
@@ -404,17 +589,43 @@ export function TownRoom(props: Props) {
             </button>
           </div>
         </div>
-        <aside className="tw-side" aria-label={`${m.site.name}: the person you follow`}>
+        <aside
+          className="tw-side"
+          ref={sideRef}
+          aria-label={`${m.site.name}: the person you follow`}
+        >
           <button
             type="button"
             className="tw-handle"
             aria-expanded={sheet}
             aria-label={sheet ? 'Show less' : 'Show more'}
-            onClick={() => setSheet((o) => !o)}
+            data-testid="town-handle"
+            onPointerDown={handleDown}
+            onPointerMove={handleMove}
+            onPointerUp={handleUp}
+            onPointerCancel={() => {
+              handle.current = null;
+              setDragH(null);
+            }}
+            onClick={(event) => {
+              // A keyboard press (no pointer, detail 0); a tap or drag was handled on pointer up.
+              if (event.detail === 0) setSheet((o) => !o);
+            }}
           >
             <i />
           </button>
-          <FollowingCard m={m} id={followId} block={shown.block} onLife={props.onLife} />
+          {askedLine && (
+            <p className="tw-asked" data-testid="town-asked">
+              {askedLine}
+            </p>
+          )}
+          <FollowingCard
+            m={m}
+            id={followId}
+            block={held.current?.id === followId ? held.current.block : shown.block}
+            held={held.current?.id === followId ? held.current : null}
+            onLife={props.onLife}
+          />
           {room && followed && followId !== null && (
             <WithThem
               m={m}
@@ -456,6 +667,25 @@ export function TownRoom(props: Props) {
   );
 }
 
+/**
+ * The weather of the day the town is entered on. The engine rolls a day's weather when its first
+ * block runs, so before anything has run the site still holds the placeholder (0 °C, clear). The
+ * same roll is made here, from the same state, so the first view shows what the playing view will;
+ * the worker rolls its own copy identically when play starts, and its snapshot replaces this.
+ */
+function showTodaysWeather(world: WorldState, content: ContentBundle, active: ActiveSite): void {
+  if (world.day !== active.enteredDay || active.block !== 0) return;
+  const name = world.sites.get(active.siteId)?.name ?? '';
+  const cell = world.sites.get(active.siteId)?.cell ?? -1;
+  // Nothing is recorded: the events a roll would emit belong to the worker's run.
+  const emit = () => ({ id: -1 }) as SimEvent;
+  try {
+    rollWeather(world, content, active, emit, { name, cell });
+  } catch {
+    // Without a roll the card shows the placeholder; better than failing to open the town.
+  }
+}
+
 const count = (n: number) => Math.round(n).toLocaleString('en-US');
 
 /** The first letter of a name, for the round badge. */
@@ -463,15 +693,25 @@ const initialOf = (name: string) => name.trim().charAt(0).toUpperCase() || '?';
 
 // ---- the person followed ----
 
+/** What the panel shows of the followed person's doing until their dot sets off. */
+interface Held {
+  id: Id;
+  spent: BlockSpent;
+  today: BlockSpent[] | undefined;
+  block: number;
+}
+
 function FollowingCard({
   m,
   id,
   block,
+  held,
   onLife,
 }: {
   m: SiteModel;
   id: Id | null;
   block: number;
+  held: Held | null;
   onLife: (id: Id) => void;
 }) {
   const { world, content, active } = m;
@@ -528,8 +768,8 @@ function FollowingCard({
     );
   }
   // What they are doing in the block that just ran, and the blocks of today before it.
-  const spentNow = lastSpent(p);
-  const earlier = (detail.today ?? []).flatMap((spent, b) =>
+  const spentNow = held ? held.spent : lastSpent(p);
+  const earlier = (held ? (held.today ?? []) : (detail.today ?? [])).flatMap((spent, b) =>
     b < block && (spent.activity || spent.with !== undefined)
       ? [`${cap(DAY_BLOCKS[b] ?? '')}: ${lower(doingText(m, spent, home))}`]
       : [],
@@ -542,7 +782,7 @@ function FollowingCard({
         <div className="tw-r">
           <div className="tw-av">{initialOf(p.name)}</div>
           <div>
-            <b data-testid="town-following-name">{p.name}</b>
+            <b data-testid="town-following-name">{m.names.get(id) ?? p.name}</b>
             <small>
               {role} · age {age} · {moodWord(detail.mood)}
             </small>

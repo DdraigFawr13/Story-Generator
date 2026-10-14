@@ -288,6 +288,8 @@ export interface BookLink {
   civ: number | null;
   ch: number;
   ev: number | null;
+  /** The margin note open (`note=person:3737`), so Back from the Town room reopens it. */
+  note?: { kind: 'person' | 'place' | 'civ'; id: number } | null;
 }
 
 /** The book a link names (`room=book&book=3&ch=2&ev=881`); null unless the room is the Book. */
@@ -298,7 +300,10 @@ export function parseBookLink(search: string): BookLink | null {
     const v = params.get(key);
     return v !== null && /^\d{1,9}$/.test(v) ? Number(v) : null;
   };
-  return { civ: whole('book'), ch: whole('ch') ?? 0, ev: whole('ev') };
+  const note = /^(person|place|civ):(\d{1,9})$/.exec(params.get('note') ?? '');
+  const link: BookLink = { civ: whole('book'), ch: whole('ch') ?? 0, ev: whole('ev') };
+  if (note) link.note = { kind: note[1] as 'person' | 'place' | 'civ', id: Number(note[2]) };
+  return link;
 }
 
 /** Path and query for a view; zoom 0, no selection and empty Legends state are left out. */
@@ -326,6 +331,7 @@ export function buildViewUrl(
   if (view.room === 'book' && view.book) {
     if (view.book.civ !== null) parts.push(`book=${view.book.civ}`, `ch=${view.book.ch}`);
     if (view.book.ev !== null) parts.push(`ev=${view.book.ev}`);
+    if (view.book.note) parts.push(`note=${view.book.note.kind}:${view.book.note.id}`);
   }
   if (view.year != null) parts.push(`year=${view.year}`);
   if (view.open) parts.push(`open=${encodeURIComponent(view.open).replace(/%3A/g, ':')}`);

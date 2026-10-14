@@ -42,7 +42,8 @@
   width: 100%;
   height: 100%;
   display: block;
-  touch-action: manipulation;
+  /* Drag pans and pinch zooms the picture; the page itself never scrolls here. */
+  touch-action: none;
 }
 .tw-root .tw-head {
   position: absolute;
@@ -87,6 +88,22 @@
   font-size: 24px;
   font-weight: 400;
   display: block;
+}
+.tw-root .tw-reset {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 8px;
+  pointer-events: auto;
+}
+.tw-root .tw-asked {
+  background: var(--card);
+  border-left: 4px solid var(--warm);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--soft);
 }
 .tw-root .tw-clock .warn {
   color: var(--red);
@@ -432,18 +449,27 @@
   .tw-root .tw-clock b {
     font-size: 19px;
   }
+  /* The bar rides on top of the sheet, so the controls stay in reach however far it is open. */
   .tw-root .tw-bar {
     left: 12px;
     right: 12px;
-    bottom: 10px;
+    bottom: calc(var(--sheet, 190px) - 180px);
     gap: 6px;
+    transition: bottom 0.2s ease;
+  }
+  .tw-root .dragging .tw-bar,
+  .tw-root .dragging .tw-side {
+    transition: none;
   }
   .tw-root .tw-pill {
     padding: 7px 12px;
     font-size: 14px;
   }
+  .tw-root .tw-speeds {
+    gap: 4px;
+  }
   .tw-root .tw-speeds .tw-pill {
-    padding: 7px 10px;
+    padding: 7px 8px;
   }
   .tw-root .tw-rate,
   .tw-root .tw-far {
@@ -452,7 +478,7 @@
   .tw-root .tw-notice {
     left: 12px;
     right: 12px;
-    bottom: 96px;
+    bottom: calc(var(--sheet, 190px) - 94px);
     font-size: 14px;
   }
   .tw-root .tw-side {
@@ -460,19 +486,15 @@
     left: 0;
     right: 0;
     bottom: 0;
-    height: 190px;
     border-left: 0;
     border-top: 1px solid var(--line);
     border-radius: 16px 16px 0 0;
     box-shadow: 0 -8px 24px rgba(20, 30, 30, 0.14);
     padding: 0 16px 16px;
     gap: 18px;
+    height: var(--sheet, 190px);
     transition: height 0.2s ease;
     z-index: 3;
-  }
-  .tw-root .sheet-open .tw-side {
-    height: 66vh;
-    height: 66dvh;
   }
   .tw-root .tw-handle {
     display: block;
@@ -484,6 +506,9 @@
     padding: 10px 0 8px;
     background: var(--paper);
     flex: none;
+    /* The handle is dragged, so the browser leaves the gesture to it. */
+    touch-action: none;
+    cursor: grab;
   }
   .tw-root .tw-handle i {
     display: block;
@@ -502,5 +527,12 @@
   .tw-root .tw-pick-list {
     padding: 8px 16px 24px;
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Six speeds and two buttons need the room the speed words take, below a wide screen. */
+@media (max-width: 1500px) {
+  .tw-root .tw-rate {
+    display: none;
   }
 }

@@ -40,6 +40,8 @@ export function TownPicker({ world, enabled, onRoom, onWatch }: Props) {
       ? rows
       : rows.filter((r) => `${r.name} ${r.kind} ${r.realm ?? ''}`.toLowerCase().includes(needle))
   ).slice(0, SHOWN);
+  // A world still being built has no towns yet; say so rather than "0 towns".
+  const loading = world.sites.size === 0;
   return (
     <RoomShell current="town" onRoom={onRoom} className="tw-root" data-testid="town-picker">
       <main className="tw-pick">
@@ -52,9 +54,10 @@ export function TownPicker({ world, enabled, onRoom, onWatch }: Props) {
             aria-label="Find a town or a realm"
             onChange={(event) => setText(event.target.value)}
           />
-          <p>
-            {rows.length} towns still stand. You watch one day at a time, and follow the people who
-            live there.
+          <p data-testid="town-picker-line">
+            {loading
+              ? 'Reading the world…'
+              : `${rows.length} ${rows.length === 1 ? 'town stands' : 'towns still stand'}. You watch one day at a time, and follow the people who live there.`}
           </p>
         </header>
         <div className="tw-pick-list">
@@ -73,7 +76,7 @@ export function TownPicker({ world, enabled, onRoom, onWatch }: Props) {
               </small>
             </button>
           ))}
-          {shown.length === 0 && <p className="tw-quiet">No town matches.</p>}
+          {!loading && shown.length === 0 && <p className="tw-quiet">No town matches.</p>}
         </div>
       </main>
     </RoomShell>

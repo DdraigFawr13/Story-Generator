@@ -41,7 +41,7 @@ test('a town is watched from People, a day plays, and Leave returns to Tales', a
   await expect(page.getByTestId('town-canvas')).toHaveAttribute('data-state', 'ready');
   await expect(page).toHaveURL(/site=\d+.*room=town&follow=\d+/);
   await expect(town.getByRole('heading', { level: 1 })).not.toBeEmpty();
-  await expect(page.getByTestId('town-sub')).toContainText('you can follow');
+  await expect(page.getByTestId('town-sub')).toContainText(/can be followed|followed of/);
   await expect(page.getByTestId('town-following')).toBeVisible();
   await expect(page.getByTestId('town-needs')).toBeVisible();
   // Old rail badge is gone in every room.
@@ -81,6 +81,7 @@ test('the rail picks a town when none has been watched, and Hall of records leav
   const picker = page.getByTestId('town-picker');
   await expect(picker).toBeVisible();
   await expect(page).toHaveURL(/room=town/);
+  await expect(picker).not.toContainText(/\b0 towns/);
   await picker.getByTestId('town-pick').first().click();
   const town = page.getByTestId('town');
   await expect(town).toBeVisible({ timeout: 30_000 });
@@ -114,4 +115,76 @@ test('the Town room fits a phone: map on top, a sheet, the tab bar below', async
     .poll(async () => (await side.boundingBox())!.height)
     .toBeGreaterThan(sideBox!.height + 100);
   expect(await noSideways()).toBe(true);
+  // The controls ride above the open sheet and still work.
+  const play = page.getByTestId('town-play');
+  await expect
+    .poll(async () => {
+      const bar = await page.locator('.tw-bar').boundingBox();
+      const open = await side.boundingBox();
+      return bar!.y + bar!.height <= open!.y + 1;
+    })
+    .toBe(true);
+  await play.click();
+  await expect(play).toHaveText(/Pause/);
+  await play.click();
+  await expect(play).toHaveText(/Play/);
+  // Tapping the map closes the sheet.
+  await page.getByTestId('town-canvas').click({ position: { x: 20, y: 20 } });
+  await expect(page.getByRole('button', { name: 'Show more' })).toBeVisible();
+  await expect
+    .poll(async () => (await side.boundingBox())!.height)
+    .toBeLessThan(sideBox!.height + 5);
+});
+
+test('Space plays and pauses from anywhere in the room, and the number keys pick the speed', async ({
+  page,
+}) => {
+  await page.goto('/?seed=SMOKE&size=128&room=town');
+  const picker = page.getByTestId('town-picker');
+  await expect(picker).toBeVisible({ timeout: 30_000 });
+  await picker.getByTestId('town-pick').first().click();
+  await expect(page.getByTestId('town')).toBeVisible({ timeout: 30_000 });
+  const play = page.getByTestId('town-play');
+  await expect(play).toHaveText(/Play/);
+  // Space starts the clock at a quarter day a second.
+  await page.keyboard.press(' ');
+  await expect(play).toHaveText(/Pause/);
+  await expect(page.getByTestId('town-rate')).toHaveText(/quarter/i);
+  // A focused speed button does not take the space for itself.
+  await page.getByTestId('town-speed-1').focus();
+  await page.keyboard.press(' ');
+  await expect(play).toHaveText(/Play/);
+  await page.keyboard.press(' ');
+  await expect(play).toHaveText(/Pause/);
+  // Number keys pick the speeds in the order shown: 4 is one day a second.
+  await page.keyboard.press('4');
+  await expect(page.getByTestId('town-speed-1')).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press(' ');
+  await expect(play).toHaveText(/Play/);
+});
+
+test('the picker never says "0 towns" while the world is being built', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __zeroTowns: boolean };
+    w.__zeroTowns = false;
+    const look = () => {
+      if (/\b0 towns/.test(document.body?.innerText ?? '')) w.__zeroTowns = true;
+    };
+    document.addEventListener('DOMContentLoaded', () => {
+      look();
+      new MutationObserver(look).observe(document.body, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+      });
+    });
+  });
+  await page.goto('/?seed=SMOKE&size=128&room=town');
+  const picker = page.getByTestId('town-picker');
+  await expect(picker).toBeVisible({ timeout: 30_000 });
+  await expect(picker.getByTestId('town-pick').first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId('town-picker-line')).toContainText(/towns? (still )?stands?/);
+  expect(
+    await page.evaluate(() => (window as unknown as { __zeroTowns: boolean }).__zeroTowns),
+  ).toBe(false);
 });

@@ -83,6 +83,7 @@ test('a realm name opens a realm note without leaving the page, and Escape close
   }
   await expect(civ.first()).toBeVisible();
   const url = page.url();
+  const entries = await page.evaluate(() => window.history.length);
   await civ.first().click();
   const note = page.getByTestId('book-note');
   await expect(note).toBeVisible();
@@ -90,7 +91,10 @@ test('a realm name opens a realm note without leaving the page, and Escape close
   await expect(note).toContainText(/Held Years \d+/);
   await expect(note.getByRole('button', { name: 'Read its book' })).toBeVisible();
   await expect(note.getByRole('link', { name: /See on map/ })).toBeVisible();
-  expect(page.url()).toBe(url);
+  // The note joins the address on the same history entry, so Back from the Town room reopens it.
+  expect(page.url()).toMatch(/&note=civ:\d+$/);
+  expect(page.url().replace(/&note=civ:\d+$/, '')).toBe(url);
+  expect(await page.evaluate(() => window.history.length)).toBe(entries);
   // A second click on another name swaps the note instead of closing it.
   await pageEl.locator('.bk-name[data-kind="person"], .bk-name[data-kind="place"]').first().click();
   await expect(note).toBeVisible();

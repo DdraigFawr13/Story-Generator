@@ -855,9 +855,9 @@ export function NextApp() {
       if (watchingRef.current) {
         // Back out of a site: leave it, then show the world the link names.
         if (!url.site) {
-          void leaveRef.current(false).then((left) => {
-            if (left) apply();
-          });
+          // `apply` runs in the same batch as the leave, so the room the address names is the one
+          // written back (not the map at the site, which would add a zoom to the address).
+          void leaveRef.current(false, apply);
         }
         return;
       }
@@ -1433,6 +1433,12 @@ export function NextApp() {
                   lastBook={lastBook.current}
                   onRoom={peopleRoom}
                   onOpen={(link) => roomChange(() => showBook(link))}
+                  onNote={(note) => {
+                    if (!bookRef.current) return;
+                    // The open note is part of the address, on the entry already there.
+                    showBook({ ...bookRef.current, note });
+                    setRoomTick((n) => n + 1);
+                  }}
                 />
               ) : picker ? (
                 <TownPicker
