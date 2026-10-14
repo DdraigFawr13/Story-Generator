@@ -15,6 +15,8 @@ export * from './narrative/render';
 export * from './narrative/biography';
 export * from './narrative/legends';
 export * from './narrative/playbyplay';
+export * from './narrative/battles';
+export * from './narrative/annals';
 export * from './systems';
 export * from './worldgen';
 export * from './worldgen/noise';

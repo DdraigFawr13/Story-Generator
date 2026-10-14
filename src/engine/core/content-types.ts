@@ -266,6 +266,58 @@ export interface ContentBundle {
   chronicle: ChronicleRules;
   /** Short play-by-plays for epic battles and beast fights, shown in Legends. */
   playByPlay: PlayByPlayRules;
+  /** Named battles (M4.8): how a battle takes the name of its place. */
+  battles: BattleRules;
+  /** Annals of each people (M4.9): era lengths and names. */
+  annals: AnnalRules;
+}
+
+/** How battles are named and which count as great (M4.8). */
+export interface BattleRules {
+  /** The first battle at a place; `{place}` is the pass, ford or town. */
+  name: string;
+  /** The second and later; `{ordinal}` is a word from `ordinals`, or "11th" past them. */
+  repeatName: string;
+  /** Ordinal words: index 0 is "First", 1 is "Second", up to the tenth. */
+  ordinals: string[];
+  /** A pass or ford this many cells from the battlefield gives it its name. */
+  placeRadius: number;
+  /** The deadliest this many battles of a world are great; so is a battle where a legend fell. */
+  greatCount: number;
+}
+
+/** What an era is about, from the events that filled it. */
+export const ERA_TAGS = ['war', 'strife', 'plague', 'famine', 'beasts', 'growth', 'quiet'] as const;
+export type EraTag = (typeof ERA_TAGS)[number];
+
+/** Era names for the annals (M4.9); `{enemy}`, `{disease}` and `{beast}` come from the record. */
+export interface AnnalRules {
+  /** Most eras in one people's annals. */
+  maxEras: number;
+  /** A run of years shorter than this merges into its neighbour. */
+  minEraYears: number;
+  /** A year takes the dominant tag of the years this far either side, so a war's gaps do not split it. */
+  smoothYears: number;
+  /** Each kind of trouble's event importance is scaled by this before eras are chosen. */
+  tagWeight: Record<Exclude<EraTag, 'quiet' | 'growth'>, number>;
+  /** A year's gravest scaled trouble must reach this, or the year is quiet (or growth). */
+  minScore: number;
+  /** A quiet era this long is a long peace. */
+  longPeaceYears: number;
+  /** Most events listed under an era, and most summary lines. */
+  keyEvents: number;
+  maxSummary: number;
+  /** The name a long quiet era takes first. */
+  longPeace: string;
+  /** Event types that tag a year, by era tag. */
+  tags: Record<Exclude<EraTag, 'quiet'>, string[]>;
+  /** Names per tag, chosen by (civ id + era number) from the first usable one. */
+  names: Record<EraTag, string[]>;
+  /** Names that need a record value, used when it is present. */
+  namedFor: { war: string; plague: string; beasts: string };
+  /** Fallback when every name is taken: `{ordinal}` (Second, Third, ... from `ordinals`) and `{name}` without its "the". */
+  repeatName: string;
+  ordinals: string[];
 }
 
 /** What a condition is, for its harm and the words of its chronicle lines (M3.5). */

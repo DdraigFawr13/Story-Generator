@@ -4,6 +4,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
+  battleOf,
   eventTitle,
   eventYear,
   importanceStars,
@@ -185,7 +186,8 @@ export function Legends(props: Props) {
   const titleOf = (event: SimEvent) => {
     let title = caches.title.get(event.id);
     if (title === undefined) {
-      title = eventTitle(event, typeDefs.get(event.type));
+      const battle = event.type === 'battle' ? battleOf(world, content, event.id) : undefined;
+      title = battle ? cap(battle.name) : eventTitle(event, typeDefs.get(event.type));
       caches.title.set(event.id, title);
     }
     return title;
