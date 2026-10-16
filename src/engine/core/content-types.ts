@@ -2403,6 +2403,8 @@ export interface IntrigueRules {
   /** Share of the people's adults sent on a hunt, at most `huntCap` each. */
   huntShare: number;
   huntCap: number;
+  /** Fewest soldiers a hunt sends in all; a smaller host stays home. */
+  huntMin: number;
   /** Chance a hunt that outnumbers the legend kills them, and that a hunter dies when the legend wins. */
   huntKill: number;
   hunterDeath: number;

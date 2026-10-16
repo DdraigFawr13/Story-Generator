@@ -30,7 +30,14 @@ import {
   siteOf,
 } from './people';
 import { bandCount } from './pop';
-import { addGrievance, atWar, causesOf, liveSites, type HistoryRun } from './state';
+import {
+  addGrievance,
+  atWar,
+  causesOf,
+  grievanceEventsOf,
+  liveSites,
+  type HistoryRun,
+} from './state';
 
 type Motive = 'rival' | 'vengeance' | 'fear' | 'ownFear';
 
@@ -63,6 +70,20 @@ function latestDeed(
     if (event && accept(event)) return event;
   }
   return undefined;
+}
+
+/** The legend's latest deed of renown they led (a rise, a slaying, a broken host, a duel, a hunt beaten off). */
+function renownOf(run: HistoryRun, legend: Person): SimEvent | undefined {
+  const { risePhrases } = run.content.notables.deeds;
+  return latestDeed(
+    run,
+    legend,
+    (e) =>
+      e.actors[0] === legend.id &&
+      (risePhrases[e.type] !== undefined ||
+        e.type === 'legend_risen' ||
+        e.type === 'legend_hunted'),
+  );
 }
 
 const honouredBy = (run: HistoryRun, ruler: Person | undefined, legend: Person) =>
@@ -176,14 +197,20 @@ function runPlots(run: HistoryRun): void {
     if (ruler && ruler.id !== plotter.id && plotter.rivals?.includes(ruler.id)) {
       const chance = clamp(rules.rivalPlotChance * unruliness(run, civ), 0, 1);
       if (rng.chance(chance)) {
-        const dispute = latestDeed(
+        // The wrong between them: the lost claim, the seat taken, or an earlier plot.
+        const grudge = latestDeed(
           run,
           plotter,
-          (e) => e.type === 'succession_disputed' && e.actors.includes(ruler.id),
+          (e) =>
+            (e.type === 'succession_disputed' ||
+              e.type === 'seat_seized' ||
+              e.type === 'plot_foiled') &&
+            e.actors.includes(ruler.id),
         );
-        const grudge = dispute ?? latestDeed(run, plotter);
-        plot(run, plotter, ruler, 'rival', grudge?.id);
-        continue;
+        if (grudge) {
+          plot(run, plotter, ruler, 'rival', grudge.id);
+          continue;
+        }
       }
     }
     // An avenger's sworn enemy: a foreign ruler or legend still living.
@@ -202,7 +229,7 @@ function runPlots(run: HistoryRun): void {
         plotter,
         (e) => e.type === 'oath_sworn' && e.actors.includes(foe.id),
       );
-      plot(run, plotter, foe, 'vengeance', (oath ?? latestDeed(run, plotter))?.id);
+      if (oath) plot(run, plotter, foe, 'vengeance', oath.id);
     }
   }
 }
@@ -283,7 +310,7 @@ function honour(run: HistoryRun, legend: Person, civ: Civ, ruler: Person): void 
   const rules = run.rules.intrigue;
   const site = siteOf(run, legend);
   const gift = run.rng.intrigue.pick(rules.phrases.gifts).replace('{site}', site?.name ?? civ.name);
-  const deed = latestDeed(run, legend);
+  const deed = renownOf(run, legend);
   const event = run.emit({
     type: 'legend_honoured',
     actors: [ruler.id, legend.id],
@@ -306,8 +333,11 @@ function honour(run: HistoryRun, legend: Person, civ: Civ, ruler: Person): void 
 function coup(run: HistoryRun, legend: Person, civ: Civ, ruler: Person): void {
   const rules = run.rules.intrigue;
   const wrong =
-    latestDeed(run, legend, (e) => e.type === 'plot_foiled' && e.actors.includes(ruler.id)) ??
-    latestDeed(run, legend);
+    latestDeed(
+      run,
+      legend,
+      (e) => (e.type === 'plot_foiled' || e.type === 'seat_seized') && e.actors.includes(ruler.id),
+    ) ?? renownOf(run, legend);
   const how = rules.phrases.coup.replace('{prior}', ruler.name);
   const event = run.emit({
     type: 'seat_seized',
@@ -325,29 +355,38 @@ function coup(run: HistoryRun, legend: Person, civ: Civ, ruler: Person): void {
 }
 
 /**
- * A legend not honoured by their ruler, who is the ruler's rival or a stranger to the realm's
- * ways, goes over to a people that is at war with theirs or holds a grievance of it.
+ * Once in a life, a legend not honoured by their ruler goes over to a people at war with theirs
+ * or holding a grievance of it: the ruler's rival to any such people, a stranger to the realm's
+ * ways only to a people of their own ways.
  */
 function betray(run: HistoryRun, legend: Person, civ: Civ, ruler: Person): boolean {
   const rules = run.rules.intrigue;
+  if (run.intrigue.turncoats.has(legend.id)) return false;
   const rival = ruler.rivals?.includes(legend.id) === true;
   if (!rival && legend.cultureId === civ.cultureId) return false;
   for (const other of run.world.civs.values()) {
     if (other.id === civ.id || other.fell !== undefined) continue;
+    if (!rival && other.cultureId !== legend.cultureId) continue;
     if (!atWar(run, other.id, civ.id) && (other.grievances.get(civ.id) ?? 0) < rules.fearGrievance)
       continue;
     const capital = run.world.sites.get(other.capital);
     const lord = rulerOf(run, other);
     if (!capital || capital.ruinedYear !== undefined || !lord) continue;
     if (!run.rng.intrigue.chance(rules.betrayChance)) return false;
-    const wrong =
-      latestDeed(
-        run,
-        legend,
-        (e) =>
-          (e.type === 'plot_foiled' || e.type === 'succession_disputed') &&
-          e.actors.includes(ruler.id),
-      ) ?? latestDeed(run, legend);
+    // The rival's wrong is the quarrel with the ruler; the stranger's, the newest wrong between the peoples.
+    const wrong = rival
+      ? latestDeed(
+          run,
+          legend,
+          (e) =>
+            (e.type === 'plot_foiled' ||
+              e.type === 'succession_disputed' ||
+              e.type === 'seat_seized') &&
+            e.actors.includes(ruler.id),
+        )
+      : undefined;
+    const between = grievanceEventsOf(run, other.id, civ.id);
+    const cause = wrong?.id ?? between[between.length - 1] ?? renownOf(run, legend)?.id;
     const why = (rival ? rules.phrases.betrayRival : rules.phrases.betrayStranger)
       .replace('{ruler}', ruler.name)
       .replace('{civ}', civ.name);
@@ -355,7 +394,7 @@ function betray(run: HistoryRun, legend: Person, civ: Civ, ruler: Person): boole
       type: 'legend_betrayed',
       actors: [legend.id, ruler.id, lord.id],
       place: capital.cell,
-      causes: causesOf(wrong?.id),
+      causes: causesOf(cause),
       data: {
         name: legend.name,
         ruler: ruler.name,
@@ -367,6 +406,7 @@ function betray(run: HistoryRun, legend: Person, civ: Civ, ruler: Person): boole
     });
     legend.civId = other.id;
     legend.siteId = capital.id;
+    run.intrigue.turncoats.add(legend.id);
     addDeed(legend, event.id);
     markDeed(run, legend);
     addGrievance(run, civ.id, other.id, rules.grievanceBetrayal, event.id);
@@ -433,7 +473,7 @@ function fearedBy(run: HistoryRun, legend: Person, civ: Civ): void {
   if (legend.died !== undefined || !ruler || ruler.id === legend.id) return;
   if (honouredBy(run, ruler, legend) || legend.fame <= ruler.fame || !canPlot(run, ruler)) return;
   if (rng.chance(rules.ownFearChance))
-    plot(run, ruler, legend, 'ownFear', latestDeed(run, legend)?.id);
+    plot(run, ruler, legend, 'ownFear', renownOf(run, legend)?.id);
 }
 
 /** Yearly, for each legend of a standing people: honours, fears, a seat seized, betrayal and bounties. */
@@ -514,8 +554,9 @@ function huntLegends(run: HistoryRun): void {
       const hunter = hunterOf(run, civ, legend);
       if (hunter) hunters.push(hunter);
     }
+    // A people too small to field a host worth the name sends none.
+    if (host < rules.huntMin) continue;
     const strength = host + hunters.reduce((n, h) => n + deedSoldiers(run, h), 0);
-    if (strength <= 0) continue;
     const outgunned = strength > legendBreaks(run, legend);
     const slain = outgunned && rng.chance(rules.huntKill);
     const outcome = (

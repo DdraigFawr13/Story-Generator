@@ -1135,9 +1135,9 @@ export const eventTypes: EventTypeDef[] = [
     precision: 'year',
     links: { civ: 'civ', site: 'site' },
     templates: [
-      'In {date} {ruler} of the {civ} honoured {name} at {site} with {gift}.',
+      'In {date} {ruler} of the {civ} honoured {name} with {gift}.',
       '{date}: {name} was given {gift} by {ruler} of the {civ}.',
-      'The {civ} held {name} in honour in {date}: {ruler} gave {gift} at {site}.',
+      'The {civ} held {name} in honour in {date}: {ruler} gave them {gift}.',
     ],
   },
   {

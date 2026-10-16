@@ -216,6 +216,8 @@ export interface IntrigueState {
   bounties: Map<Id, Map<Id, Id>>;
   /** War id to the legend its enemy ruler bribed to stand aside. */
   bribed: Map<number, Id>;
+  /** Legends who have gone over to another people: once in a life. */
+  turncoats: Set<Id>;
   /** A plotter or legend who takes the seat in the succession this death brings (set around one killing). */
   usurper?: { civ: Id; person: Id; cause: Id; phrase: string } | undefined;
 }
@@ -501,6 +503,7 @@ export function createRun(
       harm: new Map(),
       bounties: new Map(),
       bribed: new Map(),
+      turncoats: new Set(),
     },
     faithEvents: new Map(),
   };

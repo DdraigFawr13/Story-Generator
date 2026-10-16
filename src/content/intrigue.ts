@@ -13,7 +13,7 @@ export const INTRIGUE: IntrigueRules = {
   // A sworn avenger of a murdered kinsman rarely reaches a foreign throne.
   vengeancePlotChance: 0.02,
   // Intellect 10 strikes four times in ten; each point adds two in a hundred.
-  strikeBase: 0.4,
+  strikeBase: 0.5,
   strikeIntellect: 0.02,
   strikeRange: [0.05, 0.8],
   // A ruler's guard cuts the odds by a quarter; a legend is hard to kill in the dark.
@@ -24,27 +24,29 @@ export const INTRIGUE: IntrigueRules = {
   // Between an insult (0.6) and a sworn vengeance (1.5) twice over: a murder is remembered.
   grievanceMurder: 3,
   grievanceFoiled: 1.5,
-  honourChance: 0.3,
+  honourChance: 0.08,
   honourFame: 5,
   // At or over the 1 a war needs.
   fearGrievance: 1,
   fearPlotChance: 0.1,
   ownFearChance: 0.03,
-  seizeChance: 0.35,
+  seizeChance: 0.5,
   seizeChildFactor: 2,
   coupChance: 0.25,
-  betrayChance: 0.15,
+  betrayChance: 0.25,
   grievanceBetrayal: 2.5,
-  bribeChance: 0.2,
+  bribeChance: 0.3,
   bountyHarms: 2,
   grievanceShelter: 1,
   coalitionMin: 2,
-  coalitionChance: 0.3,
-  soloHuntChance: 0.1,
+  coalitionChance: 0.4,
+  soloHuntChance: 0.25,
   // Strong or better (R-24): a hunt is led by someone who can face a legend's guards.
   hunterPower: 7,
-  huntShare: 0.03,
+  huntShare: 0.1,
   huntCap: 400,
+  // A hunt sends at least this many soldiers in all, or none goes.
+  huntMin: 60,
   huntKill: 0.7,
   hunterDeath: 0.3,
   // A legend's death is news over the yearly rollup (base 2).
