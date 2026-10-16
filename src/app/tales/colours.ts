@@ -136,7 +136,7 @@ export function assignHues(
 
 /**
  * One hue per people (race), the way realms get theirs: peoples whose realms touch sit far apart
- * on the colour wheel, the biggest choose first. `realmNeighbours` and `realmSize` are the realm
+ * on the colour wheel and every people keeps far from the rest, the biggest choose first. `realmNeighbours` and `realmSize` are the realm
  * graph; `raceOf` names each realm's people. Deterministic: races are numbered in id order.
  */
 export function assignRaceHues(
@@ -164,6 +164,27 @@ export function assignRaceHues(
       links.get(ia)!.add(ib);
     }
   }
-  const hue = assignHues([...index.values()], links, size);
+  // Peoples are few, so each also keeps far from every people already coloured, touching or not:
+  // the farthest from all comes first, then the farthest from its neighbours.
+  const hue = new Map<number, number>();
+  const order = [...index.values()].sort(
+    (a, b) => (size.get(b) ?? 0) - (size.get(a) ?? 0) || a - b,
+  );
+  for (const id of order) {
+    const gapTo = (h: number, list: number[]) =>
+      list.length ? Math.min(...list.map((n) => hueGap(h, n))) : 999;
+    const all = [...hue.values()];
+    const near = [...(links.get(id) ?? [])].flatMap((n) => (hue.has(n) ? [hue.get(n)!] : []));
+    let best = HUES[0]!;
+    let bestKey: [number, number] | null = null;
+    for (const h of HUES) {
+      const key: [number, number] = [gapTo(h, all), gapTo(h, near)];
+      if (!bestKey || key[0] > bestKey[0] || (key[0] === bestKey[0] && key[1] > bestKey[1])) {
+        bestKey = key;
+        best = h;
+      }
+    }
+    hue.set(id, best);
+  }
   return new Map(races.map((r, i) => [r, hue.get(i)!]));
 }
