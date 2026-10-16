@@ -510,6 +510,18 @@ for (const r of rows) {
 }
 
 process.stdout.write(
+  '\nintrigue: seed | plots struck / foiled | seats seized | legends honoured / betrayed / bribed | bounties | hunts\n',
+);
+for (const r of rows) {
+  const h = r.history;
+  process.stdout.write(
+    `${r.seed.padEnd(4)} | ${String(h.plotsStruck).padStart(3)} / ${String(h.plotsFoiled).padStart(3)} | ${String(h.seatsSeized).padStart(3)} | ` +
+      `${String(h.legendsHonoured).padStart(3)} / ${String(h.legendsBetrayed).padStart(3)} / ${String(h.legendsBribed).padStart(3)} | ` +
+      `${String(h.bountiesSet).padStart(3)} | ${String(h.legendsHunted).padStart(3)}\n`,
+  );
+}
+
+process.stdout.write(
   '\nfaith: seed | faiths | schisms | prophets | heresies | holy wars | conversions | rulers converted | desecrations | forgotten\n',
 );
 for (const r of rows) {

@@ -70,6 +70,14 @@ export const PLAYBACK_EFFECTS: Record<string, PlaybackEffect> = {
     beat: true,
     fast: true,
   },
+  seat_seized: {
+    fx: 'crown',
+    colour: GOLD,
+    label: 'seat seized',
+    big: 'Seat seized',
+    beat: true,
+    fast: true,
+  },
   realm_split: {
     fx: 'wipe',
     colour: GOLD,
@@ -188,6 +196,7 @@ export const PLAYBACK_TAGS: Record<string, PlaybackTag> = {
   succession_disputed: { text: 'Throne disputed' },
   civil_war_began: { text: 'Civil war' },
   throne_seized: { text: 'Throne seized' },
+  seat_seized: { text: 'Seat seized' },
   realm_split: { text: '{civ} stands apart', plain: 'Realm split' },
 };
 
@@ -206,6 +215,7 @@ export const PLAYBACK_STORY: Record<string, string[]> = {
   succession_disputed: ['Two claimants, one throne, and the hall divided.'],
   civil_war_began: ['{name|A claimant} will not kneel; {from} turns its spears on itself.'],
   throne_seized: ['{name|The claimant} sits the throne {prior|the old ruler} lost.'],
+  seat_seized: ['{name|A legend} takes the seat {prior|the old ruler} held.'],
   realm_split: ['Neither half could win: {from} and {civ} go their own ways.'],
   legend_risen: ['Songs will carry the name {name}.'],
   artifact_made: ['{maker|A master} makes {item}, and it will outlive them.'],

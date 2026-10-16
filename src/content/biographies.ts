@@ -36,6 +36,8 @@ export const BIOGRAPHIES: BiographyRules = {
     execution: 'by the executioner',
     duel: 'in single combat with another legend',
     peril: 'in a perilous place',
+    assassination: "at an assassin's hand",
+    overthrow: 'when cast down from the seat',
   },
   sentences: {
     // Person

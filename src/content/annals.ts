@@ -26,6 +26,7 @@ export const ANNALS: AnnalRules = {
       'civil_war_began',
       'succession_disputed',
       'throne_seized',
+      'seat_seized',
       'revolt_crushed',
       'realm_split',
     ],

@@ -314,6 +314,9 @@ export const DEATH_CAUSES = [
   'duel',
   // M4.7: died in a perilous place on an expedition.
   'peril',
+  // Court intrigue: killed by a plot, or cast down from the seat by a rival.
+  'assassination',
+  'overthrow',
 ] as const;
 export type DeathCause = (typeof DEATH_CAUSES)[number];
 
