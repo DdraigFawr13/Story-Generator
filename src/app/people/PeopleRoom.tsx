@@ -12,9 +12,9 @@ import {
   type SimEvent,
   type WorldState,
 } from '../../engine';
-import { AllEvents } from '../LegendPages';
+import { AllEvents, PageView } from '../LegendPages';
 import { RoomShell, type RoomId } from '../rooms/Rooms';
-import { Link, plural, useLegends } from '../legends-ctx';
+import { KIND_LABEL, Link, plural, useLegends, type PageRef } from '../legends-ctx';
 import {
   PERSON_FILTERS,
   rolesOf,
@@ -44,24 +44,64 @@ interface Props {
   onFollow: (person: { id: Id; name: string }) => void;
   /** Back from a page to the index. */
   onIndex: () => void;
+  /** Any other page (a town, realm, family, beast, treasure, event or race), shown here too. */
+  page?: PageRef | null;
+  /** Every chronicle line on a record page, or the shortened list. */
+  all?: boolean;
+  onAll?: (all: boolean) => void;
+  /** Back from a record page: to the page before it, else the index. */
+  onBack?: () => void;
 }
 
 /** Index rows shown at a time; scrolling to the end of the list reveals the next page. */
 const PAGE = 80;
 
-export function PeopleRoom({ person, onRoom, onFollow, onIndex }: Props) {
+export function PeopleRoom(props: Props) {
+  const { person, onRoom, onFollow, onIndex, page } = props;
   const { world } = useLegends();
   const found = person === null ? undefined : world.people.get(person);
   return (
     <RoomShell current="people" onRoom={onRoom} className="pp-root" data-testid="people">
       <main className="pp-main">
-        {found ? (
+        {page ? (
+          <RecordPage
+            key={`${page.kind}:${page.id}`}
+            page={page}
+            all={props.all ?? false}
+            onAll={props.onAll ?? (() => undefined)}
+            onBack={props.onBack ?? onIndex}
+          />
+        ) : found ? (
           <PersonPage key={found.id} person={found} onFollow={onFollow} onIndex={onIndex} />
         ) : (
           <PeopleIndex />
         )}
       </main>
     </RoomShell>
+  );
+}
+
+/** A town, realm, family, beast, treasure, event or race: its Legends page in the room's look. */
+function RecordPage({
+  page,
+  all,
+  onAll,
+  onBack,
+}: {
+  page: PageRef;
+  all: boolean;
+  onAll: (all: boolean) => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="pp-scroll" data-testid="record-page">
+      <button type="button" className="pp-back" onClick={onBack}>
+        ‹ Back
+      </button>
+      <div className="pp-record lg-page" data-kind={KIND_LABEL[page.kind]}>
+        <PageView page={page} all={all} onAll={onAll} />
+      </div>
+    </div>
   );
 }
 
@@ -131,10 +171,14 @@ function PeopleIndex() {
     <div className="pp-scroll" data-testid="people-index">
       <header className="pp-top">
         <h1>People</h1>
-        <p>
-          {shown.length.toLocaleString('en-GB')} of {rows.length.toLocaleString('en-GB')} notable
-          figures, the most famous first
-        </p>
+        {rows.length === 0 && world.people.size === 0 ? (
+          <p>The world is still being made…</p>
+        ) : (
+          <p>
+            {shown.length.toLocaleString('en-GB')} of {rows.length.toLocaleString('en-GB')} notable
+            figures, the most famous first
+          </p>
+        )}
         <input
           type="search"
           className="pp-search"

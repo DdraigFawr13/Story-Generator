@@ -42,18 +42,6 @@ export function labelColour(hue: number): Rgb3 {
   return [Math.round(c[0] * 0.8), Math.round(c[1] * 0.8), Math.round(c[2] * 0.8)];
 }
 
-/** People fills by race id (the approved mock-up's table); unknown races stay paper. */
-export const RACE_FILL: Record<string, Rgb3> = {
-  human: [176, 190, 224],
-  tylwyth: [170, 212, 190],
-  dvergar: [222, 186, 160],
-  orc: [196, 206, 150],
-  halfling: [230, 212, 160],
-  cewri: [206, 196, 220],
-  goblin: [200, 214, 170],
-  fomori: [170, 200, 214],
-};
-
 /** Neighbour sets, keyed by id, symmetric. */
 export type Neighbours = Map<number, Set<number>>;
 
@@ -144,4 +132,59 @@ export function assignHues(
     used.set(best, (used.get(best) ?? 0) + 1);
   }
   return hue;
+}
+
+/**
+ * One hue per people (race), the way realms get theirs: peoples whose realms touch sit far apart
+ * on the colour wheel and every people keeps far from the rest, the biggest choose first. `realmNeighbours` and `realmSize` are the realm
+ * graph; `raceOf` names each realm's people. Deterministic: races are numbered in id order.
+ */
+export function assignRaceHues(
+  realmNeighbours: Neighbours,
+  realmSize: ReadonlyMap<number, number>,
+  raceOf: (civ: number) => string | undefined,
+): Map<string, number> {
+  const races = [...new Set([...realmSize.keys()].map(raceOf))]
+    .filter((r): r is string => r !== undefined)
+    .sort();
+  const index = new Map(races.map((r, i) => [r, i]));
+  const links: Neighbours = new Map();
+  const size = new Map<number, number>();
+  for (const [civ, n] of realmSize) {
+    const i = index.get(raceOf(civ) ?? '');
+    if (i !== undefined) size.set(i, (size.get(i) ?? 0) + n);
+  }
+  for (const [a, set] of realmNeighbours) {
+    const ia = index.get(raceOf(a) ?? '');
+    if (ia === undefined) continue;
+    for (const b of set) {
+      const ib = index.get(raceOf(b) ?? '');
+      if (ib === undefined || ib === ia) continue;
+      if (!links.has(ia)) links.set(ia, new Set());
+      links.get(ia)!.add(ib);
+    }
+  }
+  // Peoples are few, so each also keeps far from every people already coloured, touching or not:
+  // the farthest from all comes first, then the farthest from its neighbours.
+  const hue = new Map<number, number>();
+  const order = [...index.values()].sort(
+    (a, b) => (size.get(b) ?? 0) - (size.get(a) ?? 0) || a - b,
+  );
+  for (const id of order) {
+    const gapTo = (h: number, list: number[]) =>
+      list.length ? Math.min(...list.map((n) => hueGap(h, n))) : 999;
+    const all = [...hue.values()];
+    const near = [...(links.get(id) ?? [])].flatMap((n) => (hue.has(n) ? [hue.get(n)!] : []));
+    let best = HUES[0]!;
+    let bestKey: [number, number] | null = null;
+    for (const h of HUES) {
+      const key: [number, number] = [gapTo(h, all), gapTo(h, near)];
+      if (!bestKey || key[0] > bestKey[0] || (key[0] === bestKey[0] && key[1] > bestKey[1])) {
+        bestKey = key;
+        best = h;
+      }
+    }
+    hue.set(id, best);
+  }
+  return new Map(races.map((r, i) => [r, hue.get(i)!]));
 }

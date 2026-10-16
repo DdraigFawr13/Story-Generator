@@ -26,8 +26,17 @@ async function closePlayback(page: Page) {
   const stage = page.getByTestId('tales-stage');
   await expect(stage).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Skip to the present' }).click();
-  await page.getByRole('button', { name: 'Explore the map' }).click();
-  await expect(stage).toHaveCount(0);
+  await openClassic(page);
+}
+
+/** The classic viewer (old map, Legends pane, saves) opens from the rail's new-world sheet. */
+async function openClassic(page: Page) {
+  await page.getByRole('button', { name: 'New world', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'New world' })
+    .getByRole('button', { name: 'Classic viewer' })
+    .click();
+  await expect(page.getByTestId('tales-stage')).toHaveCount(0);
 }
 
 test('the world map generates, inspects, saves, reloads and advances', async ({ page }) => {
@@ -56,8 +65,7 @@ test('the world map generates, inspects, saves, reloads and advances', async ({ 
   await expect(card).toHaveCount(0);
   await page.getByRole('button', { name: 'Skip to the present' }).click();
   await expect(present).toBeVisible();
-  await page.getByRole('button', { name: 'Explore the map' }).click();
-  await expect(stage).toHaveCount(0);
+  await openClassic(page);
   const map = page.getByTestId('world-map');
   await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
   await expect(map).toHaveAttribute('data-seed', 'SMOKE');
@@ -173,15 +181,12 @@ test('the world map generates, inspects, saves, reloads and advances', async ({ 
   expect(errors).toEqual([]);
 });
 
-test('old /?next links still open the world map', async ({ page }) => {
+test('old /?next links open their page in the rooms', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/?next&seed=SMOKE&size=128&open=race:human');
-  const map = page.getByTestId('world-map');
-  await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
-  await expect(map).toHaveAttribute('data-seed', 'SMOKE');
-  await expect(
-    page.getByRole('region', { name: 'Legends' }).getByRole('heading', { level: 3 }),
-  ).not.toHaveText('');
+  const record = page.getByTestId('record-page');
+  await expect(record).toBeVisible({ timeout: 30_000 });
+  await expect(record.getByRole('heading', { level: 3 })).not.toHaveText('');
   // Links the app writes no longer carry the flag.
   await expect(page).not.toHaveURL(/[?&]next/);
   expect(errors).toEqual([]);

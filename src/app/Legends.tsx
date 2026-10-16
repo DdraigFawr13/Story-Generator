@@ -69,6 +69,8 @@ interface Props {
   onBook?: (civId: Id) => void;
   /** A room drawn over the pane that needs the Legends context (the People room). */
   room?: React.ReactNode;
+  /** A room covers the pane: it stays mounted but takes no focus and is not read aloud. */
+  covered?: boolean;
 }
 
 const CATEGORIES: { id: CategoryId; label: string; blurb: string }[] = [
@@ -662,7 +664,11 @@ export function Legends(props: Props) {
 
   return (
     <LegendsContext.Provider value={ctx}>
-      <section className="lg-pane" aria-label="Legends">
+      <section
+        className="lg-pane"
+        aria-label="Legends"
+        {...(props.covered ? { inert: true, 'aria-hidden': true } : {})}
+      >
         <header>
           <div className="lg-top">
             <h2>Legends</h2>
