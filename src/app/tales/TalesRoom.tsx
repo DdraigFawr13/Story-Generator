@@ -3,7 +3,7 @@
 // by atlas.ts, the marks over it by markers.tsx; this file holds the clock, the controls and the
 // pause card. It only shows what the history logged.
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_CONTENT, PLAYBACK_EFFECTS, PLAYBACK_TAGS } from '../../content';
 import type { Id, SimEvent, WorldState } from '../../engine';
 import type { LegendCategory } from '../map-view';
@@ -16,7 +16,15 @@ import {
   type PlaybackEvent,
 } from '../playback/data';
 import { RoomShell, type RoomId } from '../rooms/Rooms';
-import { TINT, createAtlas, type Atlas, type MapMode, type Town } from './atlas';
+import {
+  TINT,
+  atlasSteps,
+  coastPath,
+  createAtlas,
+  type Atlas,
+  type MapMode,
+  type Town,
+} from './atlas';
 import {
   assignHues,
   assignRaceHues,
@@ -29,15 +37,22 @@ import {
 } from './colours';
 import {
   CARD_ROWS,
+  GLYPH_ZOOM,
+  MAX_DOTS,
+  MAX_MARKS,
   TOWN_NAMES_ZOOM,
   ZOOM_MAX,
   centreOn,
   clampView,
+  clusterMarks,
+  eventsAt,
   groupMarks,
+  kindMix,
   zoomAt,
+  type MarkCluster,
   type View,
 } from './explore';
-import { ExploreMarks, Towns, type TownMark } from './exploreMarks';
+import { ExploreMarks, Glyph, Towns, type TownMark } from './exploreMarks';
 import { settleLabels } from './labels';
 import { PHONE_MAX, cardSide, fitMap, nearestCell } from './layout';
 import { Capitals, MAX_TAGS, Marks, type Clock, type Recent } from './markers';
@@ -96,13 +111,8 @@ interface Props {
 
 /** What the open place card is about: the events at a cell, or a town (and its events). */
 type Pin =
-  | { kind: 'events'; cell: number; side: 'left' | 'right' | 'mid' }
-  | {
-      kind: 'town';
-      cell: number;
-      site: Id;
-      side: 'left' | 'right' | 'mid';
-    };
+  | { kind: 'events'; cell: number; cells: number[]; side: 'left' | 'right' | 'mid' }
+  | { kind: 'town'; cell: number; cells: number[]; site: Id; side: 'left' | 'right' | 'mid' };
 
 /** Years a second the clock can run at. */
 export const SPEEDS = [0.5, 1, 2, 4, 8, 15, 30, 60] as const;
@@ -116,6 +126,8 @@ const MODES: { id: MapMode; label: string }[] = [
   { id: 'plain', label: 'Plain' },
 ];
 const AUTO_RESUME_MS = 8000;
+/** Realm names fade out above this zoom, where town names take over. */
+const REALM_FADE_ZOOM = 3;
 /** The sharper terrain is at most this many pixels a side. */
 const SHARP_PX = 2048;
 const RECENT_MS = 2600;
@@ -261,6 +273,9 @@ function Room({
   const [card, setCard] = useState<{ event: PlaybackEvent; key: number } | null>(null);
   const [recent, setRecent] = useState<(Recent & { until: number })[]>([]);
   const [atlas, setAtlas] = useState<Atlas | null>(null);
+  // The sharper terrain for the explore state, built in slices, and the shore as a vector line.
+  const [sharp, setSharp] = useState<{ atlas: Atlas; coast: string } | null>(null);
+  const [sharpOn, setSharpOn] = useState(false);
   const [stage, setStage] = useState({ w: 0, h: 0 });
   const [helpOpen, setHelpOpen] = useState(false);
   const [labels, setLabels] = useState<Map<number, { x: number; y: number; n: number }>>(new Map());
@@ -299,7 +314,10 @@ function Room({
       DEFAULT_CONTENT.biomes.map((b) => b.id),
     );
     setAtlas(made);
-    return () => setAtlas(null);
+    return () => {
+      setAtlas(null);
+      setSharp(null);
+    };
   }, [world]);
   useEffect(() => {
     if (atlas && wrapEl.current) {
@@ -311,6 +329,18 @@ function Room({
     }
     return undefined;
   }, [atlas]);
+  // The sharp canvas lies over the first and fades in once it is drawn.
+  useEffect(() => {
+    if (!sharp || !atlas) return undefined;
+    const canvas = sharp.atlas.canvas;
+    canvas.className = 'tr-canvas tr-sharp';
+    canvas.setAttribute('aria-hidden', 'true');
+    atlas.canvas.after(canvas);
+    return () => canvas.remove();
+  }, [sharp, atlas]);
+  useEffect(() => {
+    sharp?.atlas.canvas.classList.toggle('on', sharpOn);
+  }, [sharp, sharpOn]);
 
   // The stage size, for fitting the map.
   useEffect(() => {
@@ -324,9 +354,14 @@ function Room({
   }, []);
 
   // The political layer, redrawn only when the borders or the mode change.
-  const borderKey = data.borderYear(year);
+  const nowBorders = data.borderYear(year);
+  // Scrubbing in explore skips the years it passes: the sharp layer is slow to draw.
+  const deferredBorders = useDeferredValue(nowBorders);
+  const borderKey = exploring ? deferredBorders : nowBorders;
+  /** The atlas that is drawn on: the sharp one while exploring, once it is built. */
+  const target = exploring && sharp ? sharp.atlas : atlas;
   useEffect(() => {
-    if (!atlas) return;
+    if (!target) return;
     const sites = data.sitesAt(borderKey);
     const seats = new Set(data.seatsAt(borderKey).values());
     const towns: Town[] = [];
@@ -354,7 +389,7 @@ function Room({
       }
       return null;
     };
-    const result = atlas.draw({
+    const result = target.draw({
       mode,
       key: borderKey,
       owner: data.bordersAt(borderKey),
@@ -364,9 +399,17 @@ function Room({
       holy,
     });
     setLabels(result.centres);
-    stageEl.current?.setAttribute('data-terrain-ms', atlas.terrainMs.toFixed(0));
     stageEl.current?.setAttribute('data-draw-ms', result.ms.toFixed(0));
-  }, [atlas, mode, borderKey, data, palette, realmOf, world]);
+  }, [target, mode, borderKey, data, palette, realmOf, world]);
+  // Fade the sharp layer in after its first drawing, and out when exploring ends.
+  useEffect(() => {
+    if (!exploring || !sharp) {
+      setSharpOn(false);
+      return undefined;
+    }
+    const id = requestAnimationFrame(() => setSharpOn(true));
+    return () => cancelAnimationFrame(id);
+  }, [exploring, sharp]);
 
   /** Moves the playhead DOM; the heavy parts follow the year state. */
   const sync = () => {
@@ -553,9 +596,6 @@ function Room({
   // second while things glide. Counts of named realms are left on the stage for the tests.
   useLayoutEffect(() => {
     settle();
-    // The zoom buttons sit above the key, whatever height it has.
-    const key = stageEl.current?.querySelector<HTMLElement>('.tr-key');
-    stageEl.current?.style.setProperty('--tr-key-h', `${key?.offsetHeight ?? 0}px`);
   });
   useEffect(() => {
     const timer = window.setInterval(settle, 160);
@@ -641,26 +681,52 @@ function Room({
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout, atlas]);
-  // Past 2x the terrain is built again at twice the pixels (once a world), so a close view stays
-  // crisp. It waits a moment so a zoom in progress is not held up by it.
-  const sharpFor = useRef<WorldState | null>(null);
-  const sharpZoom = (view?.z ?? 1) > 2;
+  // On entering explore the terrain is built again at up to 2048 px, in short slices with a pause
+  // between them, well before anyone zooms; it then fades in over the first one, with the shore
+  // as a vector line. Once a world; leaving explore early stops the build.
   useEffect(() => {
-    if (!exploring || !atlas || !sharpZoom || sharpFor.current === world) return undefined;
-    const timer = window.setTimeout(() => {
-      sharpFor.current = world;
-      const scale = Math.min(Math.round(atlas.scale * 1.5), Math.floor(SHARP_PX / atlas.width));
-      if (scale <= atlas.scale) return;
-      const made = createAtlas(
-        world.cells!,
-        DEFAULT_CONTENT.biomes.map((b) => b.id),
-        scale,
-      );
-      stageEl.current?.setAttribute('data-sharp-ms', made.terrainMs.toFixed(0));
-      setAtlas(made);
-    }, 150);
-    return () => window.clearTimeout(timer);
-  }, [exploring, atlas, sharpZoom, world]);
+    if (!exploring || !atlas || sharp) return undefined;
+    const scale = Math.floor(SHARP_PX / atlas.width);
+    if (scale <= atlas.scale) return undefined;
+    let timer = 0;
+    let stopped = false;
+    const cells = world.cells!;
+    const steps = atlasSteps(
+      cells,
+      DEFAULT_CONTENT.biomes.map((b) => b.id),
+      scale,
+      { coast: false },
+    );
+    let coast = '';
+    let slices = 0;
+    let longest = 0;
+    let total = 0;
+    const tick = () => {
+      if (stopped) return;
+      const t = performance.now();
+      let made: Atlas | null = null;
+      if (!coast) coast = coastPath(cells);
+      else {
+        const r = steps.next();
+        if (r.done) made = r.value;
+      }
+      const spent = performance.now() - t;
+      slices += 1;
+      total += spent;
+      longest = Math.max(longest, spent);
+      if (made) {
+        stageEl.current?.setAttribute('data-sharp-ms', total.toFixed(0));
+        stageEl.current?.setAttribute('data-sharp-slice-ms', longest.toFixed(0));
+        stageEl.current?.setAttribute('data-sharp-slices', String(slices));
+        setSharp({ atlas: made, coast });
+      } else timer = window.setTimeout(tick, 24);
+    };
+    timer = window.setTimeout(tick, 400);
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+  }, [exploring, atlas, sharp, world]);
   // Wheel, drag and pinch on the stage, in the explore state only.
   useEffect(() => {
     const el = stageEl.current;
@@ -762,8 +828,9 @@ function Room({
   }, [exploring]);
   // A beast's mark stands on drawn land: its lair's cell, or the nearest cell that is.
   // Armies march in wars and battles; great figures are the legends.
-  const armies = shown.has('war') || shown.has('battle');
-  const legends = shown.has('legend');
+  // While exploring the event marks stand for wars and legends; the play's flags and stars rest.
+  const armies = !exploring && (shown.has('war') || shown.has('battle'));
+  const legends = !exploring && shown.has('legend');
   const model = useMemo(() => {
     const marches = armies ? baseModel.marches : [];
     const figures = legends ? baseModel.figures : [];
@@ -862,9 +929,17 @@ function Room({
     [cardPlace, layout, atlas, stage, W, H],
   );
   // ---- explore: event marks, towns and the place card ---------------------------------------
+  // Whole map: a few dots. From 2x: glyphs. Marks within 18 px of each other merge into one; the
+  // zoom steps in quarters so they do not reshuffle on every wheel tick.
+  const detail = (view?.z ?? 1) >= GLYPH_ZOOM;
+  const zQuarter = Math.round((view?.z ?? 1) * 4) / 4;
   const groups = useMemo(
-    () => (exploring ? groupMarks(data.events, year, shown) : []),
-    [exploring, data, year, shown],
+    () => (exploring ? groupMarks(data.events, year, shown, detail ? MAX_MARKS : MAX_DOTS) : []),
+    [exploring, data, year, shown, detail],
+  );
+  const clusters = useMemo(
+    () => clusterMarks(groups, W, (layout?.size ?? 0) * zQuarter),
+    [groups, W, layout, zQuarter],
   );
   const borderNow = data.borderYear(year);
   const towns = useMemo(() => {
@@ -895,9 +970,8 @@ function Room({
   /** What the place card lists: the shown events there up to the year shown, newest first. */
   const pinRows = useMemo(() => {
     if (!pin) return [];
-    const here = data.events.filter((e) => e.place === pin.cell);
-    const list = groupMarks(here, year, shown, 1)[0]?.events ?? [];
-    return list.slice(0, pin.kind === 'town' ? CARD_ROWS : 12).map((e) => {
+    const all = eventsAt(data.events, new Set(pin.cells), year, shown);
+    return all.map((e) => {
       const event = eventById.get(e.id);
       const person = e.actors.map((id) => world.people.get(id)).find((p) => p !== undefined);
       return {
@@ -911,16 +985,21 @@ function Room({
     // `textOf` is a new function each render; the rows follow the place, the year and the filter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pin, data, year, shown, eventById, world]);
+  /** The kinds of the events at the open place: "3 wars · 2 legends". */
+  const pinMix = useMemo(
+    () => kindMix(pin ? eventsAt(data.events, new Set(pin.cells), year, shown) : []),
+    [pin, data, year, shown],
+  );
   const pinTown = pin?.kind === 'town' ? towns.find((t) => t.id === pin.site) : undefined;
-  const openEvents = (cell: number) => {
+  const openEvents = (c: MarkCluster) => {
     setFocus(null);
-    setPin({ kind: 'events', cell, side: sideOf(cell, view) });
+    setPin({ kind: 'events', cell: c.cell, cells: c.cells, side: sideOf(c.cell, view) });
   };
   const openTown = (id: Id) => {
     const t = towns.find((x) => x.id === id);
     if (!t) return;
     setFocus(null);
-    setPin({ kind: 'town', cell: t.cell, site: id, side: sideOf(t.cell, view) });
+    setPin({ kind: 'town', cell: t.cell, cells: [t.cell], site: id, side: sideOf(t.cell, view) });
   };
   const cardPerson = card
     ? card.event.actors.map((id) => world.people.get(id)).find((p) => p !== undefined)
@@ -1123,6 +1202,16 @@ function Room({
                 : { visibility: 'hidden' }
             }
           >
+            {exploring && sharp && (
+              <svg
+                className={`tr-coast${sharpOn ? ' on' : ''}`}
+                viewBox={`0 0 ${W} ${H}`}
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path d={sharp.coast} />
+              </svg>
+            )}
             {mode === 'faiths' &&
               [...world.faiths.values()].map((f) => {
                 const site = f.seatSiteId === undefined ? undefined : data.sites.get(f.seatSiteId);
@@ -1152,7 +1241,7 @@ function Room({
                 return (
                   <div
                     key={`realm:${civ}`}
-                    className="tr-rg realm"
+                    className={`tr-rg realm${(view?.z ?? 1) > REALM_FADE_ZOOM ? ' off' : ''}`}
                     data-lbl="realm"
                     data-form="full"
                     style={{
@@ -1199,7 +1288,8 @@ function Room({
                   onOpen={openTown}
                 />
                 <ExploreMarks
-                  groups={groups}
+                  clusters={clusters}
+                  detail={detail}
                   width={W}
                   height={H}
                   open={pin?.kind === 'events' ? pin.cell : null}
@@ -1268,7 +1358,7 @@ function Room({
                   {PAUSE_KINDS.map((k) => (
                     <div key={k.id} className="row">
                       <span className="name">
-                        <i style={{ background: k.colour }} />
+                        <Glyph kind={k.id} size={13} />
                         {k.label}
                         <small>{kindCount.get(k.id) ?? 0}</small>
                       </span>
@@ -1289,7 +1379,7 @@ function Room({
                   ))}
                   <p>
                     {exploring
-                      ? 'Each ticked kind is marked on the map up to the year on the ribbon: click a mark to read it. The Pause ticks apply when you play on.'
+                      ? 'Marks are grouped by place: one mark stands for every ticked event there, drawn as the most important kind, and its card lists them all. Click a mark to read it. The Pause ticks apply when you play on.'
                       : firstRun
                         ? 'The first play runs to the present (or until you skip) without pausing. Replays pause on the ticked events.'
                         : 'Shown events are marked on the map and the ribbon; paused ones stop to ask. Peace is shown with wars but never pauses.'}
@@ -1362,6 +1452,17 @@ function Room({
             onClick={() => setHelpOpen(false)}
             data-testid="tales-key"
           >
+            {exploring && shown.size > 0 && (
+              <section className="tr-legend tr-evkey" data-legend="events">
+                <h3>Events</h3>
+                {PAUSE_KINDS.filter((k) => shown.has(k.id)).map((k) => (
+                  <div key={k.id}>
+                    <Glyph kind={k.id} size={12} />
+                    <span>{k.label}</span>
+                  </div>
+                ))}
+              </section>
+            )}
             {legend && (
               <section className="tr-legend" data-legend={mode}>
                 <h3>{legend.title}</h3>
@@ -1520,13 +1621,14 @@ function Room({
                   <h2>{siteAtCell.get(pin.cell) ?? 'Open country'}</h2>
                 </>
               )}
+              {pinMix && <p className="mix">{pinMix}</p>}
               {pinRows.length === 0 ? (
                 <p className="none">
                   Nothing is marked here for the kinds shown, up to year {year}.
                 </p>
               ) : (
                 <ol className="tr-rows">
-                  {pinRows.map((r) => (
+                  {pinRows.slice(0, pin.kind === 'town' ? CARD_ROWS : 60).map((r) => (
                     <li key={r.id}>
                       <div className="k">Year {r.y}</div>
                       <h3>{r.title}</h3>
@@ -1544,6 +1646,9 @@ function Room({
                     </li>
                   ))}
                 </ol>
+              )}
+              {pin.kind === 'town' && pinRows.length > CARD_ROWS && (
+                <p className="none">and {pinRows.length - CARD_ROWS} more events here</p>
               )}
             </section>
           )}
@@ -1618,7 +1723,14 @@ function Room({
             ))}
           </div>
           <div className="tr-track">
-            <div className="tr-label" style={{ left: lastPct(year) }}>
+            <div
+              className="tr-label"
+              style={{
+                left: lastPct(year),
+                // Near either end the label leans inward so it never runs off the ribbon.
+                transform: `translateX(${-Math.min(100, Math.max(0, (year / Math.max(1, data.last)) * 100))}%)`,
+              }}
+            >
               Year {year}
             </div>
             <div className="tr-line">

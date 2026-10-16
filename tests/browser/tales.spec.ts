@@ -50,10 +50,22 @@ test('Explore the map stays in Tales: marks follow the Show filter, the map zoom
   await page.getByRole('group', { name: 'Events' }).getByLabel('Show wars').uncheck();
   await expect(wars).toHaveCount(0);
 
+  // The key is folded away in explore; the ? button opens it and it lists the marks.
+  const key = page.getByTestId('tales-key');
+  await expect(key).toBeHidden();
+  await page.getByRole('button', { name: 'Map key' }).click();
+  await expect(key.locator('[data-legend="events"]')).toBeVisible();
+  await page.getByRole('button', { name: 'Map key' }).click();
+  await expect(key).toBeHidden();
+  // On the whole map a mark is a dot; the glyph (an svg) comes with the zoom.
+  await expect(marks.first().locator('svg')).toHaveCount(0);
+
   // Zoom in with the button; the whole-map button resets it.
   await expect(stage).toHaveAttribute('data-zoom', '1.00');
   await page.getByRole('button', { name: 'Zoom in' }).click();
+  await page.getByRole('button', { name: 'Zoom in' }).click();
   await expect(stage).not.toHaveAttribute('data-zoom', '1.00');
+  await expect(marks.first().locator('svg')).toHaveCount(1);
   await page.getByRole('button', { name: 'Whole map' }).click();
   await expect(stage).toHaveAttribute('data-zoom', '1.00');
 

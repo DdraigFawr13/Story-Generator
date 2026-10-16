@@ -176,9 +176,20 @@ const ROOMS: { id: RoomId; label: string }[] = [
 ];
 
 /** The rail. `current` is the room on show; every other room calls `onRoom`. */
-export function Rail({ current, onRoom }: { current: RoomId; onRoom: (room: RoomId) => void }) {
+export function Rail({
+  current,
+  onRoom,
+  sheet,
+  onSheet,
+}: {
+  current: RoomId;
+  onRoom: (room: RoomId) => void;
+  /** The new-world sheet is open (it is drawn by the shell, above the room). */
+  sheet: boolean;
+  onSheet: (open: boolean | ((open: boolean) => boolean)) => void;
+}) {
   const controls = useContext(WorldControlsContext);
-  const [sheet, setSheet] = useState(false);
+  const setSheet = onSheet;
   // A new world arriving closes the sheet; a refused seed opens it again to say why.
   const made = controls ? `${controls.seed}|${controls.size}|${controls.years}` : '';
   useEffect(() => setSheet(false), [made]);
@@ -243,12 +254,6 @@ export function Rail({ current, onRoom }: { current: RoomId; onRoom: (room: Room
       {ROOMS.map((r) => item(r.id, r.label))}
       <span className="rm-grow" />
       {item('world', 'World')}
-      {controls && sheet && (
-        <>
-          <div className="rm-backdrop" aria-hidden="true" />
-          <WorldSheet controls={controls} onClose={() => setSheet(false)} />
-        </>
-      )}
     </nav>
   );
 }
@@ -268,11 +273,19 @@ export function RoomShell({
   'data-testid'?: string;
   'data-mode'?: string;
 }) {
-  const busy = useContext(WorldControlsContext)?.busy ?? null;
+  const controls = useContext(WorldControlsContext);
+  const busy = controls?.busy ?? null;
+  const [sheet, setSheet] = useState(false);
   return (
     <div className={`rm-root ${className}`} {...rest}>
-      <Rail current={current} onRoom={onRoom} />
+      <Rail current={current} onRoom={onRoom} sheet={sheet} onSheet={setSheet} />
       {children}
+      {controls && sheet && (
+        <>
+          <div className="rm-backdrop" aria-hidden="true" />
+          <WorldSheet controls={controls} onClose={() => setSheet(false)} />
+        </>
+      )}
       {busy && (
         <div className="rm-busy" role="status" aria-live="polite">
           <i style={{ width: `${Math.round(busy.fraction * 100)}%` }} />

@@ -489,6 +489,7 @@
   text-shadow: none;
 }
 .tr-root .tr-rg.realm {
+  transition: opacity 0.5s;
   transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px)));
   font-size: 10.5px;
   letter-spacing: 0.16em;
@@ -880,8 +881,8 @@
 }
 .tr-root .tr-zoom {
   position: absolute;
-  right: 18px;
-  bottom: calc(var(--tr-key-h, 0px) + 26px);
+  right: 58px;
+  bottom: 16px;
   z-index: 3;
   display: flex;
   background: var(--paper);
@@ -927,7 +928,96 @@
 }
 .tr-root .tr-ev svg {
   display: block;
+  opacity: 0.78;
   filter: drop-shadow(0 0 1.5px rgba(246, 241, 228, 0.9));
+}
+/* On the whole map a mark is a small coloured dot, so a crowd of them stays quiet. */
+.tr-root .tr-ev.dot {
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%) translate(7px, -7px);
+}
+.tr-root .tr-ev.dot i {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid rgba(45, 42, 37, 0.7);
+  opacity: 0.8;
+}
+.tr-root .tr-evkey div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tr-root .tr-pin p.mix {
+  margin-top: 4px;
+  font-family: 'Alegreya Sans SC', sans-serif;
+  letter-spacing: 0.06em;
+  font-size: 13px;
+  color: var(--soft);
+}
+/* The shore and the sharper terrain fade in over the first drawing, not swapped for it. */
+.tr-root .tr-sharp {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  pointer-events: none;
+}
+.tr-root .tr-sharp.on {
+  opacity: 1;
+}
+.tr-root .tr-coast {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  pointer-events: none;
+}
+.tr-root .tr-coast.on {
+  opacity: 1;
+}
+.tr-root .tr-coast path {
+  fill: none;
+  stroke: rgb(84, 74, 62);
+  stroke-width: 1.3px;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.tr-root .tr-rg.realm.off {
+  opacity: 0;
+  animation: none;
+}
+/* In explore the key is folded away behind the "?" button, on a wide screen too. */
+.tr-root .tr-stage.exploring .tr-key {
+  display: none;
+}
+.tr-root .tr-stage.exploring .tr-key.open {
+  display: grid;
+  z-index: 4;
+  bottom: 54px;
+}
+.tr-root .tr-stage.exploring .tr-help {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  z-index: 3;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  font-size: 15px;
+  color: var(--soft);
 }
 .tr-root .tr-ev:hover,
 .tr-root .tr-ev.open {

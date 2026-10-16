@@ -52,13 +52,13 @@
 .rm-root .rm-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 39;
+  z-index: 90;
   background: rgba(45, 42, 37, 0.18);
   animation: rm-fade 0.25s ease-out;
 }
 .rm-root .rm-sheet {
   position: fixed;
-  z-index: 40;
+  z-index: 91;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -162,7 +162,7 @@
   left: 50%;
   top: 14px;
   transform: translateX(-50%);
-  z-index: 30;
+  z-index: 89;
   width: min(320px, calc(100% - 32px));
   padding: 8px 12px 10px;
   background: var(--paper);

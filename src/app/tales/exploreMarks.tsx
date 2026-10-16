@@ -3,7 +3,7 @@
 // map; sizes are pixels, so a mark keeps its size however far the map is zoomed.
 
 import { useMemo } from 'react';
-import { groupTitle, type MarkEvent, type MarkGroup } from './explore';
+import { groupTitle, type MarkCluster, type MarkEvent } from './explore';
 import { useFading } from './markers';
 import { PAUSE_KINDS, type PauseKind } from './pauses';
 
@@ -49,14 +49,14 @@ export function Glyph({ kind, size = 13 }: { kind: PauseKind; size?: number }) {
             d={p.d}
             fill={colour}
             stroke={INK}
-            strokeWidth="2"
+            strokeWidth="1.3"
             strokeLinejoin="round"
             paintOrder="stroke"
           />
         ) : (
           <g key={i} fill="none" strokeLinecap="round" strokeLinejoin="round">
-            <path d={p.d} stroke={INK} strokeWidth="5" />
-            <path d={p.d} stroke={colour} strokeWidth="2.6" />
+            <path d={p.d} stroke={INK} strokeWidth="3.8" />
+            <path d={p.d} stroke={colour} strokeWidth="2.4" />
           </g>
         ),
       )}
@@ -65,27 +65,30 @@ export function Glyph({ kind, size = 13 }: { kind: PauseKind; size?: number }) {
 }
 
 interface MarkProps {
-  groups: readonly MarkGroup<MarkEvent & { title: string }>[];
+  clusters: readonly MarkCluster<MarkEvent & { title: string }>[];
   width: number;
   height: number;
+  /** Full glyphs and counts (zoomed in); otherwise a small dot for each mark. */
+  detail: boolean;
   /** Cell of the open card, to mark its glyph. */
   open: number | null;
-  onOpen: (cell: number) => void;
+  onOpen: (cluster: MarkCluster) => void;
 }
 
-/** The event glyphs. A group that leaves fades out; one that arrives fades in. */
-export function ExploreMarks({ groups, width, height, open, onOpen }: MarkProps) {
+/** The event marks. One that leaves fades out; one that arrives fades in. */
+export function ExploreMarks({ clusters, width, height, detail, open, onOpen }: MarkProps) {
   const items = useMemo(
     () =>
-      groups.map((g) => ({
-        key: `ev:${g.cell}`,
-        cell: g.cell,
-        kind: g.kind,
-        count: g.events.length,
-        title: groupTitle(g.events),
+      clusters.map((c) => ({
+        key: `ev:${c.cell}`,
+        cell: c.cell,
+        kind: c.kind,
+        count: c.events.length,
+        title: groupTitle(c.events),
       })),
-    [groups],
+    [clusters],
   );
+  const byCell = useMemo(() => new Map(clusters.map((c) => [c.cell, c])), [clusters]);
   const shown = useFading(items, 450);
   return (
     <>
@@ -93,7 +96,9 @@ export function ExploreMarks({ groups, width, height, open, onOpen }: MarkProps)
         <button
           key={m.key}
           type="button"
-          className={`tr-ev${m.leaving ? ' leaving' : ''}${open === m.cell ? ' open' : ''}`}
+          className={`tr-ev${detail ? '' : ' dot'}${m.leaving ? ' leaving' : ''}${
+            open === m.cell ? ' open' : ''
+          }`}
           data-testid="event-mark"
           data-kind={m.kind}
           style={{
@@ -103,10 +108,13 @@ export function ExploreMarks({ groups, width, height, open, onOpen }: MarkProps)
           title={m.title}
           aria-label={m.title.replace(/\n/g, '. ')}
           tabIndex={m.leaving ? -1 : 0}
-          onClick={() => onOpen(m.cell)}
+          onClick={() => {
+            const c = byCell.get(m.cell);
+            if (c) onOpen(c);
+          }}
         >
-          <Glyph kind={m.kind} />
-          {m.count > 1 && <b>{m.count}</b>}
+          {detail ? <Glyph kind={m.kind} /> : <i style={{ background: colourOf(m.kind) }} />}
+          {detail && m.count > 1 && <b>{m.count}</b>}
         </button>
       ))}
     </>
