@@ -254,6 +254,27 @@ export interface Person {
   enemies?: Id[];
   /** M3.9: the one awakening of their life (an `AwakeningDef` id), the day and its event. */
   awakening?: { id: string; day: number; eventId: Id };
+  /** M5.2: how a mage learned their magic and from whom (world tier). */
+  lore?: MageLore;
+}
+
+/** M5.2: how a mage learned their magic and from whom. */
+export interface MageLore {
+  /** How they first learned: a teacher (incl. a parent), their people's college, a book, the village hedge-witch, or before the records began. */
+  via: 'teacher' | 'college' | 'book' | 'hedge' | 'old';
+  /** Their teachers in order (the first, then e.g. a legend who took them on later). */
+  teachers: Id[];
+  /** Apprentices they took, in order. */
+  apprentices: Id[];
+  /** College name when via college; book item id when via book; hedge-witch's site id when via hedge. */
+  college?: string;
+  bookId?: Id;
+  siteId?: Id;
+  /** Year apprenticeship began, and its event. */
+  since: number;
+  event?: Id;
+  /** Each spell learned: ability id, history year, and the source (a teacher's person id, a book's item id, or a college name). */
+  learned: { id: string; year: number; teacher?: Id; book?: Id; college?: string }[];
 }
 
 /** Why a world-tier person is tracked individually (M2.5). */
@@ -321,6 +342,11 @@ export interface Item {
   lostAt?: number;
   /** Event ids of its making, inheritance, loss, theft and finding. */
   deeds: Id[];
+  /** M5.2: magic spells (ability ids) a spellbook holds, and its school. */
+  spells?: string[];
+  school?: string;
+  /** M5.2: history year it burned (holder null, never lost or found). */
+  burned?: number;
 }
 
 /** A perilous place (M4.7): a ruin, old mine, barrow, empty lair or aura place in the wild. */

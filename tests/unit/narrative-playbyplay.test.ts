@@ -1,17 +1,35 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
 import { buildLegendIndex, generateWorld, playByPlay, type WorldState } from '../../src/engine';
+import { findWorld } from './helpers/find-world';
 
-let shared: WorldState | undefined;
-/** One 64x64, 250-year world with epic battles and beast fights (S2: 7 battles, 32 fights). */
-const base = () =>
-  (shared ??= generateWorld('S2', { width: 64, height: 64, historyYears: 250 }, DEFAULT_CONTENT));
+const SEEDS = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'];
+const make = (seed: string) =>
+  generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, DEFAULT_CONTENT);
 
 const FIGHTS = ['battle', 'beast_slain', 'beast_fought', 'beast_hunt_failed'];
 
 describe('play-by-play', () => {
   it('tells epic fights in 3 to 6 true beats and leaves the rest out', () => {
-    const world = base();
+    // A world with epic battles and beast fights told in beats, and fights left untold.
+    const told = (w: WorldState) => {
+      const index = buildLegendIndex(w, DEFAULT_CONTENT);
+      const kinds = new Set<string>();
+      let untold = 0;
+      for (const e of w.events) {
+        if (!FIGHTS.includes(e.type)) continue;
+        if (playByPlay(w, DEFAULT_CONTENT, index, e).length === 0) untold += 1;
+        else kinds.add(e.type === 'battle' ? 'battle' : 'beast');
+      }
+      return kinds.size === 2 && untold > 0;
+    };
+    const { world } = findWorld(
+      'epic battles, beast fights and untold fights',
+      'pbp',
+      SEEDS,
+      make,
+      told,
+    );
     const index = buildLegendIndex(world, DEFAULT_CONTENT);
     const seen = new Set<string>();
     let empty = 0;

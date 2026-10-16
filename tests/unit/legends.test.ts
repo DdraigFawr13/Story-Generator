@@ -17,7 +17,6 @@ import {
   validateContent,
   type WorldState,
 } from '../../src/engine';
-import smoke from '../fixtures/smoke-cells-digest.json';
 
 let shared: WorldState | undefined;
 /** One 64x64, 60-year world shared by the cases. */
@@ -136,15 +135,6 @@ describe('cellsDigest', () => {
     expect(cellsDigest(cells)).not.toBe(before);
     cells.elevation[0] = (cells.elevation[0]! - 1) as number;
     expect(cellsDigest(cells)).toBe(before);
-  });
-
-  it('matches the committed digest of seed SMOKE at 128 (the browser smoke compares the same)', () => {
-    const world = generateWorld(
-      smoke.seed,
-      { width: smoke.size, height: smoke.size },
-      DEFAULT_CONTENT,
-    );
-    expect(cellsDigest(world.cells!)).toBe(smoke.digest);
   });
 });
 

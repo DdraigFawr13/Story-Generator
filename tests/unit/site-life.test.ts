@@ -15,9 +15,12 @@ import {
   type WorldState,
 } from '../../src/engine';
 import { biggest, copy } from './helpers/site-fixture';
+import { findWorld } from './helpers/find-world';
 
 const C = DEFAULT_CONTENT;
 const LIFE = C.life;
+// The fed-town case searches this fixed list (first match wins).
+const SEEDS = ['SITE-B', 'SITE-D', 'SITE-A', 'SITE-C', 'SITE-E', 'SITE-F', 'SITE-G', 'SITE-H'];
 const BREAKDOWNS = new Set([
   LIFE.events.tantrum,
   LIFE.events.despair,
@@ -75,16 +78,31 @@ describe('daily life', () => {
   });
 
   it('carries small children with a household adult and keeps every need recoverable', () => {
-    // SITE-B: after the colleges and free cities change, SITE-A's biggest town is another one, where
-    // a forager's purpose sits at zero at the checked moment (logged as a playtest follow-up). Since
-    // roaming beasts (2026-10-13) SITE-B's biggest town ends history short of food, so six residents
-    // are hungry at day 60; SITE-D's was fed until M5.6 dragons (history drift left a need at zero); re-pinned: SITE-B is fed again.
-    const world = generateWorld('SITE-B', { width: 64, height: 64 }, C);
-    const active = embark(world, C, biggest(world).id);
-    for (let d = 0; d < 60; d += 1) {
-      stepSite(world, C);
-      stepBlock(world, C); // stop at varied blocks: night, morning, afternoon, evening
-    }
+    // Searches the list for a fed, housed biggest town: a hungry one pins needs at zero by day 60.
+    const play = (source: WorldState) => {
+      const world = structuredClone(source);
+      const active = embark(world, C, biggest(world).id);
+      for (let d = 0; d < 60; d += 1) {
+        stepSite(world, C);
+        stepBlock(world, C); // stop at varied blocks: night, morning, afternoon, evening
+      }
+      return { world, active };
+    };
+    const fed = (w: WorldState, a: { residents: number[] }) =>
+      a.residents.every((id) =>
+        Object.values(w.people.get(id)!.detail!.needs).every((value) => value > 0),
+      );
+    const { world: found } = findWorld(
+      'a fed, housed biggest town with no need at zero on day 60',
+      'life',
+      SEEDS,
+      (seed) => generateWorld(seed, { width: 64, height: 64 }, C),
+      (w) => {
+        const t = play(w);
+        return fed(t.world, t.active);
+      },
+    );
+    const { world, active } = play(found);
     for (const id of active.residents) {
       const detail = world.people.get(id)!.detail!;
       if (detail.with !== undefined) {

@@ -1,8 +1,7 @@
 // The one Chromium smoke (REBOOT_PLAN §11). Grows with each phase toward
 // generate → legends → embark → play → save → reload → continue.
 import { expect, test, type Page } from '@playwright/test';
-import smokeDigest from '../fixtures/smoke-cells-digest.json' with { type: 'json' };
-import smokeMap from '../fixtures/smoke-localmap-digest.json' with { type: 'json' };
+import { SMOKE, smokeExpected } from './smoke-expected';
 
 function collectErrors(page: Page): string[] {
   const errors: string[] = [];
@@ -71,8 +70,8 @@ test('the world map generates, inspects, saves, reloads and advances', async ({ 
   await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
   await expect(map).toHaveAttribute('data-seed', 'SMOKE');
   await expect(page.getByRole('alert')).toHaveCount(0);
-  // The generated cells match the committed hash, so Chromium and Node agree (no float drift).
-  await expect(map).toHaveAttribute('data-cells-digest', smokeDigest.digest);
+  // The generated cells match Node's for the same world, so Chromium and Node agree (no float drift).
+  await expect(map).toHaveAttribute('data-cells-digest', smokeExpected().cells);
 
   // Legends: open the first civ, unfold a "why?", follow a cause to its event, show it on the map.
   const legends = page.getByRole('region', { name: 'Legends' });
@@ -197,7 +196,8 @@ test('a site can be watched: embark, play, inspect a person and return to the ma
   page,
 }) => {
   const errors = collectErrors(page);
-  await page.goto(`/?seed=${smokeMap.seed}&size=${smokeMap.size}`);
+  const smokeMap = smokeExpected();
+  await page.goto(`/?seed=${SMOKE.seed}&size=${SMOKE.size}`);
   await closePlayback(page);
   const map = page.getByTestId('world-map');
   await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
@@ -211,10 +211,10 @@ test('a site can be watched: embark, play, inspect a person and return to the ma
   await legends.getByRole('button', { name: 'Watch this site' }).click();
   await legends.getByRole('button', { name: 'Start watching' }).click();
 
-  // The local map matches the committed hash, so Chromium and Node agree.
+  // The local map matches Node's for the same site, so Chromium and Node agree.
   const canvas = page.getByTestId('site-canvas');
   await expect(canvas).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
-  await expect(canvas).toHaveAttribute('data-localmap-digest', smokeMap.digest);
+  await expect(canvas).toHaveAttribute('data-localmap-digest', smokeMap.localMap);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Story Generator — ');
   await expect(page).toHaveURL(new RegExp(`site=${smokeMap.site}&day=0`));
 
@@ -244,11 +244,15 @@ test('a site can be watched: embark, play, inspect a person and return to the ma
   await page.getByRole('button', { name: '4×' }).click();
   await expect(date).not.toHaveText(savedDate!, { timeout: 10_000 });
   await page.getByRole('button', { name: 'Pause' }).click();
-  // The address bar follows the on-page link a moment later; reload only once it names the pause.
-  const pausedPoint = /[?&]day=\d+(&b=\d)?&/.exec(
-    (await page.getByTestId('site-link').textContent())!,
-  )![0];
-  await expect(page).toHaveURL(new RegExp(pausedPoint.replace('?', '\\?')));
+  // The address bar follows the on-page link a moment later, and a tick already under way can
+  // still move both after Pause; reload only once the two name the same moment.
+  await expect
+    .poll(async () => {
+      const link = (await page.getByTestId('site-link').textContent()) ?? '';
+      const point = /[?&]day=\d+(&b=\d)?&/.exec(link)?.[0];
+      return point !== undefined && page.url().includes(point.slice(1));
+    })
+    .toBe(true);
   // Reload (the link replays the site to where play stopped), then load the save and continue.
   await page.reload();
   await expect(canvas).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });

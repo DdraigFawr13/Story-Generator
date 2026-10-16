@@ -142,6 +142,8 @@ describe('war', () => {
       'holy_war_preached',
       'temple_desecrated',
       'holy_city_taken',
+      // M5.2 lineages: a barrow's treasure carried out wrongs the owning civ (places.ts barrowGrievance), and history now hits it.
+      'expedition_treasure',
     ];
     let wars = 0;
     for (const seed of ['WAR-A', 'WAR-B', 'WAR-C', 'WAR-D']) {

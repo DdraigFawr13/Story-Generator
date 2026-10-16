@@ -25,7 +25,10 @@ Shared rules come from AI-Master-Instructions and load through CLAUDE.md (`.clau
 
 ## Local checks (run before pushing)
 
+- While iterating: run only the related tests (`npx vitest run tests/unit/<file>.test.ts`, about 4 s for two files); run the full check once before each push.
 - Every push: `npm run check` (format, typecheck, boundaries, unit tests, build).
+- A test that needs an example event (a wedding, a beast slain) searches a fixed seed list with `tests/unit/helpers/find-world.ts` instead of pinning one seed; if a history change empties the list, add seeds rather than re-pinning. The browser smoke computes its world digests in Node at test time (`tests/browser/smoke-expected.ts`), so nothing is re-saved after a history change.
+- If the site speed guard misses its limit in a thread container, don't re-run main to compare: it misses there too, and CI decides.
 - UI or browser-test changes: also `npm run test:browser`.
 - Worldgen changes: the `worldgen-check` skill.
 - After a sync: `node .claude/master/sync.mjs --check`.
@@ -34,7 +37,7 @@ Cloud sessions: the synced session hook installs Node 24.19.0 and npm 11.9.0 and
 
 ## What CI runs
 
-- **CI** (`ci.yml`): `core` (AI-master drift check, format, typecheck, boundaries, unit tests, build) and `browser` (Chromium smoke) on every PR and `main` push. Target: under 5 minutes.
+- **CI** (`ci.yml`): `core` (AI-master drift check, format, typecheck, boundaries, unit tests, build) and `browser` (Chromium smoke against the production build, two workers, Chromium download cached) on every PR and `main` push. Target: under 5 minutes.
 - **Delete merged PR branches** (`prune-merged-branches.yml`, synced): after a merge, until GitHub's native auto-delete setting is on.
 
 ## Deployment

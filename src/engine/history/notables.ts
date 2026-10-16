@@ -974,6 +974,26 @@ export function siteLost(
   const rules = run.content.notables;
   const thief = livingPerson(run, options.lead?.id) ?? rulerOf(run, attacker);
   const victims = livingList(run).filter((p) => p.siteId === site.id && p.civId === defender.id);
+  // A razing burns some of the books the defenders held (M5.2).
+  if (razed) {
+    for (const victim of victims) {
+      for (const item of itemsHeldBy(run, victim)) {
+        if (item.kind !== 'book' || !run.rng.magic.chance(run.rules.lineages.burnChance)) continue;
+        item.holder = null;
+        item.burned = run.year;
+        const burn = run.emit({
+          type: 'book_burned',
+          actors: [victim.id],
+          place: site.cell,
+          causes: [event, ...item.deeds.slice(-1)],
+          data: { item: item.name, site: site.name, civ: attacker.name },
+        });
+        item.deeds.push(burn.id);
+        addDeed(victim, burn.id);
+        run.lore.burns.set(item.id, { event: burn.id, site: site.name });
+      }
+    }
+  }
   if (thief) {
     for (const victim of victims) {
       for (const item of itemsHeldBy(run, victim)) stealItem(run, item, thief, event);

@@ -8,7 +8,7 @@ import type { SpellDef } from '../core/content-types';
 import type { Civ, Id, Person, Site } from '../core/types';
 import { TIERS } from '../people/tiers';
 import { epochAt } from './climate';
-import { primarySchool } from './items';
+import { primarySchool, spellsHeldBy } from './items';
 import { addDeed, civOfPerson, isAdult, isElder, livingList, siteOf } from './people';
 import { totalPop } from './pop';
 import { cellDistance } from './settle';
@@ -49,12 +49,13 @@ function followSites(run: HistoryRun): void {
     const site = run.world.sites.get(college.siteId);
     if (!site || !isLive(site) || site.civId === null) {
       college.closed = run.year;
-      run.emit({
+      const closing = run.emit({
         type: 'college_closed',
         place: site?.cell ?? null,
         causes: [college.event],
         data: { college: college.name, site: site?.name ?? 'the ruins' },
       });
+      college.closedEvent = closing.id;
       continue;
     }
     college.civId = site.civId;
@@ -125,6 +126,8 @@ function foundColleges(run: HistoryRun): void {
       school,
       founded: run.year,
       event: event.id,
+      // The master's own spells and those of the books they keep (M5.2).
+      lore: spellsHeldBy(run, master),
     });
   }
 }
@@ -246,7 +249,13 @@ function troubleFor(
 ): { spell: SpellDef; site: Site; cause: Id; disease?: string } | undefined {
   const rules = run.rules.colleges;
   const school = primarySchool(caster);
-  const able = spells.filter((s) => school !== undefined && s.schools.includes(school));
+  // A caster must know one of the spells that answer the trouble (M5.2).
+  const able = spells.filter(
+    (s) =>
+      school !== undefined &&
+      s.schools.includes(school) &&
+      s.spells.some((id) => caster.knownAbilities.includes(id)),
+  );
   if (able.length === 0) return undefined;
   const sites = liveSites(run)
     .filter(

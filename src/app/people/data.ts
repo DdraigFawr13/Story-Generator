@@ -459,6 +459,9 @@ export const DEED_GROUPS = [
       'spell_cast',
       'mage_went_to_study',
       'mage_came_home',
+      'apprenticed',
+      'apprentice_taken',
+      'spell_mastered',
       'college_founded',
       'legend_risen',
     ],
@@ -594,4 +597,151 @@ export function watchOf(
   if (site.ruinedYear !== undefined) reason = `Town fell in Year ${site.ruinedYear}`;
   else if (!enabled) reason = 'Watch is available at the present year';
   return { siteId: site.id, name: site.name, reason, fallen: site.ruinedYear !== undefined };
+}
+
+export interface MagicSpell {
+  id: string;
+  name: string;
+  school: string;
+  /** The tier word of the power it needs: "cantrip", "gifted", "strong", "exceptional". */
+  tier: string;
+  year: number;
+  /** Who or what taught it, when recorded. */
+  from?: { text: string; to?: { kind: 'person' | 'item'; id: Id } };
+}
+
+export interface MagicRecord {
+  /** How they first learned, as a sentence opener, and its link. */
+  how: string;
+  howTo?: { kind: 'person' | 'item' | 'site'; id: Id };
+  howName?: string;
+  since: number;
+  /** Their teachers in order; then the line above the first teacher, nearest first. */
+  teachers: Person[];
+  line: Person[];
+  apprentices: Person[];
+  spells: MagicSpell[];
+  /** Spellbooks they hold now, wrote, or that burned while theirs. */
+  books: { id: Id; name: string; note: string }[];
+}
+
+const TIER_WORD: Record<string, string> = {
+  faint: 'cantrip',
+  gifted: 'gifted',
+  strong: 'strong',
+  exceptional: 'exceptional',
+  legendary: 'legendary',
+};
+
+/** A mage's learning: how and from whom, their line, apprentices, spells and books (M5.2). */
+export function magicOf(
+  world: WorldState,
+  person: Person,
+  content: Pick<ContentBundle, 'abilities' | 'schools'>,
+): MagicRecord | undefined {
+  const lore = person.lore;
+  if (!lore) return undefined;
+  const people = (ids: readonly Id[]) =>
+    ids.map((id) => world.people.get(id)).filter((p): p is Person => p !== undefined);
+  const teachers = people(lore.teachers);
+  const line: Person[] = [];
+  const seen = new Set<Id>([person.id, ...lore.teachers]);
+  for (let up = teachers[0]?.lore?.teachers[0]; up !== undefined && line.length < 8;) {
+    const p = world.people.get(up);
+    if (!p || seen.has(up)) break;
+    seen.add(up);
+    line.push(p);
+    up = p.lore?.teachers[0];
+  }
+  const site = (id: Id | undefined) => (id === undefined ? undefined : world.sites.get(id));
+  let how: string;
+  let howTo: MagicRecord['howTo'];
+  let howName: string | undefined;
+  const parent = teachers[0] && person.family.parents.includes(teachers[0].id);
+  switch (lore.via) {
+    case 'teacher':
+      how = parent
+        ? `Taught by ${teachers[0]!.sex === 'f' ? 'her mother' : 'his father'}`
+        : 'Taught by';
+      howTo = teachers[0] ? { kind: 'person', id: teachers[0].id } : undefined;
+      howName = teachers[0]?.name;
+      break;
+    case 'college':
+      how = `Studied at ${lore.college ?? 'a college of magic'}`;
+      break;
+    case 'book': {
+      const book = lore.bookId === undefined ? undefined : world.items.get(lore.bookId);
+      how = 'Learned from the pages of';
+      if (book) {
+        howTo = { kind: 'item', id: book.id };
+        howName = book.name;
+      }
+      break;
+    }
+    case 'hedge': {
+      const s = site(lore.siteId);
+      how = 'Learned a cantrip at the knee of a hedge-witch of';
+      if (s) {
+        howTo = { kind: 'site', id: s.id };
+        howName = s.name;
+      } else howName = 'the wilds';
+      break;
+    }
+    default:
+      how = 'Learned before the records begin';
+  }
+  const abilities = new Map(content.abilities.map((a) => [a.id, a]));
+  const schoolName = (id: string | undefined) =>
+    (content.schools.find((s) => s.id === id)?.name ?? id ?? '').toLowerCase();
+  const learned = new Map(lore.learned.map((l) => [l.id, l]));
+  const spells: MagicSpell[] = [];
+  for (const id of person.knownAbilities) {
+    const ability = abilities.get(id);
+    if (!ability || ability.family !== 'magic') continue;
+    const record = learned.get(id);
+    const spell: MagicSpell = {
+      id,
+      name: ability.name,
+      school: schoolName(ability.school),
+      tier: TIER_WORD[tierOfPower(ability.requirements.power ?? 1)] ?? '',
+      year: record?.year ?? lore.since,
+    };
+    if (record?.teacher !== undefined) {
+      const t = world.people.get(record.teacher);
+      if (t) spell.from = { text: `from ${t.name}`, to: { kind: 'person', id: t.id } };
+    } else if (record?.book !== undefined) {
+      const b = world.items.get(record.book);
+      if (b) spell.from = { text: `from ${b.name}`, to: { kind: 'item', id: b.id } };
+    } else if (record?.college) spell.from = { text: `at ${record.college}` };
+    else if (lore.via === 'hedge') spell.from = { text: 'from the hedge-witch' };
+    spells.push(spell);
+  }
+  spells.sort((a, b) => a.year - b.year || a.name.localeCompare(b.name));
+  const books: MagicRecord['books'] = [];
+  for (const item of world.items.values()) {
+    if (item.spells === undefined) continue;
+    const holds = item.holder === person.id;
+    const wrote = item.makerId === person.id;
+    if (!holds && !wrote) continue;
+    const count = `${item.spells.length} ${item.spells.length === 1 ? 'spell' : 'spells'}`;
+    const note = [
+      wrote ? 'written by them' : '',
+      holds ? 'kept' : '',
+      item.burned !== undefined ? `burned Year ${item.burned}` : '',
+    ]
+      .filter((s) => s)
+      .join(', ');
+    books.push({ id: item.id, name: item.name, note: `${count} · ${note || 'passed on'}` });
+  }
+  return {
+    how,
+    ...(howTo ? { howTo } : {}),
+    ...(howName ? { howName } : {}),
+    since: lore.since,
+    teachers,
+    line,
+    apprentices: people(lore.apprentices),
+    spells,
+    books,
+  };
 }
