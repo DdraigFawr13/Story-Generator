@@ -12,15 +12,14 @@ import {
   type SimEvent,
   type WorldState,
 } from '../../src/engine';
+import { cached, findWorld } from './helpers/find-world';
 
-let shared: WorldState | undefined;
-/** One 64x64, 250-year world shared by the cases (re-pinned NOT-A to NOT-B for M5.6 dragons: history drift made the most famous dead notable one born before the first settlement). */
-const base = () =>
-  (shared ??= generateWorld(
-    'NOT-B',
-    { width: 64, height: 64, historyYears: 250 },
-    DEFAULT_CONTENT,
-  ));
+/** Fixed seed list: the cases share the first world; the one needing a notable born in the records searches the list. */
+const SEEDS = ['NOT-B', 'NOT-A', 'NOT-C', 'NOT-D', 'NOT-E', 'NOT-F', 'NOT-G', 'NOT-H'];
+const make = (seed: string) =>
+  generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, DEFAULT_CONTENT);
+/** One 64x64, 250-year world shared by the cases. */
+const base = () => cached('bio', SEEDS[0]!, make);
 
 const narratorOf = (world: WorldState) =>
   templateNarrator(DEFAULT_CONTENT, (id) => world.people.get(id)?.name ?? `#${id}`);
@@ -97,13 +96,19 @@ describe('biographies', () => {
   const maxLines = DEFAULT_CONTENT.biographies.maxLines;
 
   it('tell a dead notable from the record, in order, from events they acted in', () => {
-    const world = base();
+    const diedInRecords = (w: WorldState) =>
+      [...w.people.values()].filter((p) => p.died !== undefined && p.born >= 0);
+    // A prophet born before the records reads "20 years before the first settlements"; this checks one born in them.
+    const { world } = findWorld(
+      'a notable born in the records who died',
+      'bio',
+      SEEDS,
+      make,
+      (w) => diedInRecords(w).length > 0,
+    );
     const index = buildLegendIndex(world, DEFAULT_CONTENT);
     const narrator = narratorOf(world);
-    const dead = [...world.people.values()]
-      // M5.2 lineages: the most famous dead notable is now a prophet born before the records, whose summary reads "20 years before the first settlements"; this checks one born in the records.
-      .filter((p) => p.died !== undefined && p.born >= 0)
-      .sort((a, b) => b.fame - a.fame || a.id - b.id)[0]!;
+    const dead = diedInRecords(world).sort((a, b) => b.fame - a.fame || a.id - b.id)[0]!;
     const bio = biography(world, DEFAULT_CONTENT, narrator, index, { kind: 'person', id: dead.id });
     const text = bio.summary.join(' ');
     // Either personBorn variant names the year.

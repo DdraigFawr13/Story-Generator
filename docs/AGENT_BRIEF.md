@@ -12,7 +12,7 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256Ã
 - Prefer a content entry over an engine special case; put tunable numbers in `src/content/` with a one-line comment.
 - Every state change a person would notice emits an event with a content template and cause links. Chronicle text never invents facts.
 - A name a reader takes as identity never repeats in the same role (a person's spouses, items); a repeated life event says what changed (LESSONS 2026-10-13).
-- Tests are light: tiny fixtures, one determinism test, invariant checkers, one Chromium smoke. No seed batteries. Never skip or weaken a test to get green.
+- Tests are light: tiny fixtures, one determinism test, invariant checkers, one Chromium smoke. No seed batteries; a test that needs an example event searches a short fixed seed list (`tests/unit/helpers/find-world.ts`) instead of pinning one seed. Never skip or weaken a test to get green.
 - No new runtime dependencies, API keys or backend without the user.
 
 ## How work flows
@@ -26,8 +26,8 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256Ã
 
 ## Commands
 
-- `npm run check`: format, typecheck, boundaries, unit tests, build. Run before every push (about 40 s locally on 2026-10-13, of which the unit tests are 30 s; CI's two jobs take about 1 minute each).
-- `npm run test:browser`: the Chromium smoke; run for UI or browser-test changes.
+- `npm run check`: format, typecheck, boundaries, unit tests, build. Run before every push (about 49 s locally on 2026-10-16, of which the unit tests are 31 s; the format check takes under 1 s on a re-run).
+- `npm run test:browser`: the Chromium smoke, against a production build with two workers; run for UI or browser-test changes.
 - `npm run drama -- --seeds 5`: world and history statistics per seed (a tool, not a gate).
 - `npm run drama -- --seeds 10 --years 250 --baseline tests/baseline/drama-10-seeds.json`: diff history numbers against the saved baseline (`--write-baseline FILE` regenerates it).
 - `npm run sweep -- --rule expandChance --values 0.1,0.3 --seeds 5`: one history summary line per rule value.
@@ -50,4 +50,4 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256Ã
 | `src/platform/` | IndexedDB saves, the world-gen and site workers and their hosts |
 | `src/app/` | React: `WorldMap`, `MapPanels`, `YearSlider`, `tales/` (Tales room, atlas and markers), `town/` (Town room, canvas and scene model), `playback/data.ts`, `Legends` and `LegendPages`, `EmbarkCards`, `SiteView` with `site-panels` and `site-render` |
 | `scripts/` | boundaries check, drama and baseline diff, sweep, worldmap, site, biographies |
-| `tests/unit/`, `tests/browser/` | Vitest units (31 files, 251 tests, 30 s), the Playwright smoke (3 tests, 24 s) |
+| `tests/unit/`, `tests/browser/` | Vitest units (57 files, 455 tests, 31 s), the Playwright smoke (17 tests, 70 s with the build) |

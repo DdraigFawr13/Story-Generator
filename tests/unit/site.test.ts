@@ -6,7 +6,6 @@ import {
   embark,
   foodDaysLeft,
   foundOutpost,
-  generateWorld,
   householdLabel,
   leaveSite,
   localMapDigest,
@@ -21,7 +20,6 @@ import {
   type WorldState,
 } from '../../src/engine';
 
-import smokeMap from '../fixtures/smoke-localmap-digest.json';
 import { base, biggest, copy } from './helpers/site-fixture';
 
 const C = DEFAULT_CONTENT;
@@ -248,17 +246,5 @@ describe('saves', () => {
     expect(back.activeSite).toEqual(world.activeSite);
     expect(back.activeSite!.map.terrain).toBeInstanceOf(Uint8Array);
     expect(back.activeSite!.households).toBeInstanceOf(Map);
-  });
-});
-
-describe('smoke local map', () => {
-  it('matches the committed digest of the first standing site of seed SMOKE at 128 (the browser smoke compares the same)', () => {
-    const world = generateWorld(smokeMap.seed, { width: smokeMap.size, height: smokeMap.size }, C);
-    // The Sites list in Legends sorts by peak population, then id; the smoke opens the first standing one.
-    const first = [...world.sites.values()]
-      .filter((s) => s.ruinedYear === undefined)
-      .sort((a, b) => b.peakPop - a.peakPop || a.id - b.id)[0]!;
-    expect(first.id).toBe(smokeMap.site);
-    expect(localMapDigest(embark(world, C, first.id).map)).toBe(smokeMap.digest);
   });
 });

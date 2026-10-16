@@ -22,16 +22,14 @@ import {
   type WorldState,
 } from '../../src/engine';
 import { biggest, copy } from './helpers/site-fixture';
+import { findWorld } from './helpers/find-world';
 
 const C = DEFAULT_CONTENT;
 const ST = C.steward;
 
-/** A world whose biggest site is not already at the food-worker ceiling when fed (SITE-C since
- * peoples settle closer on a quarter-land map: SITE-B's biggest town is at the ceiling;
- * re-pinned for M5.6 dragons: history drift put SITE-C's at the ceiling too, SITE-A's is not; re-pinned for M5.2 lineages: history drift put SITE-A's at the ceiling, SITE-D's is not). */
-let shortBase: WorldState | undefined;
-const shortCopy = () =>
-  structuredClone((shortBase ??= generateWorld('SITE-D', { width: 64, height: 64 }, C)));
+/** The food-shortage case searches this list for a world whose biggest site is not already at the food-worker ceiling when fed. */
+const SEEDS = ['SITE-D', 'SITE-A', 'SITE-B', 'SITE-C', 'SITE-E', 'SITE-F', 'SITE-G', 'SITE-H'];
+const makeSmall = (seed: string) => generateWorld(seed, { width: 64, height: 64 }, C);
 const bandOf = (world: WorldState, p: Person) => {
   const race = C.races.find((r) => r.id === p.raceId)!;
   const age = world.params.historyYears - p.born;
@@ -73,25 +71,40 @@ describe('work', () => {
   });
 
   it('puts more people on food when the stores run short', () => {
-    const fed = shortCopy();
-    const short = shortCopy();
-    const site = biggest(fed);
-    const a = embark(fed, C, site.id);
-    const b = embark(short, C, site.id);
-    const need = a.residents.length * 2;
-    // The fed town gets a year of grain whatever its history left it; the short one two days.
-    for (const item of C.items) {
-      if (item.kind !== 'food') continue;
-      a.stock.set(item.id, item.id === 'grain' ? need * 168 : 0);
-      b.stock.set(item.id, item.id === 'grain' ? need : 0);
-    }
-    stepBlock(fed, C);
-    stepBlock(short, C);
-    const onFood = (w: WorldState, s: typeof a) =>
+    const onFood = (w: WorldState, s: { residents: number[] }) =>
       s.residents.filter((id) => {
         const j = C.jobs.find((x) => x.id === w.people.get(id)!.detail!.jobId);
         return j?.serves === 'food';
       }).length;
+    const trial = (source: WorldState) => {
+      const fed = structuredClone(source);
+      const short = structuredClone(source);
+      const site = biggest(fed);
+      const a = embark(fed, C, site.id);
+      const b = embark(short, C, site.id);
+      const need = a.residents.length * 2;
+      // The fed town gets a year of grain whatever its history left it; the short one two days.
+      for (const item of C.items) {
+        if (item.kind !== 'food') continue;
+        a.stock.set(item.id, item.id === 'grain' ? need * 168 : 0);
+        b.stock.set(item.id, item.id === 'grain' ? need : 0);
+      }
+      stepBlock(fed, C);
+      stepBlock(short, C);
+      return { fed, short, a, b };
+    };
+    // A fed town already at the ceiling cannot show the shift, so take the first world that can.
+    const { world } = findWorld(
+      'a town that puts more people on food when short',
+      'work',
+      SEEDS,
+      makeSmall,
+      (w) => {
+        const t = trial(w);
+        return onFood(t.short, t.b) > onFood(t.fed, t.a);
+      },
+    );
+    const { fed, short, a, b } = trial(world);
     expect(foodMeals(b, C)).toBeLessThan(foodMeals(a, C));
     expect(onFood(short, b)).toBeGreaterThan(onFood(fed, a));
   });

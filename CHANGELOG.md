@@ -2,6 +2,10 @@
 
 Newest first. One short entry per merged milestone.
 
+## Process
+
+- **Faster tests** (Morgan approved all five changes, 2026-10-16). Tests that need an example event (a deed, a civil war, a wedding, a razing death) no longer pin one seed: each searches a fixed list of about eight seeds with `tests/unit/helpers/find-world.ts` and fails, naming the list, if none has it; "one world has every deed" checks were split so each kind is found on its own. The browser smoke computes its SMOKE digests in Node at test time (`tests/browser/smoke-expected.ts`), so the two saved digest files are gone. Unit tests share worker state (`isolate: false`) and the format check caches; the browser smoke runs against a production build with two workers, and CI caches the Chromium download. A latent race in the site smoke (reading the link before a tick in flight settled) was fixed by waiting for the link and the address bar to agree. Measured in a 4-core container: unit tests 52 s to 31 s, `npm run check` 77 s to 49 s, format re-check 12 s to under 1 s, browser smoke 97 s to 70 s.
+
 ## UI redesign — Four rooms
 
 - **Tales tweaks**. The Tales map opens in Realms mode, with fainter realm colours over the land so biomes, rivers and towns stay readable (the same for Peoples and Faiths). The key now explains the mode's colours: the realms of the shown year, the peoples, the faiths, or the main kinds of land. A world's first play runs through all its years without pausing; replays pause to ask as before. An Events filter replaces the "Pauses on" chooser: each kind of event (legends, wars, new realms, battles, new rulers, towns taken, famine and plague, treasure, faith) can be shown on the map and ribbon (with its count), and paused on; the choice is kept while the tab is open.
