@@ -27,6 +27,17 @@ import {
   type Neighbours,
   type Rgb3,
 } from './colours';
+import {
+  CARD_ROWS,
+  TOWN_NAMES_ZOOM,
+  ZOOM_MAX,
+  centreOn,
+  clampView,
+  groupMarks,
+  zoomAt,
+  type View,
+} from './explore';
+import { ExploreMarks, Towns, type TownMark } from './exploreMarks';
 import { settleLabels } from './labels';
 import { PHONE_MAX, cardSide, fitMap, nearestCell } from './layout';
 import { Capitals, MAX_TAGS, Marks, type Clock, type Recent } from './markers';
@@ -62,8 +73,8 @@ interface Props {
   onOpenEvent: (id: Id) => void;
   /** Open the Book room; `year` and `follow` say where Tales comes back to. */
   onBook: (year: number, follow: { id: Id; name: string } | null) => void;
-  /** Open the Legends pane, at a category when one is named (Book). */
-  onLegends: (category?: LegendCategory) => void;
+  /** Deprecated: the end card no longer opens the Legends pane. */
+  onLegends?: (category?: LegendCategory) => void;
   /** Open the People room's index; `year` and `follow` say where Tales comes back to. */
   onPeople: (year: number, follow: { id: Id; name: string } | null) => void;
   /** Open the Town room (the last town watched, else the picker); Tales comes back to `year`. */
@@ -72,7 +83,26 @@ interface Props {
   onOpenPerson: (id: Id, year: number, follow: { id: Id; name: string } | null) => void;
   /** A person to follow from the start (Follow on their page). */
   initialFollow?: { id: Id; name: string } | null | undefined;
+  /**
+   * Open in the explore state at this year, not playing; with a cell, zoomed on it and ringed
+   * ("show on map", the rail's World item).
+   */
+  explore?: { year: number; cell: number | null } | null;
+  /** Watch a town day by day (offered at the present only). */
+  onWatch?: (siteId: Id) => void;
+  /** Open a town's records. */
+  onRecords?: (siteId: Id) => void;
 }
+
+/** What the open place card is about: the events at a cell, or a town (and its events). */
+type Pin =
+  | { kind: 'events'; cell: number; side: 'left' | 'right' | 'mid' }
+  | {
+      kind: 'town';
+      cell: number;
+      site: Id;
+      side: 'left' | 'right' | 'mid';
+    };
 
 /** Years a second the clock can run at. */
 export const SPEEDS = [0.5, 1, 2, 4, 8, 15, 30, 60] as const;
@@ -86,6 +116,8 @@ const MODES: { id: MapMode; label: string }[] = [
   { id: 'plain', label: 'Plain' },
 ];
 const AUTO_RESUME_MS = 8000;
+/** The sharper terrain is at most this many pixels a side. */
+const SHARP_PX = 2048;
 const RECENT_MS = 2600;
 /** Event tags show at this speed or slower. */
 const TAG_SPEED = 8;
@@ -175,15 +207,16 @@ function Room({
   data,
   textOf,
   startYear,
-  onClose,
   onView,
   onOpenEvent,
-  onLegends,
   onPeople,
   onTown,
   onBook,
   onOpenPerson,
   initialFollow,
+  explore,
+  onWatch,
+  onRecords,
 }: Props & { data: PlaybackData }) {
   const palette = useMemo(() => buildPalette(world, data), [world, data]);
   const baseModel = useMemo(() => buildModel(world, data, DEFAULT_CONTENT), [world, data]);
@@ -215,9 +248,16 @@ function Room({
   const [chooser, setChooser] = useState(false);
   const [follow, setFollow] = useState<{ id: Id; name: string } | null>(initialFollow ?? null);
   const [speed, setSpeed] = useState<number>(DEFAULT_SPEED);
-  const [playing, setPlaying] = useState(true);
+  const [playing, setPlaying] = useState(!explore);
   const [ended, setEnded] = useState(false);
-  const [year, setYear] = useState(Math.floor(startYear));
+  // Explore: the finished map, zoomable, with marks for the events. Playing never zooms.
+  const [exploring, setExploring] = useState(() => !!explore);
+  const [zoom, setZoom] = useState<View | null>(null);
+  const [glide, setGlide] = useState(false);
+  const [pin, setPin] = useState<Pin | null>(null);
+  const [focus, setFocus] = useState<number | null>(explore?.cell ?? null);
+  const pendingFocus = useRef<number | null>(explore?.cell ?? null);
+  const [year, setYear] = useState(Math.floor(explore?.year ?? startYear));
   const [card, setCard] = useState<{ event: PlaybackEvent; key: number } | null>(null);
   const [recent, setRecent] = useState<(Recent & { until: number })[]>([]);
   const [atlas, setAtlas] = useState<Atlas | null>(null);
@@ -225,7 +265,7 @@ function Room({
   const [helpOpen, setHelpOpen] = useState(false);
   const [labels, setLabels] = useState<Map<number, { x: number; y: number; n: number }>>(new Map());
 
-  const clock = useRef<Clock>({ t: startYear });
+  const clock = useRef<Clock>({ t: explore?.year ?? startYear });
   const lastPause = useRef(-99);
   /** When the last card closed (ms), for the real-time gap between cards. */
   const closedAt = useRef<number | null>(null);
@@ -451,10 +491,40 @@ function Room({
   };
   const toggle = () => {
     if (card) return resume();
+    if (exploring) {
+      // Play on from the year shown (from the start when that is the present).
+      leaveExplore();
+      if (clock.current.t >= data.last) return replay();
+      lastPause.current = Math.floor(clock.current.t);
+      closedAt.current = null;
+      setEnded(false);
+      setPlaying(true);
+      return undefined;
+    }
     if (ended) return replay();
     setPlaying((p) => !p);
+    return undefined;
+  };
+  const leaveExplore = () => {
+    setExploring(false);
+    setZoom(null);
+    setGlide(false);
+    setPin(null);
+    setFocus(null);
+    pendingFocus.current = null;
+  };
+  /** The finished map at the present: borders, towns and marks, free to zoom. */
+  const startExplore = () => {
+    closedAt.current = performance.now();
+    setCard(null);
+    clock.current.t = data.last;
+    sync();
+    setPlaying(false);
+    setEnded(true);
+    setExploring(true);
   };
   const replay = () => {
+    leaveExplore();
     clock.current.t = 0;
     lastPause.current = -99;
     closedAt.current = null;
@@ -483,6 +553,9 @@ function Room({
   // second while things glide. Counts of named realms are left on the stage for the tests.
   useLayoutEffect(() => {
     settle();
+    // The zoom buttons sit above the key, whatever height it has.
+    const key = stageEl.current?.querySelector<HTMLElement>('.tr-key');
+    stageEl.current?.style.setProperty('--tr-key-h', `${key?.offsetHeight ?? 0}px`);
   });
   useEffect(() => {
     const timer = window.setInterval(settle, 160);
@@ -512,6 +585,181 @@ function Room({
   }, [atlas, stage]);
   const W = atlas?.width ?? data.width;
   const H = atlas?.height ?? data.height;
+  /** The land's box as fractions of the atlas, and the stage rows kept clear on a phone. */
+  const land = useMemo(
+    () =>
+      atlas
+        ? {
+            x0: atlas.box.x0 / atlas.width,
+            y0: atlas.box.y0 / atlas.height,
+            x1: atlas.box.x1 / atlas.width,
+            y1: atlas.box.y1 / atlas.height,
+          }
+        : null,
+    [atlas],
+  );
+  const reserve = stage.w <= PHONE_MAX ? { top: 52, bottom: 52 } : { top: 0, bottom: 0 };
+  // Where the map sits: the whole-map fit, or the zoomed view kept on the stage (explore only).
+  const view = useMemo(() => {
+    if (!layout) return null;
+    const whole = { z: 1, left: layout.left, top: layout.top, size: layout.size };
+    if (!exploring || !zoom || zoom.z <= 1.001 || !land) return whole;
+    const c = clampView(zoom, layout.size, stage, land, reserve);
+    return { ...c, size: layout.size * c.z };
+    // `reserve` follows the stage.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout, exploring, zoom, land, stage]);
+  const geo = useRef({ layout, view, stage, land, reserve });
+  geo.current = { layout, view, stage, land, reserve };
+  /** Moves the map to `v` (kept on the stage); `smooth` glides there, a gesture follows at once. */
+  const setView = (v: View, smooth: boolean): View | null => {
+    const g = geo.current;
+    if (!g.layout || !g.land) return null;
+    const c = clampView(v, g.layout.size, g.stage, g.land, g.reserve);
+    setGlide(smooth);
+    setZoom(c.z <= 1.001 ? null : c);
+    return c;
+  };
+  const zoomBy = (factor: number, at?: { x: number; y: number }, smooth = false) => {
+    const g = geo.current;
+    if (!g.view || !g.layout) return;
+    const p = at ?? { x: g.stage.w / 2, y: g.stage.h / 2 };
+    setView(zoomAt(g.view, g.layout.size, g.view.z * factor, p), smooth);
+  };
+  const wholeMap = () => {
+    setGlide(true);
+    setZoom(null);
+  };
+  // The first view of an explore opened on a place: 2x, centred on its cell.
+  useEffect(() => {
+    const cell = pendingFocus.current;
+    if (cell === null || !layout || !atlas) return;
+    pendingFocus.current = null;
+    setView(
+      centreOn(((cell % W) + 0.5) / W, (Math.floor(cell / W) + 0.5) / H, 2, layout.size, stage),
+      false,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout, atlas]);
+  // Past 2x the terrain is built again at twice the pixels (once a world), so a close view stays
+  // crisp. It waits a moment so a zoom in progress is not held up by it.
+  const sharpFor = useRef<WorldState | null>(null);
+  const sharpZoom = (view?.z ?? 1) > 2;
+  useEffect(() => {
+    if (!exploring || !atlas || !sharpZoom || sharpFor.current === world) return undefined;
+    const timer = window.setTimeout(() => {
+      sharpFor.current = world;
+      const scale = Math.min(Math.round(atlas.scale * 1.5), Math.floor(SHARP_PX / atlas.width));
+      if (scale <= atlas.scale) return;
+      const made = createAtlas(
+        world.cells!,
+        DEFAULT_CONTENT.biomes.map((b) => b.id),
+        scale,
+      );
+      stageEl.current?.setAttribute('data-sharp-ms', made.terrainMs.toFixed(0));
+      setAtlas(made);
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [exploring, atlas, sharpZoom, world]);
+  // Wheel, drag and pinch on the stage, in the explore state only.
+  useEffect(() => {
+    const el = stageEl.current;
+    if (!exploring || !el) return undefined;
+    const IGNORE = 'button, a, input, select, label, .tr-ask, .tr-chooser, .tr-key, .tr-chip';
+    const local = (e: { clientX: number; clientY: number }) => {
+      const r = el.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    const pts = new Map<number, { x: number; y: number }>();
+    let drag: { x: number; y: number; view: View; moved: boolean } | null = null;
+    let pinch: { d: number; mid: { x: number; y: number }; view: View } | null = null;
+    const current = (): View | null => {
+      const v = geo.current.view;
+      return v ? { z: v.z, left: v.left, top: v.top } : null;
+    };
+    const pair = () => {
+      const [a, b] = [...pts.values()] as [{ x: number; y: number }, { x: number; y: number }];
+      return {
+        d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+        mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+      };
+    };
+    const onWheel = (e: WheelEvent) => {
+      if ((e.target as Element).closest('.tr-ask, .tr-chooser')) return;
+      e.preventDefault();
+      const unit = e.deltaMode === 1 ? 16 : 1;
+      zoomBy(Math.exp(-e.deltaY * unit * (e.ctrlKey ? 0.01 : 0.0016)), local(e));
+    };
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if ((e.target as Element).closest(IGNORE)) return;
+      const v = current();
+      if (!v) return;
+      pts.set(e.pointerId, local(e));
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {
+        // A pointer that is already gone cannot be captured.
+      }
+      if (pts.size === 1) drag = { ...local(e), view: v, moved: false };
+      else if (pts.size === 2) {
+        drag = null;
+        pinch = { ...pair(), view: v };
+      }
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, local(e));
+      const v = current();
+      if (!v) return;
+      if (pts.size >= 2 && pinch) {
+        const now = pair();
+        const base = pinch.view;
+        const moved = zoomAt(base, geo.current.layout!.size, base.z * (now.d / pinch.d), pinch.mid);
+        const made = setView(
+          {
+            ...moved,
+            left: moved.left + now.mid.x - pinch.mid.x,
+            top: moved.top + now.mid.y - pinch.mid.y,
+          },
+          false,
+        );
+        // Each step is measured from the last: the span and the view it left.
+        if (made) pinch = { ...now, view: made };
+      } else if (drag) {
+        const p = local(e);
+        const dx = p.x - drag.x;
+        const dy = p.y - drag.y;
+        if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+        drag.moved = true;
+        el.classList.add('dragging');
+        setView({ z: drag.view.z, left: drag.view.left + dx, top: drag.view.top + dy }, false);
+      }
+    };
+    const onUp = (e: PointerEvent) => {
+      if (!pts.delete(e.pointerId)) return;
+      pinch = null;
+      const v = current();
+      const left = [...pts.values()][0];
+      drag = pts.size === 1 && left && v ? { ...left, view: v, moved: true } : null;
+      if (!pts.size) el.classList.remove('dragging');
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onUp);
+      el.classList.remove('dragging');
+    };
+    // The handlers read the live view through `geo`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exploring]);
   // A beast's mark stands on drawn land: its lair's cell, or the nearest cell that is.
   // Armies march in wars and battles; great figures are the legends.
   const armies = shown.has('war') || shown.has('battle');
@@ -582,14 +830,15 @@ function Room({
       .map(([b, n]) => [b, n / Math.max(1, land)] as [number, number])
       .sort((a, b) => b[1] - a[1] || a[0] - b[0]);
   }, [world]);
-  const ring = card?.event.place ?? null;
-  const ringSide = useMemo((): 'left' | 'right' | 'mid' => {
-    if (ring === null || !layout || !atlas) return 'left';
+  const ring = card?.event.place ?? pin?.cell ?? focus ?? null;
+  /** The side a card takes so it leaves the ringed cell and the most land uncovered. */
+  const sideOf = (cell: number | null, box: { left: number; top: number; size: number } | null) => {
+    if (cell === null || !box || !atlas) return 'left' as const;
     const at = {
-      x: layout.left + (((ring % W) + 0.5) / W) * layout.size,
-      y: layout.top + ((Math.floor(ring / W) + 0.5) / H) * layout.size,
+      x: box.left + (((cell % W) + 0.5) / W) * box.size,
+      y: box.top + ((Math.floor(cell / W) + 0.5) / H) * box.size,
     };
-    if (stage.w <= PHONE_MAX) return 'left';
+    if (stage.w <= PHONE_MAX) return 'left' as const;
     // Land share under a pixel rectangle of the stage, from the atlas's land mask.
     let total = 0;
     for (let i = 0; i < atlas.inland.length; i += 1) total += atlas.inland[i]!;
@@ -597,14 +846,82 @@ function Room({
       let n = 0;
       for (let i = 0; i < atlas.inland.length; i += 1) {
         if (!atlas.inland[i]) continue;
-        const x = layout.left + (((i % W) + 0.5) / W) * layout.size;
-        const y = layout.top + ((Math.floor(i / W) + 0.5) / H) * layout.size;
+        const x = box.left + (((i % W) + 0.5) / W) * box.size;
+        const y = box.top + ((Math.floor(i / W) + 0.5) / H) * box.size;
         if (x >= x0 && x < x1 && y >= y0 && y < y1) n += 1;
       }
       return total ? n / total : 0;
     };
     return cardSide(stage, landUnder, at);
-  }, [ring, layout, atlas, stage, W, H]);
+  };
+  const cardPlace = card?.event.place ?? null;
+  const ringSide = useMemo(
+    () => sideOf(cardPlace, layout),
+    // `sideOf` reads the same inputs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cardPlace, layout, atlas, stage, W, H],
+  );
+  // ---- explore: event marks, towns and the place card ---------------------------------------
+  const groups = useMemo(
+    () => (exploring ? groupMarks(data.events, year, shown) : []),
+    [exploring, data, year, shown],
+  );
+  const borderNow = data.borderYear(year);
+  const towns = useMemo(() => {
+    const out: (TownMark & { civ: number; pop: number })[] = [];
+    if (!exploring) return out;
+    for (const [id, s] of data.sitesAt(borderNow)) {
+      const site = data.sites.get(id);
+      if (!site || s.ruined || s.pop <= 0) continue;
+      out.push({ id, name: site.name, cell: site.cell, civ: s.civ, pop: s.pop });
+    }
+    return out;
+  }, [exploring, data, borderNow]);
+  /** Capitals the map already names (so a town name is not written twice). */
+  const namedSeats = useMemo(() => {
+    const out = new Set<number>();
+    if (!exploring || mode === 'realms' || mode === 'plain') return out;
+    for (const id of data.seatsAt(year).values()) {
+      if (mode !== 'faiths' || holySeats.has(id)) out.add(id);
+    }
+    return out;
+  }, [exploring, mode, data, year, holySeats]);
+  const siteAtCell = useMemo(() => {
+    const out = new Map<number, string>();
+    for (const site of data.sites.values()) if (!out.has(site.cell)) out.set(site.cell, site.name);
+    return out;
+  }, [data]);
+  const zoomed = (view?.z ?? 1) >= TOWN_NAMES_ZOOM;
+  /** What the place card lists: the shown events there up to the year shown, newest first. */
+  const pinRows = useMemo(() => {
+    if (!pin) return [];
+    const here = data.events.filter((e) => e.place === pin.cell);
+    const list = groupMarks(here, year, shown, 1)[0]?.events ?? [];
+    return list.slice(0, pin.kind === 'town' ? CARD_ROWS : 12).map((e) => {
+      const event = eventById.get(e.id);
+      const person = e.actors.map((id) => world.people.get(id)).find((p) => p !== undefined);
+      return {
+        id: e.id,
+        y: e.y,
+        title: e.title,
+        text: event ? textOf(event) : '',
+        person: person ? { id: person.id, name: person.name } : null,
+      };
+    });
+    // `textOf` is a new function each render; the rows follow the place, the year and the filter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pin, data, year, shown, eventById, world]);
+  const pinTown = pin?.kind === 'town' ? towns.find((t) => t.id === pin.site) : undefined;
+  const openEvents = (cell: number) => {
+    setFocus(null);
+    setPin({ kind: 'events', cell, side: sideOf(cell, view) });
+  };
+  const openTown = (id: Id) => {
+    const t = towns.find((x) => x.id === id);
+    if (!t) return;
+    setFocus(null);
+    setPin({ kind: 'town', cell: t.cell, site: id, side: sideOf(t.cell, view) });
+  };
   const cardPerson = card
     ? card.event.actors.map((id) => world.people.get(id)).find((p) => p !== undefined)
     : undefined;
@@ -772,14 +1089,13 @@ function Room({
     return null;
   }, [mode, labels, data, palette, realmOf, world, year, biomeShare]);
 
-  const finish = () => onClose(ended ? data.last : Math.floor(clock.current.t));
   const openPerson = (id: Id) =>
     onOpenPerson(id, Math.floor(clock.current.t), follow ? { ...follow } : null);
   const onRoom = (room: RoomId) => {
     if (room === 'people') onPeople(Math.floor(clock.current.t), follow ? { ...follow } : null);
     else if (room === 'book') onBook(Math.floor(clock.current.t), follow ? { ...follow } : null);
     else if (room === 'town') onTown(Math.floor(clock.current.t), follow ? { ...follow } : null);
-    else if (room === 'world') finish();
+    else if (room === 'world') startExplore();
   };
 
   return (
@@ -791,13 +1107,19 @@ function Room({
       data-mode={mode}
     >
       <div className="tr-main">
-        <div className="tr-stage" ref={stageEl} data-testid="tales-stage">
+        <div
+          className={`tr-stage${exploring ? ' exploring' : ''}`}
+          ref={stageEl}
+          data-testid="tales-stage"
+          data-explore={exploring ? 'true' : 'false'}
+          data-zoom={view ? view.z.toFixed(2) : '1.00'}
+        >
           <div
-            className="tr-map"
+            className={`tr-map${glide ? ' glide' : ''}`}
             ref={wrapEl}
             style={
-              layout
-                ? { width: layout.size, height: layout.size, left: layout.left, top: layout.top }
+              view
+                ? { width: view.size, height: view.size, left: view.left, top: view.top }
                 : { visibility: 'hidden' }
             }
           >
@@ -865,8 +1187,28 @@ function Room({
                 recent={recent}
               />
             )}
+            {exploring && (
+              <>
+                <Towns
+                  towns={towns}
+                  width={W}
+                  height={H}
+                  named={zoomed}
+                  skip={namedSeats}
+                  open={pin?.cell ?? null}
+                  onOpen={openTown}
+                />
+                <ExploreMarks
+                  groups={groups}
+                  width={W}
+                  height={H}
+                  open={pin?.kind === 'events' ? pin.cell : null}
+                  onOpen={openEvents}
+                />
+              </>
+            )}
             <div
-              className={`tr-ring${card ? ' on' : ''}`}
+              className={`tr-ring${card || pin || focus !== null ? ' on' : ''}`}
               style={ring === null ? { opacity: 0 } : pct(ring)}
             />
           </div>
@@ -901,7 +1243,11 @@ function Room({
                 aria-expanded={chooser}
                 onClick={() => setChooser((o) => !o)}
               >
-                {firstRun ? (
+                {exploring ? (
+                  <>
+                    <small>Show</small> <span>{pausesLabel(shown)}</span>
+                  </>
+                ) : firstRun ? (
                   <>
                     <small>First play</small> <span>no pauses</span>
                   </>
@@ -942,9 +1288,11 @@ function Room({
                     </div>
                   ))}
                   <p>
-                    {firstRun
-                      ? 'The first play runs to the present (or until you skip) without pausing. Replays pause on the ticked events.'
-                      : 'Shown events are marked on the map and the ribbon; paused ones stop to ask. Peace is shown with wars but never pauses.'}
+                    {exploring
+                      ? 'Each ticked kind is marked on the map up to the year on the ribbon: click a mark to read it. The Pause ticks apply when you play on.'
+                      : firstRun
+                        ? 'The first play runs to the present (or until you skip) without pausing. Replays pause on the ticked events.'
+                        : 'Shown events are marked on the map and the ribbon; paused ones stop to ask. Peace is shown with wars but never pauses.'}
                   </p>
                 </div>
               )}
@@ -965,6 +1313,29 @@ function Room({
           </div>
           {mode === 'faiths' && (
             <p className="tr-note">Faiths are shown as they stood when history ended.</p>
+          )}
+          {exploring && (
+            <div className="tr-zoom" role="group" aria-label="Zoom">
+              <button
+                type="button"
+                aria-label="Zoom in"
+                disabled={(view?.z ?? 1) >= ZOOM_MAX - 0.001}
+                onClick={() => zoomBy(1.5, undefined, true)}
+              >
+                +
+              </button>
+              <button
+                type="button"
+                aria-label="Zoom out"
+                disabled={(view?.z ?? 1) <= 1.001}
+                onClick={() => zoomBy(1 / 1.5, undefined, true)}
+              >
+                −
+              </button>
+              <button type="button" disabled={(view?.z ?? 1) <= 1.001} onClick={wholeMap}>
+                Whole map
+              </button>
+            </div>
           )}
           <div className={`tr-year${mode === 'faiths' ? ' lower' : ''}`}>
             <div data-testid="tales-year" aria-live="off">
@@ -1101,7 +1472,83 @@ function Room({
             </section>
           )}
 
-          {ended && (
+          {pin && (
+            <section
+              key={`${pin.kind}:${pin.cell}`}
+              className={`tr-ask tr-pin ${pin.side}`}
+              role="dialog"
+              aria-label={pin.kind === 'town' ? 'Town' : 'Events at this place'}
+              data-testid="tales-pin"
+            >
+              <button type="button" className="x" aria-label="Close" onClick={() => setPin(null)}>
+                ✕
+              </button>
+              {pinTown ? (
+                <>
+                  <div
+                    className="k"
+                    style={{
+                      color: `rgb(${labelColour(palette.hue.get(pinTown.civ) ?? 0).join(',')})`,
+                    }}
+                  >
+                    {data.civById.get(pinTown.civ)?.name ?? 'A free town'}
+                  </div>
+                  <h2>{pinTown.name}</h2>
+                  <p>
+                    {pinTown.pop.toLocaleString('en-GB')} people in year {year}
+                    {world.sites.get(pinTown.id)
+                      ? `, founded in year ${world.sites.get(pinTown.id)!.founded}`
+                      : ''}
+                    .
+                  </p>
+                  <div className="acts">
+                    {onWatch && year >= data.last && (
+                      <button type="button" className="p" onClick={() => onWatch(pinTown.id)}>
+                        Watch this town
+                      </button>
+                    )}
+                    {onRecords && (
+                      <button type="button" onClick={() => onRecords(pinTown.id)}>
+                        Its records
+                      </button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="k">Marked on the map</div>
+                  <h2>{siteAtCell.get(pin.cell) ?? 'Open country'}</h2>
+                </>
+              )}
+              {pinRows.length === 0 ? (
+                <p className="none">
+                  Nothing is marked here for the kinds shown, up to year {year}.
+                </p>
+              ) : (
+                <ol className="tr-rows">
+                  {pinRows.map((r) => (
+                    <li key={r.id}>
+                      <div className="k">Year {r.y}</div>
+                      <h3>{r.title}</h3>
+                      <p>{r.text}</p>
+                      <div className="acts">
+                        <button type="button" className="p" onClick={() => onOpenEvent(r.id)}>
+                          Read the story
+                        </button>
+                        {r.person && (
+                          <button type="button" onClick={() => openPerson(r.person!.id)}>
+                            Who is {r.person.name}?
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+          )}
+
+          {ended && !exploring && (
             <section className="tr-ask end" role="dialog" aria-label="The present day">
               <div className="k">Year {data.last} · the present day</div>
               <h2>
@@ -1112,11 +1559,14 @@ function Room({
                 {present.rows.map(([label, n]) => `${n} ${label}`).join(', ')}.
               </p>
               <div className="acts">
-                <button type="button" className="p" onClick={finish}>
+                <button type="button" className="p" onClick={startExplore}>
                   Explore the map
                 </button>
-                <button type="button" onClick={() => onLegends()}>
-                  Open legends
+                <button
+                  type="button"
+                  onClick={() => onBook(Math.floor(clock.current.t), follow ? { ...follow } : null)}
+                >
+                  Read the book
                 </button>
                 <button type="button" onClick={replay}>
                   Replay
@@ -1153,7 +1603,7 @@ function Room({
                 ))}
               </select>
             </label>
-            {!ended && (
+            {!ended && !exploring && (
               <button type="button" className="skip" onClick={skip}>
                 Skip to the present
               </button>

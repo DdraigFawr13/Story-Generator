@@ -1411,15 +1411,6 @@ export function NextApp() {
                   const civ = pickBook(booksOf(world.current, legend), lastBook.current);
                   openBookRoom({ civ: civ ?? null, ch: 0, ev: null });
                 }}
-                onLegends={(category) =>
-                  roomChange(() => {
-                    setPlayback(null);
-                    showPeople(false);
-                    setSliderYear(null);
-                    setTab('legends');
-                    if (category) go({ cat: category, open: null });
-                  })
-                }
                 onPeople={(year, follow) => {
                   talesRef.current = { year, follow };
                   openPeopleIndex();
@@ -1433,6 +1424,12 @@ export function NextApp() {
                   openPersonPage(id);
                 }}
                 initialFollow={playback.follow}
+                explore={playback.explore ?? null}
+                onWatch={(id) => watchTown(id)}
+                onRecords={(id) => {
+                  flushTalesUrl();
+                  go({ open: { kind: 'site', id } });
+                }}
               />
             ) : (
               <>
