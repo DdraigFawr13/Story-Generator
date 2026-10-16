@@ -169,10 +169,14 @@ function PeopleIndex() {
     <div className="pp-scroll" data-testid="people-index">
       <header className="pp-top">
         <h1>People</h1>
-        <p>
-          {shown.length.toLocaleString('en-GB')} of {rows.length.toLocaleString('en-GB')} notable
-          figures, the most famous first
-        </p>
+        {rows.length === 0 && world.people.size === 0 ? (
+          <p>The world is still being made…</p>
+        ) : (
+          <p>
+            {shown.length.toLocaleString('en-GB')} of {rows.length.toLocaleString('en-GB')} notable
+            figures, the most famous first
+          </p>
+        )}
         <input
           type="search"
           className="pp-search"

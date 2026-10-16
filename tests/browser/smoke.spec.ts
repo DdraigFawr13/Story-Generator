@@ -32,7 +32,7 @@ async function closePlayback(page: Page) {
 
 /** The classic viewer (old map, Legends pane, saves) opens from the rail's new-world sheet. */
 async function openClassic(page: Page) {
-  await page.getByRole('button', { name: /make a new world/ }).click();
+  await page.getByRole('button', { name: 'New world', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'New world' })
     .getByRole('button', { name: 'Classic viewer' })
@@ -182,15 +182,12 @@ test('the world map generates, inspects, saves, reloads and advances', async ({ 
   expect(errors).toEqual([]);
 });
 
-test('old /?next links still open the world map', async ({ page }) => {
+test('old /?next links open their page in the rooms', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/?next&seed=SMOKE&size=128&open=race:human');
-  const map = page.getByTestId('world-map');
-  await expect(map).toHaveAttribute('data-state', 'ready', { timeout: 30_000 });
-  await expect(map).toHaveAttribute('data-seed', 'SMOKE');
-  await expect(
-    page.getByRole('region', { name: 'Legends' }).getByRole('heading', { level: 3 }),
-  ).not.toHaveText('');
+  const record = page.getByTestId('record-page');
+  await expect(record).toBeVisible({ timeout: 30_000 });
+  await expect(record.getByRole('heading', { level: 3 })).not.toHaveText('');
   // Links the app writes no longer carry the flag.
   await expect(page).not.toHaveURL(/[?&]next/);
   expect(errors).toEqual([]);

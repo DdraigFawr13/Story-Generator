@@ -41,7 +41,7 @@ function WorldSheet({ controls, onClose }: { controls: WorldControls; onClose: (
     const away = (event: PointerEvent) => {
       const target = event.target as Node;
       if (box.current && !box.current.contains(target)) {
-        if (!(target as Element).closest?.('.rm-logo')) onClose();
+        if (!(target as Element).closest?.('.rm-new')) onClose();
       }
     };
     const key = (event: KeyboardEvent) => {
@@ -63,9 +63,12 @@ function WorldSheet({ controls, onClose }: { controls: WorldControls; onClose: (
       onSubmit={(event) => {
         event.preventDefault();
         controls.generate(seed, size, years);
+        // The room's own bar shows the progress; a refused seed reopens the sheet with why.
+        onClose();
       }}
     >
       <h2>A new world</h2>
+      <p className="rm-small">This world is {controls.seed}.</p>
       <label>
         <span>Seed</span>
         <input
@@ -176,9 +179,13 @@ const ROOMS: { id: RoomId; label: string }[] = [
 export function Rail({ current, onRoom }: { current: RoomId; onRoom: (room: RoomId) => void }) {
   const controls = useContext(WorldControlsContext);
   const [sheet, setSheet] = useState(false);
-  // A new world arriving closes the sheet.
+  // A new world arriving closes the sheet; a refused seed opens it again to say why.
   const made = controls ? `${controls.seed}|${controls.size}|${controls.years}` : '';
   useEffect(() => setSheet(false), [made]);
+  const refused = controls?.seedError ?? null;
+  useEffect(() => {
+    if (refused) setSheet(true);
+  }, [refused]);
   const item = (id: RoomId, label: string) => (
     <button
       key={id}
@@ -206,25 +213,42 @@ export function Rail({ current, onRoom }: { current: RoomId; onRoom: (room: Room
   );
   return (
     <nav className="rm-rail" aria-label="Rooms">
-      {controls ? (
+      {controls && (
         <button
           type="button"
-          className="rm-logo"
-          aria-label={`World ${controls.seed}: make a new world`}
+          className="rm-room rm-new"
+          aria-label="New world"
           aria-expanded={sheet}
-          title="Make a new world"
+          title={`This world is ${controls.seed}. Make a new one.`}
           onClick={() => setSheet((o) => !o)}
         >
-          {controls.seed.length > 6 ? `${controls.seed.slice(0, 5)}…` : controls.seed}
-          <small>new ▾</small>
+          <svg
+            className="rm-ico"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="8" />
+            <path d="M12 8.5v7M8.5 12h7" />
+          </svg>
+          <span className="long">New world</span>
+          <span className="short">New</span>
         </button>
-      ) : (
-        <b className="rm-logo">World</b>
       )}
       {ROOMS.map((r) => item(r.id, r.label))}
       <span className="rm-grow" />
       {item('world', 'World')}
-      {controls && sheet && <WorldSheet controls={controls} onClose={() => setSheet(false)} />}
+      {controls && sheet && (
+        <>
+          <div className="rm-backdrop" aria-hidden="true" />
+          <WorldSheet controls={controls} onClose={() => setSheet(false)} />
+        </>
+      )}
     </nav>
   );
 }

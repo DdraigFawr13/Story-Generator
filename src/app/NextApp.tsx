@@ -202,6 +202,12 @@ function navFromUrl(url: ViewState, entry: EntryState | null, rev: number): Lege
   };
 }
 
+/** A link into the classic viewer: `room=classic`, or a site watched in the classic site view. */
+function classicLink(search: string): boolean {
+  if (parseRoomLink(search).room === 'classic') return true;
+  return new URLSearchParams(search).has('site') && !parseTownLink(search).town;
+}
+
 /** The map cell a Legends page is about, if any. */
 function cellOfPage(state: WorldState, ref: PageRef): number | null {
   if (ref.kind === 'race') return null;
@@ -239,13 +245,12 @@ export function NextApp() {
    * The new rooms are home: every page, map and town opens in a room. Only the classic viewer,
    * chosen from the new-world sheet, keeps the old Legends pane, map and site view.
    */
-  const roomsMode = useRef(
-    !(initialRoom.room === null && initial.open && !initial.open.startsWith('person:')),
-  );
+  const roomsMode = useRef(!classicLink(window.location.search));
   /** The People room (index or a person's page) covers the map and Legends while set. */
   const [people, setPeople] = useState(
-    initialRoom.room !== 'tales' &&
-      (initial.open?.startsWith('person:') === true || initialRoom.room === 'people'),
+    initialRoom.room === 'people' ||
+      (initial.open !== null && initialRoom.room === null) ||
+      (initialRoom.room === 'classic' && initial.open?.startsWith('person:') === true),
   );
   /** A room change (rail press, Follow) adds its history entry through the URL effect. */
   const [roomTick, setRoomTick] = useState(0);
@@ -365,6 +370,8 @@ export function NextApp() {
     buildViewUrl({
       ...state,
       ...v,
+      // Only the classic viewer names itself; a link with no room opens in the rooms.
+      room: roomsMode.current ? null : 'classic',
       year: y !== null && y < latest.current.finalYear ? y : null,
       open: n.open ? openOf(n.open) : null,
       cat: n.cat,
@@ -491,6 +498,20 @@ export function NextApp() {
           playbackKey.current += 1;
           talesRef.current = { year: 0, follow: null };
           setPlayback({ from: 0, key: playbackKey.current });
+        } else if (
+          roomsMode.current &&
+          generated.playback &&
+          !place.site &&
+          !place.nav.open &&
+          !peopleRef.current &&
+          !bookRef.current &&
+          !pickerRef.current
+        ) {
+          // In the rooms a link with a year opens Tales's map at that year, not the classic map.
+          const at = place.year ?? latest.current.finalYear;
+          talesRef.current = { year: at, follow: null };
+          playbackKey.current += 1;
+          setPlayback({ from: at, key: playbackKey.current, explore: { year: at, cell: null } });
         } else setPlayback(null);
         if (place.site) {
           // A link into a site: its view is the first history entry; the world URL waits behind it.
@@ -844,11 +865,14 @@ export function NextApp() {
         setSize(url.size);
         setYears(url.years);
         if (place.nav.open) setTab('legends');
-        if (link.room !== null) roomsMode.current = true;
-        else if (place.nav.open && place.nav.open.kind !== 'person') roomsMode.current = false;
+        roomsMode.current = !classicLink(window.location.search);
         setPlayback(null);
         showBook(link.room === 'book' ? parseBookLink(window.location.search) : null);
-        showPeople(link.room === 'people' || (!place.tales && place.nav.open?.kind === 'person'));
+        showPeople(
+          link.room === 'people' ||
+            (link.room === null && place.nav.open !== null) ||
+            (!place.tales && place.nav.open?.kind === 'person'),
+        );
         showPicker(link.room === 'town');
         if (place.tales && world.current.playback) {
           // Back to Tales: play on from the year and person its address names.
@@ -1275,6 +1299,11 @@ export function NextApp() {
     found: (cell: number, name: string) =>
       void watch({ kind: 'outpost', cell, name: name === '' ? null : name }),
   };
+  // While a room is shown the classic viewer stays mounted under it but out of reach: no focus,
+  // no clicks, nothing read aloud.
+  const roomOver = people || book !== null || picker;
+  const covered = roomOver || playback !== null;
+  const away = (on: boolean) => (on ? { inert: true, 'aria-hidden': true } : {});
   return withControls(
     <main className="wm-root" data-revision={revision}>
       <h1>Story Generator — world map</h1>
@@ -1285,6 +1314,7 @@ export function NextApp() {
       )}
       <div className="wm-app">
         <form
+          {...away(covered)}
           className="bar"
           onSubmit={(event) => {
             event.preventDefault();
@@ -1299,6 +1329,15 @@ export function NextApp() {
             );
           }}
         >
+          {state.playback && (
+            <button
+              type="button"
+              className="back-story"
+              onClick={() => exploreMap(null, finalYear)}
+            >
+              ‹ Back to the story
+            </button>
+          )}
           <span className="brand">New world</span>
           <label>
             Seed{' '}
@@ -1379,12 +1418,12 @@ export function NextApp() {
             </p>
           )}
         </form>
-        <div className="progress" aria-live="polite">
+        <div className="progress" aria-live="polite" {...away(covered)}>
           <i style={{ width: progress ? `${progress.fraction * 100}%` : 0 }} />
           <span className="progress-label">{progress?.label ?? ''}</span>
         </div>
         <div className="wm-main" data-tab={tab}>
-          <div className="wm-mapcol">
+          <div className="wm-mapcol" {...away(roomOver)}>
             {playback ? (
               <TalesRoom
                 key={playback.key}
@@ -1532,6 +1571,7 @@ export function NextApp() {
                 />
               ) : null
             }
+            covered={covered}
             world={state}
             index={legend}
             narrator={narrator}
@@ -1568,7 +1608,7 @@ export function NextApp() {
         </div>
       </div>
       {error && <p role="alert">{error}</p>}
-      <div className="wm-below">
+      <div className="wm-below" {...away(covered)}>
         <section aria-label="Time controls" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={() => run(1)}>+1 day</button>
           <button onClick={() => run(28)}>+1 month</button>
