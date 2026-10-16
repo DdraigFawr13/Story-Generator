@@ -48,6 +48,8 @@ export const INTRIGUE: IntrigueRules = {
   // A hunt sends at least this many soldiers in all, or none goes.
   huntMin: 60,
   huntKill: 0.7,
+  // Chance a hunt the legend could break still kills them (Morgan, 2026-10-16: about 1 in 10).
+  huntLuckyKill: 0.1,
   hunterDeath: 0.3,
   // A legend's death is news over the yearly rollup (base 2).
   legendDeathImportance: 2,
@@ -75,5 +77,6 @@ export const INTRIGUE: IntrigueRules = {
     huntKilled: 'and {name} was killed',
     huntEscaped: 'but {name} slipped away, wounded',
     huntFailed: 'and {name} broke the hunt',
+    huntLucky: 'and though {name} broke the host, a spear found them and they fell',
   },
 };

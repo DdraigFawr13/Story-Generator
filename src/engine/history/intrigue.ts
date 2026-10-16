@@ -563,13 +563,17 @@ function huntLegends(run: HistoryRun): void {
     if (host < rules.huntMin) continue;
     const strength = host + hunters.reduce((n, h) => n + deedSoldiers(run, h), 0);
     const outgunned = strength > legendBreaks(run, legend);
-    const slain = outgunned && rng.chance(rules.huntKill);
+    // A host the legend can break still lands a killing blow now and then.
+    const lucky = !outgunned && rng.chance(rules.huntLuckyKill);
+    const slain = lucky || (outgunned && rng.chance(rules.huntKill));
     const outcome = (
-      slain
-        ? rules.phrases.huntKilled
-        : outgunned
-          ? rules.phrases.huntEscaped
-          : rules.phrases.huntFailed
+      lucky
+        ? rules.phrases.huntLucky
+        : slain
+          ? rules.phrases.huntKilled
+          : outgunned
+            ? rules.phrases.huntEscaped
+            : rules.phrases.huntFailed
     ).replace('{name}', legend.name);
     const event = run.emit({
       type: 'legend_hunted',
@@ -595,7 +599,7 @@ function huntLegends(run: HistoryRun): void {
       );
       killNotable(run, legend, { cause: 'battle', killer, causes: [event.id] });
       run.intrigue.bounties.delete(id);
-    } else if (!outgunned) {
+    } else if (!outgunned && !lucky) {
       for (const hunter of hunters) {
         if (rng.chance(rules.hunterDeath))
           killNotable(run, hunter, { cause: 'battle', killer: legend, causes: [event.id] });

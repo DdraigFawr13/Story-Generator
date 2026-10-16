@@ -2407,6 +2407,8 @@ export interface IntrigueRules {
   huntMin: number;
   /** Chance a hunt that outnumbers the legend kills them, and that a hunter dies when the legend wins. */
   huntKill: number;
+  /** Chance a hunt the legend could break still kills them. */
+  huntLuckyKill: number;
   hunterDeath: number;
   /** Importance a legend's death gains. */
   legendDeathImportance: number;
@@ -2435,6 +2437,7 @@ export interface IntrigueRules {
     huntKilled: string;
     huntEscaped: string;
     huntFailed: string;
+    huntLucky: string;
   };
 }
 
