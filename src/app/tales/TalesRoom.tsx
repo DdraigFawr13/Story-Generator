@@ -18,8 +18,8 @@ import {
 import { RoomShell, type RoomId } from '../rooms/Rooms';
 import { TINT, createAtlas, type Atlas, type MapMode, type Town } from './atlas';
 import {
-  RACE_FILL,
   assignHues,
+  assignRaceHues,
   borderColour,
   fillColour,
   labelColour,
@@ -166,7 +166,8 @@ function buildPalette(world: WorldState, data: PlaybackData) {
     }
   }
   const faithHue = assignHues([...world.faiths.keys()], faithLinks, faithSize);
-  return { hue, faithHue, faithOf };
+  const raceHue = assignRaceHues(acc.neighbours, acc.size, (civ) => world.civs.get(civ)?.raceId);
+  return { hue, faithHue, faithOf, raceHue };
 }
 
 function Room({
@@ -302,7 +303,10 @@ function Room({
     }
     const fillOf = (civ: number): Rgb3 | null => {
       if (mode === 'realms') return fillColour(palette.hue.get(civ) ?? 0);
-      if (mode === 'peoples') return RACE_FILL[realmOf.get(civ) ?? ''] ?? null;
+      if (mode === 'peoples') {
+        const h = palette.raceHue.get(realmOf.get(civ) ?? '');
+        return h === undefined ? null : fillColour(h);
+      }
       if (mode === 'faiths') {
         const f = palette.faithOf(civ);
         const h = f === undefined ? undefined : palette.faithHue.get(f);
@@ -736,7 +740,7 @@ function Room({
         .map(([race]) => ({
           key: `p${race}`,
           label: DEFAULT_CONTENT.races.find((r) => r.id === race)?.name ?? race,
-          fill: soft(RACE_FILL[race] ?? [236, 228, 210]),
+          fill: soft(fillColour(palette.raceHue.get(race) ?? 0)),
         }));
       return cut(rows, 'Peoples of the realms');
     }
