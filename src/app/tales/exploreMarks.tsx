@@ -1,0 +1,174 @@
+// The marks of the Tales explore state: one small glyph a kind of event, drawn in the kind's colour
+// with an ink outline, the town names and the town hit targets. Positions are percentages of the
+// map; sizes are pixels, so a mark keeps its size however far the map is zoomed.
+
+import { useMemo } from 'react';
+import { groupTitle, type MarkCluster, type MarkEvent } from './explore';
+import { useFading } from './markers';
+import { PAUSE_KINDS, type PauseKind } from './pauses';
+
+const INK = '#2d2a25';
+
+type Part = { d: string; fill?: boolean };
+/** Simple paths on a 24 by 24 box. Closed shapes are filled; lines are drawn twice (ink, colour). */
+const GLYPHS: Record<PauseKind, Part[]> = {
+  legend: [{ d: 'M12 2l3 7 7 .6-5.3 4.7L18.2 22 12 18.2 5.8 22l1.5-7.7L2 9.6 9 9z', fill: true }],
+  war: [{ d: 'M5 4l14 15M19 4L5 19' }, { d: 'M12.5 17l5-5M11.5 17l-5-5' }],
+  realm: [{ d: 'M6 3v18' }, { d: 'M6 4h13l-3.5 4.5L19 13H6z', fill: true }],
+  battle: [{ d: 'M12 3v13M7.5 16h9M12 16v5' }],
+  ruler: [{ d: 'M3.5 19l-1-11 5.5 4 4-7 4 7 5.5-4-1 11z', fill: true }],
+  town: [
+    {
+      d: 'M12 2c.8 4.2 6.5 6.2 6.5 12.2a6.5 6.5 0 0 1-13 0c0-3 1.8-4.6 3-6.6.9 1.8 1.2 2.9 2.6 3.2C10.3 8.2 10.4 5 12 2z',
+      fill: true,
+    },
+  ],
+  hardship: [
+    { d: 'M12 3c3.2 5.2 6.3 8 6.3 12a6.3 6.3 0 0 1-12.6 0c0-4 3.1-6.8 6.3-12z', fill: true },
+  ],
+  treasure: [{ d: 'M7 4h10l5 6-10 11L2 10z', fill: true }, { d: 'M2 10h20M9 10l3 11 3-11' }],
+  faith: [
+    {
+      d: 'M12 1.5v3.5M12 19v3.5M1.5 12H5M19 12h3.5M4.5 4.5L7 7M17 17l2.5 2.5M19.5 4.5L17 7M7 17l-2.5 2.5',
+    },
+    { d: 'M12 7.2a4.8 4.8 0 1 0 0 9.6 4.8 4.8 0 0 0 0-9.6z', fill: true },
+  ],
+};
+
+const colourOf = (kind: PauseKind) => PAUSE_KINDS.find((k) => k.id === kind)!.colour;
+
+/** One glyph: 13 px, the kind's colour inside an ink outline. */
+export function Glyph({ kind, size = 13 }: { kind: PauseKind; size?: number }) {
+  const colour = colourOf(kind);
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      {GLYPHS[kind].map((p, i) =>
+        p.fill ? (
+          <path
+            key={i}
+            d={p.d}
+            fill={colour}
+            stroke={INK}
+            strokeWidth="1.3"
+            strokeLinejoin="round"
+            paintOrder="stroke"
+          />
+        ) : (
+          <g key={i} fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <path d={p.d} stroke={INK} strokeWidth="3.8" />
+            <path d={p.d} stroke={colour} strokeWidth="2.4" />
+          </g>
+        ),
+      )}
+    </svg>
+  );
+}
+
+interface MarkProps {
+  clusters: readonly MarkCluster<MarkEvent & { title: string }>[];
+  width: number;
+  height: number;
+  /** Full glyphs and counts (zoomed in); otherwise a small dot for each mark. */
+  detail: boolean;
+  /** Cell of the open card, to mark its glyph. */
+  open: number | null;
+  onOpen: (cluster: MarkCluster) => void;
+}
+
+/** The event marks. One that leaves fades out; one that arrives fades in. */
+export function ExploreMarks({ clusters, width, height, detail, open, onOpen }: MarkProps) {
+  const items = useMemo(
+    () =>
+      clusters.map((c) => ({
+        key: `ev:${c.cell}`,
+        cell: c.cell,
+        kind: c.kind,
+        count: c.events.length,
+        title: groupTitle(c.events),
+      })),
+    [clusters],
+  );
+  const byCell = useMemo(() => new Map(clusters.map((c) => [c.cell, c])), [clusters]);
+  const shown = useFading(items, 450);
+  return (
+    <>
+      {shown.map((m) => (
+        <button
+          key={m.key}
+          type="button"
+          className={`tr-ev${detail ? '' : ' dot'}${m.leaving ? ' leaving' : ''}${
+            open === m.cell ? ' open' : ''
+          }`}
+          data-testid="event-mark"
+          data-kind={m.kind}
+          style={{
+            left: `${(((m.cell % width) + 0.5) / width) * 100}%`,
+            top: `${((Math.floor(m.cell / width) + 0.5) / height) * 100}%`,
+          }}
+          title={m.title}
+          aria-label={m.title.replace(/\n/g, '. ')}
+          tabIndex={m.leaving ? -1 : 0}
+          onClick={() => {
+            const c = byCell.get(m.cell);
+            if (c) onOpen(c);
+          }}
+        >
+          {detail ? <Glyph kind={m.kind} /> : <i style={{ background: colourOf(m.kind) }} />}
+          {detail && m.count > 1 && <b>{m.count}</b>}
+        </button>
+      ))}
+    </>
+  );
+}
+
+export interface TownMark {
+  id: number;
+  name: string;
+  cell: number;
+}
+
+interface TownsProps {
+  towns: readonly TownMark[];
+  width: number;
+  height: number;
+  /** Names show (zoomed in far enough). */
+  named: boolean;
+  /** Towns whose names the capital layer already writes. */
+  skip: ReadonlySet<number>;
+  /** Cell of the open card. */
+  open: number | null;
+  onOpen: (id: number) => void;
+}
+
+/** Town names at close zoom and an invisible hit target over every town. */
+export function Towns({ towns, width, height, named, skip, open, onOpen }: TownsProps) {
+  return (
+    <>
+      {towns.map((t) => {
+        const pos = {
+          left: `${(((t.cell % width) + 0.5) / width) * 100}%`,
+          top: `${((Math.floor(t.cell / width) + 0.5) / height) * 100}%`,
+        };
+        return (
+          <div key={t.id}>
+            {!skip.has(t.id) && (
+              <div className={`tr-tn${named ? '' : ' off'}`} style={pos}>
+                <span data-lbl="town" className={named ? '' : 'off'}>
+                  {t.name}
+                </span>
+              </div>
+            )}
+            <button
+              type="button"
+              className={`tr-hit${open === t.cell ? ' open' : ''}`}
+              style={pos}
+              aria-label={`Town: ${t.name}`}
+              data-testid="town-hit"
+              onClick={() => onOpen(t.id)}
+            />
+          </div>
+        );
+      })}
+    </>
+  );
+}

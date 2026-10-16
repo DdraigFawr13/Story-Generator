@@ -255,9 +255,10 @@ export function buildSiteUrl(link: {
 
 /**
  * The rooms a link can name: `?room=tales&follow=12&year=190`, `?room=people`, `?room=book` or
- * `?room=town` (the picker; with `site=` it is the Town room, see `parseTownLink`).
+ * `?room=town` (the picker; with `site=` it is the Town room, see `parseTownLink`). `?room=classic`
+ * is the classic viewer (old map and Legends pane); a link with no room opens in the rooms.
  */
-export const ROOM_LINKS = ['tales', 'people', 'book', 'town'] as const;
+export const ROOM_LINKS = ['tales', 'people', 'book', 'town', 'classic'] as const;
 export type RoomLink = (typeof ROOM_LINKS)[number];
 
 /** The room and followed person a link names (Tales only follows); null room is the map. */

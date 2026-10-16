@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { HUES, assignHues, hlsToRgb, hueGap, touching } from '../../src/app/tales/colours';
+import {
+  HUES,
+  assignHues,
+  assignRaceHues,
+  hlsToRgb,
+  hueGap,
+  touching,
+} from '../../src/app/tales/colours';
 
 /** A strip of realms laid out on a grid: each cell holds the realm id. */
 const GRID = [
@@ -39,5 +46,36 @@ describe('realm colours', () => {
     expect(hlsToRgb(0, 0.5, 1)).toEqual([255, 0, 0]);
     expect(hlsToRgb(120, 0.5, 1)).toEqual([0, 255, 0]);
     expect(hlsToRgb(200, 0.5, 0)).toEqual([128, 128, 128]);
+  });
+
+  it('gives peoples whose realms touch hues far apart, one hue per people', () => {
+    // Realms 1 and 2 are elves, 3 dwarves, 4 humans; 1 touches 3, 2 touches 4, 3 touches 4.
+    const link = (a: number, b: number) => [a, b] as const;
+    const pairs = [link(1, 3), link(2, 4), link(3, 4)];
+    const neighbours = new Map<number, Set<number>>();
+    for (const [a, b] of pairs) {
+      if (!neighbours.has(a)) neighbours.set(a, new Set());
+      if (!neighbours.has(b)) neighbours.set(b, new Set());
+      neighbours.get(a)!.add(b);
+      neighbours.get(b)!.add(a);
+    }
+    const size = new Map([
+      [1, 30],
+      [2, 10],
+      [3, 25],
+      [4, 20],
+    ]);
+    const race: Record<number, string> = { 1: 'elf', 2: 'elf', 3: 'dwarf', 4: 'human' };
+    const hue = assignRaceHues(neighbours, size, (civ) => race[civ]);
+    expect([...hue.keys()].sort()).toEqual(['dwarf', 'elf', 'human']);
+    expect(new Set(hue.values()).size).toBe(3);
+    for (const [a, b] of [
+      ['elf', 'dwarf'],
+      ['elf', 'human'],
+      ['dwarf', 'human'],
+    ] as const) {
+      expect(hueGap(hue.get(a)!, hue.get(b)!)).toBeGreaterThanOrEqual(60);
+    }
+    expect(assignRaceHues(neighbours, size, (civ) => race[civ])).toEqual(hue);
   });
 });

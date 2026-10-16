@@ -3,10 +3,10 @@
 // where a label meets a control, the key, the pause card or the stage edge. Realm names try
 // alternatives first (the short name, then a nudge up or down) so a realm is named wherever it can be.
 
-export type LabelKind = 'tag' | 'realm' | 'cap' | 'faith' | 'region';
+export type LabelKind = 'tag' | 'realm' | 'cap' | 'faith' | 'town' | 'region';
 
-/** Highest priority first: tags, realm names, capital names, faith names, region names. */
-export const LABEL_ORDER: readonly LabelKind[] = ['tag', 'realm', 'cap', 'faith', 'region'];
+/** Highest priority first: tags, realm, capital, faith and town names, then region names. */
+export const LABEL_ORDER: readonly LabelKind[] = ['tag', 'realm', 'cap', 'faith', 'town', 'region'];
 
 interface Box {
   x0: number;
@@ -17,7 +17,7 @@ interface Box {
 
 /** Things a label must stay clear of: controls, the key, the pause card and the faiths note. */
 const BLOCKERS =
-  '.tr-chip, .tr-modes, .tr-year, .tr-note, .tr-help, .tr-key, .tr-ask, .tr-mk > svg';
+  '.tr-chip, .tr-modes, .tr-year, .tr-note, .tr-help, .tr-key, .tr-ask, .tr-zoom, .tr-mk > svg';
 /** Pixels of air kept between two labels. */
 const GAP = 2;
 /** Vertical nudges a realm name may take, after the full and the short name fit nowhere. */

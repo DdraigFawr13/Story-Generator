@@ -586,3 +586,55 @@
     font-size: 17px;
   }
 }
+
+/* ---- record pages (towns, realms, families, beasts, treasures, events, races) ---- */
+.wm-root .pp-root .pp-record {
+  max-width: 880px;
+  margin: 8px auto 0;
+  padding: 0 28px 24px;
+  font-family: 'Alegreya', Georgia, serif;
+  font-size: 16px;
+  color: var(--ink);
+}
+@media (max-width: 600px) {
+  .wm-root .pp-root .pp-record {
+    padding: 0 16px 24px;
+  }
+}
+.wm-root .pp-root .pp-record .lg-kind {
+  font-family: 'Alegreya Sans SC', sans-serif;
+  letter-spacing: 0.08em;
+  font-size: 13px;
+  color: var(--soft);
+}
+.wm-root .pp-root .pp-record > div:first-child > :is(h2, h3) {
+  font-family: 'Alegreya', Georgia, serif;
+  font-size: 40px;
+  font-weight: 500;
+  line-height: 1.1;
+  margin: 2px 0 10px;
+}
+.wm-root .pp-root .pp-record .lg-summary {
+  font-size: 18px;
+  line-height: 1.5;
+  max-width: 640px;
+}
+.wm-root .pp-root .pp-record :is(.lg-actions button, .lg-booklink) {
+  font-family: 'Alegreya', Georgia, serif;
+  font-size: 15px;
+  padding: 7px 14px;
+  border: 1px solid #d5ccb9;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  min-height: 0;
+  box-shadow: none;
+}
+.wm-root .pp-root .pp-record .lg-actions button:last-child {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.wm-root .pp-root .pp-record .lg-actions button:disabled {
+  opacity: 0.5;
+}

@@ -5,6 +5,7 @@
 
 import type { WorldCells } from '../../engine';
 import { type Rgb3 } from './colours';
+import { contours, pathOf } from './outline';
 
 export type MapMode = 'land' | 'realms' | 'peoples' | 'faiths' | 'plain';
 
@@ -36,7 +37,7 @@ export interface DrawResult {
 
 const PAPER: Rgb3 = [242, 235, 218];
 const SEA: Rgb3 = [199, 213, 215];
-const INK: Rgb3 = [84, 74, 62];
+export const INK: Rgb3 = [84, 74, 62];
 /** Soft ground tint per biome id (the map key reads it too). */
 export const TINT: Record<string, Rgb3> = {
   'temperate-forest': [204, 218, 176],
@@ -210,6 +211,15 @@ function smoothMask(
   return out;
 }
 
+/** The shore as an SVG path in cell units: the smoothed land mask's edge, smooth at any zoom. */
+export function coastPath(cells: WorldCells): string {
+  const W = cells.width;
+  const H = cells.height;
+  const land = Float32Array.from(cells.water, (v) => (v === 2 || v === 3 ? 0 : 1));
+  // The same blur and cut as the raster map (smoothMask at sigma 1.75, threshold 127).
+  return pathOf(contours(blurPlane(land, W, H, 1.75), W, H, 127 / 255, 4));
+}
+
 const FAR = 30000;
 /** Chamfer (3-4) distance to the nearest set pixel of `source`, in thirds of a pixel. */
 function distanceTo(source: Uint8Array, w: number, h: number): Uint16Array {
@@ -274,20 +284,58 @@ export interface Atlas {
   box: { x0: number; y0: number; x1: number; y1: number };
   /** Per cell: 1 where drawn land holds a mark clear of the shore (no beast floats at sea). */
   inland: Uint8Array;
-  /** Milliseconds the terrain layers took. */
+  /** Milliseconds the terrain layers took (the time spent working, not waiting between slices). */
   terrainMs: number;
+  /** The longest single slice of that work, in milliseconds. */
+  maxSliceMs: number;
   draw: (input: DrawInput) => DrawResult;
 }
 
 /** Pixels a cell the Tales map uses for a world this many cells wide. */
 export const defaultScale = (width: number): number => Math.max(4, Math.round(1024 / width));
 
+export interface AtlasOptions {
+  /** Draw the raster shore line (default); false leaves it to a vector line drawn over the map. */
+  coast?: boolean;
+}
+
 /**
  * Builds the terrain layers for a world and returns the canvas and its political drawing.
  * `scale` (pixels a cell) is for a close-up that needs a sharper plane than the Tales map.
  */
-export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scale?: number): Atlas {
-  const t0 = performance.now();
+export function createAtlas(
+  cells: WorldCells,
+  biomeIds: readonly string[],
+  scale?: number,
+  options: AtlasOptions = {},
+): Atlas {
+  const steps = atlasSteps(cells, biomeIds, scale, options);
+  for (;;) {
+    const r = steps.next();
+    if (r.done) return r.value;
+  }
+}
+
+/**
+ * The same build in slices: each `next()` does one stretch of work (a few tens to a couple of
+ * hundred milliseconds) and the caller waits for a free moment before the next, so a close-up
+ * atlas can be made without freezing the page.
+ */
+export function* atlasSteps(
+  cells: WorldCells,
+  biomeIds: readonly string[],
+  scale?: number,
+  options: AtlasOptions = {},
+): Generator<void, Atlas, void> {
+  let busy = 0;
+  let longest = 0;
+  let mark = performance.now();
+  /** Ends a slice: adds its time to the work done. */
+  const lap = () => {
+    const spent = performance.now() - mark;
+    busy += spent;
+    longest = Math.max(longest, spent);
+  };
   const W = cells.width;
   const H = cells.height;
   const N = W * H;
@@ -303,21 +351,35 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scal
   // Land and lake masks, smoothed.
   const landCells = Uint8Array.from(isLand, (v) => (v ? 255 : 0));
   const landPx = smoothMask(landCells, W, H, S, 1.75, 127);
+  lap();
+  yield;
+  mark = performance.now();
   const lakeCells = Uint8Array.from(water, (v) => (v === 2 ? 255 : 0));
   const lakePx = smoothMask(lakeCells, W, H, S, 0.9, 30);
-  const seaDist = distanceTo(
-    Uint8Array.from(landPx, (v) => (v ? 0 : 1)),
-    P,
-    P,
-  );
+  lap();
+  yield;
+  mark = performance.now();
+  const sea = new Uint8Array(P * P);
+  for (let i = 0; i < sea.length; i += 1) sea[i] = landPx[i] ? 0 : 1;
+  const seaDist = distanceTo(sea, P, P);
+  lap();
+  yield;
+  mark = performance.now();
   const landDist = distanceTo(landPx, P, P);
   /** Pixels from the nearest water (land) or land (sea). */
   const coastPx = (p: number) => (landPx[p] ? seaDist[p]! : landDist[p]!) / 3;
+
+  lap();
+  yield;
+  mark = performance.now();
 
   // ---- paper and tinted bases -------------------------------------------------------------
   // Ground tint per biome, blurred at cell size and interpolated up.
   const tintPx = new Uint8Array(P * P * 3);
   for (let ch = 0; ch < 3; ch += 1) {
+    lap();
+    yield;
+    mark = performance.now();
     const plane = new Float32Array(N);
     for (let i = 0; i < N; i += 1) plane[i] = (TINT[biomeAt(i)] ?? PAPER)[ch]!;
     upscale(blurPlane(plane, W, H, 1.5, true), W, H, S, (p, v) => {
@@ -329,12 +391,17 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scal
     [22 * k, 55],
     [36 * k, 30],
   ] as const;
-  const makeBase = (tinted: boolean): HTMLCanvasElement => {
+  const makeBase = function* (tinted: boolean): Generator<void, HTMLCanvasElement, void> {
     const canvas = canvasOf(P, P);
     const ctx = ctxOf(canvas, true);
     const img = ctx.createImageData(P, P);
     const d = img.data;
     for (let y = 0; y < P; y += 1) {
+      if (y % 128 === 127) {
+        lap();
+        yield;
+        mark = performance.now();
+      }
       for (let x = 0; x < P; x += 1) {
         const p = y * P + x;
         const q = p * 4;
@@ -438,8 +505,11 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scal
     ctx.fillText('N', 0, -r - P * 0.006);
     ctx.restore();
   }
-  const paperBase = makeBase(false);
-  const landBase = makeBase(true);
+  const paperBase = yield* makeBase(false);
+  const landBase = yield* makeBase(true);
+  lap();
+  yield;
+  mark = performance.now();
 
   // ---- symbols -----------------------------------------------------------------------------
   const symbols = canvasOf(P, P);
@@ -687,6 +757,10 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scal
     }
   }
 
+  lap();
+  yield;
+  mark = performance.now();
+
   // ---- rivers and roads (one path each, so overlaps do not darken) -----------------------------
   const strokeLinks = (
     ctx: CanvasRenderingContext2D,
@@ -739,6 +813,9 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scal
       [3, 5],
     );
   }
+  lap();
+  yield;
+  mark = performance.now();
   const roads = canvasOf(P, P);
   {
     const ctx = ctxOf(roads);
@@ -752,9 +829,13 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scal
     );
   }
 
+  lap();
+  yield;
+  mark = performance.now();
+
   // ---- coast ----------------------------------------------------------------------------------
   const coast = canvasOf(P, P);
-  {
+  if (options.coast !== false) {
     const ctx = ctxOf(coast);
     const img = ctx.createImageData(P, P);
     for (let p = 0; p < P * P; p += 1) {
@@ -768,6 +849,9 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scal
     ctx.putImageData(img, 0, 0);
   }
 
+  lap();
+  yield;
+  mark = performance.now();
   // The land's bounding box in cells, with a margin.
   let bx0 = W;
   let by0 = H;
@@ -797,6 +881,9 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scal
     if (isLand[i] && landPx[p] && coastPx(p) >= 0.5 * S) inland[i] = 1;
   }
 
+  lap();
+  yield;
+  mark = performance.now();
   // Lakes: each lake belongs to the realm round most of its shore, so no ring is drawn round it.
   const lakeOf = new Int32Array(N).fill(-1);
   const lakes: number[][] = [];
@@ -826,6 +913,10 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scal
     }
     lakes.push(members);
   }
+
+  lap();
+  yield;
+  mark = performance.now();
 
   // ---- the political layer ---------------------------------------------------------------------
   const display = canvasOf(P, P);
@@ -990,7 +1081,9 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scal
     return canvas;
   }
 
-  const terrainMs = performance.now() - t0;
+  lap();
+  const terrainMs = busy;
+  const maxSliceMs = longest;
 
   /** Finished political layers, oldest first, by mode and border year. */
   const layers = new Map<string, { canvas: HTMLCanvasElement; centres: DrawResult['centres'] }>();
@@ -1171,7 +1264,7 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scal
         }
       }
     }
-    dctx.drawImage(coast, 0, 0);
+    if (options.coast !== false) dctx.drawImage(coast, 0, 0);
     // Keep a copy for the next visit (the caller's key stands for the towns and colours too).
     let spare: HTMLCanvasElement;
     if (layers.size >= LAYER_CACHE) {
@@ -1196,6 +1289,7 @@ export function createAtlas(cells: WorldCells, biomeIds: readonly string[], scal
     box,
     inland,
     terrainMs,
+    maxSliceMs,
     draw,
   };
 }
