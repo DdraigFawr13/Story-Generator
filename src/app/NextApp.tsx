@@ -239,12 +239,13 @@ export function NextApp() {
    * The new rooms are home: every page, map and town opens in a room. Only the classic viewer,
    * chosen from the new-world sheet, keeps the old Legends pane, map and site view.
    */
-  const roomsMode = useRef(true);
+  const roomsMode = useRef(
+    !(initialRoom.room === null && initial.open && !initial.open.startsWith('person:')),
+  );
   /** The People room (index or a person's page) covers the map and Legends while set. */
   const [people, setPeople] = useState(
     initialRoom.room !== 'tales' &&
-      initialRoom.room !== 'book' &&
-      (initial.open !== null || initialRoom.room === 'people'),
+      (initial.open?.startsWith('person:') === true || initialRoom.room === 'people'),
   );
   /** A room change (rail press, Follow) adds its history entry through the URL effect. */
   const [roomTick, setRoomTick] = useState(0);
@@ -372,7 +373,7 @@ export function NextApp() {
   const writeUrl = (mode: 'push' | 'replace', v: View, n: LegendNav, y: number | null) => {
     if (!shown.current || watchingRef.current) return;
     const entry: EntryState = { trail: n.trail.map(openOf), all: n.all };
-    const url = roomUrl(shown.current, v) ?? urlFor(shown.current, v, n, y);
+    const url = roomUrl(shown.current, v, n) ?? urlFor(shown.current, v, n, y);
     // A push to the address already shown (a room pressed twice) edits that entry instead.
     const here = window.location.pathname + window.location.search;
     if (mode === 'push' && url !== here) window.history.pushState(entry, '', url);
@@ -393,6 +394,10 @@ export function NextApp() {
     }
     if (pickerRef.current) return buildViewUrl({ ...state, ...v, room: 'town' });
     if (peopleRef.current && !n.open) return buildViewUrl({ ...state, ...v, room: 'people' });
+    // A record page in the People room's shell names the room, so a reload keeps it there.
+    if (peopleRef.current && n.open && n.open.kind !== 'person') {
+      return buildViewUrl({ ...state, ...v, room: 'people', open: openOf(n.open) });
+    }
     return null;
   };
   /** Write the exact Tales address onto the current entry, before leaving Tales for a new one. */
@@ -839,6 +844,8 @@ export function NextApp() {
         setSize(url.size);
         setYears(url.years);
         if (place.nav.open) setTab('legends');
+        if (link.room !== null) roomsMode.current = true;
+        else if (place.nav.open && place.nav.open.kind !== 'person') roomsMode.current = false;
         setPlayback(null);
         showBook(link.room === 'book' ? parseBookLink(window.location.search) : null);
         showPeople(link.room === 'people' || (!place.tales && place.nav.open?.kind === 'person'));
