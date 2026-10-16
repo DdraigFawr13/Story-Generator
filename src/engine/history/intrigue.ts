@@ -349,7 +349,12 @@ function coup(run: HistoryRun, legend: Person, civ: Civ, ruler: Person): void {
   addDeed(legend, event.id);
   addDeed(ruler, event.id);
   markDeed(run, legend);
-  run.intrigue.usurper = { civ: civ.id, person: legend.id, cause: event.id, phrase: how };
+  run.intrigue.usurper = {
+    civ: civ.id,
+    person: legend.id,
+    cause: event.id,
+    phrase: rules.phrases.seizedRule,
+  };
   killNotable(run, ruler, { cause: 'overthrow', killer: legend, causes: [event.id] });
   run.intrigue.usurper = undefined;
 }

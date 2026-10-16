@@ -65,6 +65,8 @@ export const INTRIGUE: IntrigueRules = {
     usurp: 'by the blow that ended {prior}',
     seize: 'by strength of arm, past {heir}, the heir by custom',
     coup: 'by strength of arm, casting down {prior}',
+    // The rule the succession line gives a legend who took the seat; the seat_seized line tells how.
+    seizedRule: 'by strength of arm',
     betrayRival: 'after the quarrel with {ruler}',
     betrayStranger: 'a stranger to the ways of the {civ}',
     gifts: ['a seat at the high table', 'lands about {site}', 'the captaincy of the guard'],

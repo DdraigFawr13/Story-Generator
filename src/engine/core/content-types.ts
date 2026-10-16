@@ -2422,6 +2422,8 @@ export interface IntrigueRules {
     usurp: string;
     seize: string;
     coup: string;
+    /** The short rule on the succession line after a legend took the seat (the seat_seized line tells how). */
+    seizedRule: string;
     /** Why a legend went over; `{ruler}`, `{civ}`. */
     betrayRival: string;
     betrayStranger: string;

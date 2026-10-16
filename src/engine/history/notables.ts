@@ -1206,7 +1206,7 @@ function succeed(run: HistoryRun, civ: Civ, dead: Person, death: SimEvent): void
         run.claims.push({ civ: civ.id, claimant: chosen.id, ruler: legend.id, dispute: grab.id });
       }
       heir = legend;
-      phrase = how;
+      phrase = intrigue.phrases.seizedRule;
       causes.push(grab.id);
     }
   }
