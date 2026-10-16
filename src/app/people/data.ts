@@ -483,6 +483,20 @@ export const DEED_GROUPS = [
     ],
   },
   {
+    id: 'intrigue',
+    label: 'Plots and courts',
+    types: [
+      'plot_struck',
+      'plot_foiled',
+      'legend_honoured',
+      'seat_seized',
+      'legend_betrayed',
+      'legend_bribed',
+      'bounty_set',
+      'legend_hunted',
+    ],
+  },
+  {
     id: 'works',
     label: 'Works',
     types: ['artifact_made', 'book_written', 'site_founded', 'outpost_founded', 'dynasty_founded'],

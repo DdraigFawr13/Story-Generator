@@ -1,5 +1,5 @@
 // Yearly history (M2.3, M2.4, M2.4b, M2.5): after settlement, each year runs climate, harvest, goods, trade (each decade),
-// demographics, famine, civ raids, beasts, disease, migration, expansion, war, notables (and items each decade) and site upkeep in a
+// demographics, famine, civ raids, beasts, disease, migration, expansion, bribes, war, notables (and items each decade) and site upkeep in a
 // fixed order. Per-run state (links, immunity, cooldowns, wars) lives in `HistoryRun`; only sites,
 // civs, creatures, notables, items, events and territory change in the world, plus a
 // snapshot of borders and sites every decade. Trivial events roll up into a yearly
@@ -24,6 +24,7 @@ import { buildLinks, createLinkSearch } from './links';
 import { runExpansion, runMigration } from './migration';
 import { initLineages, runLineages } from './lineages';
 import { initNotables, runNotables } from './notables';
+import { runBribes, runIntrigue } from './intrigue';
 import { runItems } from './items';
 import { initPlaces, runExpeditions, runPlaces } from './places';
 import { runCivRaids, runDiplomacy } from './raids';
@@ -95,10 +96,12 @@ export function runHistory(
     runDiseases(run);
     runMigration(run);
     runExpansion(run);
+    runBribes(run);
     runWar(run);
     runNotables(run);
     runExpeditions(run);
     runCivilWars(run);
+    runIntrigue(run);
     runColleges(run);
     runLineages(run);
     runCityStates(run);

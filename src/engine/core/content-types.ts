@@ -2161,6 +2161,8 @@ export interface HistoryRules {
   cityStates: CityStateRules;
   /** Succession wars and dynasties: a disputed throne can become a civil war. */
   civilWar: CivilWarRules;
+  /** Court intrigue: plots, legends in politics, bribes, bounties and hunts. */
+  intrigue: IntrigueRules;
 }
 
 /** Spellbooks and lineages (M5.2): apprenticeship, learning, books and lost lore (lineages.ts). */
@@ -2343,6 +2345,100 @@ export interface CivilWarRules {
   luck: number;
   /** Prefixes for a claimant's realm whose name an earlier one used ("Second"). */
   ordinals: string[];
+}
+
+/** Court intrigue (intrigue.ts): plots and killings, legends honoured, feared, bribed and hunted. */
+export interface IntrigueRules {
+  /** Years before a plotter can plot again. */
+  plotCooldown: number;
+  /** Yearly chance a beaten claimant plots against their realm's ruler, before the culture's unruliness. */
+  rivalPlotChance: number;
+  /** Yearly chance a sworn avenger plots against a foreign ruler or legend. */
+  vengeancePlotChance: number;
+  /** Chance a plot strikes: base plus intellect over 10 times the slope, then clamped to the range. */
+  strikeBase: number;
+  strikeIntellect: number;
+  strikeRange: [min: number, max: number];
+  /** Multiplier on the odds against a ruler (guards), and the base odds against a legend. */
+  rulerGuard: number;
+  legendStrike: number;
+  /** Chance a beaten claimant who kills the ruler takes the seat. */
+  usurpChance: number;
+  /** Chance a failed plotter is taken (a ruler is only exposed). */
+  caughtChance: number;
+  /** Grievance a people holds against the plotter's people after a killing, and after a foiled plot. */
+  grievanceMurder: number;
+  grievanceFoiled: number;
+  /** Yearly chance a ruler honours a legend of their realm (once each). */
+  honourChance: number;
+  /** Fame a legend gains when honoured. */
+  honourFame: number;
+  /** Grievance (or war) that makes a people fear a legend who harmed them, and betray to one that wronged them. */
+  fearGrievance: number;
+  /** Yearly chance a ruler plots against a legend who harmed their people. */
+  fearPlotChance: number;
+  /** Yearly chance a ruler plots against a legend of their own realm who is more famous and not honoured. */
+  ownFearChance: number;
+  /** Chance a legend takes the seat from the heir, times the factor when the heir is a child or contested. */
+  seizeChance: number;
+  seizeChildFactor: number;
+  /** Yearly chance a legend who is the ruler's rival casts them down. */
+  coupChance: number;
+  /** Yearly chance a legend with a quarrel or a stranger's ways goes over to an enemy people. */
+  betrayChance: number;
+  /** Grievance the old people holds against the people a legend went over to. */
+  grievanceBetrayal: number;
+  /** Chance, once per war, that the enemy ruler pays a legend to stand aside. */
+  bribeChance: number;
+  /** Harms done to a people before its ruler sets a bounty on the legend. */
+  bountyHarms: number;
+  /** Grievance a people holds against the realm that shelters a legend it put a bounty on. */
+  grievanceShelter: number;
+  /** Peoples with a bounty needed for a joint hunt, and the yearly chance of a joint and of a lone hunt. */
+  coalitionMin: number;
+  coalitionChance: number;
+  soloHuntChance: number;
+  /** Least power of the figure a people sends on a hunt. */
+  hunterPower: number;
+  /** Share of the people's adults sent on a hunt, at most `huntCap` each. */
+  huntShare: number;
+  huntCap: number;
+  /** Fewest soldiers a hunt sends in all; a smaller host stays home. */
+  huntMin: number;
+  /** Chance a hunt that outnumbers the legend kills them, and that a hunter dies when the legend wins. */
+  huntKill: number;
+  /** Chance a hunt the legend could break still kills them. */
+  huntLuckyKill: number;
+  hunterDeath: number;
+  /** Importance a legend's death gains. */
+  legendDeathImportance: number;
+  phrases: {
+    /** Why a plot was laid; `{dead}` the one an oath was for, `{target}`, `{civ}` the plotter's people. */
+    why: { rival: string; vengeance: string; fear: string; ownFear: string };
+    /** How a plot ended; `{target}` and `{name}` (the plotter). */
+    struck: string;
+    foiledCaught: string;
+    foiledExposed: string;
+    foiledEscaped: string;
+    /** The rule given for a ruler who took the seat, `{prior}` the dead or cast down ruler, `{heir}` the heir passed over. */
+    usurp: string;
+    seize: string;
+    coup: string;
+    /** The short rule on the succession line after a legend took the seat (the seat_seized line tells how). */
+    seizedRule: string;
+    /** Why a legend went over; `{ruler}`, `{civ}`. */
+    betrayRival: string;
+    betrayStranger: string;
+    /** Gifts to an honoured legend (`{site}`), a bribed one, and the price on a head. */
+    gifts: string[];
+    bribes: string[];
+    prices: string[];
+    /** How a hunt ended; `{name}`. */
+    huntKilled: string;
+    huntEscaped: string;
+    huntFailed: string;
+    huntLucky: string;
+  };
 }
 
 /** One kind of evening interaction between two residents (M3.6). Numbers are tunables in content/interactions.ts. */

@@ -63,6 +63,15 @@ export function notableMetrics(world, n, DAYS_PER_YEAR) {
     realmSplits: n.realm_split ?? 0,
     dynastiesEnded: n.dynasty_ended ?? 0,
     citiesFreed: n.city_freed ?? 0,
+    // Court intrigue: plots, seats seized, legends honoured, betraying, bribed and hunted.
+    plotsStruck: n.plot_struck ?? 0,
+    plotsFoiled: n.plot_foiled ?? 0,
+    seatsSeized: n.seat_seized ?? 0,
+    legendsHonoured: n.legend_honoured ?? 0,
+    legendsBetrayed: n.legend_betrayed ?? 0,
+    legendsBribed: n.legend_bribed ?? 0,
+    bountiesSet: n.bounty_set ?? 0,
+    legendsHunted: n.legend_hunted ?? 0,
     // Faiths: schisms, holy wars, prophets, conversions and wrongs done to holy places.
     faiths: world.faiths.size,
     schisms: n.faith_schism ?? 0,

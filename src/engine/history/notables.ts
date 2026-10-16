@@ -51,6 +51,7 @@ import { stochasticRound, totalPop } from './pop';
 import { cellDistance } from './settle';
 import {
   addGrievance,
+  addHarm,
   atWar,
   cultureOf,
   isLive,
@@ -374,7 +375,12 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
   const event = run.emit({
     type: 'notable_died',
     // A figure a beast killed is never rolled into a year's count: it is part of the beast's story.
-    ...(beast ? { importanceBonus: run.content.notables.beastDeathImportance } : {}),
+    // A legend's death shakes the world, so it stays out of the rollup too.
+    ...(beast
+      ? { importanceBonus: run.content.notables.beastDeathImportance }
+      : isLegend(person)
+        ? { importanceBonus: run.rules.intrigue.legendDeathImportance }
+        : {}),
     actors: [person.id, ...(killer ? [killer.id] : []), ...spouses.map((p) => p.id)],
     place: options.peril?.cell ?? where?.cell ?? placeOf(run, person),
     causes: options.causes && options.causes.length > 0 ? options.causes : person.deeds.slice(-1),
@@ -397,6 +403,8 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
   }
   if (killer && killer.civId != null && person.civId != null && killer.civId !== person.civId) {
     swearVengeance(run, person, killer, event.id);
+    // A legend's kills abroad are remembered by the people they harmed (bounties, intrigue.ts).
+    if (isLegend(killer)) addHarm(run, killer.id, person.civId, event.id);
   }
   // A ruler of a standing people may be buried with an artifact, unless a hoarding beast took them
   // or they died in a perilous place.
@@ -698,6 +706,14 @@ export function canSpend(run: HistoryRun, person: Person): boolean {
   return isLegend(person) && run.notables.spent.get(person.id) !== run.year;
 }
 
+/** A legend whose enemy paid them to stand aside from a war that still runs. */
+export function standsAside(run: HistoryRun, person: Person): boolean {
+  for (const [warId, id] of run.intrigue.bribed) {
+    if (id === person.id && run.wars.find((w) => w.id === warId)?.ended === undefined) return true;
+  }
+  return false;
+}
+
 /**
  * The civ's strongest living figure of champion power whose home lies within `championRange`
  * cells of the field (power, then fame, then lowest id).
@@ -708,6 +724,7 @@ function championOf(run: HistoryRun, civ: Civ, field: Site): Person | undefined 
   for (const person of livingList(run)) {
     if (person.civId !== civ.id || person.magic.power < championPower || !isAdult(run, person))
       continue;
+    if (standsAside(run, person)) continue;
     const home = person.siteId == null ? undefined : run.world.sites.get(person.siteId);
     if (!home || cellDistance(run.cells.width, home.cell, field.cell) > championRange) continue;
     if (
@@ -854,7 +871,10 @@ export function battleChampions(
     if (side.won && !led) champion.fame = Math.min(FAME_MAX, champion.fame + rules.fame.victory);
     const named = (war.champions ??= []).includes(champion.id);
     // Named again only when it matters: a broken host that turned the day, or a fall.
-    if (named && !dies && !(broke > 0 && legends.turned)) return;
+    if (named && !dies && !(broke > 0 && legends.turned)) {
+      if (broke > 0) addHarm(run, champion.id, side.enemy.id, battle);
+      return;
+    }
     // A champion of a side that already had one steps up in their place.
     const replacing = war.champions.some(
       (id) => id !== champion.id && run.world.people.get(id)?.civId === side.civ.id,
@@ -894,6 +914,7 @@ export function battleChampions(
       },
     });
     addDeed(champion, event.id);
+    if (broke > 0) addHarm(run, champion.id, side.enemy.id, event.id);
     if (dies) {
       const killer = other && other.died === undefined ? other : undefined;
       killNotable(run, champion, { cause: 'battle', killer, causes: [event.id], at: site });
@@ -1111,21 +1132,87 @@ function chooseHeir(
   return { heir, challenger };
 }
 
-/** A ruler has died: the culture's rule picks the heir, a dispute may overturn it, or the seat falls to the best-known adult. */
+/** How readily a civ's people quarrel over a seat: free peoples more, ordered ones less (1 for none). */
+export function unruliness(run: HistoryRun, civ: Civ): number {
+  const culture = cultureOf(run, civ);
+  return culture
+    ? 1 + (culture.values.freedom - culture.values.order) * run.rules.cultureValues.disputeSlope
+    : 1;
+}
+
+/**
+ * The strongest living adult legend of the civ (power, then fame, then lowest id) who is not
+ * `except` and was not honoured by the dead ruler: the one who may take a seat by strength.
+ */
+function seatLegend(run: HistoryRun, civ: Civ, dead: Person, except: Person): Person | undefined {
+  let best: Person | undefined;
+  for (const person of livingList(run)) {
+    if (person.civId !== civ.id || person.id === except.id || !isLegend(person)) continue;
+    if (!isAdult(run, person) || isElder(run, person)) continue;
+    if (run.intrigue.honoured.has(`${dead.id}:${person.id}`)) continue;
+    if (
+      !best ||
+      person.magic.power > best.magic.power ||
+      (person.magic.power === best.magic.power && person.fame > best.fame)
+    )
+      best = person;
+  }
+  return best;
+}
+
+/** A ruler has died: the culture's rule picks the heir, a dispute or a legend's strength may overturn it, or the seat falls to the best-known adult. */
 function succeed(run: HistoryRun, civ: Civ, dead: Person, death: SimEvent): void {
   const rules = run.content.notables;
   const rng = run.rng.notables;
   const culture = cultureOf(run, civ);
   const causes = [death.id];
-  const { heir: chosen, challenger } = chooseHeir(run, civ, dead);
+  // A plotter or legend who just killed the ruler takes the seat, whatever the custom.
+  const usurper = run.intrigue.usurper?.civ === civ.id ? run.intrigue.usurper : undefined;
+  const taker = usurper ? livingPerson(run, usurper.person) : undefined;
+  const seat = usurper && taker && isAdult(run, taker) ? taker : undefined;
+  const { heir: chosen, challenger } = seat
+    ? { heir: seat, challenger: undefined }
+    : chooseHeir(run, civ, dead);
   let heir = chosen;
   let phrase = culture ? rules.successionPhrases[culture.succession] : rules.noHeirPhrase;
+  if (seat && usurper) {
+    phrase = usurper.phrase;
+    if (!causes.includes(usurper.cause)) causes.push(usurper.cause);
+  }
+  // A strong legend may take the seat from the heir by strength of arm; more readily from a
+  // child or a contested heir.
+  const intrigue = run.rules.intrigue;
+  const legend = !seat && chosen ? seatLegend(run, civ, dead, chosen) : undefined;
+  let seized = false;
+  if (legend && chosen) {
+    const weak = !isAdult(run, chosen) || challenger !== undefined;
+    const odds = Math.min(1, intrigue.seizeChance * (weak ? intrigue.seizeChildFactor : 1));
+    if (run.rng.intrigue.chance(odds)) {
+      seized = true;
+      const how = intrigue.phrases.seize.replace('{heir}', chosen.name);
+      const grab = run.emit({
+        type: 'seat_seized',
+        actors: [legend.id, chosen.id],
+        place: capitalOf(run, civ)?.cell ?? null,
+        causes: [death.id],
+        data: { name: legend.name, heir: chosen.name, prior: dead.name, civ: civ.name, how },
+      });
+      addDeed(legend, grab.id);
+      addDeed(chosen, grab.id);
+      markDeed(run, legend);
+      makeRivals(legend, chosen);
+      // A grown heir passed over may yet raise part of the realm (civil-war.ts, later this year).
+      if (isAdult(run, chosen)) {
+        run.claims.push({ civ: civ.id, claimant: chosen.id, ruler: legend.id, dispute: grab.id });
+      }
+      heir = legend;
+      phrase = intrigue.phrases.seizedRule;
+      causes.push(grab.id);
+    }
+  }
   // Free peoples quarrel over a seat more readily; ordered ones keep to custom.
-  const unruly = culture
-    ? 1 + (culture.values.freedom - culture.values.order) * run.rules.cultureValues.disputeSlope
-    : 1;
-  const disputeChance = Math.min(1, Math.max(0, rules.disputeChance * unruly));
-  if (heir && challenger && challenger.id !== heir.id && rng.chance(disputeChance)) {
+  const disputeChance = Math.min(1, Math.max(0, rules.disputeChance * unruliness(run, civ)));
+  if (!seized && heir && challenger && challenger.id !== heir.id && rng.chance(disputeChance)) {
     const dispute = run.emit({
       type: 'succession_disputed',
       actors: [heir.id, challenger.id],

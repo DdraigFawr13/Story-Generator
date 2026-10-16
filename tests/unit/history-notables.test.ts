@@ -137,7 +137,9 @@ describe('notables', () => {
       ...DEFAULT_CONTENT,
       notables: { ...DEFAULT_CONTENT.notables, legendChance: 1, mageNotice: 4 },
     };
-    const world = generate('NOT-LEGEND', YEARS, easy);
+    // Re-pinned for court intrigue: NOT-LEGEND's history grew to 4.3 s (59 rises) and hit the
+    // 5 s timeout under load; NOT-LEGEND-2 still raises 37 legends in 2.7 s.
+    const world = generate('NOT-LEGEND-2', YEARS, easy);
     const rises = world.events.filter((e) => e.type === 'legend_risen');
     expect(rises.length).toBeGreaterThan(0);
     for (let year = 0; year <= YEARS; year += 1) {

@@ -239,7 +239,9 @@ test('a site can be watched: embark, play, inspect a person and return to the ma
   await saves.getByRole('button', { name: 'Keep both' }).click();
   await expect(saves.getByRole('status')).toContainText('Saved “smoke site (2)”');
   const savedDate = await date.textContent();
-  const savedPoint = /[?&]day=\d+(&b=\d)?/.exec(page.url())![0];
+  // The on-page link names the saved moment at once; the address bar follows it a moment later.
+  const savedLink = (await page.getByTestId('site-link').textContent()) ?? '';
+  const savedPoint = /[?&]day=\d+(&b=\d)?/.exec(savedLink)![0];
   await page.getByRole('button', { name: 'Saves' }).click();
   await page.getByRole('button', { name: '4×' }).click();
   await expect(date).not.toHaveText(savedDate!, { timeout: 10_000 });

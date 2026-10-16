@@ -204,6 +204,24 @@ export interface NotableState {
   mageOdds: Map<string, number>;
 }
 
+/** Court intrigue bookkeeping (intrigue.ts); the events are the record. */
+export interface IntrigueState {
+  /** Year of each person's latest plot. */
+  lastPlot: Map<Id, number>;
+  /** `${rulerId}:${legendId}` for every legend a ruler honoured. */
+  honoured: Set<string>;
+  /** Per legend, per people harmed: the latest three events (kills and broken hosts). */
+  harm: Map<Id, Map<Id, Id[]>>;
+  /** Per legend, per people: the bounty_set event. */
+  bounties: Map<Id, Map<Id, Id>>;
+  /** War id to the legend its enemy ruler bribed to stand aside. */
+  bribed: Map<number, Id>;
+  /** Legends who have gone over to another people: once in a life. */
+  turncoats: Set<Id>;
+  /** A plotter or legend who takes the seat in the succession this death brings (set around one killing). */
+  usurper?: { civ: Id; person: Id; cause: Id; phrase: string } | undefined;
+}
+
 export interface HistoryRun {
   world: WorldState;
   cells: WorldCells;
@@ -232,6 +250,7 @@ export interface HistoryRun {
     cityStates: RngStream;
     civilWar: RngStream;
     faith: RngStream;
+    intrigue: RngStream;
   };
   /** Current year, 1..historyYears. */
   year: number;
@@ -277,6 +296,8 @@ export interface HistoryRun {
   pacts: Pact[];
   /** Beaten claimants waiting to rise or yield, cleared each year. */
   claims: Claim[];
+  /** Plots, honours, harm, bounties and bribes. */
+  intrigue: IntrigueState;
   /** The latest faith event per `site:${id}` or `faith:${id}`, cited by the next event there. */
   faithEvents: Map<string, Id>;
 }
@@ -305,6 +326,19 @@ export function addGrievance(run: HistoryRun, from: Id, to: Id, amount: number, 
   civ.grievances.set(to, (civ.grievances.get(to) ?? 0) + amount);
   const key = `${from}>${to}`;
   run.grievanceEvents.set(key, [...(run.grievanceEvents.get(key) ?? []), event].slice(-3));
+}
+
+/** Most harm events kept per legend and people. */
+const HARM_KEPT = 3;
+
+/** Remembers a harm a legend did a people (a kill or a broken host), keeping the latest three. */
+export function addHarm(run: HistoryRun, legend: Id, civ: Id, event: Id): void {
+  let byCiv = run.intrigue.harm.get(legend);
+  if (!byCiv) {
+    byCiv = new Map();
+    run.intrigue.harm.set(legend, byCiv);
+  }
+  byCiv.set(civ, [...(byCiv.get(civ) ?? []), event].slice(-HARM_KEPT));
 }
 
 /** Forgets all grievance between two civs, both ways. */
@@ -420,6 +454,7 @@ export function createRun(
       cityStates: streamFor(world, 'history.cityStates'),
       civilWar: streamFor(world, 'history.civilWar'),
       faith: streamFor(world, 'history.faith'),
+      intrigue: streamFor(world, 'history.intrigue'),
     },
     year: 0,
     logs: new Map(),
@@ -462,6 +497,14 @@ export function createRun(
     studied: new Set(),
     pacts: [],
     claims: [],
+    intrigue: {
+      lastPlot: new Map(),
+      honoured: new Set(),
+      harm: new Map(),
+      bounties: new Map(),
+      bribed: new Map(),
+      turncoats: new Set(),
+    },
     faithEvents: new Map(),
   };
   for (const site of world.sites.values()) {

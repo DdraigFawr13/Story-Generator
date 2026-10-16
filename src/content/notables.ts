@@ -66,6 +66,15 @@ export const NOTABLES: NotableRules = {
       prophet_rose: 6,
       faith_schism: 10,
       faith_spread: 4,
+      // Court intrigue: the plotter, the legend honoured or hunted, the ruler who pays.
+      plot_struck: 6,
+      plot_foiled: 1,
+      legend_honoured: 2,
+      seat_seized: 12,
+      legend_betrayed: 6,
+      legend_bribed: 2,
+      bounty_set: 2,
+      legend_hunted: 8,
     },
   },
   // A ruler (fame 20) adds 2 importance to the events around them; a legend adds the cap.
@@ -101,6 +110,8 @@ export const NOTABLES: NotableRules = {
     execution: 'by the executioner',
     duel: 'in single combat',
     peril: 'in {peril}',
+    assassination: "at an assassin's hand",
+    overthrow: 'cast down from the seat',
   },
   successionPhrases: {
     'kin-elected': 'by the choice of the kin',
