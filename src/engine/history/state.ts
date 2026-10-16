@@ -2,7 +2,13 @@
 // cooldowns, links and the latest event per site only matter while the years run.
 
 import { createEmitter, type EmitInput } from '../core/context';
-import type { ContentBundle, EventTypeDef, HistoryRules, RaceDef } from '../core/content-types';
+import type {
+  AbilityDef,
+  ContentBundle,
+  EventTypeDef,
+  HistoryRules,
+  RaceDef,
+} from '../core/content-types';
 import { streamFor, type RngStream } from '../core/rng';
 import type { Civ, Goods, Id, SimEvent, Site, WorldCells, WorldState } from '../core/types';
 import type { SiteLinks, LinkSearch } from './links';
@@ -13,7 +19,15 @@ import { nearestAuraSpot, type SettleContent, type SettleSearch } from './settle
 export type HistoryContent = SettleContent &
   Pick<
     ContentBundle,
-    'history' | 'creatures' | 'dragons' | 'places' | 'faiths' | 'diseases' | 'notables' | 'threats'
+    | 'history'
+    | 'creatures'
+    | 'dragons'
+    | 'places'
+    | 'faiths'
+    | 'diseases'
+    | 'notables'
+    | 'threats'
+    | 'abilities'
   >;
 
 /** The latest events that touched one site, for linking causes. */
@@ -126,6 +140,25 @@ export interface College {
   event: Id;
   /** Set when the college burned or was abandoned. */
   closed?: number;
+  /** The college_closed event. */
+  closedEvent?: Id;
+  /** M5.2: magic spell ids (ability ids) the college keeps and teaches; kept after it closes but no longer held. */
+  lore: string[];
+}
+
+/** Spells in the world (lineages.ts): what existed last year, who last knew it and what is lost. */
+export interface LoreState {
+  /** Magic abilities with a school, lowest power first, then content order. */
+  magic: AbilityDef[];
+  byId: Map<string, AbilityDef>;
+  /** "civ:spell" keys: spells above cantrips each people's members knew, kept in a book or taught at its college last year. */
+  existing: Set<string>;
+  /** The living member (highest id) who last knew or kept each, by the same key. */
+  lastKnower: Map<string, Id>;
+  /** Keys of spells a people lost and has not found again. */
+  lost: Set<string>;
+  /** Books burned since the last survey, with the razing's event and site name. */
+  burns: Map<Id, { event: Id; site: string }>;
 }
 
 /** A mage of another people studying at a college (colleges.ts). */
@@ -234,6 +267,8 @@ export interface HistoryRun {
   notables: NotableState;
   /** Colleges of magic, open and closed, in founding order. */
   colleges: College[];
+  /** Spellbooks and lineages (M5.2). */
+  lore: LoreState;
   /** Mages studying abroad, by person id. */
   students: Map<Id, Student>;
   /** Mages who went to study at a college of another people (once each); they may work spells at home. */
@@ -330,6 +365,24 @@ export function causesOf(...ids: (Id | undefined)[]): Id[] {
   return out;
 }
 
+function createLoreState(abilities: readonly AbilityDef[]): LoreState {
+  const magic = abilities
+    .filter((a) => a.family === 'magic' && a.school !== undefined)
+    .map((a, index) => ({ a, index }))
+    .sort(
+      (x, y) => (x.a.requirements.power ?? 0) - (y.a.requirements.power ?? 0) || x.index - y.index,
+    )
+    .map((x) => x.a);
+  return {
+    magic,
+    byId: new Map(magic.map((a) => [a.id, a])),
+    existing: new Set(),
+    lastKnower: new Map(),
+    lost: new Set(),
+    burns: new Map(),
+  };
+}
+
 export function createRun(
   world: WorldState,
   content: HistoryContent,
@@ -404,6 +457,7 @@ export function createRun(
       mageOdds: new Map(),
     },
     colleges: [],
+    lore: createLoreState(content.abilities),
     students: new Map(),
     studied: new Set(),
     pacts: [],

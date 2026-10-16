@@ -2155,10 +2155,59 @@ export interface HistoryRules {
   peaceYears: number;
   /** Colleges of magic (playtest add-on): founding, training, notice and spells. */
   colleges: CollegeRules;
+  /** Spellbooks and lineages (M5.2): how mages learn, teach and lose lore. */
+  lineages: LineageRules;
   /** Free cities (playtest add-on): at the start, by breaking away, and their pacts. */
   cityStates: CityStateRules;
   /** Succession wars and dynasties: a disputed throne can become a civil war. */
   civilWar: CivilWarRules;
+}
+
+/** Spellbooks and lineages (M5.2): apprenticeship, learning, books and lost lore (lineages.ts). */
+export interface LineageRules {
+  /** Gifted and up count as mages for apprenticeship. */
+  minPower: number;
+  /** Apprenticed at this share of the race's maturity years, rounded. */
+  apprenticeShare: number;
+  /** A non-parent teacher must have this power (Strong+) and be adult. */
+  teacherPower: number;
+  /** A teacher keeps at most this many apprentices in training. */
+  maxApprentices: number;
+  /** An apprentice is in training until maturity plus this many years. */
+  trainingYears: number;
+  /** Yearly chance a mage learns one new spell from their sources. */
+  learnChance: number;
+  /** Share of a lifespan: the age of the elder master each people starts with. */
+  elderMasterAge: number;
+  /** Names of each starting master's old book; `{civ}`, `{school}` and `{site}` are filled in. */
+  oldLoreNames: string[];
+  /** Chance each book held at a razed site burns. */
+  burnChance: number;
+  /** Yearly chance a living legend with no apprentice in training takes one. */
+  legendApprenticeChance: number;
+  /** A people's lost or found-again spells make the chronicle from this power up (smaller ones go quietly). */
+  lostPower: number;
+  phrases: LineagePhrases;
+}
+
+/** Phrases the lineage events print; `{teacher}`, `{site}`, `{college}`, `{book}`, `{name}` and `{item}` are filled in. */
+export interface LineagePhrases {
+  /** How an apprenticeship began: under a teacher, from a mother or father, at a college, from a book, from a hedge-witch. */
+  teacher: string;
+  mother: string;
+  father: string;
+  college: string;
+  book: string;
+  hedge: string;
+  /** The source of a mastered spell, when a teacher taught it (a book or college reuse the phrases above). */
+  taughtBy: string;
+  /** Why a spell passed out of the world. */
+  diedLast: string;
+  burned: string;
+  collegeFell: string;
+  forgotten: string;
+  /** The last who knew it now serves another people; `{name}`. */
+  wentAway: string;
 }
 
 /** A spell a college master or legend can work on a site's trouble (colleges.ts). */
@@ -2168,6 +2217,8 @@ export interface SpellDef {
   target: 'dry' | 'cold' | 'disease' | 'famine';
   /** Primary schools that can work it. */
   schools: string[];
+  /** Magic ability ids (M5.2), any one of which lets a caster work it. */
+  spells: string[];
   /** What the caster did, after their name; `{site}` and `{disease}` are filled in. */
   deed: string;
 }

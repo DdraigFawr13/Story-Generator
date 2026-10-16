@@ -30,6 +30,8 @@ import {
   type IndexRow,
   type PersonFilter,
   type WatchState,
+  magicOf,
+  type MagicRecord,
 } from './data';
 import '../tales/fonts.css';
 import './people.css';
@@ -191,7 +193,7 @@ const Row = memo(function Row({ row }: { row: IndexRow }) {
   );
 });
 
-type Tab = 'life' | 'family' | 'deeds' | 'rivals' | 'all';
+type Tab = 'life' | 'family' | 'magic' | 'deeds' | 'rivals' | 'all';
 
 function PersonPage({
   person,
@@ -225,9 +227,11 @@ function PersonPage({
   const family = familyOf(world, person);
   const rivals = useMemo(() => rivalsOf(world, person, events), [world, person, events]);
   const watch = watchOf(world, person, siteActions.enabled);
+  const magic = useMemo(() => magicOf(world, person, content), [world, person, content]);
   const tabs: { id: Tab; label: string }[] = [
     { id: 'life', label: 'Life' },
     { id: 'family', label: 'Family' },
+    ...(magic ? [{ id: 'magic' as const, label: 'Magic' }] : []),
     { id: 'deeds', label: 'Deeds' },
     { id: 'rivals', label: 'Rivals' },
     { id: 'all', label: `All ${events.length} records` },
@@ -325,6 +329,7 @@ function PersonPage({
             </ol>
           )}
           {tab === 'family' && <FamilyTab world={world} person={person} />}
+          {tab === 'magic' && magic && <MagicTab person={person} magic={magic} />}
           {tab === 'deeds' &&
             (deeds.length === 0 ? (
               <p className="pp-empty">No deeds on record.</p>
@@ -521,6 +526,120 @@ function FamilyTab({ world, person }: { world: WorldState; person: Person }) {
               </ul>
             </div>
           ),
+      )}
+    </>
+  );
+}
+
+/** How a mage learned, their line of teachers, apprentices, spells and books (M5.2). */
+function MagicTab({ person, magic }: { person: Person; magic: MagicRecord }) {
+  const own = person.sex === 'f' ? 'her' : 'his';
+  return (
+    <>
+      <div className="pp-group">
+        <h2>Learning</h2>
+        <p className="pp-house">
+          <span>
+            {magic.how}
+            {magic.howName &&
+              (magic.howTo ? (
+                <>
+                  {' '}
+                  <Link to={magic.howTo} className="pp-ln">
+                    {magic.howName}
+                  </Link>
+                </>
+              ) : (
+                ` ${magic.howName}`
+              ))}
+          </span>
+          {magic.how !== 'Learned before the records begin' && (
+            <small>From Year {yearText(magic.since)}</small>
+          )}
+        </p>
+      </div>
+      {magic.teachers.length > 1 && (
+        <div className="pp-group">
+          <h2>Later teachers</h2>
+          <ul className="pp-people">
+            {magic.teachers.slice(1).map((t) => (
+              <PersonLine
+                key={t.id}
+                person={t}
+                note={`Took ${person.sex === 'f' ? 'her' : 'him'} on later`}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
+      {magic.line.length > 0 && (
+        <div className="pp-group">
+          <h2>Line of teachers</h2>
+          <ul className="pp-people">
+            {magic.line.map((t, k) => (
+              <PersonLine
+                key={t.id}
+                person={t}
+                note={k === 0 ? `Taught ${own} teacher` : `${k + 1} teachers back`}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="pp-group">
+        <h2>Spells</h2>
+        {magic.spells.length === 0 ? (
+          <p className="pp-empty">No spells learned.</p>
+        ) : (
+          <ul>
+            {magic.spells.map((s) => (
+              <li key={s.id}>
+                <span className="yr">Year {yearText(s.year)}</span>
+                <span className="txt">
+                  <b>{s.name}</b> · {s.school}, {s.tier}
+                  {s.from &&
+                    (s.from.to ? (
+                      <>
+                        {' · '}
+                        <Link to={s.from.to} className="pp-ln">
+                          {s.from.text}
+                        </Link>
+                      </>
+                    ) : (
+                      ` · ${s.from.text}`
+                    ))}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {magic.apprentices.length > 0 && (
+        <div className="pp-group">
+          <h2>Apprentices</h2>
+          <ul className="pp-people">
+            {magic.apprentices.map((a) => (
+              <PersonLine key={a.id} person={a} note="Apprentice" />
+            ))}
+          </ul>
+        </div>
+      )}
+      {magic.books.length > 0 && (
+        <div className="pp-group">
+          <h2>Spellbooks</h2>
+          <ul>
+            {magic.books.map((b) => (
+              <li key={b.id}>
+                <span className="txt">
+                  <Link to={{ kind: 'item', id: b.id }} className="pp-ln">
+                    {b.name}
+                  </Link>{' '}
+                  <small>{b.note}</small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </>
   );

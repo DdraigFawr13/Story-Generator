@@ -25,10 +25,10 @@ const LEGEND_POWER = 17;
 // deed until roaming beasts (2026-10-13) moved its legend_founded; DH-338 had every deed until more
 // land and free cities (2026-10-13) moved its legend_founded and spell_cast; DH-105 had every deed
 // until legends as champions (2026-10-14) moved its spell_cast; DH-34 had every deed, a legend duel
-// and a broken host until dragons (M5.6) moved its legend_duel; re-pinned for M5.6 dragons: history drift; DH-3 had every deed until mountain holds (2026-10-14) moved its legend_founded; DH-37 had every deed until expeditions (M4.7) moved its spell_cast; DH-79 had every deed until religion (faiths and holy wars) moved its spell_cast and its broken host; DH-81 had every deed until legends rose only from deeds of renown moved its legend_founded and broken host; DH-152 has every deed.
+// and a broken host until dragons (M5.6) moved its legend_duel; re-pinned for M5.6 dragons: history drift; DH-3 had every deed until mountain holds (2026-10-14) moved its legend_founded; DH-37 had every deed until expeditions (M4.7) moved its spell_cast; DH-79 had every deed until religion (faiths and holy wars) moved its spell_cast and its broken host; DH-81 had every deed until legends rose only from deeds of renown moved its legend_founded and broken host; M5.2 lineages: DH-152 had every deed until spellbooks and lineages gated spell casting; DH-180 and DH-189 failed other deed checks; DH-337 had every deed only with spells learnable by any mage, an override since removed; DH-134 has every deed with the default abilities.
 let shared: WorldState | undefined;
 const world = () =>
-  (shared ??= generateWorld('DH-152', { width: 64, height: 64, historyYears: 250 }, FREQUENT));
+  (shared ??= generateWorld('DH-134', { width: 64, height: 64, historyYears: 250 }, FREQUENT));
 const ofType = (type: string) => world().events.filter((e) => e.type === type);
 const cause = (e: SimEvent, type: string) =>
   e.causes.map((id) => world().events.find((x) => x.id === id)).find((c) => c?.type === type);

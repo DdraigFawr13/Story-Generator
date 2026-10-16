@@ -101,7 +101,8 @@ describe('biographies', () => {
     const index = buildLegendIndex(world, DEFAULT_CONTENT);
     const narrator = narratorOf(world);
     const dead = [...world.people.values()]
-      .filter((p) => p.died !== undefined)
+      // M5.2 lineages: the most famous dead notable is now a prophet born before the records, whose summary reads "20 years before the first settlements"; this checks one born in the records.
+      .filter((p) => p.died !== undefined && p.born >= 0)
       .sort((a, b) => b.fame - a.fame || a.id - b.id)[0]!;
     const bio = biography(world, DEFAULT_CONTENT, narrator, index, { kind: 'person', id: dead.id });
     const text = bio.summary.join(' ');

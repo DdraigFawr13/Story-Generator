@@ -3,6 +3,7 @@
 // Tune the numbers here; the history stage in engine/history/ reads only this table.
 
 import type { HistoryRules } from '../engine';
+import { LINEAGES } from './lineages';
 import { CITY_STATES, CIVIL_WARS, COLLEGES } from './realms';
 
 export const HISTORY: HistoryRules = {
@@ -165,6 +166,7 @@ export const HISTORY: HistoryRules = {
   wearyShare: 0.15,
   peaceYears: 30,
   colleges: COLLEGES,
+  lineages: LINEAGES,
   cityStates: CITY_STATES,
   civilWar: CIVIL_WARS,
 };

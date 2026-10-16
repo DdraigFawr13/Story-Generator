@@ -112,6 +112,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...threatsProblems(content));
   problems.push(...loreProblems(content));
   problems.push(...politicsProblems(content));
+  problems.push(...lineageProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -583,6 +584,13 @@ const HISTORY_EVENT_IDS = [
   'ally_aided',
   'mage_went_to_study',
   'mage_came_home',
+  'apprenticed',
+  'apprentice_taken',
+  'spell_mastered',
+  'book_to_apprentice',
+  'book_burned',
+  'lore_lost',
+  'lore_regained',
   'high_priest_named',
   'heresy_denounced',
   'site_converted',
@@ -1266,6 +1274,44 @@ export function politicsProblems(content: ContentBundle): string[] {
   const chance = rules.succession.disputeChance;
   if (!(chance >= 0 && chance <= 1))
     problems.push(`Politics disputeChance must be 0-1, not ${chance}.`);
+  return problems;
+}
+
+/** Spellbooks and lineages (M5.2): college spells name known magic abilities; numbers in range. */
+export function lineageProblems(content: ContentBundle): string[] {
+  const rules = content.history?.lineages;
+  if (!rules) return ['Content has no lineage rules.'];
+  const problems: string[] = [];
+  const magic = new Set(content.abilities.filter((a) => a.family === 'magic').map((a) => a.id));
+  for (const spell of content.history.colleges.spells) {
+    if (spell.spells.length === 0) problems.push(`College spell ${spell.id}: names no spells.`);
+    for (const id of spell.spells) {
+      if (!magic.has(id))
+        problems.push(`College spell ${spell.id}: unknown magic ability "${id}".`);
+    }
+  }
+  const chances: [string, number][] = [
+    ['learnChance', rules.learnChance],
+    ['burnChance', rules.burnChance],
+    ['legendApprenticeChance', rules.legendApprenticeChance],
+    ['apprenticeShare', rules.apprenticeShare],
+    ['elderMasterAge', rules.elderMasterAge],
+  ];
+  for (const [name, value] of chances) {
+    if (!(value >= 0 && value <= 1)) problems.push(`Lineages ${name} must be 0-1, not ${value}.`);
+  }
+  const counts: [string, number][] = [
+    ['minPower', rules.minPower],
+    ['teacherPower', rules.teacherPower],
+    ['maxApprentices', rules.maxApprentices],
+    ['trainingYears', rules.trainingYears],
+    ['lostPower', rules.lostPower],
+  ];
+  for (const [name, value] of counts) {
+    if (!Number.isInteger(value) || value < 1)
+      problems.push(`Lineages ${name} must be a whole number of 1 or more.`);
+  }
+  if (rules.oldLoreNames.length === 0) problems.push('Lineages oldLoreNames is empty.');
   return problems;
 }
 
