@@ -21,20 +21,58 @@ import {
   type Site,
   type WorldState,
 } from '../../src/engine';
+import { findWorld } from './helpers/find-world';
 
 const C = DEFAULT_CONTENT;
 
-// Compact continents (2026-10-13) moved SITE-A's biggest site (no wedding in a year); SITE-I has weddings and births.
+// Both worlds are found by searching a fixed seed list (first match wins), lazily and once.
+const SEEDS = ['SITE-I', 'SITE-A', 'SITE-K', 'SITE-L', 'SITE-M', 'SITE-B', 'SITE-C', 'SITE-D'];
+const MARRY_SEEDS = [
+  'SITE-M',
+  'SITE-K',
+  'SITE-L',
+  'SITE-A',
+  'SITE-I',
+  'SITE-B',
+  'SITE-C',
+  'SITE-D',
+];
+const make = (seed: string) => generateWorld(seed, { width: 64, height: 64 }, C);
+const marriedWife = (world: WorldState, active: ActiveSite) =>
+  active.residents
+    .map((id) => world.people.get(id)!)
+    .find(
+      (p) =>
+        p.sex === 'f' &&
+        p.family.spouses.some((s) => active.residents.includes(s)) &&
+        p.family.householdId !== undefined,
+    );
+/** A world whose biggest town has a married wife at home, for the childbirth and mirror cases. */
 let shared: WorldState | undefined;
-const base = () => (shared ??= generateWorld('SITE-I', { width: 64, height: 64 }, C));
+const base = () =>
+  (shared ??= findWorld('a biggest town with a married wife', 'fam', SEEDS, make, (w) => {
+    const copy = structuredClone(w);
+    return marriedWife(copy, embark(copy, C, biggest(copy).id)) !== undefined;
+  }).world);
 const biggest = (world: WorldState): Site =>
   [...world.sites.values()]
     .filter((s) => s.ruinedYear === undefined && sitePopulation(s) > 0)
     .sort((a, b) => sitePopulation(b) - sitePopulation(a) || a.id - b.id)[0]!;
-// Roaming beasts (2026-10-13) took SITE-I's wedding in the year; SITE-A had weddings and births until
-// expeditions (M4.7, history drift) took its wedding; SITE-K had weddings and births until religion (faiths and holy wars) took its wedding; SITE-L had weddings and births until legends rose only from deeds of renown (history drift) took its wedding; SITE-M has weddings and births.
+/** A world whose biggest town sees a wedding and a birth in a year (seventy followed people). */
+const small = { ...C, site: { ...C.site, followCap: 70 } };
+const yearOfEvents = (world: WorldState) => {
+  const w = structuredClone(world);
+  embark(w, small, biggest(w).id);
+  const first = w.events.length;
+  for (let d = 0; d < 336; d += 1) stepSite(w, small);
+  return new Set(w.events.slice(first).map((e) => e.type));
+};
 let weddings: WorldState | undefined;
-const marrying = () => (weddings ??= generateWorld('SITE-M', { width: 64, height: 64 }, C));
+const marrying = () =>
+  (weddings ??= findWorld('a wedding and a birth in a year', 'fam', MARRY_SEEDS, make, (w) => {
+    const types = yearOfEvents(w);
+    return types.has(C.family.events.married) && types.has(C.family.events.birth);
+  }).world);
 function fresh(content = C, from = base) {
   const world = structuredClone(from());
   const active = embark(world, content, biggest(world).id);
@@ -125,7 +163,6 @@ const die = (run: ReturnType<typeof fresh>, p: Person) =>
 describe('family', () => {
   it('keeps family links symmetric after a year of marriages and births', () => {
     // Seventy followed people are enough for weddings and births, and keep the run short.
-    const small = { ...C, site: { ...C.site, followCap: 70 } };
     const { world, active } = fresh(small, marrying);
     const first = world.events.length;
     for (let d = 0; d < 336; d += 1) stepSite(world, small);
@@ -156,7 +193,7 @@ describe('family', () => {
       expect(h.members).toContain(h.head);
       for (const m of h.members) expect(person(world, m).family.householdId).toBe(h.id);
     }
-  });
+  }, 60_000);
 
   it('gives the household to the son or the eldest child by the culture rule', () => {
     const bySon = elderFamily('eldest-son');

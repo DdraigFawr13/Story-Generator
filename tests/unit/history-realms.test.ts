@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
 import { DAYS_PER_YEAR, generateWorld, type SimEvent, type WorldState } from '../../src/engine';
+import { findWorld } from './helpers/find-world';
 
-/** Free cities break away and swear pacts often on a 64x64 world; the seed has a break-away, a pact and an ally's aid. */
+/** Free cities break away and swear pacts often on a 64x64 world. */
 const cs = DEFAULT_CONTENT.history.cityStates;
 const BUSY = {
   ...DEFAULT_CONTENT,
@@ -16,15 +17,18 @@ const BUSY = {
   },
 };
 
-// Compact continents (2026-10-13) moved CS-16's sworn-ally aid (ally_aided) to CS-18; roaming beasts
-// (2026-10-13) moved it again; CS-20 had it until religion (faiths and holy wars) moved it; CS-21 has it.
-let shared: WorldState | undefined;
-const world = () =>
-  (shared ??= generateWorld('CS-21', { width: 64, height: 64, historyYears: 250 }, BUSY));
-const ofType = (type: string) => world().events.filter((e) => e.type === type);
-const byId = (id: number) => world().events.find((e) => e.id === id);
+// Tests search this fixed list for a world with the event they check (first match wins).
+const CS_SEEDS = ['CS-21', 'CS-20', 'CS-18', 'CS-16', 'CS-17', 'CS-19', 'CS-22', 'CS-23'];
+const makeFree = (seed: string) =>
+  generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, BUSY);
+const freeWith = (type: string) =>
+  findWorld(`a ${type} event`, 'cs', CS_SEEDS, makeFree, (w) =>
+    w.events.some((e) => e.type === type),
+  ).world;
+const ofType = (w: WorldState, type: string) => w.events.filter((e) => e.type === type);
 const yearOf = (e: SimEvent) => Math.floor(e.day / DAYS_PER_YEAR);
-const civNamed = (name: unknown) => [...world().civs.values()].find((c) => c.name === name);
+const civNamed = (w: WorldState, name: unknown) =>
+  [...w.civs.values()].find((c) => c.name === name);
 
 describe('free cities', () => {
   it('start as one-town realms away from every capital', () => {
@@ -48,12 +52,12 @@ describe('free cities', () => {
   });
 
   it('break away as a new free realm, and the old one waits out the grace years', () => {
-    expect(ofType('city_freed').length).toBeGreaterThan(0);
-    for (const e of ofType('city_freed')) {
-      const civ = civNamed(e.data.civ)!;
+    const w = freeWith('city_freed');
+    for (const e of ofType(w, 'city_freed')) {
+      const civ = civNamed(w, e.data.civ)!;
       expect(civ.free).toBe(true);
-      expect(world().people.get(e.actors[0]!)?.deeds).toContain(e.id);
-      const war = ofType('war_declared').find(
+      expect(w.people.get(e.actors[0]!)?.deeds).toContain(e.id);
+      const war = ofType(w, 'war_declared').find(
         (w) => w.data.civ === e.data.from && w.data.enemy === e.data.civ && w.causes.includes(e.id),
       );
       if (war) expect(yearOf(war) - yearOf(e)).toBeGreaterThanOrEqual(cs.secede.graceYears);
@@ -61,9 +65,11 @@ describe('free cities', () => {
   });
 
   it('send aid only to a sworn ally', () => {
-    expect(ofType('ally_aided').length).toBeGreaterThan(0);
-    for (const e of ofType('ally_aided')) {
-      const pact = e.causes.map(byId).find((c) => c?.type === 'pact_sworn')!;
+    const w = freeWith('ally_aided');
+    for (const e of ofType(w, 'ally_aided')) {
+      const pact = e.causes
+        .map((id) => w.events.find((x) => x.id === id))
+        .find((c) => c?.type === 'pact_sworn')!;
       expect([pact.data.civ, pact.data.other].sort()).toEqual([e.data.civ, e.data.friend].sort());
     }
   });
@@ -75,14 +81,17 @@ describe('colleges and spells', () => {
     ...D,
     notables: { ...D.notables, legendChance: 1 },
   };
-  // Compact continents (2026-10-13) moved DH-21's spell casting and college founding; DH-22 had both until M5.6 dragons (history drift); DH-1 had both until expeditions (M4.7, history drift); re-pinned: DH-3 has both.
-  let magical: WorldState | undefined;
-  const w = () =>
-    (magical ??= generateWorld('DH-3', { width: 64, height: 64, historyYears: 250 }, MAGICAL));
+  const DH_SEEDS = ['DH-3', 'DH-21', 'DH-22', 'DH-1', 'DH-2', 'DH-4', 'DH-5', 'DH-6'];
+  const makeMagic = (seed: string) =>
+    generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, MAGICAL);
+  const magicWith = (type: string) =>
+    findWorld(`a ${type} event`, 'magic', DH_SEEDS, makeMagic, (x) =>
+      x.events.some((e) => e.type === type),
+    ).world;
 
   it('are worked only by Exceptional casters, against the trouble they name', () => {
-    const spells = w().events.filter((e) => e.type === 'spell_cast');
-    expect(spells.length).toBeGreaterThan(0);
+    const w = magicWith('spell_cast');
+    const spells = ofType(w, 'spell_cast');
     const troubles = new Set([
       'dry_years_began',
       'cold_years_began',
@@ -90,19 +99,18 @@ describe('colleges and spells', () => {
       ...D.diseases.map((d) => d.event),
     ]);
     for (const e of spells) {
-      expect(w().people.get(e.actors[0]!)!.magic.power).toBeGreaterThanOrEqual(
+      expect(w.people.get(e.actors[0]!)!.magic.power).toBeGreaterThanOrEqual(
         D.history.colleges.spellPower,
       );
-      const cause = w().events.find((x) => x.id === e.causes[0]);
+      const cause = w.events.find((x) => x.id === e.causes[0]);
       expect(troubles.has(cause!.type)).toBe(true);
     }
   });
 
   it('open in a town of their people, never more than the cap at once', () => {
-    const opened = w().events.filter((e) => e.type === 'college_founded');
-    expect(opened.length).toBeGreaterThan(0);
+    const w = magicWith('college_founded');
     let open = 0;
-    for (const e of w().events) {
+    for (const e of w.events) {
       if (e.type === 'college_founded') open += 1;
       if (e.type === 'college_closed') open -= 1;
       expect(open).toBeLessThanOrEqual(D.history.colleges.maxOpen);
@@ -113,66 +121,80 @@ describe('colleges and spells', () => {
 describe('succession wars', () => {
   const D = DEFAULT_CONTENT;
   const cw = D.history.civilWar;
-  // Every beaten claimant rises; re-pinned for M5.6 dragons: history drift; CW-43 had a throne seized, a revolt crushed and a split until expeditions (M4.7, history drift: no civil war at all); re-pinned: CW-2 has all three (CW-13 lost its ending); CW-2 lost its endings to religion (faiths and holy wars), CW-24 had all three until spellbooks and lineages (M5.2, history drift); M5.2 lineages: CW-37 lost its endings to history drift; CW-116 has all three.
   const RESTLESS = {
     ...D,
     history: { ...D.history, civilWar: { ...cw, chance: 1, minSites: 2 } },
   };
-  let restless: WorldState | undefined;
-  const w = () =>
-    (restless ??= generateWorld('CW-116', { width: 64, height: 64, historyYears: 250 }, RESTLESS));
-  const of = (type: string) => w().events.filter((e) => e.type === type);
-  const find = (id: number) => w().events.find((e) => e.id === id);
-  const named = (name: unknown) => [...w().civs.values()].find((c) => c.name === name);
-  const endings = () => [...of('throne_seized'), ...of('revolt_crushed'), ...of('realm_split')];
+  const CW_SEEDS = ['CW-116', 'CW-2', 'CW-24', 'CW-37', 'CW-43', 'CW-13', 'CW-117', 'CW-118'];
+  const makeWar = (seed: string) =>
+    generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, RESTLESS);
+  const warWith = (type: string) =>
+    findWorld(`a ${type} event`, 'cw', CW_SEEDS, makeWar, (x) =>
+      x.events.some((e) => e.type === type),
+    ).world;
+  const find = (w: WorldState, id: number) => w.events.find((e) => e.id === id);
 
   it('start from a disputed succession, with the claimant ruling the towns that rose', () => {
-    expect(of('civil_war_began').length).toBeGreaterThan(0);
-    for (const e of of('civil_war_began')) {
-      expect(e.causes.map(find).some((c) => c?.type === 'succession_disputed')).toBe(true);
-      const rebel = named(e.data.civ)!;
-      expect(rebel.rebelOf).toBe(named(e.data.from)!.id);
-      expect(w().people.get(e.actors[0]!)?.deeds).toContain(e.id);
+    const w = warWith('civil_war_began');
+    for (const e of ofType(w, 'civil_war_began')) {
+      expect(e.causes.map((id) => find(w, id)).some((c) => c?.type === 'succession_disputed')).toBe(
+        true,
+      );
+      const rebel = civNamed(w, e.data.civ)!;
+      expect(rebel.rebelOf).toBe(civNamed(w, e.data.from)!.id);
+      expect(w.people.get(e.actors[0]!)?.deeds).toContain(e.id);
     }
   });
 
-  it('end with the throne seized, the revolt crushed or the realm split, within the limit', () => {
-    expect(of('throne_seized').length).toBeGreaterThan(0);
-    expect(of('revolt_crushed').length).toBeGreaterThan(0);
-    expect(of('realm_split').length).toBeGreaterThan(0);
-    for (const e of of('civil_war_began')) {
-      const rebels = e.data.civ;
-      const end = endings().find((x) => (x.data.rebels ?? x.data.civ) === rebels && x.id > e.id);
-      if (!end) {
-        expect(yearOf(e)).toBeGreaterThan(250 - cw.maxYears);
-        continue;
+  // Each ending kind is found in its own world; every one must follow a war of its rebels, within the limit.
+  for (const kind of ['throne_seized', 'revolt_crushed', 'realm_split']) {
+    it(`end with ${kind} within the limit`, () => {
+      const w = warWith(kind);
+      for (const end of ofType(w, kind)) {
+        const rebels = end.data.rebels ?? end.data.civ;
+        const e = ofType(w, 'civil_war_began').find((x) => x.data.civ === rebels && x.id < end.id)!;
+        expect(e, `war before ${kind} of ${rebels}`).toBeDefined();
+        expect(yearOf(end) - yearOf(e)).toBeLessThanOrEqual(cw.maxYears);
+        const rebel = civNamed(w, rebels)!;
+        // A reunited realm folds the claimant's back in; a split leaves it standing (until a later war).
+        if (kind === 'realm_split') expect(rebel.fell ?? Infinity).toBeGreaterThan(yearOf(end));
+        else expect(rebel.fell).toBe(yearOf(end));
       }
-      expect(yearOf(end) - yearOf(e)).toBeLessThanOrEqual(cw.maxYears);
-      const rebel = named(rebels)!;
-      // A reunited realm folds the claimant's back in; a split leaves it standing (until a later war).
-      if (end.type === 'realm_split') expect(rebel.fell ?? Infinity).toBeGreaterThan(yearOf(end));
-      else expect(rebel.fell).toBe(yearOf(end));
+    });
+  }
+
+  it('leave a war unended only in the last years', () => {
+    const w = warWith('civil_war_began');
+    const endings = ['throne_seized', 'revolt_crushed', 'realm_split'].flatMap((t) => ofType(w, t));
+    for (const e of ofType(w, 'civil_war_began')) {
+      const end = endings.find((x) => (x.data.rebels ?? x.data.civ) === e.data.civ && x.id > e.id);
+      if (!end) expect(yearOf(e)).toBeGreaterThan(250 - cw.maxYears);
     }
   });
 
   it('never burn a town, and hand a seized throne to the claimant', () => {
+    const w = findWorld('a civil battle', 'cw', CW_SEEDS, makeWar, (x) =>
+      ofType(x, 'battle').some((b) => b.data.civil === 1),
+    ).world;
     const civilBattles = new Set(
-      of('battle')
+      ofType(w, 'battle')
         .filter((b) => b.data.civil === 1)
         .map((b) => b.id),
     );
-    expect(civilBattles.size).toBeGreaterThan(0);
-    expect(of('site_razed').filter((r) => r.causes.some((c) => civilBattles.has(c)))).toEqual([]);
-    for (const e of of('throne_seized')) {
-      const victor = w().people.get(e.actors[0]!)!;
+    expect(
+      ofType(w, 'site_razed').filter((r) => r.causes.some((c) => civilBattles.has(c))),
+    ).toEqual([]);
+    const t = warWith('throne_seized');
+    for (const e of ofType(t, 'throne_seized')) {
+      const victor = t.people.get(e.actors[0]!)!;
       expect(victor.name).toBe(e.data.name);
       expect(victor.deeds).toContain(e.id);
     }
   });
 
   it('end a ruling house only when another house takes the seat', () => {
-    expect(of('dynasty_ended').length).toBeGreaterThan(0);
-    for (const e of of('dynasty_ended')) {
+    const w = warWith('dynasty_ended');
+    for (const e of ofType(w, 'dynasty_ended')) {
       expect(e.data.house).not.toBe(e.data.dynasty);
       const held = Number(e.data.years) >= cw.houseYears || Number(e.data.rulers) >= cw.houseRulers;
       expect(held).toBe(true);

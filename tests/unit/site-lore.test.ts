@@ -15,21 +15,23 @@ import {
   type Site,
   type WorldState,
 } from '../../src/engine';
+import { cached, findWorld } from './helpers/find-world';
 
 const C = DEFAULT_CONTENT;
 const SMALL = { ...C, site: { ...C.site, followCap: 30 } };
 
-// Compact continents (2026-10-13) moved SITE-A's biggest site (the year's lore check found 2 wakings, not 1); re-pinned for M5.6 dragons: history drift (SITE-C then woke two different people), SITE-A passes again.
-let shared: WorldState | undefined;
-const base = () => (shared ??= generateWorld('SITE-A', { width: 64, height: 64 }, C));
+// Most cases share the first world; the waking case searches the list for a site where one person wakes.
+const SEEDS = ['SITE-A', 'SITE-C', 'SITE-B', 'SITE-D', 'SITE-E', 'SITE-F', 'SITE-G', 'SITE-H'];
+const make = (seed: string) => generateWorld(seed, { width: 64, height: 64 }, C);
+const base = () => cached('lore', SEEDS[0]!, make);
 const biggest = (world: WorldState): Site =>
   [...world.sites.values()]
     .filter((s) => s.ruinedYear === undefined && sitePopulation(s) > 0)
     .sort((a, b) => sitePopulation(b) - sitePopulation(a) || a.id - b.id)[0]!;
 
 /** A site where no one has a spark or knows a cantrip, with one grown adult and one sparked child. */
-function fresh(content: ContentBundle = SMALL) {
-  const world = structuredClone(base());
+function fresh(content: ContentBundle = SMALL, source: WorldState = base()) {
+  const world = structuredClone(source);
   const active = embark(world, content, biggest(world).id);
   for (const id of active.residents) {
     const p = world.people.get(id)!;
@@ -152,10 +154,22 @@ describe('lore', () => {
         { ...C.awakenings[0]!, afterDays: 0, monthlyChance: 1, maxFromTier: 'strong' as const },
       ],
     };
-    const t = fresh(awake);
-    t.child.magic = { power: 0, affinities: {} };
-    addBook(t.world, t.active, t.child.id);
-    run(t.world, awake, 40);
+    const wake = (source: WorldState) => {
+      const t = fresh(awake, source);
+      t.child.magic = { power: 0, affinities: {} };
+      addBook(t.world, t.active, t.child.id);
+      run(t.world, awake, 40);
+      return t;
+    };
+    // Other readers of the book would wake too, so search for a site where only the holder does.
+    const { world } = findWorld(
+      'a site where the book wakes one reader',
+      'lore',
+      SEEDS,
+      make,
+      (w) => wake(w).active.lore.stats.awakenings === 1,
+    );
+    const t = wake(world);
     expect(t.child.magic.power).toBe(1);
     expect(t.child.awakening?.id).toBe(awake.awakenings[0]!.id);
     expect(t.world.events.filter((e) => e.type === C.lore.events.awakened)).toHaveLength(1);

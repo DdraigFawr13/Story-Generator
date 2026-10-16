@@ -22,8 +22,8 @@
     "sweep": "node scripts/sweep.mjs",
     "worldmap": "node scripts/worldmap.mjs",
     "site": "node scripts/site.mjs",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "prettier --write --cache .",
+    "format:check": "prettier --check --cache .",
     "check": "npm run format:check && npm run typecheck && npm run boundaries && npm test && npm run build"
   },
   "dependencies": {

@@ -13,6 +13,7 @@ import {
   type SimEvent,
   type WorldState,
 } from '../../src/engine';
+import { findWorld } from './helpers/find-world';
 
 const YEARS = 250;
 const SIZE = { width: 64, height: 64 };
@@ -23,8 +24,8 @@ const generate = (seed: string, years = YEARS, content: ContentBundle = DEFAULT_
 /** One 250-year world, built once for the invariant checks. */
 let shared: WorldState | undefined;
 const base = () => (shared ??= generate('NOT-A'));
-/** Seed whose default world has a razing death; its quarrelsome variant settles a dispute. */
-const RAZED_SEED = 'NOT-1'; // NOT-B had a razing death and a settled dispute until religion (faiths and holy wars) moved both; NOT-1 has both.
+/** Seeds searched, in order, for a razing death and (quarrelsome) a settled dispute. */
+const RAZED_SEEDS = ['NOT-1', 'NOT-B', 'NOT-2', 'NOT-3', 'NOT-4', 'NOT-5', 'NOT-6', 'NOT-7'];
 
 const yearOf = (event: SimEvent) => Math.floor(event.day / DAYS_PER_YEAR);
 
@@ -167,11 +168,19 @@ describe('notables', () => {
   });
 
   it('name a razing death after the kind of place burned', () => {
-    const world = generate(RAZED_SEED);
-    const sites = [...world.sites.values()];
-    const burnings = world.events.filter(
-      (e) => e.type === 'notable_died' && String(e.data.cause).includes('burning'),
+    const burned = (world: WorldState) =>
+      world.events.filter(
+        (e) => e.type === 'notable_died' && String(e.data.cause).includes('burning'),
+      );
+    const { world } = findWorld(
+      'a razing death',
+      'default',
+      RAZED_SEEDS,
+      (seed) => generate(seed),
+      (w) => burned(w).length > 0,
     );
+    const sites = [...world.sites.values()];
+    const burnings = burned(world);
     expect(burnings.length).toBeGreaterThan(0);
     for (const e of burnings) {
       const site = sites.find((s) => s.name === e.data.site)!;
@@ -184,7 +193,21 @@ describe('notables', () => {
       ...DEFAULT_CONTENT,
       notables: { ...DEFAULT_CONTENT.notables, disputeChance: 1, disputeMargin: 100 },
     };
-    const world = generate(RAZED_SEED, YEARS, quarrelsome);
+    const disputes = (world: WorldState) => {
+      const kinds = new Map(world.events.map((e) => [e.id, e.type]));
+      return world.events.some(
+        (e) =>
+          e.type === 'ruler_succeeded' &&
+          e.causes.some((id) => kinds.get(id) === 'succession_disputed'),
+      );
+    };
+    const { world } = findWorld(
+      'a settled dispute',
+      'quarrelsome',
+      RAZED_SEEDS,
+      (seed) => generate(seed, YEARS, quarrelsome),
+      disputes,
+    );
     const byId = new Map(world.events.map((e) => [e.id, e]));
     const settled = world.events.filter((e) => e.type === 'ruler_succeeded');
     let disputed = 0;
