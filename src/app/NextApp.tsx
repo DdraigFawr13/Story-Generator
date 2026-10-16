@@ -1,7 +1,7 @@
 // The app at `/`: world-map viewer on top (Phase 1, M1.4) beside the Legends pane (M2.7), with the
 // Phase 0 day controls, saves and chronicle below.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { DEFAULT_CONTENT } from '../content';
 import {
   BIRTH_TIER_IDS,
@@ -58,7 +58,7 @@ import { SiteView, type SiteLinkParts, type TickListener } from './SiteView';
 import { BookRoom } from './book/BookRoom';
 import { booksOf, chapterOfEvent, pickBook } from './book/data';
 import { PeopleRoom } from './people/PeopleRoom';
-import type { RoomId } from './rooms/Rooms';
+import { WorldControlsContext, type RoomId, type WorldControls } from './rooms/Rooms';
 import { TalesRoom } from './tales/TalesRoom';
 import { TownPicker } from './town/TownPicker';
 import { TownRoom } from './town/TownRoom';
@@ -232,11 +232,19 @@ export function NextApp() {
     from: number;
     key: number;
     follow?: { id: Id; name: string } | null;
+    /** Open Tales on its explorable map at this year, centred on this cell if one is named. */
+    explore?: { year: number; cell: number | null } | null;
   } | null>(null);
+  /**
+   * The new rooms are home: every page, map and town opens in a room. Only the classic viewer,
+   * chosen from the new-world sheet, keeps the old Legends pane, map and site view.
+   */
+  const roomsMode = useRef(true);
   /** The People room (index or a person's page) covers the map and Legends while set. */
   const [people, setPeople] = useState(
     initialRoom.room !== 'tales' &&
-      (initial.open?.startsWith('person:') === true || initialRoom.room === 'people'),
+      initialRoom.room !== 'book' &&
+      (initial.open !== null || initialRoom.room === 'people'),
   );
   /** A room change (rail press, Follow) adds its history entry through the URL effect. */
   const [roomTick, setRoomTick] = useState(0);
@@ -405,6 +413,7 @@ export function NextApp() {
   const roomChange = (apply: () => void) => {
     flushTalesUrl();
     pushNext.current = true;
+    roomsMode.current = true;
     apply();
     setRoomTick((n) => n + 1);
   };
@@ -471,6 +480,8 @@ export function NextApp() {
           playbackKey.current += 1;
           setPlayback({ from: place.tales.from, key: playbackKey.current, follow });
           showPeople(false);
+          showBook(null);
+          showPicker(false);
         } else if (autoPlay && latest.current.playHistory && !place.site && generated.playback) {
           playbackKey.current += 1;
           talesRef.current = { year: 0, follow: null };
@@ -947,8 +958,9 @@ export function NextApp() {
       scroll: 0,
     });
     if (!moved || open === null || (cur.open && sameRef(open, cur.open))) return;
-    // Opening a page: show it, and move the map and the slider to it.
-    showPeople(open.kind === 'person');
+    // Opening a page: show it, and move the map and the slider to it. In the rooms every page
+    // opens in the People room's shell; the classic viewer keeps its Legends pane.
+    showPeople(open.kind === 'person' || roomsMode.current);
     showBook(null);
     showPicker(false);
     setTab('legends');
@@ -968,14 +980,18 @@ export function NextApp() {
   };
 
   /** Show Tales from a year, following a person or no one, with no page left open behind it. */
-  const showTales = (from: number, follow: { id: Id; name: string } | null) => {
+  const showTales = (
+    from: number,
+    follow: { id: Id; name: string } | null,
+    explore?: { year: number; cell: number | null },
+  ) => {
     talesRef.current = { year: from, follow };
     showPeople(false);
     showBook(null);
     showPicker(false);
     setTab('map');
     playbackKey.current += 1;
-    setPlayback({ from, key: playbackKey.current, follow });
+    setPlayback({ from, key: playbackKey.current, follow, explore: explore ?? null });
     setNav((n) => (n.open ? { ...n, open: null, trail: [], rev: n.rev + 1, scroll: 0 } : n));
   };
   /** The People room's index, as a new history entry. */
@@ -1057,14 +1073,46 @@ export function NextApp() {
       const civ = pickBook(booksOf(world.current, latest.current.legend), lastBook.current);
       return openBookRoom({ civ: civ ?? null, ch: 0, ev: null });
     }
+    // The rail's World: the explorable map of the present, in Tales.
+    if (state.playback) exploreMap(null, latest.current.finalYear);
+    else openClassic();
+  };
+  /** Tales's explorable map at a year, centred on a cell when one is named. */
+  const exploreMap = (cell: number | null, year: number) =>
     roomChange(() => {
-      showPeople(false);
-      showBook(null);
-      showPicker(false);
-      setPlayback(null);
-      setTab('map');
-      if (latest.current.nav.open?.kind === 'person') go({ open: null });
+      const at = Math.min(year, latest.current.finalYear);
+      showTales(at, null, { year: at, cell });
     });
+  /** The classic viewer: the old map with its layers, inspector, saves and Legends pane. */
+  const openClassic = () => {
+    const open = () =>
+      roomChange(() => {
+        roomsMode.current = false;
+        showPeople(false);
+        showBook(null);
+        showPicker(false);
+        setPlayback(null);
+        setTab('map');
+        if (latest.current.nav.open) go({ open: null });
+      });
+    if (watchingRef.current) void leave(false, open);
+    else open();
+  };
+  /** A new world from a room's sheet: made, then played from year 0 in Tales. */
+  const generateFromRooms = (seedText: string, worldSize: WorldSize, length: HistoryLength) => {
+    const start = () => {
+      setSeedInput(seedText);
+      setSize(worldSize);
+      setYears(length);
+      roomsMode.current = true;
+      generate(seedText, worldSize, length, { ...INITIAL_VIEW, layer: view.layer }, 'push', {
+        year: null,
+        nav: { ...EMPTY_NAV, rev: latest.current.nav.rev + 1 },
+        tales: { from: 0, follow: null },
+      });
+    };
+    if (watchingRef.current) void leave(false, start);
+    else start();
   };
   const hrefOf = (ref: PageRef | null): string => {
     if (!shown.current) return '#';
@@ -1124,8 +1172,20 @@ export function NextApp() {
     return ids.size > 0 ? ids : null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nav.open, sitesAt, revision]);
+  const controls: WorldControls = {
+    seed: shown.current?.seed ?? seedInput,
+    size: shown.current?.size ?? size,
+    years: shown.current?.years ?? years,
+    busy: progress,
+    seedError,
+    generate: generateFromRooms,
+    classic: openClassic,
+  };
+  const withControls = (node: ReactNode) => (
+    <WorldControlsContext.Provider value={controls}>{node}</WorldControlsContext.Provider>
+  );
   if (watching?.town && state.activeSite) {
-    return (
+    return withControls(
       <main className="tw-page" data-revision={revision}>
         <h1 className="tw-sr">Story Generator — {watching.name}</h1>
         {error && <p role="alert">{error}</p>}
@@ -1169,7 +1229,7 @@ export function NextApp() {
             })
           }
         />
-      </main>
+      </main>,
     );
   }
   if (watching && state.activeSite) {
@@ -1201,13 +1261,14 @@ export function NextApp() {
     world: state,
     content: DEFAULT_CONTENT,
     enabled: yearShown >= finalYear && progress === null,
-    watch: (siteId: Id) => void watch({ kind: 'site', id: siteId }),
+    watch: (siteId: Id) =>
+      roomsMode.current ? watchTown(siteId) : void watch({ kind: 'site', id: siteId }),
     watchTown,
     outpostCheck: (cell: number) => outpostCheck(state, DEFAULT_CONTENT, cell),
     found: (cell: number, name: string) =>
       void watch({ kind: 'outpost', cell, name: name === '' ? null : name }),
   };
-  return (
+  return withControls(
     <main className="wm-root" data-revision={revision}>
       <h1>Story Generator — world map</h1>
       {CONTENT_PROBLEMS.length > 0 && (
@@ -1450,6 +1511,17 @@ export function NextApp() {
               ) : people ? (
                 <PeopleRoom
                   person={nav.open?.kind === 'person' ? nav.open.id : null}
+                  page={nav.open && nav.open.kind !== 'person' ? nav.open : null}
+                  all={nav.all}
+                  onAll={(all) => go({ all }, 'replace')}
+                  onBack={() =>
+                    nav.trail.length > 1
+                      ? go({
+                          open: nav.trail[nav.trail.length - 2]!,
+                          trail: nav.trail.slice(0, -1),
+                        })
+                      : go({ open: null })
+                  }
                   onRoom={peopleRoom}
                   onFollow={followInTales}
                   onIndex={() => go({ open: null })}
@@ -1469,12 +1541,14 @@ export function NextApp() {
             hrefOf={hrefOf}
             siteActions={actions}
             onShow={(cell) => {
+              if (roomsMode.current && state.playback) return exploreMap(cell, finalYear);
               setPlayback(null);
               focusCell(cell);
               setFromLegends(true);
               setTab('map');
             }}
             onOpenOnMap={(cell, year) => {
+              if (roomsMode.current && state.playback) return exploreMap(cell, year);
               setPlayback(null);
               setSliderYear(year);
               if (cell !== null) focusCell(cell);
@@ -1503,7 +1577,7 @@ export function NextApp() {
         <SavePanel world={state} onLoad={(loaded, view) => void openSave(loaded, view)} />
         <AptitudePreview seed={state.seed} />
       </div>
-    </main>
+    </main>,
   );
 }
 

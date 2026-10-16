@@ -1,8 +1,123 @@
 // The shared room shell: the rail down the left (the tab bar on a phone) and the room beside it.
 // Tales, People, Book and Town all use it, so the rooms look and switch the same way.
 
-import type { ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { HISTORY_YEARS, type HistoryLength, type WorldSize } from '../map-view';
 import './rooms.css';
+
+/**
+ * What every room needs to make a new world: the world shown, the generator's progress, and the
+ * calls. The app provides it; the rail's world button opens the sheet that uses it.
+ */
+export interface WorldControls {
+  seed: string;
+  size: WorldSize;
+  years: HistoryLength;
+  /** Generation under way, with what it is doing. */
+  busy: { label: string; fraction: number } | null;
+  /** Why the last seed was refused, if it was. */
+  seedError: string | null;
+  /** Make a world and play its history in Tales. */
+  generate: (seed: string, size: WorldSize, years: HistoryLength) => void;
+  /** The classic viewer: map layers, saves and founding an outpost. */
+  classic: () => void;
+}
+export const WorldControlsContext = createContext<WorldControls | null>(null);
+
+const YEAR_WORDS: Record<HistoryLength, string> = {
+  250: '250 years',
+  500: '500 years (slower)',
+  1000: '1000 years (slowest)',
+};
+
+/** The sheet behind the rail's world button: seed, size and how many years of history. */
+function WorldSheet({ controls, onClose }: { controls: WorldControls; onClose: () => void }) {
+  const [seed, setSeed] = useState(controls.seed);
+  const [size, setSize] = useState<WorldSize>(controls.size);
+  const [years, setYears] = useState<HistoryLength>(controls.years);
+  const box = useRef<HTMLFormElement>(null);
+  // A click outside or Escape closes it.
+  useEffect(() => {
+    const away = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (box.current && !box.current.contains(target)) {
+        if (!(target as Element).closest?.('.rm-logo')) onClose();
+      }
+    };
+    const key = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', key);
+    };
+  }, [onClose]);
+  return (
+    <form
+      ref={box}
+      className="rm-sheet"
+      role="dialog"
+      aria-label="New world"
+      onSubmit={(event) => {
+        event.preventDefault();
+        controls.generate(seed, size, years);
+      }}
+    >
+      <h2>A new world</h2>
+      <label>
+        <span>Seed</span>
+        <input
+          value={seed}
+          spellCheck={false}
+          aria-invalid={controls.seedError !== null}
+          onChange={(event) => setSeed(event.target.value)}
+        />
+      </label>
+      {controls.seedError && (
+        <p role="alert" className="rm-err">
+          {controls.seedError}
+        </p>
+      )}
+      <label>
+        <span>Size</span>
+        <select value={size} onChange={(event) => setSize(Number(event.target.value) as WorldSize)}>
+          <option value={256}>256 × 256</option>
+          <option value={128}>128 × 128 (small)</option>
+        </select>
+      </label>
+      <label>
+        <span>History</span>
+        <select
+          value={years}
+          onChange={(event) => setYears(Number(event.target.value) as HistoryLength)}
+        >
+          {HISTORY_YEARS.map((y) => (
+            <option key={y} value={y}>
+              {YEAR_WORDS[y]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="rm-acts">
+        <button type="submit" className="p" disabled={controls.busy !== null}>
+          {controls.busy ? 'Making…' : 'Make the world'}
+        </button>
+        <button type="button" onClick={onClose}>
+          Close
+        </button>
+      </div>
+      <p className="rm-small">
+        Its history plays in Tales once made.{' '}
+        <button type="button" className="rm-classic" onClick={controls.classic}>
+          Classic viewer
+        </button>{' '}
+        keeps the map layers, saves and outposts.
+      </p>
+    </form>
+  );
+}
 
 export type RoomId = 'tales' | 'people' | 'book' | 'town' | 'world';
 
@@ -59,6 +174,11 @@ const ROOMS: { id: RoomId; label: string }[] = [
 
 /** The rail. `current` is the room on show; every other room calls `onRoom`. */
 export function Rail({ current, onRoom }: { current: RoomId; onRoom: (room: RoomId) => void }) {
+  const controls = useContext(WorldControlsContext);
+  const [sheet, setSheet] = useState(false);
+  // A new world arriving closes the sheet.
+  const made = controls ? `${controls.seed}|${controls.size}|${controls.years}` : '';
+  useEffect(() => setSheet(false), [made]);
   const item = (id: RoomId, label: string) => (
     <button
       key={id}
@@ -86,10 +206,25 @@ export function Rail({ current, onRoom }: { current: RoomId; onRoom: (room: Room
   );
   return (
     <nav className="rm-rail" aria-label="Rooms">
-      <b className="rm-logo">S1</b>
+      {controls ? (
+        <button
+          type="button"
+          className="rm-logo"
+          aria-label={`World ${controls.seed}: make a new world`}
+          aria-expanded={sheet}
+          title="Make a new world"
+          onClick={() => setSheet((o) => !o)}
+        >
+          {controls.seed.length > 6 ? `${controls.seed.slice(0, 5)}…` : controls.seed}
+          <small>new ▾</small>
+        </button>
+      ) : (
+        <b className="rm-logo">World</b>
+      )}
       {ROOMS.map((r) => item(r.id, r.label))}
       <span className="rm-grow" />
       {item('world', 'World')}
+      {controls && sheet && <WorldSheet controls={controls} onClose={() => setSheet(false)} />}
     </nav>
   );
 }
@@ -109,10 +244,17 @@ export function RoomShell({
   'data-testid'?: string;
   'data-mode'?: string;
 }) {
+  const busy = useContext(WorldControlsContext)?.busy ?? null;
   return (
     <div className={`rm-root ${className}`} {...rest}>
       <Rail current={current} onRoom={onRoom} />
       {children}
+      {busy && (
+        <div className="rm-busy" role="status" aria-live="polite">
+          <i style={{ width: `${Math.round(busy.fraction * 100)}%` }} />
+          <span>{busy.label}</span>
+        </div>
+      )}
     </div>
   );
 }
