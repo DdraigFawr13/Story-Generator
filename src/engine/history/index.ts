@@ -22,6 +22,7 @@ import { runGoods } from './goods';
 import { runFamine, runHarvest } from './harvest';
 import { buildLinks, createLinkSearch } from './links';
 import { runExpansion, runMigration } from './migration';
+import { initLineages, runLineages } from './lineages';
 import { initNotables, runNotables } from './notables';
 import { runItems } from './items';
 import { initPlaces, runExpeditions, runPlaces } from './places';
@@ -72,6 +73,7 @@ export function runHistory(
   const links = buildLinks(cells, [...world.sites.values()], content.history, linkSearch);
   const run = createRun(world, content, search, linkSearch, links);
   initNotables(run);
+  initLineages(run);
   initFaiths(run);
   initPlaces(run);
   world.snapshots = [takeSnapshot(world, cells, 0)];
@@ -98,6 +100,7 @@ export function runHistory(
     runExpeditions(run);
     runCivilWars(run);
     runColleges(run);
+    runLineages(run);
     runCityStates(run);
     runFaith(run);
     if (year % DECADE === 0) runItems(run);

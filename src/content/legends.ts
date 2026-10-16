@@ -50,6 +50,13 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'spell_cast',
       'mage_went_to_study',
       'mage_came_home',
+      'apprenticed',
+      'apprentice_taken',
+      'spell_mastered',
+      'book_to_apprentice',
+      'book_burned',
+      'lore_lost',
+      'lore_regained',
     ],
   },
   {

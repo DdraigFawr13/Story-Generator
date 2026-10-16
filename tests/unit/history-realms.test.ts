@@ -113,14 +113,14 @@ describe('colleges and spells', () => {
 describe('succession wars', () => {
   const D = DEFAULT_CONTENT;
   const cw = D.history.civilWar;
-  // Every beaten claimant rises; re-pinned for M5.6 dragons: history drift; CW-43 had a throne seized, a revolt crushed and a split until expeditions (M4.7, history drift: no civil war at all); re-pinned: CW-2 has all three (CW-13 lost its ending); CW-2 lost its endings to religion (faiths and holy wars), CW-24 has all three.
+  // Every beaten claimant rises; re-pinned for M5.6 dragons: history drift; CW-43 had a throne seized, a revolt crushed and a split until expeditions (M4.7, history drift: no civil war at all); re-pinned: CW-2 has all three (CW-13 lost its ending); CW-2 lost its endings to religion (faiths and holy wars), CW-24 had all three until spellbooks and lineages (M5.2, history drift); M5.2 lineages: CW-37 lost its endings to history drift; CW-116 has all three.
   const RESTLESS = {
     ...D,
     history: { ...D.history, civilWar: { ...cw, chance: 1, minSites: 2 } },
   };
   let restless: WorldState | undefined;
   const w = () =>
-    (restless ??= generateWorld('CW-24', { width: 64, height: 64, historyYears: 250 }, RESTLESS));
+    (restless ??= generateWorld('CW-116', { width: 64, height: 64, historyYears: 250 }, RESTLESS));
   const of = (type: string) => w().events.filter((e) => e.type === type);
   const find = (id: number) => w().events.find((e) => e.id === id);
   const named = (name: unknown) => [...w().civs.values()].find((c) => c.name === name);

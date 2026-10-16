@@ -620,7 +620,7 @@ After the Phase 3 playtest Morgan asked for additions ranked by value and coding
 6. **Succession wars and dynasties** (Phase 6, pulled forward; value 5, M): built 2026-10-14 (civil wars, splits, ruling houses ended); the family tree in Legends is still to come.
 7. **Dragons and great beasts as individuals** (M5.6; value 4, M): dragons built 2026-10-14, up to three at once; other great beasts still to come.
 8. **Religion: gods, priests, holy wars** (Phase 7, pulled forward; value 4, M): built 2026-10-14 in history (faiths, high priests, prophets, schisms, conversion, holy wars); the Legends screens for it come with the UI redesign.
-9. **Spellbooks and lineages** (M5.2; value 4, M).
+9. **Spellbooks and lineages** (M5.2; value 4, M): built 2026-10-16 (apprenticeships, spells, spellbooks, lost and found lore, the People room's Magic tab).
 10. **Court intrigue** (Phase 6 "Legends in politics", pulled forward; value 4, M).
 11. **Story threads view** (M4.6; value 2, S).
 12. **Expeditions and perilous places** (M4.7; value 5, L): history part built 2026-10-14 (places, barrows, hoards, expeditions, beast parts, the restless dead); the map layer and Places page are still to come.

@@ -2,6 +2,7 @@
 // holder is a notable, or null while it lies lost at `lostAt`. Every event about an item is kept in
 // `Item.deeds`; holders keep the make, steal and find events among theirs.
 
+import type { AbilityDef } from '../core/content-types';
 import type { Id, Item, Person, Site } from '../core/types';
 import {
   addDeed,
@@ -27,6 +28,28 @@ export function itemsHeldBy(run: HistoryRun, person: Person): Item[] {
   const out: Item[] = [];
   for (const item of run.world.items.values()) if (item.holder === person.id) out.push(item);
   return out;
+}
+
+/** Power a spell asks for: 1 is a cantrip, 4 gifted, 8 strong, 13 exceptional (M5.2). */
+export const spellPower = (ability: AbilityDef): number => ability.requirements.power ?? 0;
+
+/** True for a magic spell above a cantrip: the lore that can be lost from the world. */
+export function isSpell(run: HistoryRun, id: string): boolean {
+  const ability = run.lore.byId.get(id);
+  return ability !== undefined && spellPower(ability) > 1;
+}
+
+/** Unburned spellbooks a person holds, in id order. */
+export function spellbooksHeldBy(run: HistoryRun, person: Person): Item[] {
+  return itemsHeldBy(run, person).filter((i) => i.spells !== undefined && i.burned === undefined);
+}
+
+/** Spells above cantrips a person knows or holds in books, without repeats. */
+export function spellsHeldBy(run: HistoryRun, person: Person): string[] {
+  const out = new Set(person.knownAbilities.filter((id) => isSpell(run, id)));
+  for (const book of spellbooksHeldBy(run, person))
+    for (const id of book.spells ?? []) if (isSpell(run, id)) out.add(id);
+  return [...out];
 }
 
 const NUMERALS = ['II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
@@ -129,7 +152,14 @@ function makeArtifacts(run: HistoryRun): void {
   }
 }
 
-function writeBook(run: HistoryRun, writer: Person, form: string, site: Site, scholar: boolean) {
+function writeBook(
+  run: HistoryRun,
+  writer: Person,
+  form: string,
+  site: Site,
+  scholar: boolean,
+  lore?: { school: string; spells: string[] },
+) {
   const rules = run.content.notables;
   const pattern = run.rng.notables.pick(rules.bookNames);
   // Lower case, so "the sailing-lore of Torfa" reads well inside a sentence.
@@ -138,6 +168,11 @@ function writeBook(run: HistoryRun, writer: Person, form: string, site: Site, sc
     fill(rules.bookNames, pattern, { form, writer: writer.name, site: site.name }),
   );
   const item = newItem(run, { kind: 'book', name, form, makerId: writer.id, holder: writer.id });
+  // A mage's book holds the spells of their school they know (M5.2).
+  if (lore) {
+    item.school = lore.school;
+    item.spells = lore.spells;
+  }
   const event = run.emit({
     type: 'book_written',
     actors: [writer.id],
@@ -166,7 +201,19 @@ function writeBooks(run: HistoryRun): void {
     if (!site) continue;
     const school = primarySchool(person);
     const forms = (school === undefined ? undefined : rules.bookForms[school]) ?? mundane;
-    writeBook(run, person, rng.notables.pick(forms), site, false);
+    const known =
+      school === undefined
+        ? []
+        : person.knownAbilities.filter((id) => run.lore.byId.get(id)?.school === school);
+    const spellbook = known.some((id) => isSpell(run, id));
+    writeBook(
+      run,
+      person,
+      rng.notables.pick(forms),
+      site,
+      false,
+      spellbook && school !== undefined ? { school, spells: known } : undefined,
+    );
   }
   for (const site of liveSites(run)) {
     if (site.kind !== 'temple') continue;
@@ -252,10 +299,36 @@ function heirOf(run: HistoryRun, dead: Person): Person | undefined {
   }
 }
 
+/** The latest of a mage's apprentices who lives and is grown (M5.2). */
+function latestApprentice(run: HistoryRun, dead: Person): Person | undefined {
+  const ids = dead.lore?.apprentices ?? [];
+  for (let i = ids.length - 1; i >= 0; i -= 1) {
+    const person = livingPerson(run, ids[i]);
+    if (person && isAdult(run, person)) return person;
+  }
+  return undefined;
+}
+
 /** The dead holder's items go to an heir, a spouse, the ruler or are lost where they died. */
 export function passItems(run: HistoryRun, dead: Person, deathEvent: Id): void {
   const rules = run.content.notables;
+  const apprentice = latestApprentice(run, dead);
   for (const item of itemsHeldBy(run, dead)) {
+    const where = siteOf(run, dead)?.name ?? 'the wilds';
+    // A mage's spellbooks go to their living apprentice (M5.2).
+    if (apprentice && item.spells !== undefined) {
+      item.holder = apprentice.id;
+      const event = run.emit({
+        type: 'book_to_apprentice',
+        actors: [dead.id, apprentice.id],
+        place: placeOf(run, dead),
+        causes: [deathEvent, ...item.deeds.slice(-1)],
+        data: { item: item.name, from: dead.name, heir: apprentice.name, site: where },
+      });
+      item.deeds.push(event.id);
+      addDeed(apprentice, event.id);
+      continue;
+    }
     const spouse = dead.family.spouses.map((id) => livingPerson(run, id)).find((p) => p);
     let heir = heirOf(run, dead) ?? spouse;
     if (!heir) {
@@ -264,7 +337,6 @@ export function passItems(run: HistoryRun, dead: Person, deathEvent: Id): void {
       if (ruler && run.rng.notables.chance(rules.itemToRulerChance)) heir = ruler;
     }
     const causes = [deathEvent, ...item.deeds.slice(-1)];
-    const where = siteOf(run, dead)?.name ?? 'the wilds';
     if (heir) {
       item.holder = heir.id;
       const event = run.emit({

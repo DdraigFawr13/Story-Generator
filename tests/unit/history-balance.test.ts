@@ -145,6 +145,12 @@ describe('new sites', () => {
       expandChance: 1,
       expandCooldown: 1,
       expandRange: [5, 12],
+      // M5.2 lineages: history drift gave this strip a civil war and a free city, whose sites keep their own civ's cooldown; the check is for one civ.
+      civilWar: { ...DEFAULT_CONTENT.history.civilWar, chance: 0 },
+      cityStates: {
+        ...DEFAULT_CONTENT.history.cityStates,
+        secede: { ...DEFAULT_CONTENT.history.cityStates.secede, chance: 0 },
+      },
     };
     const world = strip([{ x: 50, pop: 400, capacity: 500 }], 90);
     runHistory(world, withHistory(rules));
