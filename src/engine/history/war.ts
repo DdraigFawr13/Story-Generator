@@ -2,7 +2,7 @@
 // attacker campaigns against one linked site, a battle settles it on strength and luck, and
 // a win conquers or razes the site. Strength is in soldier equivalents (R-24).
 
-import type { Civ, Id, Person, Site } from '../core/types';
+import type { Civ, Id, Person, SimEvent, Site } from '../core/types';
 import { timberShort } from './goods';
 import { cultureOf } from './state';
 import {
@@ -22,6 +22,7 @@ import {
 } from './notables';
 import { civLosesSite, ruinSite } from './abandon';
 import { allyAid, pactStrength } from './city-states';
+import { swearVassal } from './diplomacy';
 import { faithAfterTaken, faithOf, proclaimHolyWar } from './faith';
 import { decideCivilWar, splitRealm } from './civil-war';
 import { bandCount, removePeople } from './pop';
@@ -78,7 +79,7 @@ export function civStrength(run: HistoryRun, civ: Civ): number {
 }
 
 /** Linked site pairs between two civs: sites of `b` that touch a site of `a`. */
-function reachable(run: HistoryRun, a: Civ, b: Civ): Site[] {
+export function reachable(run: HistoryRun, a: Civ, b: Civ): Site[] {
   const out: Site[] = [];
   for (const site of civSites(run, b)) {
     const touches = (run.links.get(site.id) ?? []).some((id) => {
@@ -142,6 +143,8 @@ function declareWars(run: HistoryRun): void {
     for (const b of civs) {
       if (b.id === a.id || atWar(run, a.id, b.id)) continue;
       if (run.year < (run.truce.get(pairKey(a.id, b.id)) ?? 0)) continue;
+      // An overlord and its vassal settle their quarrels by revolt, not by a declaration.
+      if (a.overlord === b.id || b.overlord === a.id) continue;
       const score = warScore(run, a, b, strengths, backed);
       if (score >= best) {
         best = score;
@@ -149,34 +152,39 @@ function declareWars(run: HistoryRun): void {
       }
     }
     if (!target) continue;
-    const causes = grievanceEventsOf(run, a.id, target.id).slice(-3);
-    const capital = run.world.sites.get(a.capital);
-    const [attackerCaptain, defenderCaptain] = startCaptains(run, a, target);
-    const event = run.emit({
-      type: 'war_declared',
-      place: capital?.cell ?? null,
-      actors: [attackerCaptain, defenderCaptain].flatMap((p) => (p ? [p.id] : [])),
-      causes,
-      data: { civ: a.name, enemy: target.name, war: run.wars.length + 1 },
-    });
-    const war: War = {
-      id: run.wars.length + 1,
-      attacker: a.id,
-      defender: target.id,
-      started: run.year,
-      cause: event.id,
-      lastEvent: event.id,
-      dead: 0,
-      attackerDead: 0,
-      defenderDead: 0,
-      attackerAdults: adultsOf(civSites(run, a)),
-      defenderAdults: adultsOf(civSites(run, target)),
-      attackerCaptain: attackerCaptain?.id,
-      defenderCaptain: defenderCaptain?.id,
-    };
-    run.wars.push(war);
-    proclaimHolyWar(run, war, a, target, event);
+    startWar(run, a, target, grievanceEventsOf(run, a.id, target.id).slice(-3));
   }
+}
+
+/** Opens a war: the war_declared event, the war record and a holy war if the faiths call for one. */
+export function startWar(run: HistoryRun, attacker: Civ, defender: Civ, causes: Id[]): War {
+  const capital = run.world.sites.get(attacker.capital);
+  const [attackerCaptain, defenderCaptain] = startCaptains(run, attacker, defender);
+  const event = run.emit({
+    type: 'war_declared',
+    place: capital?.cell ?? null,
+    actors: [attackerCaptain, defenderCaptain].flatMap((p) => (p ? [p.id] : [])),
+    causes,
+    data: { civ: attacker.name, enemy: defender.name, war: run.wars.length + 1 },
+  });
+  const war: War = {
+    id: run.wars.length + 1,
+    attacker: attacker.id,
+    defender: defender.id,
+    started: run.year,
+    cause: event.id,
+    lastEvent: event.id,
+    dead: 0,
+    attackerDead: 0,
+    defenderDead: 0,
+    attackerAdults: adultsOf(civSites(run, attacker)),
+    defenderAdults: adultsOf(civSites(run, defender)),
+    attackerCaptain: attackerCaptain?.id,
+    defenderCaptain: defenderCaptain?.id,
+  };
+  run.wars.push(war);
+  proclaimHolyWar(run, war, attacker, defender, event);
+  return war;
 }
 
 /** Defence multiplier of a site: its features, fortress kind, capital and a free city's walls. */
@@ -242,6 +250,7 @@ function conquer(
     data: { site: site.name, civ: attacker.name, loser: defender.name },
   });
   war.lastEvent = event.id;
+  if (!war.civil) war.taken = (war.taken ?? 0) + 1;
   faithAfterTaken(run, { site, attacker, defender, event, razed: false, war, lead });
   const fell = civLosesSite(run, defender, site, event.id);
   siteLost(run, { site, attacker, defender, event: event.id, razed: false, lead });
@@ -265,6 +274,7 @@ function raze(
     data: { site: site.name, civ: attacker.name, loser: defender.name, dead: killed },
   });
   war.lastEvent = event.id;
+  if (!war.civil) war.taken = (war.taken ?? 0) + 1;
   faithAfterTaken(run, { site, attacker, defender, event, razed: true, war, lead });
   const fell = civLosesSite(run, defender, site, event.id);
   siteLost(run, { site, attacker, defender, event: event.id, razed: true, lead });
@@ -426,24 +436,37 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ, flipp
   else conquer(run, war, target, attacker, defender, battle.id, lead);
 }
 
-function endWar(run: HistoryRun, war: War, attacker: Civ | undefined, defender: Civ | undefined) {
+/**
+ * Ends a war. `by` is the event that made the peace (a wedding): it says what `peace_made` would,
+ * so that line is left out, but the truce and the cleared grievance are the same.
+ */
+export function endWar(
+  run: HistoryRun,
+  war: War,
+  attacker: Civ | undefined,
+  defender: Civ | undefined,
+  by?: SimEvent,
+) {
   war.ended = run.year;
   const fell = attacker === undefined || defender === undefined;
   if (!fell && war.civil) splitRealm(run, war, attacker, defender);
   else if (!fell) {
-    run.emit({
-      type: 'peace_made',
-      place: run.world.sites.get(attacker.capital)?.cell ?? null,
-      causes: [war.lastEvent],
-      data: {
-        war: war.id,
-        civ: attacker.name,
-        enemy: defender.name,
-        dead: war.dead,
-        years: run.year - war.started,
-      },
-    });
+    const peace =
+      by ??
+      run.emit({
+        type: 'peace_made',
+        place: run.world.sites.get(attacker.capital)?.cell ?? null,
+        causes: [war.lastEvent],
+        data: {
+          war: war.id,
+          civ: attacker.name,
+          enemy: defender.name,
+          dead: war.dead,
+          years: run.year - war.started,
+        },
+      });
     run.truce.set(pairKey(war.attacker, war.defender), run.year + run.rules.peaceYears);
+    if (!by) swearVassal(run, war, attacker, defender, peace);
   }
   clearGrievance(run, war.attacker, war.defender);
 }
@@ -474,9 +497,13 @@ function fightWars(run: HistoryRun): void {
   }
 }
 
-/** Yearly: declare wars, fight the ones under way, then legends of quarrelling peoples may duel. */
-export function runWar(run: HistoryRun): void {
+/**
+ * Yearly: declare wars, let `called` answer them (allies called to arms), fight the ones under way,
+ * then legends of quarrelling peoples may duel.
+ */
+export function runWar(run: HistoryRun, called?: (run: HistoryRun) => void): void {
   declareWars(run);
+  called?.(run);
   fightWars(run);
   legendFeuds(run);
 }

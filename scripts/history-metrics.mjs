@@ -72,6 +72,15 @@ export function notableMetrics(world, n, DAYS_PER_YEAR) {
     legendsBribed: n.legend_bribed ?? 0,
     bountiesSet: n.bounty_set ?? 0,
     legendsHunted: n.legend_hunted ?? 0,
+    // Diplomacy: alliances sworn, calls answered or refused, betrayals, vassals and peace by marriage.
+    alliancesSworn: n.alliance_sworn ?? 0,
+    alliesAnswered: n.ally_answered ?? 0,
+    callsRefused: n.call_refused ?? 0,
+    alliancesBetrayed: n.alliance_betrayed ?? 0,
+    vassalsSworn: n.vassal_sworn ?? 0,
+    vassalRevolts: n.vassal_revolt ?? 0,
+    vassalsFreed: n.vassal_freed ?? 0,
+    peaceByMarriage: n.peace_by_marriage ?? 0,
     // Faiths: schisms, holy wars, prophets, conversions and wrongs done to holy places.
     faiths: world.faiths.size,
     schisms: n.faith_schism ?? 0,

@@ -1290,7 +1290,7 @@ const inMourning = (run: HistoryRun, p: Person) => {
   return late !== undefined && run.year - late.died! < run.content.notables.mourningYears;
 };
 
-const eligibleToMarry = (run: HistoryRun, p: Person) =>
+export const eligibleToMarry = (run: HistoryRun, p: Person) =>
   p.civId != null &&
   isAdult(run, p) &&
   !isElder(run, p) &&
@@ -1298,7 +1298,7 @@ const eligibleToMarry = (run: HistoryRun, p: Person) =>
   !inMourning(run, p);
 
 /** True if either has had a spouse of the other's name: a second "Erilu" reads as the same one. */
-function sharesSpouseName(run: HistoryRun, a: Person, b: Person): boolean {
+export function sharesSpouseName(run: HistoryRun, a: Person, b: Person): boolean {
   const named = (p: Person, name: string) =>
     p.family.spouses.some((id) => run.world.people.get(id)?.name === name);
   return named(a, b.name) || named(b, a.name);
@@ -1345,6 +1345,10 @@ function marriageEvent(run: HistoryRun, a: Person, b: Person, otherCiv: Civ | un
   });
   addDeed(a, event.id);
   addDeed(b, event.id);
+  // A match between two peoples is remembered: it can seal an alliance (diplomacy.ts).
+  if (otherCiv && civA && otherCiv.id !== civA.id)
+    run.diplomacy.marriages.set(pairKey(civA.id, otherCiv.id), { year: run.year, event: event.id });
+  return event;
 }
 
 /** A new spouse for a notable, of the other sex and about their age, living beside them. */

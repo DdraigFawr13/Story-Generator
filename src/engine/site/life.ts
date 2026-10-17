@@ -1127,8 +1127,11 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
                   : p.home
                 : activity === 'fight'
                   ? fighting.get(p)!
-                  : activity === 'eat'
-                    ? p.table
+                  : // The sick eat in bed: a loner abed is brought food, not sent to the hall.
+                    activity === 'eat'
+                    ? detail.abed
+                      ? p.home
+                      : p.table
                     : activity === 'sleep' || activity === 'despair'
                       ? p.home
                       : activity === 'work'

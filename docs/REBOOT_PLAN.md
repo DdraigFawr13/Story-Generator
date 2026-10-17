@@ -624,7 +624,7 @@ After the Phase 3 playtest Morgan asked for additions ranked by value and coding
 10. **Court intrigue** (Phase 6 "Legends in politics", pulled forward; value 4, M): built 2026-10-16 (plots and assassinations, honours, seats seized by legends, betrayal, bribes, bounties and hunts); courting or fearing the dragons is still to come.
 11. **Story threads view** (M4.6; value 2, S).
 12. **Expeditions and perilous places** (M4.7; value 5, L): history part built 2026-10-14 (places, barrows, hoards, expeditions, beast parts, the restless dead); the map layer and Places page are still to come.
-13. **Diplomacy: alliances, vassalage, betrayal** (Phase 6; value 5, L).
+13. **Diplomacy: alliances, vassalage, betrayal** (Phase 6; value 5, L): built 2026-10-17 in history (alliances, calls to arms, betrayal, vassals and revolts, peace by marriage); showing vassals on the map and in the People room is still to come.
 14. **Trade between peoples in history** (M4.4; value 3, M).
 15. **The world keeps moving while you watch** (M4.1–M4.3; value 4, L).
 16. **Armies and settlers move on the map** (M4.11; value 3, S; added 2026-10-14 from Morgan's playback notes): one host per side marches through a war and meets the enemy's host, and settlers walk to the land they found.
@@ -782,7 +782,7 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 ### Phase 6 — Kingdoms (6–8 PRs)
 - Governments (chiefdom, monarchy, council, theocracy), nobles and titles, legitimacy, factions and succession disputes.
 - **Succession wars and dynasties** (pulled forward 2026-10-14, build order 6): a disputed succession can become a civil war; a pretender raises part of the realm, the realm may split in two or a far town break away as a free city, and a dynasty can end with a new house taking the seat. Dynasties get names and a family tree in the legends browser. Built 2026-10-14 except the family tree: rules in `content/realms.ts` (`CIVIL_WARS`), engine in `engine/history/civil-war.ts`.
-- Diplomacy, alliances, vassalage, marriages between houses, betrayals (build order 13, added 2026-10-14: a sworn alliance binds a people to join a war, a lost war can make a people a vassal, a marriage between houses can end a feud, and a betrayal comes when the allies' values drift apart).
+- Diplomacy, alliances, vassalage, marriages between houses, betrayals (build order 13, added 2026-10-14: a sworn alliance binds a people to join a war, a lost war can make a people a vassal, a marriage between houses can end a feud, and a betrayal comes when the allies' values drift apart). Built 2026-10-17: rules in `content/diplomacy.ts`, engine in `engine/history/diplomacy.ts`.
 - Armies, battles and sieges; occupations and rebellions.
 - **Legends in politics** (court intrigue, pulled forward 2026-10-14, build order 10; assassination is a notable's deed with cause links back to the grudge): kingdoms court, fear, bribe or try to assassinate the 0–3 living legends. A legend can be a ruler, an ally or a deterrent, but a coalition or a larger host can still bring one down. A legend may seize a seat (a succession dispute won by power, not fame), betray their ruler, or draw a bounty and a coalition against the civ that shelters them (target story 7; added 2026-10-13). Their deaths are world-shaking events. The same applies to the dragon (M5.6): kingdoms court it, fear it or put a bounty on it. Built 2026-10-16 except the dragon part: rules in `content/intrigue.ts`, engine in `engine/history/intrigue.ts`.
 - Deep trade, roads and inequality.

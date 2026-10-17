@@ -2163,6 +2163,8 @@ export interface HistoryRules {
   civilWar: CivilWarRules;
   /** Court intrigue: plots, legends in politics, bribes, bounties and hunts. */
   intrigue: IntrigueRules;
+  /** Alliances, calls to arms, betrayal, vassalage and peace by marriage. */
+  diplomacy: DiplomacyRules;
 }
 
 /** Spellbooks and lineages (M5.2): apprenticeship, learning, books and lost lore (lineages.ts). */
@@ -2345,6 +2347,89 @@ export interface CivilWarRules {
   luck: number;
   /** Prefixes for a claimant's realm whose name an earlier one used ("Second"). */
   ordinals: string[];
+}
+
+/** Diplomacy (diplomacy.ts): sworn alliances, calls to arms, betrayal, vassalage, peace by marriage. */
+export interface DiplomacyRules {
+  alliance: {
+    /** Chance each decade, times the number of reasons, that a civ swears alliance with its best candidate. */
+    chance: number;
+    /** Most alliances a civ keeps. */
+    maxAllies: number;
+    /** Grievance either side may hold against the other and still swear. */
+    maxGrievance: number;
+    /** Greatest strangeness of cultures that still swear. */
+    maxStrangeness: number;
+    /** Grievance both hold against a third civ that makes it a shared enemy. */
+    sharedEnemy: number;
+    /** Years a cross-people marriage counts as a tie. */
+    marriageYears: number;
+    /** Share of the ally's strength lent in a war it answered (also weighs in deterrence). */
+    aidShare: number;
+  };
+  call: {
+    /** Chance an ally answers a call at honour 5, plus per honour point above 5 and for one faith. */
+    answerBase: number;
+    answerHonour: number;
+    sameFaith: number;
+    /** Grievance the defender holds against an ally that stayed away, and the attacker against one that came. */
+    grievanceRefused: number;
+    grievanceJoined: number;
+  };
+  betrayal: {
+    /** Decade chance times the drift. */
+    chance: number;
+    /** Drift added when the gods parted, the rulers are rivals, or the weaker side is weak. */
+    faithSplit: number;
+    rivals: number;
+    weak: number;
+    /** The weaker side is weak under this share of the stronger's strength. */
+    weakRatio: number;
+    /** Years after swearing or answering a call before an ally may betray. */
+    graceYears: number;
+    /** The betrayer marches on the victim when this many times as strong. */
+    attackRatio: number;
+    /** Grievance the victim holds against the betrayer. */
+    grievance: number;
+  };
+  vassal: {
+    /** Sites the winner must take, and times the loser's strength it must have, to make a vassal. */
+    minTaken: number;
+    strengthRatio: number;
+    /** Chance the loser bends the knee. */
+    chance: number;
+    /** Share of a vassal's food its sites send the overlord's capital each year. */
+    tributeShare: number;
+    /** Years of fealty before a revolt can start. */
+    minYears: number;
+    /** Yearly revolt chance, times `overlordAtWar` while the overlord fights elsewhere. */
+    revoltChance: number;
+    overlordAtWar: number;
+    /** A vassal this share as strong as its overlord may revolt. */
+    revoltRatio: number;
+    /** Grievance the vassal holds against the overlord after a revolt. */
+    grievanceRevolt: number;
+  };
+  marriagePeace: {
+    /** Yearly chance, times the two kin values over 10, that a wedding ends a war. */
+    chance: number;
+    /** Years a war runs before a wedding can end it. */
+    minYears: number;
+    /** Chance the two peoples swear alliance on the spot. */
+    allianceChance: number;
+  };
+  phrases: {
+    /** Why an alliance was sworn; `{enemy}`, `{faith}`, `{a}` and `{b}` (the spouses). */
+    why: { enemy: string; faith: string; marriage: string; trade: string };
+    /** Why an alliance was betrayed; `{victim}`. */
+    betrayed: { faith: string; rivals: string; weak: string; strange: string };
+    /** How it ended: marched on them, or only renounced the oath (full and short forms). */
+    outcome: { war: string; renounced: string };
+    outcomeShort: { war: string; renounced: string };
+    /** `{n}` years, and one year. */
+    years: string;
+    oneYear: string;
+  };
 }
 
 /** Court intrigue (intrigue.ts): plots and killings, legends honoured, feared, bribed and hunted. */

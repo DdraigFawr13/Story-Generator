@@ -497,6 +497,20 @@ export const DEED_GROUPS = [
     ],
   },
   {
+    id: 'diplomacy',
+    label: 'Oaths and alliances',
+    types: [
+      'alliance_sworn',
+      'ally_answered',
+      'call_refused',
+      'alliance_betrayed',
+      'vassal_sworn',
+      'vassal_revolt',
+      'vassal_freed',
+      'peace_by_marriage',
+    ],
+  },
+  {
     id: 'works',
     label: 'Works',
     types: ['artifact_made', 'book_written', 'site_founded', 'outpost_founded', 'dynasty_founded'],

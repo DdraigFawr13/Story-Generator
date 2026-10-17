@@ -27,6 +27,8 @@ export const ANNALS: AnnalRules = {
       'succession_disputed',
       'throne_seized',
       'seat_seized',
+      'alliance_betrayed',
+      'vassal_revolt',
       'revolt_crushed',
       'realm_split',
     ],

@@ -522,6 +522,18 @@ for (const r of rows) {
 }
 
 process.stdout.write(
+  '\ndiplomacy: seed | alliances sworn | answered / refused | betrayed | vassals / revolts / freed | peace by marriage\n',
+);
+for (const r of rows) {
+  const h = r.history;
+  process.stdout.write(
+    `${r.seed.padEnd(4)} | ${String(h.alliancesSworn).padStart(3)} | ${String(h.alliesAnswered).padStart(3)} / ${String(h.callsRefused).padStart(3)} | ` +
+      `${String(h.alliancesBetrayed).padStart(3)} | ${String(h.vassalsSworn).padStart(3)} / ${String(h.vassalRevolts).padStart(3)} / ${String(h.vassalsFreed).padStart(3)} | ` +
+      `${String(h.peaceByMarriage).padStart(3)}\n`,
+  );
+}
+
+process.stdout.write(
   '\nfaith: seed | faiths | schisms | prophets | heresies | holy wars | conversions | rulers converted | desecrations | forgotten\n',
 );
 for (const r of rows) {

@@ -633,6 +633,8 @@ export interface Civ {
   houseRulers?: number;
   /** The faith the realm keeps (faith.ts); filled at year 0 and for realms born later. */
   faithId?: Id;
+  /** The realm this one pays tribute to while it is a vassal (diplomacy.ts); cleared on revolt or fall. */
+  overlord?: Id;
 }
 
 /** A faith (religion engine): one per culture religion at the start, more by schism. Plain data. */
