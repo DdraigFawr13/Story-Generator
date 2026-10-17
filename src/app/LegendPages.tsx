@@ -18,6 +18,7 @@ import {
   type LegendRef,
   type SimEvent,
 } from '../engine';
+import { allFaiths, andList, godsText } from './faiths';
 import { allOrders, memberWord, personOrder, type OrderInfo } from './orders';
 import { allPlaces, dangerWord, emptiedBy, outcomeText, placeWhat } from './places';
 import { WatchCard } from './EmbarkCards';
@@ -41,6 +42,8 @@ const RACE_FIGURES = 6;
 /** Names listed on a page before "and n more". */
 const MEMBERS_SHOWN = 12;
 const PLACES_SHOWN = 8;
+/** Towns of a faith outside its realms named on its page; more are only counted. */
+const OTHER_TOWNS_SHOWN = 3;
 /** Sibling events listed on an event page. */
 const SIBLINGS_SHOWN = 8;
 /** The inline "why?" tree stops this many levels below a page's own lines. */
@@ -374,6 +377,7 @@ export function PageView({
   if (page.kind === 'race') return <RacePage id={page.id} />;
   if (page.kind === 'place') return <PlacePage id={page.id} />;
   if (page.kind === 'order') return <OrderPage id={page.id} />;
+  if (page.kind === 'faith') return <FaithPage id={page.id} />;
   return <EntityPage page={page} all={all} onAll={onAll} bare={bare ?? false} />;
 }
 
@@ -494,6 +498,10 @@ function EntityPage({
         'Former orders',
         <LinkList refs={orderRefs(formerOrders)} limit={PLACES_SHOWN} />,
       ]);
+    const faith = civ.faithId === undefined ? undefined : world.faiths.get(civ.faithId);
+    if (faith) {
+      facts.push(['Faith', <Link to={{ kind: 'faith', id: faith.id }}>{faith.name}</Link>]);
+    }
   } else if (page.kind === 'site') {
     const site = world.sites.get(page.id)!;
     const state = sitesAt.get(site.id);
@@ -522,6 +530,24 @@ function EntityPage({
     );
     if (seats.length > 0)
       facts.push(['Seat of', <LinkList refs={orderRefs(seats)} limit={PLACES_SHOWN} />]);
+    const faithId = site.faithId ?? (owner ? owner.faithId : undefined);
+    const faith = faithId === undefined ? undefined : world.faiths.get(faithId);
+    if (faith) {
+      facts.push(['Faith', <Link to={{ kind: 'faith', id: faith.id }}>{faith.name}</Link>]);
+    }
+    // The faiths whose holy city it is, or was until it was taken.
+    const holy = allFaiths(world).filter(
+      (f) =>
+        f.seatSiteId === site.id || (f.seatSiteId === undefined && f.seatLost?.site === site.name),
+    );
+    const held = holy.filter((f) => f.seatSiteId === site.id);
+    const once = holy.filter((f) => f.seatSiteId !== site.id);
+    const faithRefs = (fs: typeof holy) =>
+      fs.map((f) => ({ to: { kind: 'faith', id: f.id } as PageRef, label: f.name }));
+    if (held.length > 0)
+      facts.push(['Holy city of', <LinkList refs={faithRefs(held)} limit={PLACES_SHOWN} />]);
+    if (once.length > 0)
+      facts.push(['Once holy city of', <LinkList refs={faithRefs(once)} limit={PLACES_SHOWN} />]);
   } else if (page.kind === 'person') {
     const person = world.people.get(page.id)!;
     facts.push([
@@ -1377,6 +1403,294 @@ function OrderPage({ id }: { id: Id }) {
         <span>Chronicle</span>
       </div>
       <Chronicle ids={order.deeds} empty="Nothing on record." />
+    </>
+  );
+}
+
+function FaithPage({ id }: { id: Id }) {
+  const { world, onShow } = useLegends();
+  const all = useMemo(() => allFaiths(world), [world]);
+  const faith = useMemo(() => all.find((f) => f.id === id), [all, id]);
+  if (!faith) return <p className="lg-empty">Unknown faith.</p>;
+  const parent = faith.parentId === undefined ? undefined : world.faiths.get(faith.parentId);
+  const founder = faith.founderId === undefined ? undefined : world.people.get(faith.founderId);
+  const seat = faith.seatSiteId === undefined ? undefined : world.sites.get(faith.seatSiteId);
+  const holder = faith.seatHolder === undefined ? undefined : world.civs.get(faith.seatHolder);
+  const lost = faith.seatLost;
+  const forgotten = faith.forgotten;
+  const n = faith.realms.length;
+  const towns = `${faith.towns} ${plural(faith.towns, 'town', 'towns')}`;
+  const faithLink = (fid: Id) => {
+    const f = world.faiths.get(fid);
+    return f ? <Link to={{ kind: 'faith', id: fid }}>{f.name}</Link> : null;
+  };
+  const siteLink = (sid: Id) => {
+    const s = world.sites.get(sid);
+    return s ? <Link to={{ kind: 'site', id: sid }}>{s.name}</Link> : null;
+  };
+  const civLink = (cid: Id) => {
+    const c = world.civs.get(cid);
+    return c ? <Link to={{ kind: 'civ', id: cid }}>{c.name}</Link> : null;
+  };
+  // A schism born the year this faith was forgotten carried on its last followers.
+  const heir =
+    forgotten === undefined
+      ? undefined
+      : faith.children.map((c) => world.faiths.get(c)).find((c) => c?.founded === forgotten);
+
+  // The lead: how it began, what it holds, and where it stands now (or when it ended).
+  const begun =
+    faith.founded === 0 && !parent ? (
+      forgotten === undefined ? (
+        <>An old faith of {godsText(faith.gods)}, kept since the world began.</>
+      ) : (
+        <>
+          An old faith of {godsText(faith.gods)}, kept from the world&apos;s first days until Year{' '}
+          {yearText(forgotten)}.
+        </>
+      )
+    ) : (
+      <>
+        A faith of {godsText(faith.gods)}, split from{' '}
+        {parent ? faithLink(parent.id) : 'an older faith'} in Year {yearText(faith.founded)}
+        {founder && (
+          <>
+            {' '}
+            by the prophet <Link to={{ kind: 'person', id: founder.id }}>{founder.name}</Link>
+          </>
+        )}
+        .
+      </>
+    );
+  const holds = `It holds ${andList(faith.sacred)} sacred and abhors ${faith.abhors}.`;
+  let now: React.ReactNode;
+  if (forgotten !== undefined) {
+    now = (
+      <>
+        {faith.founded === 0 && !parent
+          ? 'It ended'
+          : `It was forgotten in Year ${yearText(forgotten)}`}{' '}
+        when no town still prayed to {faith.forgottenGod ?? 'its gods'}
+        {heir && <>; that year {faithLink(heir.id)} split from it</>}.
+      </>
+    );
+  } else {
+    const kept =
+      n === 0
+        ? `No realm keeps it now, but ${towns} still ${faith.towns === 1 ? 'does' : 'do'}`
+        : `Kept now by ${n} ${plural(n, 'realm', 'realms')} and ${towns}`;
+    now = seat ? (
+      <>
+        {kept}; its holy city is {siteLink(seat.id)}
+        {holder && <>, held by the {civLink(holder.id)}</>}.
+      </>
+    ) : lost ? (
+      <>
+        {kept}; it lost its holy city, {lost.site}, to the {lost.by} in Year {yearText(lost.year)}.
+      </>
+    ) : (
+      <>{kept}.</>
+    );
+  }
+
+  const facts: Fact[] = [['Gods', faith.gods.join(', ')]];
+  facts.push(['Sacred', andList(faith.sacred)], ['Abhors', faith.abhors]);
+  if (seat) {
+    facts.push([
+      'Holy city',
+      <>
+        {siteLink(seat.id)}
+        {holder && <> (held by the {civLink(holder.id)})</>}
+      </>,
+    ]);
+  } else if (lost) {
+    const lostSite = [...world.sites.values()].find((s) => s.name === lost.site);
+    facts.push([
+      'Holy city',
+      <>
+        {lostSite ? siteLink(lostSite.id) : lost.site} (
+        <EventLink id={lost.event}>
+          lost to the {lost.by}, Year {yearText(lost.year)}
+        </EventLink>
+        )
+      </>,
+    ]);
+  }
+  const priest =
+    faith.highPriestId === undefined ? undefined : world.people.get(faith.highPriestId);
+  if (priest) {
+    const rank = faith.highPriests.findLast((hp) => hp.personId === priest.id)?.rank;
+    facts.push([
+      'High priest',
+      <>
+        <Link to={{ kind: 'person', id: priest.id }}>{priest.name}</Link>
+        {rank ? `, ${rank}` : ''}
+      </>,
+    ]);
+  }
+  if (forgotten !== undefined) {
+    facts.push(['Forgotten', `Year ${yearText(forgotten)}`]);
+  } else {
+    const others = faith.otherTowns;
+    const othersText = `${others.length} ${plural(others.length, 'town', 'towns')}`;
+    facts.push([
+      'Kept by',
+      <>
+        {n > 0 && (
+          <LinkList
+            refs={faith.realms.flatMap((r) => {
+              const civ = world.civs.get(r);
+              return civ ? [{ to: { kind: 'civ', id: r } as PageRef, label: civ.name }] : [];
+            })}
+            limit={PLACES_SHOWN}
+          />
+        )}
+        {others.length > 0 && (
+          <>
+            {n > 0
+              ? others.length === 1
+                ? ', and one town in other lands'
+                : `, and ${othersText} in other lands`
+              : othersText}
+            {others.length <= OTHER_TOWNS_SHOWN && (
+              <>
+                {': '}
+                <LinkList
+                  refs={others.map((t) => ({
+                    to: { kind: 'site', id: t } as PageRef,
+                    label: world.sites.get(t)?.name ?? '?',
+                  }))}
+                  limit={OTHER_TOWNS_SHOWN}
+                />
+              </>
+            )}
+          </>
+        )}
+        {n === 0 && others.length === 0 && 'no town'}
+      </>,
+    ]);
+  }
+  if (faith.children.length > 0) {
+    facts.push([
+      'Schisms',
+      <>
+        {faith.children.map((c, k) => {
+          const child = world.faiths.get(c);
+          if (!child) return null;
+          return (
+            <Fragment key={c}>
+              {k > 0 && ', '}
+              <Link to={{ kind: 'faith', id: c }}>{child.name}</Link> in Year{' '}
+              {yearText(child.founded)}
+            </Fragment>
+          );
+        })}
+      </>,
+    ]);
+  }
+  // The priest phrase names the faith ("the Gothi Hrolna of The Hall"); on its own page that is said.
+  const ofFaith = ` of ${faith.name}`;
+  const bare = (by: string) => (by.endsWith(ofFaith) ? by.slice(0, -ofFaith.length) : by);
+  return (
+    <>
+      <div>
+        <div className="lg-kind">Faith</div>
+        <h3>{faith.name}</h3>
+      </div>
+      <p className="lg-summary">
+        {begun} {holds} {now}
+      </p>
+      <Facts facts={facts} />
+      {seat && (
+        <div className="lg-actions">
+          <button type="button" onClick={() => onShow(seat.cell)}>
+            Show holy city on map
+          </button>
+        </div>
+      )}
+      {faith.highPriests.length > 0 && (
+        <>
+          <div className="lg-sect">
+            <span>High priests · {faith.highPriests.length}</span>
+          </div>
+          <ol className="lg-annals plain">
+            {faith.highPriests.map((hp) => {
+              const died = world.people.get(hp.personId)?.died;
+              return (
+                <li key={hp.event}>
+                  <EventLink id={hp.event}>Year {yearText(hp.year)}</EventLink>{' '}
+                  <Link to={{ kind: 'person', id: hp.personId }}>{hp.name}</Link>, {hp.rank}
+                  {hp.site ? ` at ${hp.site}` : ''}
+                  {died !== undefined && `, died Year ${yearText(died)}`}
+                </li>
+              );
+            })}
+          </ol>
+        </>
+      )}
+      {faith.holyWars.length > 0 && (
+        <>
+          <div className="lg-sect">
+            <span>Holy wars · {faith.holyWars.length}</span>
+          </div>
+          <ol className="lg-annals plain">
+            {faith.holyWars.map((w) => (
+              <li key={w.event}>
+                <EventLink id={w.event}>Year {yearText(w.year)}</EventLink>{' '}
+                {w.preached ? (
+                  <>
+                    the prophet{' '}
+                    {w.byId !== undefined ? (
+                      <Link to={{ kind: 'person', id: w.byId }}>{w.by}</Link>
+                    ) : (
+                      w.by
+                    )}{' '}
+                    preached holy war on the {w.enemy}
+                  </>
+                ) : (
+                  <>
+                    the {w.civ} went to holy war on the {w.enemy}
+                    {w.by && `, blessed by ${bare(w.by)}`}
+                  </>
+                )}
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+      {faith.prophets.length > 0 && (
+        <>
+          <div className="lg-sect">
+            <span>Prophets · {faith.prophets.length}</span>
+          </div>
+          <ul className="lg-annals plain">
+            {faith.prophets.map((p) => {
+              const person = world.people.get(p);
+              return (
+                <li key={p}>
+                  <Link to={{ kind: 'person', id: p }}>{person?.name ?? '?'}</Link>
+                  {person &&
+                    ` (born Year ${yearText(person.born)}${
+                      person.died !== undefined ? `, died Year ${yearText(person.died)}` : ''
+                    })`}
+                  {faith.children
+                    .map((c) => world.faiths.get(c))
+                    .filter((child) => child?.founderId === p)
+                    .map((child) => (
+                      <Fragment key={child!.id}>
+                        , founded <Link to={{ kind: 'faith', id: child!.id }}>{child!.name}</Link>
+                      </Fragment>
+                    ))}
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+      <div className="lg-sect">
+        <span>Chronicle</span>
+      </div>
+      <Chronicle ids={faith.deeds} empty="Nothing on record." />
     </>
   );
 }

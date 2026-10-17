@@ -72,6 +72,7 @@ export const LEGEND_CATEGORIES = [
   'civ',
   'site',
   'race',
+  'faith',
   'person',
   'dynasty',
   'beast',

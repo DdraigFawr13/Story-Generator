@@ -10,6 +10,7 @@ import { eventYear, linkSegments, yearText, type Id, type SimEvent } from '../..
 import { Link, cap, count, plural, useLegends } from '../legends-ctx';
 import type { BookLink } from '../map-view';
 import { RoomShell, type RoomId } from '../rooms/Rooms';
+import { allFaiths, byFollowing, faithLine } from '../faiths';
 import { allOrders, orderLine } from '../orders';
 import { indexRows, legendIds, rolesOf, watchOf } from '../people/data';
 import { createAtlas, defaultScale, type Atlas } from '../tales/atlas';
@@ -63,6 +64,7 @@ const shade = (id: number | null) => {
 const BOOKS_SHOWN = 8;
 const LIVES_SHOWN = 8;
 const PERILS_SHOWN = 6;
+const FAITHS_SHOWN = 6;
 const PLATE_MAX_PLACES = 10;
 /** The plate's smallest crop in cells, and the most its atlas may be stretched on screen. */
 const PLATE_MIN = { w: 64, h: 40 };
@@ -151,6 +153,7 @@ function BookView({
     const chosen = rows.filter((r) => legends.has(r.id));
     return (chosen.length >= 4 ? chosen : rows).slice(0, LIVES_SHOWN);
   }, [world, rows]);
+  const faiths = useMemo(() => allFaiths(world).sort(byFollowing), [world]);
   const perils = useMemo(() => perilousPlaces(world), [world]);
   // Standing orders and academies first, then those that ended; each oldest first.
   const orders = useMemo(
@@ -176,6 +179,7 @@ function BookView({
     };
   }, [world]);
   const [morePerils, setMorePerils] = useState(false);
+  const [moreFaiths, setMoreFaiths] = useState(false);
 
   const events = useMemo(
     () => (chapter ? eraEvents(index, book.civId, chapter.from, chapter.to) : []),
@@ -406,6 +410,30 @@ function BookView({
                   ))}
                 </ul>
               </section>
+              {faiths.length > 0 && (
+                <section>
+                  <h2>Faiths</h2>
+                  <ul>
+                    {(moreFaiths ? faiths : faiths.slice(0, FAITHS_SHOWN)).map((f) => (
+                      <li key={f.id}>
+                        <Link to={{ kind: 'faith', id: f.id }} className="bk-life bk-peril">
+                          <span>{f.name}</span>
+                          <small>{faithLine(f)}</small>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  {faiths.length > FAITHS_SHOWN && (
+                    <button
+                      type="button"
+                      className="bk-more"
+                      onClick={() => setMoreFaiths((v) => !v)}
+                    >
+                      {moreFaiths ? 'fewer' : `${faiths.length - FAITHS_SHOWN} more…`}
+                    </button>
+                  )}
+                </section>
+              )}
               {orders.length > 0 && (
                 <section>
                   <h2>Orders and academies</h2>

@@ -22,7 +22,8 @@ export type PageRef =
   | { kind: 'race'; id: string }
   | { kind: 'event'; id: Id }
   | { kind: 'place'; id: Id }
-  | { kind: 'order'; id: Id };
+  | { kind: 'order'; id: Id }
+  | { kind: 'faith'; id: Id };
 export type CategoryId = LegendCategory;
 
 /** Where the Legends pane is: the list or page it shows, and how it got there. */
@@ -99,6 +100,7 @@ export const KIND_LABEL: Record<CategoryId, string> = {
   civ: 'Civ',
   site: 'Site',
   race: 'Race',
+  faith: 'Faith',
   person: 'Figure',
   dynasty: 'Family',
   beast: 'Beast',
