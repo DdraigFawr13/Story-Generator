@@ -1172,7 +1172,7 @@ function OrderPage({ id }: { id: Id }) {
     const reason = endEvent ? String(endEvent.data.reason ?? '') : '';
     now = (
       <>
-        It ended in Year {yearText(order.ended)} after {order.heads.length}{' '}
+        It ended in Year {yearText(order.ended)} after {numberWord(order.heads.length)}{' '}
         {plural(order.heads.length, 'master', 'masters')} and {numberWord(served)} {word(served)}
         {reason && `; ${reason}`}.
       </>
@@ -1289,7 +1289,11 @@ function OrderPage({ id }: { id: Id }) {
                 <EventLink id={m.event}>Year {yearText(m.joined)}</EventLink>
               ) : (
                 <span className="lg-when" title="The year they joined is not on record">
-                  {m.joinedBy !== undefined ? `by ${yearText(m.joinedBy)}` : 'early'}
+                  {m.joinedBy !== undefined
+                    ? `by ${yearText(m.joinedBy)}`
+                    : m.joinedAfter !== undefined
+                      ? `after ${yearText(m.joinedAfter)}`
+                      : ''}
                 </span>
               )}{' '}
               {person(m.personId)}

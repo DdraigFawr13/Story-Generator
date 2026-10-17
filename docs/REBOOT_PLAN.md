@@ -660,7 +660,7 @@ Thirty-eight threads have merged since the list was written (#101 to #138, `CHAN
 | P7 | Other great beasts and the restless dead | M5.6 leftover | Picked 2026-10-17; built as build order 20 (#133) | 3 | M |
 | P8 | Rough-edges bundle | the list above | Picked 2026-10-17; built 2026-10-17 (#137: child deaths, orcs, holds at passes) | 3 | S |
 
-#### Proposed next set, second round (2026-10-17 evening; a proposal, not approved)
+#### Proposed next set, second round (2026-10-17 evening; S1 and H2 picked)
 
 Split into screen builds (`src/app`) and history builds (`src/engine`, `src/content`) so one of each can run side by side without touching the same files. Ranked by fit with Morgan's recorded taste: personal, story-first screens that read well on a phone; famous figures who did things, and a record of why; betrayals; a calm storyteller map. Value 1–5; effort S, M or L as above. None starts without Morgan's pick.
 

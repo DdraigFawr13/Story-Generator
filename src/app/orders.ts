@@ -61,8 +61,10 @@ export interface OrderMember {
   /** The joining year and event, while the record keeps them (minor joinings are pruned). */
   joined?: number;
   event?: Id;
-  /** When the joining is not on record: the next member's known joining year, by which they had joined. */
+  /** When the joining is not on record: the next member's known joining year, by which they had
+   * joined, or else the last known one before them, after which they joined. */
   joinedBy?: number;
+  joinedAfter?: number;
   /** Alive, of the order's people, and the order still stands. */
   serving: boolean;
   /** The member's best deed as its doer since they joined (or since the founding when that is not
@@ -203,12 +205,18 @@ function describe(
     });
   }
 
-  // A member whose joining was pruned joined before the next member whose joining is on record.
+  // A member whose joining was pruned joined between the known joinings around them (members are
+  // in joining order, the founder first).
   let next: number | undefined;
   for (let k = members.length - 1; k >= 0; k -= 1) {
     const m = members[k]!;
     if (m.joined !== undefined) next = m.joined;
     else if (next !== undefined) m.joinedBy = next;
+  }
+  let prev: number | undefined;
+  for (const m of members) {
+    if (m.joined !== undefined) prev = m.joined;
+    else if (m.joinedBy === undefined && prev !== undefined) m.joinedAfter = prev;
   }
 
   const lostAt = new Map<string, SimEvent>();

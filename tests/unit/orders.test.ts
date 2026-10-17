@@ -101,6 +101,7 @@ describe('orders and academies', () => {
       [3, undefined, true],
     ]);
     expect(ash!.members.map((m) => m.best)).toEqual([undefined, 13, undefined]);
+    expect(ash!.members[2]).toMatchObject({ joinedAfter: 12 });
     expect(ash!.hunts).toEqual([13]);
     expect(ash!.witchHunts).toEqual([22]);
     expect(ash!.deeds).toEqual([10, 11, 21, 22]);
