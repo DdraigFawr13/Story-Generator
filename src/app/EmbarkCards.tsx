@@ -59,6 +59,7 @@ export function WatchCard({ siteId, actions }: { siteId: Id; actions: SiteAction
       followedHouseholds: Math.ceil(followed / PEOPLE_PER_HOUSEHOLD),
       isCapital: civ?.capital === site.id,
       coast: site.features.includes('coast'),
+      kind: site.kind,
     });
     return {
       look: makeLookCtx(map, content.site, new Map(layout.buildings.map((b) => [b.id, b]))),

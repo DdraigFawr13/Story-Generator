@@ -620,6 +620,8 @@ export interface RoutineRules {
     child: number;
     elder: number;
     jitter: number;
+    /** A person's own habit, early riser to late: up to this much, the same every day. */
+    personal: number;
     max: number;
   };
   /** Not everyone starts work at once (village life). */
@@ -750,6 +752,14 @@ export interface BuildingDef extends SiteGlyphDef {
   houses?: Workplace[];
   /** Village life: laid out at embark when the site's whole population reaches this. */
   minPop?: number;
+  /** One more copy for every this many people of the whole site above `minPop` (or above 0). */
+  perPop?: number;
+  /** Most copies a site lays out. */
+  maxCount?: number;
+  /** Laid out only at history sites of these kinds. */
+  siteKinds?: string[];
+  /** Counts as this role's building for routines (an inn is an alehouse). */
+  serves?: 'alehouse' | 'well' | 'shrine';
 }
 
 export type ItemEffect =
@@ -1193,6 +1203,8 @@ export interface SiteRules {
   peoplePerHome: number;
   /** Fields in the layout = ceil(pop / this). */
   peoplePerField: number;
+  /** A followed household with more members than this gets a double-width home. */
+  bigHousehold: number;
   /** How far (0-1) a river in a neighbouring cell is pulled toward the site. */
   riverPull: number;
   /** Chance a married man in a leaders-many-spouses culture takes a second wife at promotion. */
