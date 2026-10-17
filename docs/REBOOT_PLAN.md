@@ -617,7 +617,7 @@ After the Phase 3 playtest Morgan asked for additions ranked by value and coding
 3. **Named battles on the map** (M4.8; value 3, S): built 2026-10-14 (#105).
 4. **Annals of each people** (M4.9; value 3, S): built 2026-10-14 (#105).
 5. **Dwarven mountain holds** (M4.10; value 3, S): built 2026-10-14 (#107).
-6. **Succession wars and dynasties** (Phase 6, pulled forward; value 5, M): built 2026-10-14 (#104: civil wars, splits, ruling houses ended); the family tree is in progress from 2026-10-17 as a dynasty tree screen in the People room.
+6. **Succession wars and dynasties** (Phase 6, pulled forward; value 5, M): built 2026-10-14 (#104: civil wars, splits, ruling houses ended); the family tree of each house is on its People room page (#124, 2026-10-17).
 7. **Dragons and great beasts as individuals** (M5.6; value 4, M): dragons built 2026-10-14 (#106), up to three at once; other great beasts and the restless dead still to come.
 8. **Religion: gods, priests, holy wars** (Phase 7, pulled forward; value 4, M): built 2026-10-14 in history (#109: faiths, high priests, prophets, schisms, conversion, holy wars); the People room lists priests and prophets, and a page per faith is still to come.
 9. **Spellbooks and lineages** (M5.2; value 4, M): built 2026-10-16 (#118: apprenticeships, spells, spellbooks, lost and found lore, the People room's Magic tab).
@@ -635,7 +635,7 @@ Items not in the list (M4.5, M5.1, M5.3, M5.4, the rest of Phases 6–9) keep th
 
 Twelve threads have merged since the list was written (#101 to #122, `CHANGELOG.md`), beside the Four rooms UI redesign (#110 to #113, #115, #117) and the faster tests (#119). Thirteen of the sixteen items are built in full or in their history part. Left, in list order:
 
-- Running: the family tree (item 6), as a dynasty tree screen in the People room.
+- Built since: the family tree (item 6), on each house's page in the People room (#124).
 - UI halves of built items: a page per faith (8); the perilous places map layer and Places page (12); vassals on the map and "vassal of" in the People room (13).
 - History leftovers: other great beasts and the restless dead as individuals (7); the dragon courted, feared or put under bounty (10).
 - Not started: the story threads view (11), trade between peoples (14), the world moving while you watch (15).
@@ -807,7 +807,7 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 
 ### Phase 6 — Kingdoms (6–8 PRs)
 - Governments (chiefdom, monarchy, council, theocracy), nobles and titles, legitimacy, factions and succession disputes.
-- **Succession wars and dynasties** (pulled forward 2026-10-14, build order 6): a disputed succession can become a civil war; a pretender raises part of the realm, the realm may split in two or a far town break away as a free city, and a dynasty can end with a new house taking the seat. Dynasties get names and a family tree in the legends browser. Built 2026-10-14 except the family tree: rules in `content/realms.ts` (`CIVIL_WARS`), engine in `engine/history/civil-war.ts`.
+- **Succession wars and dynasties** (pulled forward 2026-10-14, build order 6): a disputed succession can become a civil war; a pretender raises part of the realm, the realm may split in two or a far town break away as a free city, and a dynasty can end with a new house taking the seat. Dynasties get names and a family tree in the legends browser. Built 2026-10-14; the family tree of each house is on its People room page (#124, 2026-10-17). Rules in `content/realms.ts` (`CIVIL_WARS`), engine in `engine/history/civil-war.ts`.
 - Diplomacy, alliances, vassalage, marriages between houses, betrayals (build order 13, added 2026-10-14: a sworn alliance binds a people to join a war, a lost war can make a people a vassal, a marriage between houses can end a feud, and a betrayal comes when the allies' values drift apart). Built 2026-10-17: rules in `content/diplomacy.ts`, engine in `engine/history/diplomacy.ts`.
 - Armies, battles and sieges; occupations and rebellions.
 - **Legends in politics** (court intrigue, pulled forward 2026-10-14, build order 10; assassination is a notable's deed with cause links back to the grudge): kingdoms court, fear, bribe or try to assassinate the 0–3 living legends. A legend can be a ruler, an ally or a deterrent, but a coalition or a larger host can still bring one down. A legend may seize a seat (a succession dispute won by power, not fame), betray their ruler, or draw a bounty and a coalition against the civ that shelters them (target story 7; added 2026-10-13). Their deaths are world-shaking events. The same applies to the dragon (M5.6): kingdoms court it, fear it or put a bounty on it. Built 2026-10-16 except the dragon part: rules in `content/intrigue.ts`, engine in `engine/history/intrigue.ts`.

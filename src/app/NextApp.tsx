@@ -1565,6 +1565,7 @@ export function NextApp() {
                         })
                       : go({ open: null })
                   }
+                  from={nav.trail[nav.trail.length - 2] ?? null}
                   onRoom={peopleRoom}
                   onFollow={followInTales}
                   onIndex={() => go({ open: null })}
