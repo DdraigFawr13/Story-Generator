@@ -17,6 +17,7 @@ import {
   type SimEvent,
   type WorldState,
 } from '../../engine';
+import { allPlaces, byStory, placeKindLabel, type PlaceInfo } from '../places';
 
 type BookContent = Pick<ContentBundle, 'annals' | 'eventTypes' | 'cultures'>;
 
@@ -335,71 +336,21 @@ export function siteInYear(
   return undefined;
 }
 
-export interface Peril {
-  siteId: Id;
-  name: string;
-  /** People its beasts killed there: raid dead plus the figures they slew. */
-  deaths: number;
-  /** The beasts that hold or haunt it, the deadliest first. */
-  beasts: { name: string; status: 'alive' | 'slain' | 'dead' }[];
+/** Perilous places that have a story (a company went in, or someone died there), most storied first. */
+export function perilousPlaces(world: WorldState): PlaceInfo[] {
+  return allPlaces(world)
+    .filter((p) => p.expeditions.length > 0 || p.deaths > 0)
+    .sort(byStory);
 }
 
-/**
- * Perilous places: the sites near which a dragon or great beast has its lair, or where one raided or
- * killed, most deaths first. Lairs are cells, so a lair is placed at the town its first sighting
- * names ("near X"); a beast with no town on record adds no row.
- */
-export function perilsOf(world: WorldState, content: Pick<ContentBundle, 'creatures'>): Peril[] {
-  const tiers = new Map(content.creatures.map((def) => [def.id, def.tier]));
-  const byCell = new Map<number, Id>();
-  const byName = new Map<string, Id>();
-  for (const s of world.sites.values()) {
-    byCell.set(s.cell, s.id);
-    byName.set(s.name, s.id);
-  }
-  const events = new Map(world.events.map((e) => [e.id, e]));
-  const rows = new Map<Id, Peril & { by: Map<string, number> }>();
-  for (const c of world.creatures.values()) {
-    if (c.dragon === undefined && (tiers.get(c.defId) ?? 'beast') === 'beast') continue;
-    const dead = new Map<Id, number>();
-    const add = (site: Id | undefined, n: number) => {
-      if (site !== undefined) dead.set(site, (dead.get(site) ?? 0) + n);
-    };
-    for (const id of c.deeds) {
-      const e = events.get(id);
-      if (!e) continue;
-      if (typeof e.data.near === 'string') add(byName.get(e.data.near), 0);
-      if (e.type === 'beast_raid' && e.place !== null)
-        add(byCell.get(e.place), Number(e.data.dead) || 0);
-    }
-    for (const victim of c.kills ?? []) {
-      const home = world.people.get(victim)?.siteId;
-      add(home == null ? undefined : home, 1);
-    }
-    const status: Peril['beasts'][number]['status'] =
-      c.died === undefined ? 'alive' : c.slainBy !== undefined ? 'slain' : 'dead';
-    for (const [site, n] of dead) {
-      const s = world.sites.get(site);
-      if (!s) continue;
-      const row = rows.get(site) ?? {
-        siteId: site,
-        name: s.name,
-        deaths: 0,
-        beasts: [] as Peril['beasts'],
-        by: new Map<string, number>(),
-      };
-      row.deaths += n;
-      row.by.set(c.name, n);
-      row.beasts.push({ name: c.name, status });
-      rows.set(site, row);
-    }
-  }
-  return [...rows.values()]
-    .map(({ by, ...row }) => ({
-      ...row,
-      beasts: row.beasts.sort((a, b) => (by.get(b.name) ?? 0) - (by.get(a.name) ?? 0)),
-    }))
-    .sort((a, b) => b.deaths - a.deaths || a.siteId - b.siteId);
+/** "old mine · 4 expeditions, 5 dead", or "barrow · its dead woke". */
+export function perilousLine(p: PlaceInfo): string {
+  const told: string[] = [];
+  const n = p.expeditions.length;
+  if (n > 0) told.push(`${n} ${n === 1 ? 'expedition' : 'expeditions'}`);
+  if (p.deaths > 0) told.push(`${p.deaths} dead`);
+  if (p.woke) told.push('its dead woke');
+  return [placeKindLabel(p.kind), told.join(', ')].filter(Boolean).join(' \u00b7 ');
 }
 
 /** "Year 12–71" for a life, or "born Year 12" for a person still living (`years` is "12–71" or "12–"). */

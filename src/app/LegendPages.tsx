@@ -18,6 +18,7 @@ import {
   type LegendRef,
   type SimEvent,
 } from '../engine';
+import { allPlaces, dangerWord, emptiedBy, outcomeText, placeWhat } from './places';
 import { WatchCard } from './EmbarkCards';
 import { TiesSection } from './TiesSection';
 import { standingAt } from './ties';
@@ -370,6 +371,7 @@ export function PageView({
 }) {
   if (page.kind === 'event') return <EventPage id={page.id} />;
   if (page.kind === 'race') return <RacePage id={page.id} />;
+  if (page.kind === 'place') return <PlacePage id={page.id} />;
   return <EntityPage page={page} all={all} onAll={onAll} bare={bare ?? false} />;
 }
 
@@ -896,6 +898,136 @@ function EventPage({ id }: { id: Id }) {
           </ul>
         </>
       )}
+    </>
+  );
+}
+
+function PlacePage({ id }: { id: Id }) {
+  const { world, onShow } = useLegends();
+  const place = useMemo(() => allPlaces(world).find((p) => p.id === id), [world, id]);
+  if (!place) return <p className="lg-empty">Unknown place.</p>;
+  const { expeditions, deaths, woke } = place;
+  const parts = [`${placeWhat(place)}, ${dangerWord(place.danger)} to enter.`];
+  if (expeditions.length > 0) {
+    const n = expeditions.length;
+    parts.push(
+      `${n} ${plural(n, 'company has', 'companies have')} gone in${
+        deaths > 0 ? `; ${deaths} never came back` : ''
+      }.`,
+    );
+  }
+  if (emptiedBy(place, world.params.historyYears)) {
+    parts.push(`Nothing is left to find there since Year ${yearText(place.emptied!)}.`);
+  }
+  if (woke) parts.push(`Robbed, its dead woke in Year ${yearText(woke.year)}.`);
+  const facts: Fact[] = [];
+  const site = place.siteId === undefined ? undefined : world.sites.get(place.siteId);
+  if (site)
+    facts.push(['Once the town of', <Link to={{ kind: 'site', id: site.id }}>{site.name}</Link>]);
+  const beast = place.creatureId === undefined ? undefined : world.creatures.get(place.creatureId);
+  if (beast)
+    facts.push(['Lair of', <Link to={{ kind: 'beast', id: beast.id }}>{beast.name}</Link>]);
+  const buried = place.buriedId === undefined ? undefined : world.people.get(place.buriedId);
+  if (buried) {
+    facts.push(['Buried here', <Link to={{ kind: 'person', id: buried.id }}>{buried.name}</Link>]);
+  }
+  const raisedBy = place.civId === undefined ? undefined : world.civs.get(place.civId);
+  if (raisedBy && place.kind === 'barrow') {
+    facts.push(['Raised by', <Link to={{ kind: 'civ', id: raisedBy.id }}>{raisedBy.name}</Link>]);
+  }
+  if (woke) {
+    facts.push([
+      'Woke',
+      <>
+        {woke.creatureId === undefined ? (
+          woke.name
+        ) : (
+          <Link to={{ kind: 'beast', id: woke.creatureId }}>{woke.name}</Link>
+        )}{' '}
+        in Year {yearText(woke.year)}
+      </>,
+    ]);
+  }
+  facts.push(['Danger', dangerWord(place.danger)]);
+  facts.push([
+    'Lies here',
+    place.lying.length > 0 ? (
+      <LinkList
+        refs={place.lying.map((item) => ({
+          to: { kind: 'item', id: item },
+          label: world.items.get(item)?.name ?? '?',
+        }))}
+        limit={MEMBERS_SHOWN}
+      />
+    ) : place.finds > 0 ? (
+      'Something still lies hidden there'
+    ) : (
+      'Nothing is left to find'
+    ),
+  ]);
+  if (deaths > 0) {
+    facts.push([
+      'Its dead',
+      <>
+        {deaths}
+        {place.fallen.length > 0 && (
+          <>
+            {': '}
+            <LinkList
+              refs={place.fallen.map((person) => ({
+                to: { kind: 'person', id: person },
+                label: world.people.get(person)?.name ?? '?',
+              }))}
+              limit={MEMBERS_SHOWN}
+            />
+          </>
+        )}
+      </>,
+    ]);
+  }
+  return (
+    <>
+      <div>
+        <div className="lg-kind">Perilous place</div>
+        <h3>{cap(place.name)}</h3>
+      </div>
+      <p className="lg-summary">{cap(parts.join(' '))}</p>
+      <Facts facts={facts} />
+      <div className="lg-actions">
+        <button type="button" onClick={() => onShow(place.cell)}>
+          Show on map
+        </button>
+      </div>
+      <div className="lg-sect">
+        <span>Expeditions · {expeditions.length}</span>
+      </div>
+      {expeditions.length === 0 ? (
+        <p className="lg-empty flush">No one has gone in yet.</p>
+      ) : (
+        <ol className="lg-annals plain lg-expeditions">
+          {expeditions.map((x) => (
+            <li key={x.id}>
+              <EventLink id={x.id}>Year {yearText(x.year)}</EventLink>{' '}
+              {x.leaderId === null ? (
+                cap(x.who)
+              ) : (
+                <Link to={{ kind: 'person', id: x.leaderId }}>{x.who}</Link>
+              )}{' '}
+              of {x.from}, {x.party} strong,{' '}
+              {x.endId === null ? (
+                outcomeText(x)
+              ) : (
+                <EventLink id={x.endId}>{outcomeText(x)}</EventLink>
+              )}
+              {x.dead > 0 && `, ${x.dead} did not come back`}
+            </li>
+          ))}
+        </ol>
+      )}
+      <div className="lg-sect">
+        <span>Chronicle</span>
+      </div>
+      <Chronicle ids={place.deeds} empty="No one has gone in yet." />
     </>
   );
 }
