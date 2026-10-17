@@ -98,6 +98,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...settlementProblems(content));
   problems.push(...creatureProblems(content));
   problems.push(...dragonProblems(content));
+  problems.push(...greatBeastProblems(content));
   problems.push(...feudProblems(content));
   problems.push(...greatWorkProblems(content));
   problems.push(...placeProblems(content));
@@ -261,6 +262,58 @@ export function feudProblems(content: ContentBundle): string[] {
   for (const sex of ['m', 'f'] as const) {
     if (phrases.kin[sex].length < 4) problems.push(`Feuds: kin words for "${sex}" need 4 entries.`);
   }
+  return problems;
+}
+
+/** Great beasts: known creatures and tempers, names to draw, chances 0-1, templates filled. */
+export function greatBeastProblems(content: ContentBundle): string[] {
+  const rules = content.greatBeasts;
+  if (!rules) return ['Content has no great beast rules.'];
+  const problems: string[] = [];
+  const temperIds = new Set(rules.tempers.map((t) => t.id));
+  if (temperIds.size !== rules.tempers.length) problems.push('Great beasts: duplicate tempers.');
+  for (const temper of rules.tempers) {
+    if (!(temper.raidFactor >= 0))
+      problems.push(`Great beast temper ${temper.id}: raidFactor must not be negative.`);
+  }
+  const seen = new Set<string>();
+  for (const kind of rules.kinds) {
+    const where = `Great beast ${kind.creatureId}`;
+    if (!content.creatures.some((c) => c.id === kind.creatureId))
+      problems.push(`${where}: unknown creature.`);
+    if (seen.has(kind.creatureId)) problems.push(`${where}: listed twice.`);
+    seen.add(kind.creatureId);
+    if (kind.names.length === 0) problems.push(`${where}: no names.`);
+    if (new Set(kind.names).size !== kind.names.length) problems.push(`${where}: duplicate names.`);
+    if (kind.tempers.length === 0) problems.push(`${where}: no tempers.`);
+    for (const temper of kind.tempers) {
+      if (!temperIds.has(temper.id)) problems.push(`${where}: unknown temper "${temper.id}".`);
+      if (!(temper.weight > 0)) problems.push(`${where}: temper weight must be above 0.`);
+    }
+    if (kind.lairNames.length === 0 || kind.lairNames.some((n) => !n.includes('{name}')))
+      problems.push(`${where}: every lair name needs {name}.`);
+    if (!kind.tollWord) problems.push(`${where}: no toll word.`);
+  }
+  for (const key of ['tollShare', 'tollPaid'] as const) {
+    if (!(rules[key] >= 0 && rules[key] <= 1)) problems.push(`Great beasts: ${key} must be 0-1.`);
+  }
+  if (!(rules.grudgeYears >= 1)) problems.push('Great beasts: grudgeYears must be at least 1.');
+  for (const key of ['grudgeRangeFactor', 'grudgeRaidFactor'] as const) {
+    if (!(rules[key] >= 1)) problems.push(`Great beasts: ${key} must be at least 1.`);
+  }
+  if (!rules.tollAgain.includes('{nth}')) problems.push('Great beasts: tollAgain needs {nth}.');
+  const rest = rules.restless;
+  if (rest.names.length === 0 || rest.names.some((n) => !n.includes('{ruler}')))
+    problems.push('Great beasts: every restless name needs {ruler}.');
+  if (!(rest.walk >= 1 && rest.vengeanceRange >= 1 && rest.layRange >= 1))
+    problems.push('Great beasts: restless walk and ranges must be at least 1.');
+  if (!(rest.vengeanceFactor >= 1))
+    problems.push('Great beasts: vengeanceFactor must be at least 1.');
+  if (!(rest.layChance >= 0 && rest.layChance <= 1))
+    problems.push('Great beasts: layChance must be 0-1.');
+  if (!rest.unknownRuler) problems.push('Great beasts: no unknownRuler phrase.');
+  if (!rest.fallenPhrase.includes('{civ}'))
+    problems.push('Great beasts: fallenPhrase needs {civ}.');
   return problems;
 }
 
@@ -730,6 +783,12 @@ const HISTORY_EVENT_IDS = [
   'dragon_unleashed',
   'dragon_bounty_taken',
   'dragon_bounty_claimed',
+  'great_beast_appeared',
+  'great_beast_grudge',
+  'great_beast_toll',
+  'great_beast_died',
+  'dead_rested',
+  'dead_laid_to_rest',
   'great_work_raised',
   'great_work_fell',
   'item_enchanted',

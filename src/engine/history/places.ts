@@ -11,6 +11,7 @@ import { cultureGivenName } from '../people/names';
 import { TIERS } from '../people/tiers';
 import { NO_NEAR, atSite, freshName, livingCreatures, nearestSite, whereIs } from './beasts';
 import { claimHoard, hoardListOf, hoardedItems } from './dragons';
+import { restlessName } from './great-beasts';
 import { fill, itemsHeldBy, newItem, uniqueName } from './items';
 import {
   beastKillChance,
@@ -368,7 +369,8 @@ export function beastParts(
   home: Site,
   slain: Id,
 ): void {
-  if (def.tier === 'beast') return;
+  // A host of the restless dead is burned where it falls and leaves nothing to work.
+  if (def.tier === 'beast' || creature.dead) return;
   const rules = run.content.places.parts;
   const civ = civOf(run, home);
   if (!civ || !isLive(home)) return;
@@ -550,20 +552,33 @@ function pickLeader(run: HistoryRun, civ: Civ, cell: number): Person | undefined
   return best;
 }
 
-/** The robbed dead wake: a restless-dead creature with the barrow as its lair. */
-function wakeDead(run: HistoryRun, place: PerilousPlace, robbery: Id): void {
+/**
+ * The robbed dead wake: a restless-dead creature with the barrow as its lair, named for the ruler
+ * buried there and turned on the civ that robbed it (great-beasts.ts takes it from there).
+ */
+function wakeDead(run: HistoryRun, place: PerilousPlace, robbery: Id, robbers: Civ): void {
   const ex = run.content.places.expedition;
   const def = run.content.creatures.find((d) => d.id === ex.restlessDeadId);
   if (!def || livingCreatures(run).filter((c) => c.defId === def.id).length >= def.maxAlive) return;
   const rng = run.rng.places;
   const near = nearestSite(run, place.cell, Infinity)?.name ?? NO_NEAR;
-  const name = freshName(run, def, rng.pick(def.names), near);
+  const plain = freshName(run, def, rng.pick(def.names), near);
+  const buried = place.personId === undefined ? undefined : run.world.people.get(place.personId);
+  const name = restlessName(run, def, buried, plain, near);
   const lifespan = rng.between(def.lifespan[0], def.lifespan[1]);
+  const ruler = buried?.name ?? run.content.greatBeasts.restless.unknownRuler;
   const event = run.emit({
     type: 'barrow_woke',
     place: place.cell,
     causes: [robbery],
-    data: { beast: name, kind: def.name, peril: place.name, near },
+    data: {
+      beast: name,
+      kind: def.name,
+      peril: place.name,
+      near,
+      ruler,
+      robbers: robbers.name,
+    },
   });
   const { world } = run;
   const id = world.nextId.creature;
@@ -575,6 +590,12 @@ function wakeDead(run: HistoryRun, place: PerilousPlace, robbery: Id): void {
     lair: place.cell,
     born: run.year,
     lifespan,
+    dead: {
+      ...(buried ? { rulerId: buried.id } : {}),
+      ruler,
+      placeId: place.id,
+      robbers: robbers.id,
+    },
     deeds: [event.id],
   });
   place.deeds.push(event.id);
@@ -824,6 +845,6 @@ function placeWon(
     const owner = place.civId === undefined ? undefined : run.world.civs.get(place.civId);
     if (owner && owner.fell === undefined && owner.id !== civ.id)
       addGrievance(run, owner.id, civ.id, ex.barrowGrievance, event.id);
-    if (rng.chance(ex.wakeDeadChance)) wakeDead(run, place, event.id);
+    if (rng.chance(ex.wakeDeadChance)) wakeDead(run, place, event.id, civ);
   }
 }

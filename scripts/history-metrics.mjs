@@ -139,6 +139,13 @@ export function notableMetrics(world, n, DAYS_PER_YEAR) {
     dragonBountyHunts: n.dragon_bounty_taken ?? 0,
     dragonBountyClaimed: n.dragon_bounty_claimed ?? 0,
     dragonBurned: n.dragon_burned ?? 0,
+    // Great beasts and the restless dead as individuals.
+    greatBeasts: [...world.creatures.values()].filter((c) => c.great).length,
+    greatTolls: n.great_beast_toll ?? 0,
+    greatGrudges: n.great_beast_grudge ?? 0,
+    greatAged: n.great_beast_died ?? 0,
+    deadRested: n.dead_rested ?? 0,
+    deadLaid: n.dead_laid_to_rest ?? 0,
     // Perilous places, hoards and expeditions (M4.7).
     places: world.places.size,
     placesEmptied: [...world.places.values()].filter((p) => p.emptied !== undefined).length,

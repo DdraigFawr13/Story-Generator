@@ -127,7 +127,8 @@ export const places: PlaceRules = {
     bandChance: 0.5,
     bountyWeight: 3,
     barrowGrievance: 2,
-    wakeDeadChance: 0.25,
+    // Half of the robbed barrows wake their dead.
+    wakeDeadChance: 0.5,
     restlessDeadId: 'restless-dead',
     bandWord: 'a band of commoners',
     commonerRole: ', a commoner of {site},',

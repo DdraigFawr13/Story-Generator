@@ -121,13 +121,20 @@ describe('lore', () => {
   it('lends a book for its story, not because of its last return', () => {
     // A book lent and returned week after week made the drama report's longest cause chain.
     const { world, active, content, parent, child } = fresh();
+    // The only book in town is the parent's: a book another resident brought from history would
+    // be lent to the child first.
+    for (const item of world.items.values())
+      if (item.kind === 'book' && active.residents.includes(item.holder ?? -1)) item.holder = null;
     const book = addBook(world, active, parent.id);
     const { emit, label } = voiceOf(world, content, active);
     const before = emit({ type: C.lore.events.lost, place: label.cell, data: {} });
     const back = emit({ type: C.lore.events.returned, place: label.cell, data: {} });
     book.deeds.push(before.id, back.id);
     run(world, content, 14);
-    const lent = world.events.find((e) => e.type === C.lore.events.lent);
+    // This book's loan: another resident may hold a book of their own from history.
+    const lent = world.events.find(
+      (e) => e.type === C.lore.events.lent && e.data.item === book.name,
+    );
     expect(lent?.actors).toEqual([parent.id, child.id]);
     expect(lent!.causes).toEqual([before.id]);
   });

@@ -34,6 +34,17 @@ import {
   runDragonCourt,
   unleashDragon,
 } from './dragon-court';
+import {
+  appearance,
+  askToll,
+  greatBeastDied,
+  greatKind,
+  greatRaidFactor,
+  noteGrudge,
+  raidTarget,
+  runRestless,
+  tellGrudge,
+} from './great-beasts';
 import { addDeed } from './people';
 import { beastParts, carryOff, lairAbandoned } from './places';
 import { bandCount, removePeople, stochasticRound, totalPop } from './pop';
@@ -151,14 +162,17 @@ function spawn(run: HistoryRun, def: CreatureDef): void {
   const lair = findLair(run, def);
   if (lair < 0) return;
   const near = nearestSite(run, lair, Infinity)?.name ?? NO_NEAR;
-  const beastName = freshName(run, def, name, near);
+  // A great kind is named as an individual, from its own stream (great-beasts.ts).
+  const kind = greatKind(run, def);
+  const named = kind ? appearance(run, def, kind, lair, near) : undefined;
+  const beastName = named?.name ?? freshName(run, def, name, near);
   const id = world.nextId.creature;
   world.nextId.creature += 1;
   const event = run.emit({
-    type: 'beast_appeared',
+    type: named ? 'great_beast_appeared' : 'beast_appeared',
     place: lair,
     causes: [],
-    data: { beast: beastName, kind: def.name, near },
+    data: named?.data ?? { beast: beastName, kind: def.name, near },
   });
   world.creatures.set(id, {
     id,
@@ -167,6 +181,7 @@ function spawn(run: HistoryRun, def: CreatureDef): void {
     lair,
     born: run.year,
     lifespan,
+    ...(named ? { great: named.great } : {}),
     deeds: [event.id],
   });
 }
@@ -204,9 +219,10 @@ function firstTime(run: HistoryRun, creature: Creature, kind: string, key: Id): 
   return true;
 }
 
-/** A dragon's slaying outranks an ordinary beast's. */
+/** A dragon's or a named great beast's slaying outranks an ordinary beast's. */
 function slainBonus(run: HistoryRun, creature: Creature): { importanceBonus?: number } {
-  return creature.dragon ? { importanceBonus: run.content.dragons.slainImportance } : {};
+  if (creature.dragon) return { importanceBonus: run.content.dragons.slainImportance };
+  return creature.great ? { importanceBonus: run.content.greatBeasts.slainImportance } : {};
 }
 
 /** Rounded numbers a fight was settled on, kept on the event for its play-by-play. */
@@ -240,8 +256,10 @@ function trySlay(
   const strength = Math.min(1, fighters / need);
   const chance = rules.slayBase * strength * rules.slayTierFactor[def.tier];
   if (!rng.chance(chance)) {
-    if (slayer)
+    if (slayer) {
       answerLost(run, creature, def, slayer, site, raid, fightData(fighters, def, chance));
+      noteGrudge(run, creature, site);
+    }
     return false;
   }
   const hero = slayer ? slayer.name : cultureGivenName(culture.names, run.rng.names);
@@ -323,8 +341,10 @@ function raid(run: HistoryRun, creature: Creature, def: CreatureDef): void {
   // A dragon spares the towns of a realm in pact with it or courting it, and a courted one may be
   // loosed on the courter's enemy instead.
   const unleashed = creature.dragon ? unleashDragon(run, creature) : undefined;
+  // A vengeful beast strikes the town it holds a grudge against, a restless host its robbers.
   const site =
     unleashed?.site ??
+    raidTarget(run, creature, def) ??
     nearestSite(
       run,
       whereIs(creature),
@@ -334,6 +354,9 @@ function raid(run: HistoryRun, creature: Creature, def: CreatureDef): void {
   if (!site) return;
   // A dragon of greedy temper is paid off, unless a legend of the town will not pay.
   if (!unleashed && creature.dragon && askTribute(run, creature, def, site)) return;
+  // A toll-taker is paid in food, or raids as usual.
+  if (askToll(run, creature, def, site)) return;
+  const grudge = tellGrudge(run, creature, def, site);
   const factor = rng.between(500, 1500) / 1000;
   const pop = totalPop(site);
   const walled = standingWork(site, 'wall') ? run.content.greatWorks.wallRaidShare : 1;
@@ -344,7 +367,7 @@ function raid(run: HistoryRun, creature: Creature, def: CreatureDef): void {
   const event = run.emit({
     type: 'beast_raid',
     place: site.cell,
-    causes: causesOf(unleashed?.event ?? creature.deeds[creature.deeds.length - 1]),
+    causes: causesOf(unleashed?.event ?? grudge ?? creature.deeds[creature.deeds.length - 1]),
     data: { beast: creature.name, site: site.name, civ: civName(run, site), dead },
   });
   creature.deeds.push(event.id);
@@ -413,6 +436,7 @@ export function fightHunt(
     beastParts(run, def, prey, hunter, home, event.id);
     return;
   }
+  noteGrudge(run, prey, home);
   const dies = rng.chance(beastKillChance(run, hunter, def.danger, aid + edge));
   const event = run.emit({
     type: 'beast_hunt_failed',
@@ -528,17 +552,22 @@ export function runBeasts(run: HistoryRun): void {
     if (!def) continue;
     if (run.year - creature.born >= creature.lifespan) {
       creature.died = run.year;
+      greatBeastDied(run, creature, def);
       lairAbandoned(run, creature, def);
       continue;
     }
     // A sleeping dragon neither roams nor raids; its temper sets how often it raids (dragons.ts).
     if (creature.dragon && !dragonAwake(run, creature)) continue;
+    // A restless host rests, or walks toward its robbers (great-beasts.ts).
+    if (runRestless(run, creature)) continue;
     roam(run, creature, def);
     // One draw per beast per year, whether or not a site is in range.
     // A courted dragon is loosed on the courter's enemies more often than it raids of itself.
     const chance =
       def.raidChance *
-      (creature.dragon ? raidFactor(run, creature) * courtRaidFactor(run, creature) : 1);
+      (creature.dragon
+        ? raidFactor(run, creature) * courtRaidFactor(run, creature)
+        : greatRaidFactor(run, creature, def));
     if (beastRng(run, creature).chance(chance)) raid(run, creature, def);
   }
   runHunts(run);

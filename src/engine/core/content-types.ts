@@ -232,6 +232,8 @@ export interface ContentBundle {
   creatures: CreatureDef[];
   /** The dragon as an individual (M5.6). */
   dragons: DragonRules;
+  /** Great beasts and the restless dead as individuals (great-beasts.ts). */
+  greatBeasts: GreatBeastRules;
   /** Great works and enchanted items (great-works.ts). */
   greatWorks: GreatWorkRules;
   /** Perilous places, hoards and expeditions (M4.7). */
@@ -1617,6 +1619,74 @@ export interface DragonRules {
   spoilsWord: string;
   /** Realms that court, pay or put a price on a dragon. */
   court: DragonCourtRules;
+}
+
+/** A great beast's temper: its epithet, how it reads and how much more often it raids. */
+export interface GreatBeastTemper {
+  id: string;
+  epithet: string;
+  word: string;
+  /** Multiplies the kind's raid chance. */
+  raidFactor: number;
+  /** A town that fought it and failed is remembered (grudgeYears), and struck first. */
+  grudge?: boolean;
+  /** Towns pay it a toll (tollShare of their food) instead of being raided. */
+  toll?: boolean;
+}
+
+/** One covered kind of great beast: the names, tempers and lairs its individuals draw from. */
+export interface GreatBeastKind {
+  /** The `CreatureDef` id. */
+  creatureId: string;
+  /** Given names; the epithet of its temper follows. */
+  names: string[];
+  /** Tempers it may have, with weights. */
+  tempers: { id: string; weight: number }[];
+  /** Lair name templates; `{name}` is its given name. */
+  lairNames: string[];
+  /** What a toll-taker takes: "cattle". */
+  tollWord: string;
+}
+
+/** The restless dead as individuals: named for the buried ruler, bent on the robbers, then laid to rest. */
+export interface RestlessRules {
+  /** Name templates; `{ruler}` is the buried ruler. */
+  names: string[];
+  /** Cells it walks toward the robbers' nearest town each year. */
+  walk: number;
+  /** Farthest (cells) from it a robber town can lie to draw it. */
+  vengeanceRange: number;
+  /** Multiplies its raid chance while a robber town draws it. */
+  vengeanceFactor: number;
+  /** A town keeping a faith within this many cells may lay it to rest... */
+  layRange: number;
+  /** ...with this yearly chance. */
+  layChance: number;
+  /** How the host ended when the robbers fell: `{civ}` is filled in. */
+  fallenPhrase: string;
+  /** Said of a ruler the barrow does not remember. */
+  unknownRuler: string;
+}
+
+/** Great beasts as individuals: named, tempered, grudging, toll-taking, and the restless dead. */
+export interface GreatBeastRules {
+  kinds: GreatBeastKind[];
+  tempers: GreatBeastTemper[];
+  /** Years a vengeful beast remembers a town that fought it. */
+  grudgeYears: number;
+  /** It strikes a grudge town up to this many times its raid range away. */
+  grudgeRangeFactor: number;
+  /** Its raid chance multiplier while the grudge holds. */
+  grudgeRaidFactor: number;
+  /** Share of a town's food a toll takes. */
+  tollShare: number;
+  /** Chance a town pays rather than is raided. */
+  tollPaid: number;
+  /** Appended when a town pays again; `{nth}` is "second", "third"... */
+  tollAgain: string;
+  /** Added to the importance of a named great beast's slaying. */
+  slainImportance: number;
+  restless: RestlessRules;
 }
 
 /** One kind of great work (great-works.ts): where it may stand, who may raise it, what it costs. */

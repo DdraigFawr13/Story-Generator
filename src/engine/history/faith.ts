@@ -70,7 +70,7 @@ function priestOf(run: HistoryRun, faith: Faith): Person | undefined {
 }
 
 /** "the Title Name of Faith", or "the priests of Faith" when none lives; always printed mid-sentence. */
-function priestPhrase(run: HistoryRun, faith: Faith, priest: Person | undefined): string {
+export function priestPhrase(run: HistoryRun, faith: Faith, priest: Person | undefined): string {
   return priest
     ? `the ${defOf(run, faith).priestTitle} ${priest.name} of ${faith.name}`
     : `the priests of ${faith.name}`;
