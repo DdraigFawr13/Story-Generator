@@ -23,13 +23,15 @@ const FREQUENT = {
 const LEGEND_POWER = 17;
 
 // The tests search this fixed list for a world with the event they check (first match wins).
-// DH-137 and DH-81 lead since the 2026-10-17 great beasts change: between them they hold every
-// deed, so the "each found in some world" scan builds two worlds instead of eight.
+// DH-137, DH-5 and DH-60 lead since the orders and academies change (colleges are no longer founded
+// by peoples that hunt mages, which moved the spell_cast events): between them they hold every
+// deed, so the "each found in some world" scan builds three worlds instead of eight.
 const SEEDS = [
   'DH-137',
+  'DH-5',
+  'DH-60',
   'DH-81',
   'DH-144',
-  'DH-60',
   'DH-134',
   'DH-3',
   'DH-37',

@@ -85,6 +85,8 @@ function run(seed, content) {
     rollupBelow: content.history.importance?.rollupBelow,
     DAYS_PER_YEAR,
     raceIds,
+    orderRules: content.history.orders,
+    cultures: content.cultures,
   });
 }
 

@@ -123,6 +123,8 @@ function stats(seed) {
     rollupBelow,
     DAYS_PER_YEAR,
     raceIds: DEFAULT_CONTENT.races.map((race) => race.id),
+    orderRules: DEFAULT_CONTENT.history.orders,
+    cultures: DEFAULT_CONTENT.cultures,
   });
   // Wars: first year of each war, and the years any war was under way (declared to its last event).
   const warSpan = new Map();

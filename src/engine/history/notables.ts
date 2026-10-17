@@ -348,6 +348,8 @@ export interface DeathOptions {
   fought?: boolean;
   /** The perilous place they died in (an expedition): their items stay there. */
   peril?: PerilousPlace | undefined;
+  /** Importance added to the death, for a killing the chronicle should keep (an execution). */
+  importanceBonus?: number | undefined;
 }
 
 /** A notable dies: the event, vengeance, their items and, for a ruler, the succession. */
@@ -386,7 +388,9 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
       ? { importanceBonus: run.content.notables.beastDeathImportance }
       : isLegend(person)
         ? { importanceBonus: run.rules.intrigue.legendDeathImportance }
-        : {}),
+        : options.importanceBonus
+          ? { importanceBonus: options.importanceBonus }
+          : {}),
     actors: [person.id, ...(killer ? [killer.id] : []), ...spouses.map((p) => p.id)],
     place: options.peril?.cell ?? where?.cell ?? placeOf(run, person),
     causes: options.causes && options.causes.length > 0 ? options.causes : person.deeds.slice(-1),

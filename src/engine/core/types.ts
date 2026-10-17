@@ -24,6 +24,7 @@ export const ENTITY_KINDS = [
   'dynasty',
   'place',
   'faith',
+  'order',
 ] as const;
 export type EntityKind = (typeof ENTITY_KINDS)[number];
 
@@ -663,6 +664,30 @@ export interface Faith {
   seatSiteId?: Id;
   /** Year no live site kept it any more. */
   forgotten?: number;
+}
+
+/** A knightly order or a magic academy founded by a legend (orders.ts). */
+export interface Order {
+  id: Id;
+  kind: 'order' | 'academy';
+  name: string;
+  founderId: Id;
+  civId: Id | null;
+  siteId: Id | null;
+  founded: number;
+  event: Id;
+  /** Heads in order; the first is the founder; the last is the current head while it stands. */
+  heads: Id[];
+  /** Everyone who ever joined, in order (founder first). A member counts while alive and of the order's civ. */
+  members: Id[];
+  /** Academy: the founder's primary school, which its scholars share. */
+  school?: string;
+  /** Academy: the founder's spells (ability ids) at founding; orders: []. */
+  lore: string[];
+  /** Spells of `lore` no living member knows any more, in the order they were lost. */
+  lost: string[];
+  ended?: number;
+  endEvent?: Id;
 }
 
 /** The goods a site stocks (M2.4): food plus four traded materials. */
@@ -1309,6 +1334,8 @@ export interface WorldState {
   places: Map<Id, PerilousPlace>;
   /** Faiths, living and forgotten, filled by the history stage. */
   faiths: Map<Id, Faith>;
+  /** Knightly orders and magic academies, open and ended, filled by the history stage. */
+  orders: Map<Id, Order>;
   /** Notables, living and dead (M2.5); everyone else is a count in `Site.pop`. */
   people: Map<Id, Person>;
   dynasties: Map<Id, Dynasty>;

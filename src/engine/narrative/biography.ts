@@ -5,7 +5,7 @@
 import { DAYS_PER_YEAR, MONTH_NAMES, dateOf } from '../core/clock';
 import type { ContentBundle } from '../core/content-types';
 import { hashString } from '../core/rng';
-import type { Creature, Id, Person, SimEvent, WorldState } from '../core/types';
+import type { Creature, Id, Order, Person, SimEvent, WorldState } from '../core/types';
 import { totalPop } from '../history/pop';
 import { tierOfPower } from '../people/tiers';
 import { fillTemplate, type Narrator } from './render';
@@ -188,6 +188,7 @@ function personSummary(
         : say('personRoleAlone', { title, house }),
     );
   }
+  out.push(...orderLines(world, say, person));
   const spouses = person.family.spouses
     .map((id) => world.people.get(id)?.name)
     .filter((n): n is string => n !== undefined);
@@ -224,6 +225,57 @@ function personSummary(
     out.push(say('personLiving', { age: finalYear - person.born }));
   }
   return out;
+}
+
+/** 1 -> "1st", 2 -> "2nd", 11 -> "11th". */
+function ordinal(n: number): string {
+  const teen = n % 100 >= 11 && n % 100 <= 13;
+  const suffix = teen ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
+  return `${n}${suffix}`;
+}
+
+/** One line for the first order or academy the person founded, else headed, else joined. */
+function orderLines(
+  world: WorldState,
+  say: (name: string, vars: Record<string, string | number>) => string,
+  person: Person,
+): string[] {
+  const orders = [...world.orders.values()];
+  const siteName = (order: Order) =>
+    order.siteId === null ? 'its seat' : (world.sites.get(order.siteId)?.name ?? 'its seat');
+  const founded = orders.find((o) => o.founderId === person.id);
+  if (founded) {
+    const heads = founded.heads.length;
+    const base = { order: founded.name, site: siteName(founded), year: founded.founded };
+    if (founded.ended !== undefined)
+      return [
+        say('orderFoundedEnded', {
+          ...base,
+          years: founded.ended - founded.founded,
+          masters: `${heads} ${plural(heads, 'master', 'masters')}`,
+        }),
+      ];
+    return [
+      say(heads === 1 ? 'orderFoundedFounder' : 'orderFoundedLive', {
+        ...base,
+        nth: ordinal(heads),
+      }),
+    ];
+  }
+  const alive = person.died === undefined;
+  const headed = orders.find((o) => o.heads.includes(person.id));
+  if (headed) {
+    const now =
+      alive && headed.ended === undefined && headed.heads[headed.heads.length - 1] === person.id;
+    return [say(now ? 'orderHeadedNow' : 'orderHeadedPast', { order: headed.name })];
+  }
+  const joined = orders.find((o) => o.members.includes(person.id));
+  if (joined) {
+    const now = alive && joined.ended === undefined && joined.civId === person.civId;
+    const kind = joined.kind === 'academy' ? 'Scholar' : 'Knight';
+    return [say(`order${kind}${now ? 'Now' : 'Past'}`, { order: joined.name })];
+  }
+  return [];
 }
 
 function siteSummary(world: WorldState, content: BioContent, ref: LegendRef): string[] {

@@ -135,12 +135,14 @@ describe('succession wars', () => {
     ).world;
   const find = (w: WorldState, id: number) => w.events.find((e) => e.id === id);
 
-  it('start from a disputed succession, with the claimant ruling the towns that rose', () => {
+  it('start from a disputed succession or a returned claimant, with the claimant ruling the towns that rose', () => {
     const w = warWith('civil_war_began');
     for (const e of ofType(w, 'civil_war_began')) {
-      expect(e.causes.map((id) => find(w, id)).some((c) => c?.type === 'succession_disputed')).toBe(
-        true,
-      );
+      // The claim is a disputed succession, or an exile come home to claim the seat (feuds.ts).
+      const claim = (c: SimEvent | undefined) =>
+        c?.type === 'succession_disputed' ||
+        (c?.type === 'exile_returned' && c.data.kind === 'claim');
+      expect(e.causes.map((id) => find(w, id)).some(claim)).toBe(true);
       const rebel = civNamed(w, e.data.civ)!;
       expect(rebel.rebelOf).toBe(civNamed(w, e.data.from)!.id);
       expect(w.people.get(e.actors[0]!)?.deeds).toContain(e.id);

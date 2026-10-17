@@ -100,6 +100,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...dragonProblems(content));
   problems.push(...greatBeastProblems(content));
   problems.push(...feudProblems(content));
+  problems.push(...orderProblems(content));
   problems.push(...greatWorkProblems(content));
   problems.push(...placeProblems(content));
   problems.push(...faithProblems(content));
@@ -261,6 +262,63 @@ export function feudProblems(content: ContentBundle): string[] {
   if (phrases.struck.escaped.length === 0) problems.push('Feuds: no escape phrases.');
   for (const sex of ['m', 'f'] as const) {
     if (phrases.kin[sex].length < 4) problems.push(`Feuds: kin words for "${sex}" need 4 entries.`);
+  }
+  return problems;
+}
+
+/** Orders and academies (orders.ts): chances 0-1, counts at least 1, name lists and phrases filled. */
+export function orderProblems(content: ContentBundle): string[] {
+  const rules = content.history.orders;
+  if (!rules) return ['Content has no order rules.'];
+  const problems: string[] = [];
+  const chances = [
+    'foundChance',
+    'recruitChance',
+    'trainChance',
+    'learnChance',
+    'knightHuntChance',
+  ] as const;
+  for (const key of chances) {
+    if (!(rules[key] >= 0 && rules[key] <= 1)) problems.push(`Orders: ${key} must be 0-1.`);
+  }
+  if (!(rules.heroFounders.chance >= 0 && rules.heroFounders.chance <= 1))
+    problems.push('Orders: heroFounders chance must be 0-1.');
+  for (const key of ['chance', 'burnChance', 'legendBurnChance', 'fleeChance'] as const) {
+    if (!(rules.hunt[key] >= 0 && rules.hunt[key] <= 1))
+      problems.push(`Orders: hunt ${key} must be 0-1.`);
+  }
+  for (const key of ['legendFactor', 'orderFactor'] as const) {
+    if (!(rules.hunt[key] >= 0)) problems.push(`Orders: hunt ${key} must be 0 or more.`);
+  }
+  for (const key of [
+    'maxOpen',
+    'maxKnights',
+    'maxScholars',
+    'academyMinSpell',
+    'knightRaidYears',
+  ] as const) {
+    if (!(rules[key] >= 1)) problems.push(`Orders: ${key} must be at least 1.`);
+  }
+  for (const key of ['knightAid', 'orderDefence', 'founderFame', 'legendJoinBonus'] as const) {
+    if (!(rules[key] >= 0)) problems.push(`Orders: ${key} must be 0 or more.`);
+  }
+  for (const [attitude, effect] of Object.entries(rules.attitudes)) {
+    if (!(effect.notice >= 0 && effect.collegeFound >= 0))
+      problems.push(`Orders: attitude ${attitude} factors must be 0 or more.`);
+    if (effect.word.trim() === '') problems.push(`Orders: attitude ${attitude} has no word.`);
+  }
+  if (!(rules.attitude.persecuteAt < rules.attitude.revereAt))
+    problems.push('Orders: persecuteAt must be under revereAt.');
+  const lists = {
+    orderNames: rules.orderNames,
+    academyNames: rules.academyNames,
+    charteredNames: rules.charteredNames,
+    emblems: rules.emblems,
+    knightTitles: rules.knightTitles,
+  };
+  for (const [name, list] of Object.entries(lists)) {
+    if (list.length === 0) problems.push(`Orders: no ${name}.`);
+    if (new Set(list).size !== list.length) problems.push(`Orders: duplicate ${name}.`);
   }
   return problems;
 }

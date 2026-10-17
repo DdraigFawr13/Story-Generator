@@ -93,7 +93,8 @@ describe('notables', () => {
     expect(items.size).toBeGreaterThan(0);
     for (const item of items.values()) {
       if (item.holder === null) {
-        expect(item.lostAt).toBeDefined();
+        // A burned book has neither a holder nor a place (Item.burned).
+        if (item.burned === undefined) expect(item.lostAt).toBeDefined();
       } else {
         expect(people.get(item.holder)?.died).toBeUndefined();
         expect(item.lostAt).toBeUndefined();

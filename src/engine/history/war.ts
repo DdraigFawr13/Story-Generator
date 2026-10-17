@@ -26,6 +26,7 @@ import { swearVassal } from './diplomacy';
 import { faithAfterTaken, faithOf, proclaimHolyWar } from './faith';
 import { decideCivilWar, splitRealm } from './civil-war';
 import { breachWall } from './great-works';
+import { orderAt } from './orders';
 import { bandCount, removePeople } from './pop';
 import { cellDistance } from './settle';
 import {
@@ -203,6 +204,8 @@ function siteDefence(run: HistoryRun, site: Site, defender: Civ): number {
   if (defender.free) bonus *= worn(table.freeCity ?? 1);
   // A great wall counts its multiplier on top (great-works.ts).
   if (standingWork(site, 'wall')) bonus *= run.content.greatWorks.wallDefence;
+  // A knightly order of the defender seated here holds it harder (orders.ts).
+  if (orderAt(run, site.id)?.civId === defender.id) bonus *= run.rules.orders.orderDefence;
   return bonus;
 }
 

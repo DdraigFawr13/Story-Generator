@@ -337,6 +337,7 @@ export interface HistoryRun {
     intrigue: RngStream;
     diplomacy: RngStream;
     feuds: RngStream;
+    orders: RngStream;
   };
   /** Remains of slain great beasts, in the order they were left. */
   remains: Remains[];
@@ -562,6 +563,7 @@ export function createRun(
       intrigue: streamFor(world, 'history.intrigue'),
       diplomacy: streamFor(world, 'history.diplomacy'),
       feuds: streamFor(world, 'history.feuds'),
+      orders: streamFor(world, 'history.orders'),
     },
     remains: [],
     year: 0,

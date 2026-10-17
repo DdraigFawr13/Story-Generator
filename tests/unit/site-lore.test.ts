@@ -21,7 +21,7 @@ const C = DEFAULT_CONTENT;
 const SMALL = { ...C, site: { ...C.site, followCap: 30 } };
 
 // Most cases share the first world; the waking case searches the list for a site where one person wakes.
-const SEEDS = ['SITE-A', 'SITE-C', 'SITE-B', 'SITE-D', 'SITE-E', 'SITE-F', 'SITE-G', 'SITE-H'];
+const SEEDS = ['SITE-C', 'SITE-A', 'SITE-B', 'SITE-D', 'SITE-E', 'SITE-F', 'SITE-G', 'SITE-H'];
 const make = (seed: string) => generateWorld(seed, { width: 64, height: 64 }, C);
 const base = () => cached('lore', SEEDS[0]!, make);
 const biggest = (world: WorldState): Site =>
