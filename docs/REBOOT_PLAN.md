@@ -642,7 +642,7 @@ Twelve threads have merged since the list was written (#101 to #122, `CHANGELOG.
 - UI halves of built items: a page per faith (8); the perilous places map layer and Places page (12); vassals on the map and "vassal of" in the People room (13).
 - History leftovers: other great beasts and the restless dead as individuals (7). The dragon courted, feared or put under bounty (10) is built as build order 17.
 - Not started: the story threads view (11), trade between peoples (14), the world moving while you watch (15).
-- Rough edges carried from earlier threads: child deaths below history's share and orcs at 7% (M4.0 leftovers); village back lanes that bend with the ground; only 4 of 111 dwarven holds sit at a pass; the after-play map pauses about 0.4 s when the sharper map swaps in and draws stepped borders at full zoom; `?year=` starts at a different year from where Tales plays.
+- Rough edges carried from earlier threads: child deaths below history's share and orcs at 7% (M4.0 leftovers); only 4 of 111 dwarven holds sit at a pass; the after-play map pauses about 0.4 s when the sharper map swaps in and draws stepped borders at full zoom; `?year=` starts at a different year from where Tales plays.
 
 #### Proposed next set (2026-10-17; a proposal, not approved)
 
