@@ -281,7 +281,11 @@ function passBearer(run: HistoryRun, feud: Feud, house: Id, dead: Person, deathE
     causes: causesOf(deathEvent, feud.last),
     data: {
       name: heir.name,
-      kin: kinWord(run, heir, dead),
+      // An heir named for the dead is called their namesake, so the line never reads as a slip.
+      kin:
+        heir.name === dead.name
+          ? `${kinWord(run, heir, dead)} and namesake`
+          : kinWord(run, heir, dead),
       dead: dead.name,
       house: houseName(run, house),
       foe: houseName(run, otherHouse(feud, house)),
