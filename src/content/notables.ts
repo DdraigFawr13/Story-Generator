@@ -75,6 +75,12 @@ export const NOTABLES: NotableRules = {
       legend_bribed: 2,
       bounty_set: 2,
       legend_hunted: 8,
+      // Dragon at court: the ruler who pays or sets a price, the figure who takes it (the slayer's fame is in dragons.court.bountyFame).
+      dragon_pact: 2,
+      dragon_bounty_set: 2,
+      dragon_courted: 2,
+      dragon_unleashed: 2,
+      dragon_bounty_taken: 4,
     },
   },
   // A ruler (fame 20) adds 2 importance to the events around them; a legend adds the cap.

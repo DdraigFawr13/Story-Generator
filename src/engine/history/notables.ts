@@ -441,9 +441,12 @@ function runDeaths(run: HistoryRun): void {
   }
 }
 
-/** Chance a beast of `danger` kills a figure it beat in a fight: stronger figures more often live. */
-export function beastKillChance(run: HistoryRun, person: Person, danger: number): number {
-  return (run.content.notables.beastKill * danger) / (danger + deedSoldiers(run, person));
+/**
+ * Chance a beast of `danger` kills a figure it beat in a fight: stronger figures more often live,
+ * and so do those with `aid` soldiers at their side (a bounty's lent host).
+ */
+export function beastKillChance(run: HistoryRun, person: Person, danger: number, aid = 0): number {
+  return (run.content.notables.beastKill * danger) / (danger + deedSoldiers(run, person) + aid);
 }
 
 /** A beast raid may kill one notable at the raided site, the weaker the likelier. */

@@ -47,6 +47,8 @@ export const dragons: DragonRules = {
       burnBelow: 0,
       burnChance: 0,
       burnGap: 0,
+      // Courtship: it takes every gift.
+      courtAccept: 1,
     },
     {
       id: 'wrathful',
@@ -60,6 +62,8 @@ export const dragons: DragonRules = {
       burnBelow: 300,
       burnChance: 0.12,
       burnGap: 30,
+      // Courtship: it burns the envoys seven times in ten.
+      courtAccept: 0.3,
     },
     {
       id: 'slumbering',
@@ -71,6 +75,8 @@ export const dragons: DragonRules = {
       burnBelow: 0,
       burnChance: 0,
       burnGap: 0,
+      // Courtship: it takes the gifts six times in ten.
+      courtAccept: 0.6,
       // Sleeps 20 to 50 years, wakes 5 to 15.
       sleep: [20, 50],
       wake: [5, 15],
@@ -102,4 +108,50 @@ export const dragons: DragonRules = {
     treasure: ['treasure', 'treasures'],
   },
   spoilsWord: 'the tribute and plunder it had gathered',
+  court: {
+    // A realm deals with a dragon when its capital lies within 60 cells of the lair.
+    courtRange: 60,
+    // A ruler answers once the realm has taken 2 harms from one dragon.
+    fearHarms: 2,
+    // Yearly chance of an answer once the harms are enough.
+    answerChance: 0.3,
+    // Chance of a bounty over a pact: 0.5, +0.05 per point of war above 5, -0.05 per point of
+    // wealth above 5, +0.2 with a living legend, kept between 0.1 and 0.9.
+    bountyBase: 0.5,
+    bountyPerWar: 0.05,
+    bountyPerWealth: 0.05,
+    bountyLegend: 0.2,
+    bountyRange: [0.1, 0.9],
+    // A pact realm's capital gives a third of its food every 5 years.
+    pactShare: 0.33,
+    pactEvery: 5,
+    // Yearly chance a ruler at war courts a dragon within courtRange of the enemy; a courted dragon
+    // is loosed on enemy towns within courtRange of where it is.
+    courtChance: 0.06,
+    // Grievance the struck realm holds against the courter per unleashed raid.
+    grievanceUnleashed: 1,
+    // Yearly chance a figure takes a standing bounty; the same figure waits 25 years.
+    bountyTakeChance: 0.05,
+    bountyCooldown: 25,
+    // The payer lends a fifth of its adults, at most 1,000, to the figure who takes the bounty;
+    // the host raises the odds of the kill and shields the taker (about 1 death in 10 hunts).
+    bountyAidShare: 0.2,
+    bountyAidCap: 1000,
+    // The payer's guides and gold triple the slay chance of a bounty hunt.
+    bountyOdds: 3,
+    // A courted dragon raids four times as often while its courter has an enemy town in reach.
+    unleashFactor: 4,
+    // Fame the slayer gains for claiming the bounty.
+    bountyFame: 5,
+    phrases: {
+      prices: [
+        'a chest of gold',
+        'a hundred head of cattle and a hall',
+        "a lord's share of silver",
+      ],
+      pactWord: 'a third of its food',
+      courtAccepted: 'and the dragon took the gifts',
+      courtRefused: 'but the dragon burned the envoys',
+    },
+  },
 };
