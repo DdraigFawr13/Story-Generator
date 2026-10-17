@@ -612,24 +612,49 @@ Each phase lists its goal, milestones (PR-sized), done-when criteria and known f
 
 After the Phase 3 playtest Morgan asked for additions ranked by value and coding effort ([ranked list](https://claude.ai/code/artifact/f0a2128a-8c01-45d0-b3ed-802706df83d1)), liked all fifteen and chose legends first. Work now follows this order; the phases below still group the work by topic, and each item is spelled out in its phase. Value is 1–5; effort is S (one short thread), M (one thread) or L (two or three). The order may change at any playtest check-in.
 
-1. **Legends as champions** (M5.5; value 5, M): in progress from 2026-10-14, pulled ahead of Phases 4 and 5.
-2. **Site life fixes** (M4.0; value 3, S): the Phase 3 playtest's known rough edges. Can run beside any other item.
-3. **Named battles on the map** (M4.8; value 3, S).
-4. **Annals of each people** (M4.9; value 3, S).
-5. **Dwarven mountain holds** (M4.10; value 3, S).
-6. **Succession wars and dynasties** (Phase 6, pulled forward; value 5, M): built 2026-10-14 (civil wars, splits, ruling houses ended); the family tree in Legends is still to come.
-7. **Dragons and great beasts as individuals** (M5.6; value 4, M): dragons built 2026-10-14, up to three at once; other great beasts still to come.
-8. **Religion: gods, priests, holy wars** (Phase 7, pulled forward; value 4, M): built 2026-10-14 in history (faiths, high priests, prophets, schisms, conversion, holy wars); the Legends screens for it come with the UI redesign.
-9. **Spellbooks and lineages** (M5.2; value 4, M): built 2026-10-16 (apprenticeships, spells, spellbooks, lost and found lore, the People room's Magic tab).
-10. **Court intrigue** (Phase 6 "Legends in politics", pulled forward; value 4, M): built 2026-10-16 (plots and assassinations, honours, seats seized by legends, betrayal, bribes, bounties and hunts); courting or fearing the dragons is still to come.
-11. **Story threads view** (M4.6; value 2, S).
-12. **Expeditions and perilous places** (M4.7; value 5, L): history part built 2026-10-14 (places, barrows, hoards, expeditions, beast parts, the restless dead); the map layer and Places page are still to come.
-13. **Diplomacy: alliances, vassalage, betrayal** (Phase 6; value 5, L): built 2026-10-17 in history (alliances, calls to arms, betrayal, vassals and revolts, peace by marriage); showing vassals on the map and in the People room is still to come.
-14. **Trade between peoples in history** (M4.4; value 3, M).
-15. **The world keeps moving while you watch** (M4.1–M4.3; value 4, L).
-16. **Armies and settlers move on the map** (M4.11; value 3, S; added 2026-10-14 from Morgan's playback notes): one host per side marches through a war and meets the enemy's host, and settlers walk to the land they found.
+1. **Legends as champions** (M5.5; value 5, M): built 2026-10-14 (#101), pulled ahead of Phases 4 and 5.
+2. **Site life fixes** (M4.0; value 3, S): the Phase 3 playtest's known rough edges; built 2026-10-14 (#103). Can run beside any other item.
+3. **Named battles on the map** (M4.8; value 3, S): built 2026-10-14 (#105).
+4. **Annals of each people** (M4.9; value 3, S): built 2026-10-14 (#105).
+5. **Dwarven mountain holds** (M4.10; value 3, S): built 2026-10-14 (#107).
+6. **Succession wars and dynasties** (Phase 6, pulled forward; value 5, M): built 2026-10-14 (#104: civil wars, splits, ruling houses ended); the family tree is in progress from 2026-10-17 as a dynasty tree screen in the People room.
+7. **Dragons and great beasts as individuals** (M5.6; value 4, M): dragons built 2026-10-14 (#106), up to three at once; other great beasts and the restless dead still to come.
+8. **Religion: gods, priests, holy wars** (Phase 7, pulled forward; value 4, M): built 2026-10-14 in history (#109: faiths, high priests, prophets, schisms, conversion, holy wars); the People room lists priests and prophets, and a page per faith is still to come.
+9. **Spellbooks and lineages** (M5.2; value 4, M): built 2026-10-16 (#118: apprenticeships, spells, spellbooks, lost and found lore, the People room's Magic tab).
+10. **Court intrigue** (Phase 6 "Legends in politics", pulled forward; value 4, M): built 2026-10-16 (#120: plots and assassinations, honours, seats seized by legends, betrayal, bribes, bounties and hunts); courting or fearing the dragons is still to come.
+11. **Story threads view** (M4.6; value 2, S): not started.
+12. **Expeditions and perilous places** (M4.7; value 5, L): history part built 2026-10-14 (#108: places, barrows, hoards, expeditions, beast parts, the restless dead); the map layer and Places page are still to come.
+13. **Diplomacy: alliances, vassalage, betrayal** (Phase 6; value 5, L): built 2026-10-17 in history (#121: alliances, calls to arms, betrayal, vassals and revolts, peace by marriage); showing vassals on the map and in the People room is still to come.
+14. **Trade between peoples in history** (M4.4; value 3, M): not started.
+15. **The world keeps moving while you watch** (M4.1–M4.3; value 4, L): not started.
+16. **Armies and settlers move on the map** (M4.11; value 3, S; added 2026-10-14 from Morgan's playback notes): one host per side marches through a war and meets the enemy's host, and settlers walk to the land they found. Built 2026-10-17 (#122).
 
 Items not in the list (M4.5, M5.1, M5.3, M5.4, the rest of Phases 6–9) keep their place and come after it unless a check-in moves them.
+
+#### Where the list stands (2026-10-17)
+
+Twelve threads have merged since the list was written (#101 to #122, `CHANGELOG.md`), beside the Four rooms UI redesign (#110 to #113, #115, #117) and the faster tests (#119). Thirteen of the sixteen items are built in full or in their history part. Left, in list order:
+
+- Running: the family tree (item 6), as a dynasty tree screen in the People room.
+- UI halves of built items: a page per faith (8); the perilous places map layer and Places page (12); vassals on the map and "vassal of" in the People room (13).
+- History leftovers: other great beasts and the restless dead as individuals (7); the dragon courted, feared or put under bounty (10).
+- Not started: the story threads view (11), trade between peoples (14), the world moving while you watch (15).
+- Rough edges carried from earlier threads: child deaths below history's share and orcs at 7% (M4.0 leftovers); village back lanes that bend with the ground; only 4 of 111 dwarven holds sit at a pass; the after-play map pauses about 0.4 s when the sharper map swaps in and draws stepped borders at full zoom; `?year=` starts at a different year from where Tales plays.
+
+#### Proposed next set (2026-10-17; a proposal, not approved)
+
+For when the picks Morgan has already seen (vassals shown in the UI, the world moving while you watch) are placed. Ranked by fit with Morgan's recorded taste: personal and story-first screens, famous figures who did things, betrayals, a calm on-theme map with a touch of fantasy, records of how things came to be. Value 1–5; effort S, M or L as above. None starts without Morgan's pick.
+
+| Order | Addition | Where | What you would see | Value | Effort |
+| --- | --- | --- | --- | --- | --- |
+| P1 | The dragon at court | Phase 6 leftover | Realms court, fear, pay tribute to or set a bounty on a named dragon; a legend who takes the bounty hunts it, and dies more often than not | 4 | M |
+| P2 | Perilous places on the map and a Places page | M4.7 leftover | Ruins, barrows and lairs marked on the Tales map under the event filter; a page per place with its hoard, its expeditions and its dead | 4 | S |
+| P3 | Great works and enchanting | M5.3 | A legend raises one tower, wall, bridge or warded grove in a lifetime, drawn on the map with a chronicle line; master smiths make named items from beast parts | 4 | M |
+| P4 | Feuds across generations and exile | M4.5 | A wrong between two houses outlives both; heirs inherit the grudge, an exiled notable returns, inheritance disputes split a family | 4 | M |
+| P5 | A page per faith | Phase 7 leftover | Gods, holy city, high priests in order, schisms and holy wars, in the People and Book rooms | 3 | S |
+| P6 | Orders and academies | Phase 7 | A legend founds an order or academy that keeps or loses their lore after them; each culture reveres, regulates or persecutes magic | 3 | M |
+| P7 | Other great beasts and the restless dead | M5.6 leftover | Named giants and wyverns with lairs and tempers; a robbed barrow wakes its dead | 3 | M |
+| P8 | Rough-edges bundle | the list above | The carried rough edges fixed in one short thread; runs beside any other | 3 | S |
 
 ### Phase 0 — Reset and skeleton (2–3 PRs)
 - **M0.1 Docs reset:**
