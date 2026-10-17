@@ -18,7 +18,11 @@ import { parseOpen, type LegendCategory } from './map-view';
 
 /** A page in the pane: any legend entity, a race (content only) or a single event. */
 export type PageRef =
-  LegendRef | { kind: 'race'; id: string } | { kind: 'event'; id: Id } | { kind: 'place'; id: Id };
+  | LegendRef
+  | { kind: 'race'; id: string }
+  | { kind: 'event'; id: Id }
+  | { kind: 'place'; id: Id }
+  | { kind: 'order'; id: Id };
 export type CategoryId = LegendCategory;
 
 /** Where the Legends pane is: the list or page it shows, and how it got there. */
@@ -99,6 +103,7 @@ export const KIND_LABEL: Record<CategoryId, string> = {
   dynasty: 'Family',
   beast: 'Beast',
   place: 'Place',
+  order: 'Order',
   item: 'Artifact',
   event: 'Event',
 };

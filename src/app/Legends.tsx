@@ -17,6 +17,7 @@ import {
   type WorldState,
 } from '../engine';
 import { PageView } from './LegendPages';
+import { allOrders, orderLine } from './orders';
 import { allPlaces, placeKindLabel } from './places';
 import {
   LegendsContext,
@@ -83,6 +84,7 @@ const CATEGORIES: { id: CategoryId; label: string; blurb: string }[] = [
   { id: 'dynasty', label: 'Families', blurb: 'Founded lines' },
   { id: 'beast', label: 'Beasts', blurb: 'Lairs and monsters' },
   { id: 'place', label: 'Places', blurb: 'Ruins, barrows and lairs' },
+  { id: 'order', label: 'Orders', blurb: 'Knightly orders and academies' },
   { id: 'item', label: 'Artifacts', blurb: 'Artifacts and books' },
   { id: 'event', label: 'Events', blurb: 'Everything the chroniclers noted, greatest first' },
 ];
@@ -209,6 +211,7 @@ export function Legends(props: Props) {
       return event ? titleOf(event) : '?';
     }
     if (ref.kind === 'place') return world.places.get(ref.id)?.name ?? '?';
+    if (ref.kind === 'order') return cap(world.orders.get(ref.id)?.name ?? '?');
     return refName(world, ref);
   };
 
@@ -313,6 +316,13 @@ export function Legends(props: Props) {
         }`,
       };
     });
+    const orders: Row[] = allOrders(world, content).map((order) => ({
+      ref: { kind: 'order', id: order.id },
+      name: cap(order.name),
+      years: spanText(order.founded, order.ended),
+      meta: orderLine(order, world),
+      civId: order.civId,
+    }));
     const items: Row[] = [...world.items.values()].map((item) => ({
       ref: { kind: 'item', id: item.id },
       name: item.name,
@@ -327,6 +337,7 @@ export function Legends(props: Props) {
       dynasty: dynasties,
       beast: beasts,
       place: places,
+      order: orders,
       item: items,
     };
     for (const rows of Object.values(named)) {
@@ -346,6 +357,7 @@ export function Legends(props: Props) {
       dynasty: dynasties,
       beast: beasts,
       place: places,
+      order: orders,
       item: items,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -424,6 +436,7 @@ export function Legends(props: Props) {
     dynasty: lists.dynasty.length,
     beast: lists.beast.length,
     place: lists.place.length,
+    order: lists.order.length,
     item: lists.item.length,
     event: world.events.length,
   };

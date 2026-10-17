@@ -18,6 +18,7 @@ import {
   type LegendRef,
   type SimEvent,
 } from '../engine';
+import { allOrders, memberWord, personOrder, type OrderInfo } from './orders';
 import { allPlaces, dangerWord, emptiedBy, outcomeText, placeWhat } from './places';
 import { WatchCard } from './EmbarkCards';
 import { TiesSection } from './TiesSection';
@@ -372,10 +373,14 @@ export function PageView({
   if (page.kind === 'event') return <EventPage id={page.id} />;
   if (page.kind === 'race') return <RacePage id={page.id} />;
   if (page.kind === 'place') return <PlacePage id={page.id} />;
+  if (page.kind === 'order') return <OrderPage id={page.id} />;
   return <EntityPage page={page} all={all} onAll={onAll} bare={bare ?? false} />;
 }
 
 type Fact = [string, React.ReactNode];
+
+const orderRefs = (orders: readonly OrderInfo[]) =>
+  orders.map((o) => ({ to: { kind: 'order', id: o.id } as PageRef, label: cap(o.name) }));
 
 function Facts({ facts }: { facts: Fact[] }) {
   if (facts.length === 0) return null;
@@ -479,6 +484,16 @@ function EntityPage({
         />,
       ]);
     }
+    const orders = allOrders(world, content).filter((o) => o.civId === civ.id && o.founded <= year);
+    const standingOrders = orders.filter((o) => o.ended === undefined || o.ended > year);
+    const formerOrders = orders.filter((o) => o.ended !== undefined && o.ended <= year);
+    if (standingOrders.length > 0)
+      facts.push(['Orders', <LinkList refs={orderRefs(standingOrders)} limit={PLACES_SHOWN} />]);
+    if (formerOrders.length > 0)
+      facts.push([
+        'Former orders',
+        <LinkList refs={orderRefs(formerOrders)} limit={PLACES_SHOWN} />,
+      ]);
   } else if (page.kind === 'site') {
     const site = world.sites.get(page.id)!;
     const state = sitesAt.get(site.id);
@@ -502,6 +517,11 @@ function EntityPage({
     } else {
       facts.push(['Peak', `peak population ${count(site.peakPop)}`]);
     }
+    const seats = allOrders(world, content).filter(
+      (o) => o.siteId === site.id && o.founded <= year && (o.ended === undefined || o.ended > year),
+    );
+    if (seats.length > 0)
+      facts.push(['Seat of', <LinkList refs={orderRefs(seats)} limit={PLACES_SHOWN} />]);
   } else if (page.kind === 'person') {
     const person = world.people.get(page.id)!;
     facts.push([
@@ -516,6 +536,13 @@ function EntityPage({
     ]);
     const civ = person.civId == null ? undefined : world.civs.get(person.civId);
     if (civ) facts.push(['Serves', <Link to={{ kind: 'civ', id: civ.id }}>{civ.name}</Link>]);
+    const sworn = personOrder(allOrders(world, content), person.id);
+    if (sworn) {
+      facts.push([
+        sworn.title.replace(/ of$/, ''),
+        <Link to={{ kind: 'order', id: sworn.order.id }}>{cap(sworn.order.name)}</Link>,
+      ]);
+    }
     const house =
       person.dynastyId === undefined ? undefined : world.dynasties.get(person.dynastyId);
     if (house)
@@ -1028,6 +1055,328 @@ function PlacePage({ id }: { id: Id }) {
         <span>Chronicle</span>
       </div>
       <Chronicle ids={place.deeds} empty="No one has gone in yet." />
+    </>
+  );
+}
+
+const ORDINAL_WORDS =
+  'first second third fourth fifth sixth seventh eighth ninth tenth eleventh twelfth'.split(' ');
+/** "ninth", then "13th", "21st", "22nd". */
+function ordinalWord(n: number): string {
+  const word = ORDINAL_WORDS[n - 1];
+  if (word) return word;
+  const teen = n % 100 >= 11 && n % 100 <= 13;
+  return `${n}${teen ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] ?? 'th')}`;
+}
+
+/** "its founder's spell", "both of its founder's spells", "all 3 of its founder's spells". */
+const spellsOf = (n: number) =>
+  n === 1
+    ? "its founder's spell"
+    : n === 2
+      ? "both of its founder's spells"
+      : `all ${n} of its founder's spells`;
+
+const SMALL_NUMBERS =
+  'no one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen'.split(
+    ' ',
+  );
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+/** "six", "forty-five"; 100 and up as digits. */
+function numberWord(n: number): string {
+  if (n < 20) return SMALL_NUMBERS[n]!;
+  if (n >= 100) return String(n);
+  const tens = TENS[Math.floor(n / 10)]!;
+  return n % 10 === 0 ? tens : `${tens}-${SMALL_NUMBERS[n % 10]}`;
+}
+/** Hunts listed on an order page before "Show all". */
+const HUNTS_SHOWN = 8;
+
+function OrderPage({ id }: { id: Id }) {
+  const { world, content, onShow, titleOf, index } = useLegends();
+  const order = useMemo(
+    () => allOrders(world, content).find((o) => o.id === id),
+    [world, content, id],
+  );
+  const [allMembers, setAllMembers] = useState(false);
+  const [allHunts, setAllHunts] = useState(false);
+  if (!order) {
+    return (
+      <>
+        <div>
+          <div className="lg-kind">{KIND_LABEL.order}</div>
+          <h3>No such order</h3>
+        </div>
+        <p className="lg-empty flush">
+          This world has no knightly order or academy by that number.
+        </p>
+      </>
+    );
+  }
+  const academy = order.kind === 'academy';
+  const founder = world.people.get(order.founderId);
+  const seat = order.siteId === null ? undefined : world.sites.get(order.siteId);
+  const civ = order.civId === null ? undefined : world.civs.get(order.civId);
+  const foundedAt = index.event(order.event)?.data.site;
+  const head = order.heads[order.heads.length - 1];
+  const headPerson = head ? world.people.get(head.personId) : undefined;
+  const endEvent = order.endEvent === undefined ? undefined : index.event(order.endEvent);
+  const school = order.school ?? 'magic';
+  // Two people of one name on the page are told apart by their birth year.
+  const ids = new Set([
+    ...order.heads.map((h) => h.personId),
+    ...order.members.map((m) => m.personId),
+  ]);
+  const nameCount = new Map<string, number>();
+  for (const pid of ids) {
+    const name = world.people.get(pid)?.name;
+    if (name) nameCount.set(name, (nameCount.get(name) ?? 0) + 1);
+  }
+  const person = (pid: Id) => {
+    const p = world.people.get(pid);
+    if (!p) return '?';
+    return (
+      <>
+        <Link to={{ kind: 'person', id: pid }}>{p.name}</Link>
+        {(nameCount.get(p.name) ?? 0) > 1 && ` (born Year ${yearText(p.born)})`}
+      </>
+    );
+  };
+  const word = (n: number) => memberWord(order.kind, n);
+
+  const begun = (
+    <>
+      {academy ? `An academy of ${school}` : 'A knightly order'}
+      {civ && !academy && <> of the {civ.name}</>}, {academy ? 'opened' : 'founded'}
+      {typeof foundedAt === 'string' && ` at ${foundedAt}`} in Year {yearText(order.founded)}
+      {founder && <> by {person(founder.id)}</>}.
+    </>
+  );
+  const moves = order.moves.map((m, k) => (
+    <Fragment key={m.event}>
+      {k > 0 && ', then '}
+      {m.passed ? (
+        <>
+          passed with {m.site} to the {m.civ} in{' '}
+        </>
+      ) : (
+        <>moved to {m.site} in </>
+      )}
+      <EventLink id={m.event}>Year {yearText(m.year)}</EventLink>
+    </Fragment>
+  ));
+  const moved = order.moves.length > 0 && <> It {moves}.</>;
+  const served = order.members.length;
+  let now: React.ReactNode;
+  if (order.ended !== undefined) {
+    const reason = endEvent ? String(endEvent.data.reason ?? '') : '';
+    now = (
+      <>
+        It ended in Year {yearText(order.ended)} after {numberWord(order.heads.length)}{' '}
+        {plural(order.heads.length, 'master', 'masters')} and {numberWord(served)} {word(served)}
+        {reason && `; ${reason}`}.
+      </>
+    );
+  } else {
+    now = (
+      <>
+        It stands{seat && ` at ${seat.name}`}
+        {civ && academy && <> under the {civ.name}</>}
+        {headPerson && (
+          <>
+            , led by its {ordinalWord(order.heads.length)} master, {person(headPerson.id)}
+          </>
+        )}
+        , with {numberWord(order.serving)} {word(order.serving)} today and {numberWord(served)} in
+        all.
+      </>
+    );
+  }
+  const keptSpells = order.lore.filter((sp) => sp.lost === undefined);
+  const lostSpells = order.lore.filter((sp) => sp.lost !== undefined);
+  const loreLine =
+    academy && order.lore.length > 0
+      ? lostSpells.length === 0
+        ? ` It keeps ${spellsOf(order.lore.length)}.`
+        : keptSpells.length === 0
+          ? ` It has lost ${spellsOf(order.lore.length)}.`
+          : ` It keeps ${keptSpells.length} of its founder's ${order.lore.length} spells.`
+      : '';
+
+  const facts: Fact[] = [];
+  if (founder) facts.push(['Founder', person(founder.id)]);
+  if (academy) facts.push(['School', cap(school)]);
+  if (seat) {
+    facts.push([
+      order.ended === undefined ? 'Seat' : 'Last seat',
+      <>
+        <Link to={{ kind: 'site', id: seat.id }}>{seat.name}</Link>
+        {' ('}
+        <button type="button" className="lg-ln" onClick={() => onShow(seat.cell)}>
+          show on map
+        </button>
+        )
+      </>,
+    ]);
+  }
+  if (civ) {
+    facts.push([
+      order.ended === undefined ? 'Serves' : 'Served',
+      <Link to={{ kind: 'civ', id: civ.id }}>{civ.name}</Link>,
+    ]);
+  }
+  if (order.ended === undefined && headPerson) facts.push(['Master now', person(headPerson.id)]);
+  facts.push([
+    order.ended === undefined ? 'Founded' : 'Years',
+    order.ended === undefined
+      ? `Year ${yearText(order.founded)}`
+      : `Year ${yearText(order.founded)} to ${yearText(order.ended)}`,
+  ]);
+
+  // Those serving now come first, then the rest, each in the order they joined.
+  const roll = [
+    ...order.members.filter((m) => m.serving),
+    ...order.members.filter((m) => !m.serving),
+  ];
+  const shown = allMembers ? roll : roll.slice(0, MEMBERS_SHOWN);
+  const masters = new Set(order.heads.map((h) => h.personId));
+  const died = content.notables.deeds.huntPhrases.died;
+  const hunts = allHunts ? order.hunts : order.hunts.slice(0, HUNTS_SHOWN);
+  return (
+    <>
+      <div>
+        <div className="lg-kind">{academy ? 'Academy' : 'Knightly order'}</div>
+        <h3>{cap(order.name)}</h3>
+      </div>
+      <p className="lg-summary">
+        {begun}
+        {moved} {now}
+        {loreLine}
+      </p>
+      <Facts facts={facts} />
+      <div className="lg-sect">
+        <span>Masters · {order.heads.length}</span>
+      </div>
+      <ol className="lg-annals plain">
+        {order.heads.map((h, k) => (
+          <li key={h.personId}>
+            <EventLink id={h.event}>Year {yearText(h.from)}</EventLink> {person(h.personId)}
+            {k === 0 ? ', the founder' : ''}
+            {h.to !== undefined &&
+              (h.diedInOffice
+                ? `, died in office Year ${yearText(h.to)}`
+                : `, until Year ${yearText(h.to)}`)}
+          </li>
+        ))}
+      </ol>
+      <div className="lg-sect">
+        <span>
+          {cap(word(2))} · {order.members.length}
+        </span>
+      </div>
+      <ul className="lg-annals plain lg-members">
+        {shown.map((m) => {
+          const p = world.people.get(m.personId);
+          const best = m.best === undefined ? undefined : index.event(m.best);
+          const notes = [
+            m.serving ? 'serving' : '',
+            masters.has(m.personId) && m.personId !== order.founderId ? 'master' : '',
+            p?.died !== undefined ? `died Year ${yearText(p.died)}` : '',
+          ].filter((t) => t);
+          return (
+            <li key={m.personId}>
+              {m.event !== undefined && m.joined !== undefined ? (
+                <EventLink id={m.event}>Year {yearText(m.joined)}</EventLink>
+              ) : (
+                <span className="lg-when" title="The year they joined is not on record">
+                  {m.joinedBy !== undefined
+                    ? `by ${yearText(m.joinedBy)}`
+                    : m.joinedAfter !== undefined
+                      ? `after ${yearText(m.joinedAfter)}`
+                      : ''}
+                </span>
+              )}{' '}
+              {person(m.personId)}
+              {m.personId === order.founderId ? ', the founder' : ''}
+              {notes.length > 0 && `, ${notes.join(', ')}`}
+              {best && (
+                <>
+                  {' · '}
+                  <Link to={{ kind: 'event', id: best.id }}>{titleOf(best)}</Link>
+                </>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {order.members.length > MEMBERS_SHOWN && (
+        <button type="button" className="lg-more" onClick={() => setAllMembers((v) => !v)}>
+          {allMembers ? 'Fewer' : `Show all ${order.members.length}`}
+        </button>
+      )}
+      {academy && order.lore.length > 0 && (
+        <>
+          <div className="lg-sect">
+            <span>Spells · {order.lore.length}</span>
+          </div>
+          <ul className="lg-annals plain">
+            {order.lore.map((sp) => (
+              <li key={sp.id}>
+                {sp.name}
+                {sp.lostEvent !== undefined ? (
+                  <>
+                    {', '}
+                    <EventLink id={sp.lostEvent}>lost in Year {yearText(sp.lost!)}</EventLink>
+                  </>
+                ) : sp.lost !== undefined ? (
+                  `, lost in Year ${yearText(sp.lost)}`
+                ) : (
+                  ', still taught'
+                )}
+                {sp.learnedBy > 0 &&
+                  `; learned here by ${numberWord(sp.learnedBy)} ${plural(sp.learnedBy, 'scholar', 'scholars')}`}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {order.hunts.length > 0 && (
+        <>
+          <div className="lg-sect">
+            <span>Hunts · {order.hunts.length}</span>
+          </div>
+          <ol className="lg-annals plain">
+            {hunts.map((hid) => {
+              const e = index.event(hid);
+              if (!e) return null;
+              const beast = index.refs(hid).find((r) => r.kind === 'beast');
+              const prey = String(e.data.beast ?? 'a beast');
+              const how =
+                e.type === 'beast_slain'
+                  ? 'slew it'
+                  : e.data.outcome === died
+                    ? 'never came home'
+                    : 'came home scarred';
+              return (
+                <li key={hid}>
+                  <EventLink id={hid}>Year {yearText(eventYear(e))}</EventLink>{' '}
+                  {e.actors[0] !== undefined && person(e.actors[0])} against{' '}
+                  {beast ? <Link to={beast}>{prey}</Link> : prey}, {how}
+                </li>
+              );
+            })}
+          </ol>
+          {order.hunts.length > HUNTS_SHOWN && (
+            <button type="button" className="lg-more" onClick={() => setAllHunts((v) => !v)}>
+              {allHunts ? 'Fewer' : `Show all ${order.hunts.length}`}
+            </button>
+          )}
+        </>
+      )}
+      <div className="lg-sect">
+        <span>Chronicle</span>
+      </div>
+      <Chronicle ids={order.deeds} empty="Nothing on record." />
     </>
   );
 }

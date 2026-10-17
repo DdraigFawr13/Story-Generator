@@ -13,6 +13,7 @@ import {
   type WorldState,
 } from '../../engine';
 import { AllEvents, PageView } from '../LegendPages';
+import { allOrders, personOrder } from '../orders';
 import { RoomShell, type RoomId } from '../rooms/Rooms';
 import { KIND_LABEL, Link, plural, useLegends, type PageRef } from '../legends-ctx';
 import {
@@ -76,7 +77,14 @@ export function PeopleRoom(props: Props) {
             from={props.from?.kind === 'person' ? props.from.id : undefined}
           />
         ) : found ? (
-          <PersonPage key={found.id} person={found} onFollow={onFollow} onIndex={onIndex} />
+          <PersonPage
+            key={found.id}
+            person={found}
+            onFollow={onFollow}
+            onIndex={onIndex}
+            // Opened from another page: Back returns there rather than to the list.
+            onBack={props.from ? (props.onBack ?? onIndex) : undefined}
+          />
         ) : (
           <PeopleIndex />
         )}
@@ -257,10 +265,12 @@ function PersonPage({
   person,
   onFollow,
   onIndex,
+  onBack,
 }: {
   person: Person;
   onFollow: (person: { id: Id; name: string }) => void;
   onIndex: () => void;
+  onBack?: (() => void) | undefined;
 }) {
   const { world, index, content, textOf, titleOf, finalYear, siteActions } = useLegends();
   const [tab, setTab] = useState<Tab>('life');
@@ -276,6 +286,10 @@ function PersonPage({
   );
   const roles = useMemo(() => rolesOf(world, person, content).line, [world, person, content]);
   const chips = chipsOf(world, person, content, finalYear);
+  const sworn = useMemo(
+    () => personOrder(allOrders(world, content), person.id),
+    [world, content, person.id],
+  );
   const life = useMemo(
     () => lifeRows(world, person, events, textOf, { legend, titleOf }),
     [world, person, events, textOf, titleOf, legend],
@@ -296,8 +310,8 @@ function PersonPage({
   ];
   return (
     <div className="pp-scroll" data-testid="person-page">
-      <button type="button" className="pp-back" onClick={onIndex}>
-        ‹ People
+      <button type="button" className="pp-back" onClick={onBack ?? onIndex}>
+        {onBack ? '‹ Back' : '‹ People'}
       </button>
       <header className="pp-head">
         <Disc name={person.name} civId={person.civId ?? null} legend={legend} big />
@@ -315,6 +329,11 @@ function PersonPage({
                   {c.text}
                 </span>
               ),
+            )}
+            {sworn && (
+              <Link to={{ kind: 'order', id: sworn.order.id }} className="pp-tag">
+                {sworn.title} {sworn.order.name}
+              </Link>
             )}
           </div>
         </div>

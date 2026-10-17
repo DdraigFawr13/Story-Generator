@@ -644,7 +644,7 @@ Items not in the list (M4.5, M5.1, M5.3, M5.4, the rest of Phases 6–9) keep th
 Thirty-eight threads have merged since the list was written (#101 to #138, `CHANGELOG.md`). Thirteen of the sixteen ranked items are built in full, and the proposed next set P1 to P8 is built too (P5, a page per faith, is in review as #136). Left:
 
 - Not started from the ranked list: the story threads view (11), trade between peoples (14; cross-border trade turned out to be 26% to 30% of trades already, so only its story parts remain), the world moving while you watch (15).
-- UI halves: a page per order and academy (orders and academies have no screen yet); a page per faith is in review (#136).
+- UI halves: a page per faith is in review (#136); a page per order and academy was picked as S1 below.
 - Screen edges after the map polish (#125 fixed the swap-in pause, the stepped borders and the waiting year link): borders trail the year by about 0.75 s while scrubbing; some era names carry a double "the"; `?year=` may still open Tales at a different year on a phone (Morgan's report, to be checked).
 
 #### Proposed next set (2026-10-17 morning; all picked and built)
@@ -660,7 +660,7 @@ Thirty-eight threads have merged since the list was written (#101 to #138, `CHAN
 | P7 | Other great beasts and the restless dead | M5.6 leftover | Picked 2026-10-17; built as build order 20 (#133) | 3 | M |
 | P8 | Rough-edges bundle | the list above | Picked 2026-10-17; built 2026-10-17 (#137: child deaths, orcs, holds at passes) | 3 | S |
 
-#### Proposed next set, second round (2026-10-17 evening; a proposal, not approved)
+#### Proposed next set, second round (2026-10-17 evening; S1 and H2 picked)
 
 Split into screen builds (`src/app`) and history builds (`src/engine`, `src/content`) so one of each can run side by side without touching the same files. Ranked by fit with Morgan's recorded taste: personal, story-first screens that read well on a phone; famous figures who did things, and a record of why; betrayals; a calm storyteller map. Value 1–5; effort S, M or L as above. None starts without Morgan's pick.
 
@@ -668,7 +668,7 @@ Screen builds:
 
 | Order | Addition | Where | What you would see | Value | Effort |
 | --- | --- | --- | --- | --- | --- |
-| S1 | Orders and academies pages | Phase 7 (P6's UI half) | A page per order and academy in the People room: founder, seat, heads in order, members with their deeds, the spells it keeps or has lost; "Knight of ..." and "Scholar of ..." on person pages; a realm's page lists its orders | 4 | S |
+| S1 | Orders and academies pages | Phase 7 (P6's UI half) | Picked 2026-10-17 with H2; built 2026-10-17: a page per order and academy in the People room (founder, seat, masters in turn, members with their best deeds, spells kept or lost, its knights' hunts); "Knight of ..." and "Scholar of ..." on person pages; realm and town pages and the Book list them | 4 | S |
 | S2 | Open stories | M4.6, re-scoped | At any year, the stories still unresolved: feuds burning, exiles abroad, bounties unclaimed, dragons unslain, wars on, seats disputed, lore lost; one line each with who and since when, on the year recap, the Tales end card and in the Book | 4 | M |
 | S3 | The world at a glance | new | The first page after a world is made, phone-first: its three biggest stories so far, the legends alive, its dragons and the realms at war, each a link into Tales, People or Book; reachable from the rail | 3 | S |
 | S4 | Screen edges bundle | UI_ROOMS status | Borders keep up with the scrub, era names lose the double "the", and whatever Morgan still sees on the phone (the year link) | 2 | S |

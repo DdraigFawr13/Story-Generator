@@ -197,6 +197,7 @@ The terrain layer is drawn once per world. The political layer is redrawn only w
 
 ## Status
 
+- Orders and academies pages (S1, 2026-10-17): every knightly order and academy has a page in the People room: who founded it and where, its seat, realm and master, its masters in turn, its knights or scholars (those serving now first, each with the year they joined when the record keeps it and their best deed), an academy's spells kept or lost, the beasts its knights rode out against, and its chronicle. Person pages gain a "Knight of ..." (or Founder, Master, Scholar of ...) tag, realm pages list their orders and former orders, a town names the order seated there, and the Book's contents and the Legends list name them all. Screen only.
 - Opening page and touch (#138, 2026-10-17): the first world is made behind a plain "Making the world" page with its progress, not the classic viewer; on a touch screen the Tales map drags and pinches while history plays as well as after.
 - Perilous places on the map (#134, 2026-10-17): ruins, old mines, barrows, empty lairs and places of power stand as small grey stone shapes on the after-play map from the year they became places (dashed when nothing is left to find); each opens a page per place.
 - Great works on the map (#132, 2026-10-17): towers, walls, bridges and warded groves stand as small engraved shapes by their town, a great item as a four-point star where it was made.
