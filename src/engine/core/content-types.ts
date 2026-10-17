@@ -1498,9 +1498,57 @@ export interface DragonTemper {
   burnChance: number;
   /** Years after one burning before it may burn another site. */
   burnGap: number;
+  /** Chance a realm's courtship is accepted (greedy 1, wrathful 0.3, slumbering 0.6); a refusal harms the realm. */
+  courtAccept: number;
   /** Years asleep and years awake in turn (absent: never sleeps). */
   sleep?: [number, number];
   wake?: [number, number];
+}
+
+/** How realms near a dragon deal with it: court it, pay it, or put a price on it (dragon-court.ts). */
+export interface DragonCourtRules {
+  /** A realm deals with a dragon when its capital lies within this many cells of the lair. */
+  courtRange: number;
+  /** Harms a realm must take from one dragon before its ruler answers. */
+  fearHarms: number;
+  /** Yearly chance the ruler answers once the harms reach `fearHarms`. */
+  answerChance: number;
+  /** Chance the answer is a bounty rather than a pact: base, plus per point of `war` above 5, minus per point of `wealth` above 5, plus if the realm has a living legend. */
+  bountyBase: number;
+  bountyPerWar: number;
+  bountyPerWealth: number;
+  bountyLegend: number;
+  /** The chance is clamped to this (min, max). */
+  bountyRange: [number, number];
+  /** A pact realm's capital gives this share of its food every `pactEvery` years. */
+  pactShare: number;
+  pactEvery: number;
+  /** Yearly chance a ruler at war courts a dragon near the enemy. */
+  courtChance: number;
+  /** Grievance the struck realm holds against the courting realm per unleashed raid. */
+  grievanceUnleashed: number;
+  /** Yearly chance, per dragon with a standing bounty, that a figure takes it. */
+  bountyTakeChance: number;
+  /** Years before the same figure may take another bounty. */
+  bountyCooldown: number;
+  /** Soldiers the paying realm lends the taker: min(cap, floor(adults * share)). */
+  bountyAidShare: number;
+  bountyAidCap: number;
+  /** Times the slay chance of a bounty hunt (the payer's guides and gold). */
+  bountyOdds: number;
+  /** Raid chance multiplier while a courted dragon has an enemy town of its courter in reach. */
+  unleashFactor: number;
+  /** Fame the slayer gains on claiming the bounty. */
+  bountyFame: number;
+  phrases: {
+    /** What a bounty offers. */
+    prices: string[];
+    /** How a pact's tribute reads: "a third of its food". */
+    pactWord: string;
+    /** How a courtship ended. */
+    courtAccepted: string;
+    courtRefused: string;
+  };
 }
 
 /** The world's one dragon at a time (M5.6): when it wakes, who it is, what it does and what it hoards. */
@@ -1553,6 +1601,8 @@ export interface DragonRules {
   hoardWords: Record<'tribute' | 'plunder' | 'treasure', [string, string]>;
   /** Said of a hoard with no treasure when its taker carries it home. */
   spoilsWord: string;
+  /** Realms that court, pay or put a price on a dragon. */
+  court: DragonCourtRules;
 }
 
 /** One kind of perilous place (M4.7). Ranges run low to high. */

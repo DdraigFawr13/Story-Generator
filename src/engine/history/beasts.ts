@@ -27,6 +27,13 @@ import {
   runDragonQuests,
   wakeDragon,
 } from './dragons';
+import {
+  courtRaidFactor,
+  dragonSpares,
+  noteDragonHarm,
+  runDragonCourt,
+  unleashDragon,
+} from './dragon-court';
 import { addDeed } from './people';
 import { beastParts, carryOff, lairAbandoned } from './places';
 import { bandCount, removePeople, stochasticRound, totalPop } from './pop';
@@ -59,10 +66,16 @@ export function livingCreatures(run: HistoryRun): Creature[] {
 }
 
 /** The nearest live site to a cell within `range` (Chebyshev), ties by lowest id. */
-export function nearestSite(run: HistoryRun, cell: number, range: number): Site | undefined {
+export function nearestSite(
+  run: HistoryRun,
+  cell: number,
+  range: number,
+  allowed: (site: Site) => boolean = () => true,
+): Site | undefined {
   let best: Site | undefined;
   let bestDistance = Infinity;
   for (const site of liveSites(run)) {
+    if (!allowed(site)) continue;
     const distance = cellDistance(run.cells.width, cell, site.cell);
     if (distance <= range && distance < bestDistance) {
       best = site;
@@ -295,10 +308,20 @@ function answerLost(
 function raid(run: HistoryRun, creature: Creature, def: CreatureDef): void {
   const { rules } = run;
   const rng = beastRng(run, creature);
-  const site = nearestSite(run, whereIs(creature), def.raidRange);
+  // A dragon spares the towns of a realm in pact with it or courting it, and a courted one may be
+  // loosed on the courter's enemy instead.
+  const unleashed = creature.dragon ? unleashDragon(run, creature) : undefined;
+  const site =
+    unleashed?.site ??
+    nearestSite(
+      run,
+      whereIs(creature),
+      def.raidRange,
+      creature.dragon ? dragonSpares(run, creature) : undefined,
+    );
   if (!site) return;
   // A dragon of greedy temper is paid off, unless a legend of the town will not pay.
-  if (creature.dragon && askTribute(run, creature, def, site)) return;
+  if (!unleashed && creature.dragon && askTribute(run, creature, def, site)) return;
   const factor = rng.between(500, 1500) / 1000;
   const pop = totalPop(site);
   const wanted = Math.min(pop * rules.raidKillCap, def.danger * rules.raidKillPerDanger * factor);
@@ -307,10 +330,11 @@ function raid(run: HistoryRun, creature: Creature, def: CreatureDef): void {
   const event = run.emit({
     type: 'beast_raid',
     place: site.cell,
-    causes: causesOf(creature.deeds[creature.deeds.length - 1]),
+    causes: causesOf(unleashed?.event ?? creature.deeds[creature.deeds.length - 1]),
     data: { beast: creature.name, site: site.name, civ: civName(run, site), dead },
   });
   creature.deeds.push(event.id);
+  noteDragonHarm(run, creature, site.civId, event.id);
   logOf(run, site.id).raided = { year: run.year, event: event.id };
   beastRaidDeaths(run, site, event.id, creature, def.danger);
   carryOff(run, creature, def, site, event.id);
@@ -323,7 +347,8 @@ function raid(run: HistoryRun, creature: Creature, def: CreatureDef): void {
  * A figure of `home` takes on `prey` alone, with their soldier equivalent against its danger (the
  * slay odds of a raided town). A win ends the beast; a failed hunt may cost their life
  * (`beastKillChance`), and a dragon's hoard takes what they carried. `cause` is the event that
- * sent them out (default: the beast's latest deed for a win, their own for a loss).
+ * sent them out (default: the beast's latest deed for a win, their own for a loss). A bounty's
+ * hunter brings `aid` soldiers lent by the payer and `odds` times the slay chance.
  */
 export function fightHunt(
   run: HistoryRun,
@@ -333,16 +358,18 @@ export function fightHunt(
   home: Site,
   civ: Civ,
   cause?: Id,
+  aid = 0,
+  odds = 1,
 ): void {
   const { rules } = run;
   const rng = beastRng(run, prey);
   const deeds = run.content.notables.deeds;
   markDeed(run, hunter);
   const need = def.danger * rules.slayAdultsPerDanger;
-  const soldiers = deedSoldiers(run, hunter);
+  const soldiers = deedSoldiers(run, hunter) + aid;
   const strength = Math.min(1, soldiers / need);
   const near = nearestSite(run, whereIs(prey), Infinity) ?? home;
-  const chance = rules.slayBase * strength * rules.slayTierFactor[def.tier];
+  const chance = Math.min(1, rules.slayBase * strength * rules.slayTierFactor[def.tier] * odds);
   if (rng.chance(chance)) {
     prey.died = run.year;
     prey.slainBy = hunter.name;
@@ -370,7 +397,7 @@ export function fightHunt(
     beastParts(run, def, prey, hunter, home, event.id);
     return;
   }
-  const dies = rng.chance(beastKillChance(run, hunter, def.danger));
+  const dies = rng.chance(beastKillChance(run, hunter, def.danger, aid));
   const event = run.emit({
     type: 'beast_hunt_failed',
     place: whereIs(prey),
@@ -492,9 +519,13 @@ export function runBeasts(run: HistoryRun): void {
     if (creature.dragon && !dragonAwake(run, creature)) continue;
     roam(run, creature, def);
     // One draw per beast per year, whether or not a site is in range.
-    const chance = def.raidChance * (creature.dragon ? raidFactor(run, creature) : 1);
+    // A courted dragon is loosed on the courter's enemies more often than it raids of itself.
+    const chance =
+      def.raidChance *
+      (creature.dragon ? raidFactor(run, creature) * courtRaidFactor(run, creature) : 1);
     if (beastRng(run, creature).chance(chance)) raid(run, creature, def);
   }
   runHunts(run);
   runDragonQuests(run);
+  runDragonCourt(run);
 }

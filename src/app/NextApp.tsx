@@ -156,8 +156,11 @@ interface Restore {
   nav: LegendNav;
   /** A watched site to go straight into (a link with `site=`). */
   site?: SiteLink | null;
-  /** Tales at this year with this person followed (a link with `room=tales`). */
-  tales?: { from: number; follow: Id | null } | undefined;
+  /**
+   * Tales at this year with this person followed (a link with `room=tales`); `hold` opens it
+   * paused there, for a shared link that names its year.
+   */
+  tales?: { from: number; follow: Id | null; hold?: boolean } | undefined;
 }
 
 /** What the site view is showing: the site, and what to restore from a link. */
@@ -238,6 +241,8 @@ export function NextApp() {
     from: number;
     key: number;
     follow?: { id: Id; name: string } | null;
+    /** Open paused at `from` (a shared link with a year), not playing on from it. */
+    hold?: boolean;
     /** Open Tales on its explorable map at this year, centred on this cell if one is named. */
     explore?: { year: number; cell: number | null } | null;
   } | null>(null);
@@ -490,7 +495,12 @@ export function NextApp() {
           const follow = who ? { id: who.id, name: who.name } : null;
           talesRef.current = { year: place.tales.from, follow };
           playbackKey.current += 1;
-          setPlayback({ from: place.tales.from, key: playbackKey.current, follow });
+          setPlayback({
+            from: place.tales.from,
+            key: playbackKey.current,
+            follow,
+            hold: place.tales.hold ?? false,
+          });
           showPeople(false);
           showBook(null);
           showPicker(false);
@@ -844,7 +854,7 @@ export function NextApp() {
         site: initial.site,
         tales:
           initialRoom.room === 'tales'
-            ? { from: initial.year ?? 0, follow: initialRoom.follow }
+            ? { from: initial.year ?? 0, follow: initialRoom.follow, hold: initial.year !== null }
             : undefined,
       },
       // Links with a year, an open page, a room or a watched site never auto-play.
@@ -1431,6 +1441,7 @@ export function NextApp() {
                 titleOf={titleOf}
                 textOf={(event) => narrator.renderEvent(event)}
                 startYear={playback.from}
+                startPaused={playback.hold ?? false}
                 onClose={(year) =>
                   roomChange(() => {
                     setPlayback(null);

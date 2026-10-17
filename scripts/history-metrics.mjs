@@ -96,6 +96,12 @@ export function notableMetrics(world, n, DAYS_PER_YEAR) {
     dragonsSlain: dragons.filter((c) => c.slayerId !== undefined || c.slainBy).length,
     dragonTributes: n.dragon_tribute ?? 0,
     dragonQuests: n.dragon_quest ?? 0,
+    dragonPacts: n.dragon_pact ?? 0,
+    dragonBounties: n.dragon_bounty_set ?? 0,
+    dragonCourted: n.dragon_courted ?? 0,
+    dragonUnleashed: n.dragon_unleashed ?? 0,
+    dragonBountyHunts: n.dragon_bounty_taken ?? 0,
+    dragonBountyClaimed: n.dragon_bounty_claimed ?? 0,
     dragonBurned: n.dragon_burned ?? 0,
     // Perilous places, hoards and expeditions (M4.7).
     places: world.places.size,

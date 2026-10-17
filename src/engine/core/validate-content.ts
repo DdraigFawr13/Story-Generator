@@ -246,6 +246,43 @@ export function dragonProblems(content: ContentBundle): string[] {
   for (const key of ['tributeShare', 'seekerMax'] as const) {
     if (!(rules[key] >= 0 && rules[key] <= 1)) problems.push(`Dragons: ${key} must be 0-1.`);
   }
+  for (const temper of rules.tempers) {
+    if (!(temper.courtAccept >= 0 && temper.courtAccept <= 1))
+      problems.push(`Dragon temper ${temper.id}: courtAccept must be 0-1.`);
+  }
+  const court = rules.court;
+  for (const key of [
+    'answerChance',
+    'bountyBase',
+    'pactShare',
+    'courtChance',
+    'bountyTakeChance',
+    'bountyAidShare',
+  ] as const) {
+    if (!(court[key] >= 0 && court[key] <= 1)) problems.push(`Dragon court: ${key} must be 0-1.`);
+  }
+  if (!(
+    court.bountyRange[0] >= 0 &&
+    court.bountyRange[0] <= court.bountyRange[1] &&
+    court.bountyRange[1] <= 1
+  ))
+    problems.push('Dragon court: bountyRange needs 0 <= min <= max <= 1.');
+  for (const key of ['courtRange', 'fearHarms', 'pactEvery', 'bountyCooldown'] as const) {
+    if (!(court[key] >= 1)) problems.push(`Dragon court: ${key} must be at least 1.`);
+  }
+  for (const key of [
+    'bountyPerWar',
+    'bountyPerWealth',
+    'bountyLegend',
+    'grievanceUnleashed',
+    'bountyAidCap',
+    'bountyOdds',
+    'unleashFactor',
+    'bountyFame',
+  ] as const) {
+    if (!(court[key] >= 0)) problems.push(`Dragon court: ${key} must not be negative.`);
+  }
+  if (court.phrases.prices.length === 0) problems.push('Dragon court: no bounty prices.');
   return problems;
 }
 
@@ -563,6 +600,12 @@ const HISTORY_EVENT_IDS = [
   'dragon_burned',
   'dragon_quest',
   'dragon_hoard_claimed',
+  'dragon_pact',
+  'dragon_bounty_set',
+  'dragon_courted',
+  'dragon_unleashed',
+  'dragon_bounty_taken',
+  'dragon_bounty_claimed',
   'item_hoarded',
   'artifact_made',
   'book_written',
