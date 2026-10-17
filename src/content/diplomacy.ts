@@ -31,8 +31,8 @@ export const DIPLOMACY: DiplomacyRules = {
     grievanceJoined: 0.8,
   },
   betrayal: {
-    // Each decade, times the drift (about 1 for ordinary strangers): one pair in seventy.
-    chance: 0.015,
+    // Each decade, times the drift (about 1 for ordinary strangers): one pair in thirty-five (Morgan asked for twice the betrayal, 2026-10-17).
+    chance: 0.03,
     // Each term is worth one ordinary stranger's drift.
     faithSplit: 1,
     rivals: 1,
