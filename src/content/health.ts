@@ -127,6 +127,15 @@ export const CONDITIONS: ConditionDef[] = [
     words: { onset: 'the bloody flux', death: 'the bloody flux' },
   },
   {
+    id: 'croup',
+    name: 'The croup',
+    kind: 'disease',
+    harm: 1,
+    deathCause: 'disease',
+    abed: true,
+    words: { onset: 'the croup', death: 'the croup' },
+  },
+  {
     // The shell every Phase 2 disease (content/diseases.ts) takes at the site; its words are the disease's name.
     id: 'sickness',
     name: 'Sickness',
@@ -223,6 +232,25 @@ export const AILMENTS: AilmentDef[] = [
     // 0.015% a day in the hot months, from bad water even when the well is full.
     sources: { wellLow: 0.002, background: { chance: 0.00015, months: [3, 4, 5] } },
     season: { months: [3, 5], mul: 2 },
+  },
+  {
+    // The sickness of the young: history loses about 2% of children a year (content/history.ts
+    // childDeath), and the chill and the flux alone took a tenth of that at the site (P8, 2026-10-17).
+    id: 'croup',
+    name: 'the croup',
+    conditionId: 'croup',
+    incubation: 2,
+    duration: [5, 9],
+    peak: [20, 45],
+    infectivity: 0.03,
+    householdOnly: true,
+    // Grown folk shrug it off; the old feel it a little.
+    ageRisk: { child: 2, adult: 0.2, elder: 0.8 },
+    immuneDays: 336,
+    // One case in 7 turns grave: enough to kill a child, less often when tended.
+    grave: { chance: 0.15, mul: 2.5, cap: 150 },
+    // 0.06% of people a day, any month: a child catches it about once in five years.
+    sources: { background: { chance: 0.0006, months: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] } },
   },
 ];
 

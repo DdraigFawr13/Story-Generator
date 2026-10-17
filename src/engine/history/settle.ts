@@ -200,6 +200,7 @@ const PREFERENCE_FEATURES: Record<string, SiteFeature[]> = {
   deposit: ['deposit'],
   forest: ['forest'],
   heights: ['heights'],
+  pass: ['pass'],
 };
 
 /** Mean fertility over the reach window (water counts as 0). */

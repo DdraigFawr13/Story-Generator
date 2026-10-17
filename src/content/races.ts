@@ -217,7 +217,9 @@ const orc: RaceDef = {
   affinityWeights: { mind: 3, fire: 3, earth: 1 },
   lifespanYears: 60,
   maturityYears: 15,
-  fertility: 1.1,
+  // Orcs breed fast: roaming wolf packs on the steppe had thinned them from 8.6% to 6.6% of all
+  // people (P8, 2026-10-17); 1.25 brings them back to about 8.7% on 10 worlds.
+  fertility: 1.25,
   // The downside: a fifth more food than a human, so lean years drive them to raid.
   foodNeed: 1.2,
   preferredBiomes: ['steppe', 'savanna', 'grassland'],

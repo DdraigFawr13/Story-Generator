@@ -123,7 +123,7 @@ const dvergarCulture: CultureDef = {
   magic: 'wary',
   religion: { id: 'ancestor-stones', name: 'The Ancestor Stones' },
   preferredBiomes: ['alpine', 'tundra', 'taiga'],
-  sitePreferences: ['deposit', 'heights'],
+  sitePreferences: ['deposit', 'heights', 'pass'],
   names: DVERGAR_NAMES,
 };
 

@@ -89,7 +89,7 @@ export type GovernmentKind =
   | 'warren';
 export type MagicAttitude = 'sacred' | 'honoured' | 'respected' | 'wary' | 'licensed';
 export type SitePreference =
-  'river' | 'coast' | 'aura' | 'plains' | 'deposit' | 'forest' | 'heights';
+  'river' | 'coast' | 'aura' | 'plains' | 'deposit' | 'forest' | 'heights' | 'pass';
 
 export interface CultureNames {
   /** Given names are a start plus an end: "Cad" + "oc". */
