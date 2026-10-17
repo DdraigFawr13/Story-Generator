@@ -56,7 +56,8 @@ import {
   type MarkCluster,
   type View,
 } from './explore';
-import { ExploreMarks, Glyph, Towns, type TownMark } from './exploreMarks';
+import { ExploreMarks, Glyph, Towns, WorkGlyph, WorkMarks, type TownMark } from './exploreMarks';
+import { WORK_KINDS, allWorks, workLine, worksAt, type WorkMark } from './works';
 import { settleLabels } from './labels';
 import { PHONE_MAX, cardSide, fitMap, nearestCell } from './layout';
 import {
@@ -291,6 +292,8 @@ function Room({
   const [zoom, setZoom] = useState<View | null>(null);
   const [glide, setGlide] = useState(false);
   const [pin, setPin] = useState<Pin | null>(null);
+  // Great works on the explore map (shown until the reader unticks them).
+  const [showWorks, setShowWorks] = useState(true);
   const [focus, setFocus] = useState<number | null>(explore?.cell ?? null);
   const pendingFocus = useRef<number | null>(explore?.cell ?? null);
   const [year, setYear] = useState(Math.floor(explore?.year ?? startYear));
@@ -1037,9 +1040,28 @@ function Room({
     [pin, data, year, loud],
   );
   const pinTown = pin?.kind === 'town' ? towns.find((t) => t.id === pin.site) : undefined;
+  const everyWork = useMemo(() => allWorks(world), [world]);
+  const works = useMemo(
+    () => (exploring && showWorks && mode !== 'plain' ? worksAt(everyWork, year) : []),
+    [exploring, showWorks, mode, everyWork, year],
+  );
+  /** The great works at the open place, raised by the year shown. */
+  const pinWorks = useMemo(
+    () => (pin ? worksAt(everyWork, year).filter((w) => pin.cells.includes(w.cell)) : []),
+    [pin, everyWork, year],
+  );
+  const workKindsShown = useMemo(
+    () => WORK_KINDS.filter((k) => works.some((w) => w.kind === k.id)),
+    [works],
+  );
   const openEvents = (c: MarkCluster) => {
     setFocus(null);
     setPin({ kind: 'events', cell: c.cell, cells: c.cells, side: sideOf(c.cell, view) });
+  };
+  const openWork = (w: WorkMark) => {
+    if (towns.some((t) => t.id === w.siteId)) return openTown(w.siteId);
+    setFocus(null);
+    setPin({ kind: 'events', cell: w.cell, cells: [w.cell], side: sideOf(w.cell, view) });
   };
   const openTown = (id: Id) => {
     const t = towns.find((x) => x.id === id);
@@ -1351,6 +1373,14 @@ function Room({
                   open={pin?.cell ?? null}
                   onOpen={openTown}
                 />
+                <WorkMarks
+                  works={works}
+                  width={W}
+                  height={H}
+                  year={year}
+                  detail={detail}
+                  onOpen={openWork}
+                />
                 <ExploreMarks
                   clusters={clusters}
                   detail={detail}
@@ -1395,11 +1425,21 @@ function Room({
                 type="button"
                 className="tr-chooser-btn"
                 aria-expanded={chooser}
-                onClick={() => setChooser((o) => !o)}
+                onClick={() => {
+                  setHelpOpen(false);
+                  setChooser((o) => !o);
+                }}
               >
                 {exploring ? (
                   <>
-                    <small>Show</small> <span>{pausesLabel(shown)}</span>
+                    <small>Show</small>{' '}
+                    <span>
+                      {showWorks && everyWork.length > 0
+                        ? shown.size > 0
+                          ? `${pausesLabel(shown)}, great works`
+                          : 'great works'
+                        : pausesLabel(shown)}
+                    </span>
                   </>
                 ) : firstRun ? (
                   <>
@@ -1441,6 +1481,27 @@ function Room({
                       />
                     </div>
                   ))}
+                  {exploring && everyWork.length > 0 && (
+                    <div className="row">
+                      <span className="name">
+                        <WorkGlyph kind="tower" size={13} />
+                        great works
+                        <small>{everyWork.length}</small>
+                      </span>
+                      <input
+                        type="checkbox"
+                        aria-label="Show great works"
+                        checked={showWorks}
+                        onChange={() => setShowWorks((on) => !on)}
+                      />
+                      <input
+                        type="checkbox"
+                        aria-label="Pause on great works"
+                        checked={false}
+                        disabled
+                      />
+                    </div>
+                  )}
                   <p>
                     {exploring
                       ? 'Marks are grouped by place: one mark stands for every ticked event there, drawn as the most important kind, and its card lists them all. Click a mark to read it. The Pause ticks apply when you play on.'
@@ -1510,7 +1571,10 @@ function Room({
             className="tr-help"
             aria-label="Map key"
             aria-expanded={helpOpen}
-            onClick={() => setHelpOpen((o) => !o)}
+            onClick={() => {
+              setChooser(false);
+              setHelpOpen((o) => !o);
+            }}
           >
             ?
           </button>
@@ -1528,6 +1592,19 @@ function Room({
                   <div key={k.id}>
                     <Glyph kind={k.id} size={12} />
                     <span>{k.label}</span>
+                  </div>
+                ))}
+              </section>
+            )}
+            {exploring && workKindsShown.length > 0 && (
+              <section className="tr-legend tr-evkey" data-legend="works">
+                <h3>Great works</h3>
+                {workKindsShown.map((k) => (
+                  <div key={k.id}>
+                    <WorkGlyph kind={k.id} size={12} />
+                    <span>
+                      {k.label} <small>{works.filter((w) => w.kind === k.id).length}</small>
+                    </span>
                   </div>
                 ))}
               </section>
@@ -1701,6 +1778,21 @@ function Room({
                   <div className="k">Marked on the map</div>
                   <h2>{siteAtCell.get(pin.cell) ?? 'Open country'}</h2>
                 </>
+              )}
+              {pinWorks.length > 0 && <div className="k tr-works-k">Great works</div>}
+              {pinWorks.length > 0 && (
+                <ul className="tr-works" aria-label="Great works here">
+                  {pinWorks.map((w) => (
+                    <li key={w.key}>
+                      <WorkGlyph
+                        kind={w.kind}
+                        size={13}
+                        fallen={w.fell !== undefined && w.fell <= year}
+                      />
+                      <span>{workLine(w, year)}.</span>
+                    </li>
+                  ))}
+                </ul>
               )}
               {pinMix && <p className="mix">{pinMix}</p>}
               {pinRows.length === 0 ? (

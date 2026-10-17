@@ -2,10 +2,11 @@
 // with an ink outline, the town names and the town hit targets. Positions are percentages of the
 // map; sizes are pixels, so a mark keeps its size however far the map is zoomed.
 
-import { useMemo } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { groupTitle, type MarkCluster, type MarkEvent } from './explore';
 import { useFading } from './markers';
 import { PAUSE_KINDS, type PauseKind } from './pauses';
+import { workLine, type WorkKind, type WorkMark } from './works';
 
 const INK = '#2d2a25';
 
@@ -168,6 +169,84 @@ export function Towns({ towns, width, height, named, skip, open, onOpen }: Towns
               onClick={() => onOpen(t.id)}
             />
           </div>
+        );
+      })}
+    </>
+  );
+}
+
+/** Great works as engraved ink shapes on a pale fill, on the same 24 by 24 box. */
+const WORK_GLYPHS: Record<WorkKind, string> = {
+  tower: 'M12 1.5l4.5 6.5H15v14H9V8H7.5z',
+  wall: 'M2 20v-9h2.4V8h3.2v3h2.8V8h3.2v3h2.8V8h3.2v3H22v9z',
+  bridge: 'M1.5 8h21v9H20a4 4 0 0 0-8 0 4 4 0 0 0-8 0H1.5z',
+  grove:
+    'M7 3a4.5 4.5 0 0 1 1 8.9V21H6v-9.1A4.5 4.5 0 0 1 7 3zM17 3a4.5 4.5 0 0 1 1 8.9V21h-2v-9.1A4.5 4.5 0 0 1 17 3z',
+  item: 'M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z',
+};
+
+/** One work's shape: warm stone inside an ink outline; a fallen one is outlined in dashes. */
+export function WorkGlyph({
+  kind,
+  size = 13,
+  fallen = false,
+}: {
+  kind: WorkKind;
+  size?: number;
+  fallen?: boolean;
+}) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d={WORK_GLYPHS[kind]}
+        fill={fallen ? 'none' : '#c19a5b'}
+        stroke={INK}
+        strokeWidth={fallen ? 1.6 : 2}
+        strokeDasharray={fallen ? '2.4 1.8' : undefined}
+        strokeLinejoin="round"
+        paintOrder="stroke"
+      />
+    </svg>
+  );
+}
+
+interface WorkMarksProps {
+  works: readonly WorkMark[];
+  width: number;
+  height: number;
+  year: number;
+  /** Zoomed in: larger shapes. */
+  detail: boolean;
+  onOpen: (work: WorkMark) => void;
+}
+
+/** The great works standing at the year shown, up and to the left of their town; fallen ones fade. */
+export function WorkMarks({ works, width, height, year, detail, onOpen }: WorkMarksProps) {
+  return (
+    <>
+      {works.map((w) => {
+        const fallen = w.fell !== undefined && w.fell <= year;
+        const line = workLine(w, year);
+        return (
+          <button
+            key={w.key}
+            type="button"
+            className={`tr-wk${detail ? '' : ' small'}${fallen ? ' fallen' : ''}`}
+            data-testid="work-mark"
+            data-kind={w.kind}
+            style={
+              {
+                left: `${(((w.cell % width) + 0.5) / width) * 100}%`,
+                top: `${((Math.floor(w.cell / width) + 0.5) / height) * 100}%`,
+                '--slot': w.slot,
+              } as CSSProperties
+            }
+            title={line}
+            aria-label={line}
+            onClick={() => onOpen(w)}
+          >
+            <WorkGlyph kind={w.kind} size={detail ? 17 : 12} fallen={fallen} />
+          </button>
         );
       })}
     </>

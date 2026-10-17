@@ -49,6 +49,12 @@ test('Explore the map stays in Tales: marks follow the Show filter, the map zoom
   await page.locator('.tr-chooser-btn').click();
   await page.getByRole('group', { name: 'Events' }).getByLabel('Show wars').uncheck();
   await expect(wars).toHaveCount(0);
+  // Great works stand beside their towns until unticked.
+  const works = stage.locator('[data-testid="work-mark"]');
+  expect(await works.count()).toBeGreaterThan(0);
+  await page.getByRole('group', { name: 'Events' }).getByLabel('Show great works').uncheck();
+  await expect(works).toHaveCount(0);
+  await page.getByRole('group', { name: 'Events' }).getByLabel('Show great works').check();
 
   // The key is folded away in explore; the ? button opens it and it lists the marks.
   const key = page.getByTestId('tales-key');
