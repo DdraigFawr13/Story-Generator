@@ -18,7 +18,7 @@ const content = {
     },
   },
 };
-const SEEDS = ['DI-1', 'DI-2', 'DI-3', 'DI-4', 'DI-5', 'DI-6', 'DI-7', 'DI-8'];
+const SEEDS = Array.from({ length: 16 }, (_, k) => `DI-${k + 1}`);
 
 function example(what: string, has: (w: WorldState) => boolean): WorldState {
   return findWorld(
@@ -50,17 +50,18 @@ describe('realm ties', () => {
     expect(allTies(world).filter((t) => t.kind === 'alliance')).toHaveLength(sworn);
   });
 
-  it('ends an alliance at a refused call and a vassalage at a revolt', () => {
-    const world = example('a revolt and a refused call', (w) =>
-      ['vassal_revolt', 'call_refused'].every((t) => w.events.some((e) => e.type === t)),
-    );
-    const ties = allTies(world);
+  it('ends an alliance at a refused call', () => {
+    const world = example('a refused call', (w) => w.events.some((e) => e.type === 'call_refused'));
     const refused = world.events.find((e) => e.type === 'call_refused')!;
-    const tie = ties.find((t) => t.end === refused.id)!;
+    const tie = allTies(world).find((t) => t.end === refused.id)!;
     expect(tie.ended).toBe('refused');
     expect(world.civs.get(tie.by!)!.name).toBe(refused.data.civ);
+  });
+
+  it("ends a vassalage at a revolt, on both realms' pages", () => {
+    const world = example('a revolt', (w) => w.events.some((e) => e.type === 'vassal_revolt'));
     const revolt = world.events.find((e) => e.type === 'vassal_revolt')!;
-    const vassal = ties.find((t) => t.end === revolt.id)!;
+    const vassal = allTies(world).find((t) => t.end === revolt.id)!;
     expect(vassal.ended).toBe('revolt');
     expect(world.civs.get(vassal.b)!.name).toBe(revolt.data.civ);
     expect(tiesOf(world, vassal.b)).toContain(vassal);
