@@ -23,6 +23,15 @@ test('a person opens from the index, Follow returns to Tales, and back returns t
   await expect(page).toHaveURL(/open=person:\d+/);
   const name = await pageEl.getByRole('heading', { level: 1 }).textContent();
   await pageEl.getByRole('tab', { name: 'Family' }).click();
+  // A person with a house links to its family tree; the frame opens and the page never scrolls sideways.
+  const treeLink = pageEl.getByRole('link', { name: /See the family tree/ });
+  if (await treeLink.count()) {
+    await treeLink.click();
+    await expect(page.getByTestId('house-tree')).toBeVisible();
+    await page.goBack();
+    await expect(pageEl).toBeVisible();
+    await pageEl.getByRole('tab', { name: 'Family' }).click();
+  }
   await pageEl.getByRole('tab', { name: 'Life' }).click();
   await expect(pageEl.locator('.pp-life li').first()).toBeVisible();
   // Follow opens Tales with this person followed.
