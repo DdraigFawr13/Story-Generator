@@ -391,7 +391,18 @@ function Room({
   /** The atlas that is drawn on: the sharp one while exploring, once it is built. */
   const target = exploring && sharp ? sharp.atlas : atlas;
   /** Each vassal's overlord in the border year, rebuilt from the diplomacy events. */
-  const vassals = useMemo(() => overlordsAt(world, borderKey), [world, borderKey]);
+  // Read for the shown year, not the border snapshot's, so a revolt clears the cue that year. The
+  // pairs are keyed as text so the layer redraws only when they change.
+  const vassalKey = [...overlordsAt(world, year)].map(([v, o]) => `${v}>${o}`).join(',');
+  const vassals = useMemo(
+    () =>
+      new Map(
+        vassalKey === ''
+          ? []
+          : vassalKey.split(',').map((pair) => pair.split('>').map(Number) as [number, number]),
+      ),
+    [vassalKey],
+  );
   useEffect(() => {
     if (!target) return;
     const sites = data.sitesAt(borderKey);
@@ -430,7 +441,7 @@ function Room({
       borderOf: (civ) => borderColour(palette.hue.get(civ) ?? 0),
       towns,
       holy,
-      variant: mode === 'realms' ? [...vassals].map(([v, o]) => `${v}>${o}`).join(',') : '',
+      variant: mode === 'realms' ? vassalKey : '',
     };
     const finish = (result: DrawResult) => {
       setLabels(result.centres);
@@ -1147,7 +1158,16 @@ function Room({
     });
     if (mode === 'realms') {
       const rows: Row[] = [];
+      // Each overlord and its vassals lead the key, so the cue is named; then the rest by size.
+      const order: number[] = [];
+      const lords = new Set(vassals.values());
       for (const [civ] of held) {
+        if (!lords.has(civ)) continue;
+        order.push(civ);
+        for (const [v] of held) if (vassals.get(v) === civ) order.push(v);
+      }
+      for (const [civ] of held) if (!order.includes(civ)) order.push(civ);
+      for (const civ of order) {
         const info = data.civById.get(civ);
         if (!info) continue;
         const hue = palette.hue.get(civ) ?? 0;
