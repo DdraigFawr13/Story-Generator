@@ -7,6 +7,7 @@ import { DIPLOMACY } from './diplomacy';
 import { FEUDS } from './feuds';
 import { INTRIGUE } from './intrigue';
 import { LINEAGES } from './lineages';
+import { ORDERS } from './orders';
 import { CITY_STATES, CIVIL_WARS, COLLEGES } from './realms';
 
 export const HISTORY: HistoryRules = {
@@ -175,4 +176,5 @@ export const HISTORY: HistoryRules = {
   intrigue: INTRIGUE,
   diplomacy: DIPLOMACY,
   feuds: FEUDS,
+  orders: ORDERS,
 };

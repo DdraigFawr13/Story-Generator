@@ -26,6 +26,7 @@ import { buildLinks, createLinkSearch } from './links';
 import { runExpansion, runMigration } from './migration';
 import { initLineages, runLineages } from './lineages';
 import { initNotables, runNotables } from './notables';
+import { runOrders } from './orders';
 import { runBribes, runIntrigue } from './intrigue';
 import { runGreatWorks } from './great-works';
 import { runItems } from './items';
@@ -108,6 +109,7 @@ export function runHistory(
     runIntrigue(run);
     runFeuds(run);
     runColleges(run);
+    runOrders(run);
     runLineages(run);
     runGreatWorks(run);
     runCityStates(run);

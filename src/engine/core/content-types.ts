@@ -2386,6 +2386,106 @@ export interface HistoryRules {
   diplomacy: DiplomacyRules;
   /** Blood feuds between houses, exile and the inheritance quarrels that split a house. */
   feuds: FeudRules;
+  /** Knightly orders and magic academies founded by legends, and how each people treats magic. */
+  orders: OrderRules;
+}
+
+/** How a people treats magic, from its values (orders.ts). */
+export type MagicStance = 'revere' | 'regulate' | 'persecute';
+
+/** Knightly orders, magic academies and the witch hunts of peoples that fear magic (orders.ts): every number and phrase. */
+export interface OrderRules {
+  /** Yearly chance a living legend (adult, not elder, at a live site of their own people) who never founded one founds an institution. */
+  foundChance: number;
+  /** Non-legends who may found a knightly order: their titles, the fame they need and the yearly chance. */
+  heroFounders: { titles: NotableRole[]; minFame: number; chance: number };
+  /** Power of the founder's best spell in their primary school that makes the institution an academy rather than an order. */
+  academyMinSpell: number;
+  /** Most open orders, and most open academies, in the world at once. */
+  maxOpen: number;
+  /** Fame a founder gains. */
+  founderFame: number;
+  /** Order names: `{site}`, `{founder}`, `{emblem}`. */
+  orderNames: string[];
+  /** Academy names: `{site}`, `{founder}`, `{school}` (capitalised), `{emblem}`. */
+  academyNames: string[];
+  /** Academy names a regulating people's crown charters; same fields as `academyNames`. */
+  charteredNames: string[];
+  /** Emblems drawn for `{emblem}`. */
+  emblems: string[];
+  /** Yearly chance each fit person joins an open institution of their people. */
+  recruitChance: number;
+  /** Most members an order and an academy hold at once (alive and of its people). */
+  maxKnights: number;
+  maxScholars: number;
+  /** Titles an order recruits besides a legend with no academy-grade spell. */
+  knightTitles: NotableRole[];
+  /** Power a mage needs to join an academy. */
+  academyMinPower: number;
+  /** Importance a legend joining adds (so the join stays in the chronicle). */
+  legendJoinBonus: number;
+  /** Yearly chance an academy member gains a power, never reaching the legendary tier. */
+  trainChance: number;
+  /** Yearly chance an academy member who lacks a spell of the academy's lore, and has the power for it, learns one. */
+  learnChance: number;
+  /** Yearly chance an open order with a non-legend knight sends one against the nearest beast. */
+  knightHuntChance: number;
+  /** Years a beast's raid on the order's people stays a reason to ride against it. */
+  knightRaidYears: number;
+  /** Share of the other knights' soldiers lent to the hunter. */
+  knightAid: number;
+  /** Defence multiplier at a seat held by an open order of the defender. */
+  orderDefence: number;
+  /** A people's attitude: score = sum of weight x culture value; at or over `revereAt` it reveres magic, at or under `persecuteAt` it persecutes, else it regulates. */
+  attitude: {
+    weights: Partial<Record<CultureValue, number>>;
+    revereAt: number;
+    persecuteAt: number;
+  };
+  /** Effects of each attitude: `notice` multiplies the commons' notice of mage births, `collegeFound` the chance to found a college (0: never); `word` fills `{attitude}`. */
+  attitudes: Record<MagicStance, { notice: number; collegeFound: number; word: string }>;
+  /** The yearly witch hunt of a persecuting people. */
+  hunt: {
+    /** Chance a living adult mage (Strong+, not the ruler, once in a life) is hunted. */
+    chance: number;
+    /** Multiplier on the chance for a legend, and when the people has an open order. */
+    legendFactor: number;
+    orderFactor: number;
+    /** Chance a hunted mage is burned, and a legend. */
+    burnChance: number;
+    legendBurnChance: number;
+    /** Chance one who is not burned flees abroad (else hides). */
+    fleeChance: number;
+    /** Importance a burning adds to the mage's death, so the chronicle keeps it. */
+    burnImportance: number;
+  };
+  phrases: {
+    /** What the order's knights add to a hunt; `{order}`, `{head}`. */
+    knights: string;
+    /** How a hunt ended; `{refuge}` is the people fled to. */
+    burned: string;
+    fled: string;
+    hid: string;
+    /** Who named a new head: `{members}` (see `memberWord`) and `{name}`. */
+    crown: string;
+    chosen: string;
+    /** Plural and singular words for members by kind. */
+    members: Record<'order' | 'academy', string>;
+    member: Record<'order' | 'academy', string>;
+    /** Why an institution ended; `{civ}`, `{member}`. */
+    fell: string;
+    closed: string;
+    lastDied: string;
+    /** An order or academy whose seat is ruined while its people stand; `{site}`. */
+    lost: string;
+    /** What lost lore is blamed on: the replaced head (`{head}`), the end (`{order}`), or the scholars dying out. */
+    headDied: string;
+    ended: string;
+    scholarsPassed: string;
+    /** Why a college closed (`reason` of college_closed): its site fell (`{site}`) or passed to a people that hunts mages (`{site}`, `{civ}`). */
+    collegeLost: string;
+    collegeHunted: string;
+  };
 }
 
 /** Generation feuds and exile (feuds.ts): every number and phrase the feud systems read. */

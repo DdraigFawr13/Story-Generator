@@ -102,6 +102,22 @@ export const BIOGRAPHIES: BiographyRules = {
     deadLaid: ['It was laid to rest by {priest}.'],
     itemHeld: ['{name}, a {form}, was made in Year {made} and is held by {holder}.'],
     itemLost: ['{name}, a {form}, was made in Year {made} and is lost.'],
+    // Orders and academies: a founder's fate for it, a master, a knight or a scholar.
+    orderFoundedFounder: [
+      '{He} founded {order} at {site} in Year {year}; it stands, still under its founder.',
+    ],
+    orderFoundedLive: [
+      '{He} founded {order} at {site} in Year {year}; it stands, under its {nth} master.',
+    ],
+    orderFoundedEnded: [
+      '{He} founded {order} at {site} in Year {year}; it lasted {years} years under {masters}.',
+    ],
+    orderHeadedNow: ['{He} is master of {order}.'],
+    orderHeadedPast: ['{He} was master of {order}.'],
+    orderKnightNow: ['{He} is a knight of {order}.'],
+    orderKnightPast: ['{He} was a knight of {order}.'],
+    orderScholarNow: ['{He} is a scholar of {order}.'],
+    orderScholarPast: ['{He} was a scholar of {order}.'],
     dynasty: ['{Name} was founded in Year {founded} by {founder}{civ}.'],
   },
 };

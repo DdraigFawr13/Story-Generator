@@ -8,6 +8,7 @@ import type { SpellDef } from '../core/content-types';
 import type { Civ, Id, Person, Site } from '../core/types';
 import { TIERS } from '../people/tiers';
 import { epochAt } from './climate';
+import { inAcademy, magicAttitude } from './orders';
 import { primarySchool, spellsHeldBy } from './items';
 import { addDeed, civOfPerson, isAdult, isElder, livingList, siteOf } from './people';
 import { totalPop } from './pop';
@@ -35,7 +36,10 @@ export function collegeOf(run: HistoryRun, civId: Id | null | undefined): Colleg
 
 /** How many times the usual share of mage births a civ's commons have noticed. */
 export function noticeFactor(run: HistoryRun, civId: Id | null): number {
-  return collegeOf(run, civId) ? run.rules.colleges.noticeFactor : 1;
+  const college = collegeOf(run, civId) ? run.rules.colleges.noticeFactor : 1;
+  // A people that reveres magic notices more mage births, one that hunts mages fewer (orders.ts).
+  const civ = civId === null ? undefined : run.world.civs.get(civId);
+  return college * run.rules.orders.attitudes[magicAttitude(run, civ)].notice;
 }
 
 /** How many times as likely a civ's mages are to rise to legend. */
@@ -43,17 +47,27 @@ export function legendFactor(run: HistoryRun, civId: Id | null | undefined): num
   return collegeOf(run, civId) ? run.rules.colleges.legendFactor : 1;
 }
 
-/** A college closes when its site is ruined; it serves whoever holds the site. */
+/** A college closes when its site is ruined or passes to a people that hunts mages; it serves whoever holds the site. */
 function followSites(run: HistoryRun): void {
+  const phrases = run.rules.orders.phrases;
   for (const college of openColleges(run)) {
     const site = run.world.sites.get(college.siteId);
-    if (!site || !isLive(site) || site.civId === null) {
+    const holder = site?.civId == null ? undefined : run.world.civs.get(site.civId);
+    const hunted = holder !== undefined && magicAttitude(run, holder) === 'persecute';
+    if (!site || !isLive(site) || site.civId === null || hunted) {
       college.closed = run.year;
+      const siteName = site?.name ?? 'the ruins';
       const closing = run.emit({
         type: 'college_closed',
         place: site?.cell ?? null,
         causes: [college.event],
-        data: { college: college.name, site: site?.name ?? 'the ruins' },
+        data: {
+          college: college.name,
+          site: siteName,
+          reason: (hunted ? phrases.collegeHunted : phrases.collegeLost)
+            .replace('{site}', siteName)
+            .replace('{civ}', holder?.name ?? ''),
+        },
       });
       college.closedEvent = closing.id;
       continue;
@@ -87,7 +101,9 @@ function foundColleges(run: HistoryRun): void {
     const master = strongestMage(run, civ);
     if (!master) continue;
     const learning = cultureOf(run, civ)?.values.learning ?? 0;
-    if (!rng.chance((rules.foundChance * learning) / 10)) continue;
+    // A people that reveres magic founds more colleges, one that hunts mages none (orders.ts).
+    const mood = run.rules.orders.attitudes[magicAttitude(run, civ)].collegeFound;
+    if (!rng.chance((rules.foundChance * learning * mood) / 10)) continue;
     // An aura spot or temple first, then the capital, then the most people.
     let site: Site | undefined;
     let best = -1;
@@ -329,7 +345,13 @@ function castSpells(run: HistoryRun): void {
   for (const caster of livingList(run)) {
     const power = caster.magic.power;
     if (power < rules.spellPower) continue;
-    if (power < LEGENDARY && !collegeOf(run, caster.civId) && !run.studied.has(caster.id)) continue;
+    if (
+      power < LEGENDARY &&
+      !collegeOf(run, caster.civId) &&
+      !run.studied.has(caster.id) &&
+      !inAcademy(run, caster.id)
+    )
+      continue;
     if (run.students.has(caster.id)) continue;
     if (!isAdult(run, caster) || isElder(run, caster)) continue;
     const last = run.notables.lastDeed.get(caster.id);

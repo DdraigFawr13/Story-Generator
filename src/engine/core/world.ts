@@ -67,6 +67,7 @@ export function createWorld(seed: string, params: Partial<WorldParams> = {}): Wo
     creatures: new Map(),
     places: new Map(),
     faiths: new Map(),
+    orders: new Map(),
     people: new Map(),
     dynasties: new Map(),
     items: new Map(),

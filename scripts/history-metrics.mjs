@@ -61,8 +61,52 @@ function feudMetrics(world, n) {
   };
 }
 
+/** Culture attitude to magic by the order rules' weights: 'revere', 'regulate' or 'persecute'. */
+function attitudeOf(culture, rules) {
+  let score = 0;
+  for (const [value, weight] of Object.entries(rules.attitude.weights))
+    score += weight * (culture?.values[value] ?? 0);
+  if (score >= rules.attitude.revereAt) return 'revere';
+  if (score <= rules.attitude.persecuteAt) return 'persecute';
+  return 'regulate';
+}
+
+/** Orders, academies, lost lore and witch hunts, read from the orders and events. */
+function orderMetrics(world, n, orderRules, cultures) {
+  const orders = [...world.orders.values()];
+  const hunts = world.events.filter((e) => e.type === 'mage_hunted');
+  const phrases = orderRules?.phrases;
+  const out = {
+    orders: orders.filter((o) => o.kind === 'order').length,
+    academies: orders.filter((o) => o.kind === 'academy').length,
+    ordersEnded: orders.filter((o) => o.ended !== undefined).length,
+    // Joins kept in the chronicle (legends and the famous); ordinary ones are rolled up.
+    legendJoins: world.events.filter(
+      (e) =>
+        e.type === 'order_joined' &&
+        (world.people.get(e.actors[0])?.magic.power ?? 0) >= LEGEND_POWER,
+    ).length,
+    loreLost: orders.reduce((sum, o) => sum + o.lost.length, 0),
+    mageHunts: n.mage_hunted ?? 0,
+    burned: phrases ? hunts.filter((e) => e.data.outcome === phrases.burned).length : 0,
+    fled: phrases
+      ? hunts.filter((e) => String(e.data.outcome).startsWith(phrases.fled.split('{')[0])).length
+      : 0,
+  };
+  if (orderRules) {
+    const cultureById = new Map(cultures.map((c) => [c.id, c]));
+    for (const stance of ['revere', 'regulate', 'persecute']) out[`civs_${stance}`] = 0;
+    for (const civ of world.civs.values())
+      out[`civs_${attitudeOf(cultureById.get(civ.cultureId), orderRules)}`] += 1;
+  }
+  return out;
+}
+
+/** Legendary tier's lowest power (people/tiers.ts). */
+const LEGEND_POWER = 17;
+
 /** Notables, families and items (M2.5): counts from the people, items and events. */
-export function notableMetrics(world, n, DAYS_PER_YEAR) {
+export function notableMetrics(world, n, DAYS_PER_YEAR, orderRules, cultures) {
   let alive = 0;
   for (const person of world.people.values()) if (person.died === undefined) alive += 1;
   // Legends alive at once: each legend_risen event starts a span that ends when the person dies.
@@ -172,12 +216,13 @@ export function notableMetrics(world, n, DAYS_PER_YEAR) {
     partsCrafted: n.beast_parts_crafted ?? 0,
     carriedOff: n.item_carried_off ?? 0,
     feuds: feudMetrics(world, n),
+    ...orderMetrics(world, n, orderRules, cultures ?? []),
   };
 }
 
 export function historyMetrics(
   world,
-  { startPop, peakPop, historyMs, rollupBelow, DAYS_PER_YEAR, raceIds },
+  { startPop, peakPop, historyMs, rollupBelow, DAYS_PER_YEAR, raceIds, orderRules, cultures },
 ) {
   const n = countEvents(world, { rollupBelow, DAYS_PER_YEAR });
   const c = (type) => n[type] ?? 0;
@@ -245,7 +290,7 @@ export function historyMetrics(
     chain,
     uncaused,
     events: world.events.length,
-    ...notableMetrics(world, n, DAYS_PER_YEAR),
+    ...notableMetrics(world, n, DAYS_PER_YEAR, orderRules, cultures),
   };
   ids.forEach((id, i) => {
     out[`share_${id}`] = round1(shares[i]);

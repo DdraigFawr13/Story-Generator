@@ -12,6 +12,8 @@ export function historyMetrics(
     rollupBelow?: number;
     DAYS_PER_YEAR: number;
     raceIds?: string[];
+    orderRules?: any;
+    cultures?: any[];
   },
 ): Metrics;
 export function baselineMetrics(metrics: Metrics): Metrics;
