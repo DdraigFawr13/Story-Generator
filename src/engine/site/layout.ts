@@ -16,6 +16,10 @@ export interface LayoutInput {
   isCapital: boolean;
   /** The site is on the coast: add a dock. */
   coast: boolean;
+  /** The history site's kind (hold, mine, village...): some buildings are laid out only at some kinds. */
+  kind: string;
+  /** Followed household sizes in the order homes are assigned; a big household gets a double home. */
+  householdSizes?: number[];
 }
 
 // Layout tuning (tiles).
@@ -41,8 +45,22 @@ const TERRACE = 5;
 const OPEN_PLOT_PERCENT = 12;
 /** The square prefers to stand at least this far (tiles) from the map's edge. */
 const EDGE_MARGIN = 28;
+/** Back lanes bend with the ground: a row of homes may stand up to this many tiles further out than the one before it. */
+const LANE_BEND = 2;
 /** Rings searched before giving up on a building. */
 const MAX_RING = 60;
+/** A neighbourhood building stands this far (tiles) along the main street from the square for the first, +10 for each next... */
+const NEIGHBOURHOOD_FIRST = 14;
+/** ...this much further each time... */
+const NEIGHBOURHOOD_STEP = 10;
+/** ...wrapping after this many positions so the farthest stays on the map. */
+const NEIGHBOURHOOD_SLOTS = 4;
+/** A neighbourhood building looks this many rings around its anchor before it is skipped. */
+const NEIGHBOURHOOD_RING = 6;
+/** A mine head is looked for beside ore (else stone) no further than this (Manhattan tiles) from the square. */
+const MINE_REACH = 40;
+/** The mine head looks this many rings around its ore tile for room. */
+const MINE_RING = 6;
 
 /** True when a w x h footprint at (x, y), padded by `pad`, is clear building land. */
 function isFree(
@@ -81,12 +99,13 @@ export function findSpot(
   origin: readonly [number, number],
   minRing: number,
   pad: number,
+  maxRing = MAX_RING,
 ): [number, number] | null {
   const code = siteCodes(rules);
   const seed = hash2(map.cellX, map.cellY, map.width);
   const [ox, oy] = origin;
   const { w, h } = buildingDef(rules, defId);
-  for (let r = minRing; r < MAX_RING; r += 1) {
+  for (let r = minRing; r < maxRing; r += 1) {
     const ring: [number, number][] = [];
     for (let dy = -r; dy <= r; dy += 1) {
       for (let dx = -r; dx <= r; dx += 1) {
@@ -380,35 +399,99 @@ export function layoutSite(
     terrain[k] = code.path;
     tree[k] = 0;
   }
-  /** The door of a building placed around the square: on the wall facing the origin. */
-  const faceOrigin = (b: Building) => {
+  /** The wall tile of a building facing a target tile (the door, if it has one). */
+  const facing = (b: Building, tx: number, ty: number) => {
     const cx = b.x + (b.w >> 1);
     const cy = b.y + (b.h >> 1);
-    const dx = ox - cx;
-    const dy = oy - cy;
-    const door =
-      Math.abs(dx) > Math.abs(dy)
-        ? (b.y + (b.h >> 1)) * size + (dx > 0 ? b.x + b.w - 1 : b.x)
-        : (dy > 0 ? b.y + b.h - 1 : b.y) * size + b.x + (b.w >> 1);
-    b.door = door;
-    const step = doorstep(b, size);
-    carvePath(map, rules, step % size, Math.floor(step / size), ox, oy, true);
-    const sk = step;
-    if (map.building[sk] === 0 && water[sk] === 0) terrain[sk] = code.path;
+    const dx = tx - cx;
+    const dy = ty - cy;
+    return Math.abs(dx) > Math.abs(dy)
+      ? (b.y + (b.h >> 1)) * size + (dx > 0 ? b.x + b.w - 1 : b.x)
+      : (dy > 0 ? b.y + b.h - 1 : b.y) * size + b.x + (b.w >> 1);
+  };
+  /** Opens a path from the wall facing (tx, ty) toward it; a walled building's door is that wall. */
+  const faceTarget = (b: Building, tx: number, ty: number) => {
+    const probe = { x: b.x, y: b.y, w: b.w, h: b.h, door: facing(b, tx, ty) };
+    if (buildingDef(rules, b.defId).walled) b.door = probe.door;
+    const step = doorstep(probe, size);
+    carvePath(map, rules, step % size, Math.floor(step / size), tx, ty, true);
+    if (map.building[step] === 0 && water[step] === 0) terrain[step] = code.path;
+  };
+  /** The door of a building placed around the square: on the wall facing the origin. */
+  const faceOrigin = (b: Building) => {
+    if (buildingDef(rules, b.defId).walled) faceTarget(b, ox, oy);
   };
   // Public buildings face the square.
   const civic = (defId: string, ring: number) => {
     const b = place(defId, ring);
-    if (b && buildingDef(rules, defId).walled) faceOrigin(b);
+    if (b) faceOrigin(b);
     return b;
+  };
+  const kindOk = (d: { siteKinds?: string[] }) => !d.siteKinds || d.siteKinds.includes(input.kind);
+  /** How many copies of a building the site lays out (0 below its minimum population). */
+  const countOf = (d: (typeof rules.buildings)[number]) => {
+    if (d.minPop !== undefined && input.pop < d.minPop) return 0;
+    const extra = d.perPop ? Math.floor((input.pop - (d.minPop ?? 0)) / d.perPop) : 0;
+    return Math.min(d.maxCount ?? Infinity, 1 + extra);
   };
   if (input.isCapital) civic('hall', 6);
   place('well', 2);
   for (const def of rules.buildings) {
-    if (def.minPop !== undefined && input.pop >= def.minPop) civic(def.id, 6);
+    if (def.minPop !== undefined && input.pop >= def.minPop && !def.serves && kindOk(def)) {
+      civic(def.id, 6);
+    }
   }
   civic('stockpile', 6);
   civic('shrine', 7);
+  // Neighbourhoods: extra copies (and the inn) stand along the main street, alternating sides of
+  // it and of the square, each with its door and a path toward the street.
+  let hood = 0;
+  for (const def of rules.buildings) {
+    if (!kindOk(def) || def.id === 'mine') continue;
+    const first = def.serves ? 0 : 1;
+    for (let c = first; c < countOf(def); c += 1) {
+      const slot = (hood >> 1) % NEIGHBOURHOOD_SLOTS;
+      const u = (hood & 1 ? -1 : 1) * (NEIGHBOURHOOD_FIRST + NEIGHBOURHOOD_STEP * slot);
+      const v = (((hood >> 1) + (hood >> 3)) & 1 ? -1 : 1) * (STREET_GAP >> 1);
+      hood += 1;
+      const [ax, ay] = at(u, v);
+      const spot = findSpot(map, rules, def.id, [ax, ay], 0, 1, NEIGHBOURHOOD_RING);
+      if (!spot) continue;
+      const b = stamp(def.id, spot[0], spot[1]);
+      const [tx, ty] = alongX ? [b.x + (b.w >> 1), oy] : [ox, b.y + (b.h >> 1)];
+      faceTarget(b, tx, ty);
+    }
+  }
+  // A mine head beside the ore nearest the square, else the nearest stone (most mining towns
+  // dig stone; ore is rare on a local map), with a path toward the square.
+  for (const def of rules.buildings) {
+    if (def.id !== 'mine' || !kindOk(def)) continue;
+    let ore = -1;
+    for (const mineral of [code.ore, code.stone]) {
+      let oreD = MINE_REACH + 1;
+      for (let k = 0; k < total; k += 1) {
+        if (map.mineral[k] !== mineral || water[k] !== 0) continue;
+        const d = Math.abs((k % size) - ox) + Math.abs(Math.floor(k / size) - oy);
+        if (d < oreD) {
+          oreD = d;
+          ore = k;
+        }
+      }
+      if (ore >= 0) break;
+    }
+    if (ore < 0) continue;
+    const spot = findSpot(
+      map,
+      rules,
+      def.id,
+      [ore % size, Math.floor(ore / size)],
+      1,
+      1,
+      MINE_RING,
+    );
+    if (!spot) continue;
+    faceTarget(stamp(def.id, spot[0], spot[1]), ox, oy);
+  }
 
   // Street plots: homes face the main street on both sides; behind each row lies its strip of
   // fields (the crofts), then a back lane every STREET_GAP tiles whose homes face it from the far
@@ -442,18 +525,65 @@ export function layoutSite(
     }
   }
   plots.sort((a, b) => a.d - b.d || a.street - b.street || a.side - b.side || a.i - b.i);
+  // Back lanes bend with the ground: each row (TERRACE plots, between two gaps) of every back lane
+  // on a side stands 0 to LANE_BEND tiles further out, picked to keep the lane on the contour of
+  // the row nearer the square, at most a tile's jog from it. The main street stays straight, and
+  // all back lanes on a side move together, so the crofts between them keep their depth.
+  const span = TERRACE + 1;
+  const lineHeight = (sign: number, g: number, dv: number) => {
+    let sum = 0;
+    let n = 0;
+    for (let u = g * span * pitch; u < (g * span + TERRACE) * pitch; u += 1) {
+      const [x, y] = at(u, sign * (STREET_GAP + dv));
+      if (!inMap(x, y)) continue;
+      sum += map.elevation[y * size + x]!;
+      n += 1;
+    }
+    return n > 0 ? sum / n : NaN;
+  };
+  const bends = new Map<string, number>();
+  const bendOf = (sign: number, g: number): number => {
+    const k = `${sign},${g}`;
+    const known = bends.get(k);
+    if (known !== undefined) return known;
+    // The rows either side of the square's middle stay put; each row further out follows the one inside it.
+    let dv = 0;
+    if (g !== 0 && g !== -1) {
+      const inner = g > 0 ? g - 1 : g + 1;
+      const prev = bendOf(sign, inner);
+      const target = lineHeight(sign, inner, prev);
+      // The closest height wins; a tie keeps the row in line with the one before.
+      let best = Infinity;
+      dv = prev;
+      for (let d = Math.max(0, prev - 1); d <= Math.min(LANE_BEND, prev + 1); d += 1) {
+        const miss = Math.abs(lineHeight(sign, g, d) - target);
+        if (miss < best || (miss === best && d === prev)) {
+          best = miss;
+          dv = d;
+        }
+      }
+    }
+    bends.set(k, dv);
+    return dv;
+  };
+  /** A street's line (v) along a row: the main street at 0; a back lane bent outward. */
+  const laneV = (street: number, g: number) =>
+    street * STREET_GAP + (street === 0 ? 0 : Math.sign(street) * bendOf(Math.sign(street), g));
+  const rowOf = (i: number) => Math.floor(i / span);
   const placed = new Map<string, Building>();
+  const plotKeys = new Set(plots.map((p) => `${p.street},${p.side},${p.i}`));
   const key = (p: Plot, di = 0) => `${p.street},${p.side},${p.i + di}`;
   /** The plot's top-left tile, size and door (on the street side, in the middle). */
-  const plotRect = (p: Plot) => {
+  const plotRect = (p: Plot, span = 1) => {
     const u0 = p.i * pitch;
-    const vStreet = p.street * STREET_GAP;
+    const long = span * along - (span - 1);
+    const vStreet = laneV(p.street, rowOf(p.i));
     const v0 = p.side > 0 ? vStreet + 1 : vStreet - deep;
     const [ax, ay] = at(u0, v0);
-    const [bx, by] = at(u0 + along - 1, v0 + deep - 1);
+    const [bx, by] = at(u0 + long - 1, v0 + deep - 1);
     const x = Math.min(ax, bx);
     const y = Math.min(ay, by);
-    const [dx, dy] = at(u0 + (along >> 1), p.side > 0 ? v0 : v0 + deep - 1);
+    const [dx, dy] = at(u0 + (long >> 1), p.side > 0 ? v0 : v0 + deep - 1);
     return { x, y, w: Math.abs(bx - ax) + 1, h: Math.abs(by - ay) + 1, door: dy * size + dx };
   };
   /** Free for a home, allowing the wall a neighbour in the row already stands on. */
@@ -474,7 +604,8 @@ export function layoutSite(
   let homes = 0;
   for (const p of plots) {
     if (homes >= homeCount) break;
-    const r = plotRect(p);
+    if (placed.has(key(p))) continue;
+    let r = plotRect(p);
     const shared = new Set<number>();
     for (const di of [-1, 1]) {
       const n = placed.get(key(p, di));
@@ -482,8 +613,20 @@ export function layoutSite(
       for (const k of n.cells) shared.add(k);
     }
     if (!plotFree(r, shared)) continue;
+    // A big household takes this plot and the next one in the row (sharing the wall) as one home.
+    let double = false;
+    if ((input.householdSizes?.[homes] ?? 0) > rules.bigHousehold) {
+      const wide = plotRect(p, 2);
+      const nextKey = key(p, 1);
+      const beyond = placed.get(key(p, 2));
+      const wideShared = new Set([...shared, ...(beyond?.cells ?? [])]);
+      if (plotKeys.has(nextKey) && !placed.has(nextKey) && plotFree(wide, wideShared)) {
+        r = wide;
+        double = true;
+      }
+    }
     // The street in front must be walkable land.
-    const [sx, sy] = at(p.i * pitch + (along >> 1), p.street * STREET_GAP);
+    const [sx, sy] = at(p.i * pitch + (along >> 1), laneV(p.street, rowOf(p.i)));
     const sk = sy * size + sx;
     if (!inMap(sx, sy) || building[sk] || (water[sk] !== 0 && water[sk] !== code.river)) continue;
     const b = stampBuilding(
@@ -499,10 +642,11 @@ export function layoutSite(
     b.door = r.door;
     buildings.push(b);
     placed.set(key(p), b);
+    if (double) placed.set(key(p, 1), b);
     homes += 1;
     // The street along the home's front.
-    for (let u = p.i * pitch - 1; u <= p.i * pitch + along; u += 1) {
-      const [x, y] = at(u, p.street * STREET_GAP);
+    for (let u = p.i * pitch - 1; u <= p.i * pitch + (double ? 2 * along - 1 : along); u += 1) {
+      const [x, y] = at(u, laneV(p.street, rowOf(p.i)));
       if (!inMap(x, y)) continue;
       const k = y * size + x;
       if (building[k] || water[k] === code.sea || water[k] === code.lake) continue;
@@ -515,7 +659,6 @@ export function layoutSite(
   }
   // Each row on a back lane gets a way through to the street before it, at the gap on the row's
   // end nearest the square; then the crofts fill the strip behind each row.
-  const span = TERRACE + 1;
   const segments = new Map<string, { street: number; side: number; g: number }>();
   for (const k of placed.keys()) {
     const [street, side, i] = k.split(',').map(Number) as [number, number, number];
@@ -544,14 +687,18 @@ export function layoutSite(
   for (const { street, side, g } of ordered) {
     if (street === 0) continue;
     const gap = g * span * pitch >= 0 ? g * span - 1 : g * span + TERRACE;
-    cut(gap * pitch + (along >> 1), street * STREET_GAP, (street - side) * STREET_GAP);
+    // The way through also joins this row's lane to the next row's, where the lane jogs.
+    const v = laneV(street, g);
+    const before = laneV(street - side, g);
+    const next = laneV(street, g > 0 ? g - 1 : g < -1 ? g + 1 : g);
+    cut(gap * pitch + (along >> 1), Math.min(v, before, next), Math.max(v, before, next));
   }
   const fieldDef = buildingDef(rules, 'field');
   const fieldCount = Math.ceil(input.pop / rules.peoplePerField);
   let fields = 0;
   for (const { street, side, g } of ordered) {
     const u0 = g * span * pitch;
-    const vBack = street * STREET_GAP + side * (deep + 1);
+    const vBack = laneV(street, g) + side * (deep + 1);
     for (
       let u = u0;
       u + fieldDef.w <= u0 + TERRACE * pitch + 1 && fields < fieldCount;

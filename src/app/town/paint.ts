@@ -80,6 +80,8 @@ const SLOW_FRAME_MS = 30;
 const TAP_SLOP = 6;
 /** How long a tapped building's name stays up (ms). */
 const NAME_MS = 2500;
+/** Below this many pixels a tile (the whole-town fit on a phone), only the first building of each name is labelled. */
+const REPEAT_LABELS_FROM = 8;
 
 /** A tile hash for small, steady variations in tree size and place. */
 function hash(x: number, y: number): number {
@@ -168,6 +170,8 @@ export class TownPainter {
   constructor(
     private readonly canvas: HTMLCanvasElement,
     rules: SiteRules,
+    /** The engine's latest leave time as a share of the block (content `routines.leave.max`). */
+    private readonly leaveMax: number,
   ) {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('This browser has no 2D canvas.');
@@ -307,7 +311,7 @@ export class TownPainter {
 
   /**
    * Re-reads the site after a snapshot: the buildings, and where each resident now is. Each dot
-   * sets off after its own delay (a share of `pace.spreadMs` from its id, so no one moves on the
+   * sets off after its own delay (a share of `pace.spreadMs` from its engine leave time, so no one moves on the
    * beat) and walks, or fades at fast speeds, to its new place. A zero `glideMs` puts it there.
    */
   refresh(world: WorldState, pace: Pace, nameOf: (id: Id) => string, now = performance.now()) {
@@ -360,7 +364,8 @@ export class TownPainter {
         fy: here.y,
         tx,
         ty,
-        start: now + (duration > 0 ? leaveDelay(id, pace.spreadMs) : 0),
+        start:
+          now + (duration > 0 ? leaveDelay(id, pace.spreadMs, detail?.leaveAt, this.leaveMax) : 0),
         duration,
         path,
         fade: pace.fade,
@@ -755,10 +760,19 @@ export class TownPainter {
       asks.push({ key: id, rank, ...box });
       info.set(id, { text, strong, italic });
     };
+    // Zoomed out (a phone's whole-town fit), a big town's second well or shrine is not named: the
+    // first of each name (the square's, laid out first) keeps it, and a tap still shows the rest.
+    const named = new Set<string>();
+    const repeats: [Id, string][] = [];
     for (const b of this.buildings) {
       if (!b.label) continue;
       const rect = { x: this.ox + b.x * s, y: this.oy + b.y * s, w: b.w * s, h: b.h * s };
       if (!onScreen(rect)) continue;
+      if (s < REPEAT_LABELS_FROM && named.has(b.label)) {
+        repeats.push([b.id, b.label]);
+        continue;
+      }
+      named.add(b.label);
       ask(
         b.id,
         labelRank(b.defId),
@@ -786,6 +800,7 @@ export class TownPainter {
     for (const k of placed.skipped) {
       if (typeof k === 'number') this.skipped.set(k, info.get(k)!.text);
     }
+    for (const [id, text] of repeats) this.skipped.set(id, text);
   }
 
   private drawLabels(ctx: CanvasRenderingContext2D, snow: boolean) {

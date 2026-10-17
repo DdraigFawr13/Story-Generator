@@ -57,7 +57,7 @@ describe('village routines', () => {
       site: {
         ...C.site,
         buildings: C.site.buildings.map((b) =>
-          b.id === 'alehouse' ? { ...b, minPop: 1_000_000 } : b,
+          b.id === 'alehouse' || b.id === 'inn' ? { ...b, minPop: 1_000_000 } : b,
         ),
       },
     };

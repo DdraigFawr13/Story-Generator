@@ -304,9 +304,19 @@ export function unitHash(id: number): number {
   return ((h ^ (h >>> 15)) >>> 0) / 4294967296;
 }
 
-/** How long after the block's beat a person sets off, in ms: a share of `spreadMs` from their id. */
-export function leaveDelay(id: number, spreadMs: number): number {
-  return Math.round(unitHash(id) * spreadMs);
+/**
+ * How long after the block's beat a person sets off, in ms. With the engine's own leave time
+ * (`leaveAt`, a share of the block up to the content's `routines.leave.max`, passed as `leaveMax`)
+ * it is that share of `spreadMs`; without it, a share from their id.
+ */
+export function leaveDelay(
+  id: number,
+  spreadMs: number,
+  leaveAt: number | undefined,
+  leaveMax: number,
+): number {
+  if (leaveAt === undefined || leaveMax <= 0) return Math.round(unitHash(id) * spreadMs);
+  return Math.round(Math.min(1, Math.max(0, leaveAt / leaveMax)) * spreadMs);
 }
 
 /** A walk's duration: at least the base time, and long enough that the dot never exceeds the speed cap. */
@@ -341,8 +351,8 @@ export interface Box {
 export const boxesHit = (a: Box, b: Box): boolean =>
   a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
-/** Label order: the hall first, then the alehouse and the shrine, then the rest. */
-const LABEL_FIRST = ['hall', 'alehouse', 'shrine'];
+/** Label order: the hall first, then the alehouse, inn, shrine and mine head, then the rest. */
+const LABEL_FIRST = ['hall', 'alehouse', 'inn', 'shrine', 'mine'];
 
 /** The rank of a building's name when two would overlap: lower is placed first. */
 export function labelRank(defId: string): number {

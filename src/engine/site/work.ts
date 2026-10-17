@@ -375,16 +375,18 @@ function rebuildLists(ws: WorkSite, content: SiteContent, active: ActiveSite): v
   );
   // Village life: a building that houses a workplace (the bakehouse, the smithy) comes first.
   const housing = (place: Workplace) =>
-    built.find(
+    built.filter(
       (b) =>
         b.progress === undefined &&
         !b.burnt &&
         rules.buildings.find((d) => d.id === b.defId)?.houses?.includes(place) &&
         b.defId !== 'hall',
     );
-  const smithy = housing('forge');
+  const smithies = housing('forge');
+  const smithy = smithies[0];
+  const bakehouses = housing('kitchen');
   const kitchen =
-    housing('kitchen') ??
+    bakehouses[0] ??
     built.find((b) => b.defId === 'hall') ??
     built.find((b) => b.defId === 'stockpile');
   // A site with no room left for a workshop (a crowded town) crafts in the stockpile yard.
@@ -396,8 +398,14 @@ function rebuildLists(ws: WorkSite, content: SiteContent, active: ActiveSite): v
       ? built.find((b) => b.defId === 'stockpile')
       : undefined;
   ws.workshop = workshop ? interiorCells(workshop) : yard ? interiorCells(yard) : [];
-  ws.kitchen = kitchen ? interiorCells(kitchen) : [];
-  ws.forge = smithy ? interiorCells(smithy) : ws.workshop;
+  // Cooks and smiths spread over every copy of their building.
+  ws.kitchen =
+    bakehouses.length > 0
+      ? bakehouses.flatMap(interiorCells)
+      : kitchen
+        ? interiorCells(kitchen)
+        : [];
+  ws.forge = smithy ? smithies.flatMap(interiorCells) : ws.workshop;
   ws.smithy = smithy !== undefined;
   if (workshop || yard) has.add('workshop');
   if (ws.forge.length > 0) has.add('forge');

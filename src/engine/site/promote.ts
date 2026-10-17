@@ -387,6 +387,10 @@ export function embark(world: WorldState, content: SiteContent, siteId: Id): Act
     followedHouseholds: homeless,
     isCapital,
     coast,
+    kind: site.kind,
+    householdSizes: sortedById(households.values())
+      .filter((h) => h !== hallHousehold)
+      .map((h) => h.members.length),
   });
   const buildings = new Map<Id, Building>();
   for (const b of layout.buildings) buildings.set(b.id, b);
