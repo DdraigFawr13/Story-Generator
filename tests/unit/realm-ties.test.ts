@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
 import { DIPLOMACY } from '../../src/content/diplomacy';
 import { generateWorld, type WorldState } from '../../src/engine';
-import { allTies, standingAt, tiesOf } from '../../src/app/ties';
+import { allTies, overlordsAt, standingAt, tiesOf } from '../../src/app/ties';
 import { findWorld } from './helpers/find-world';
 
 // The realm pages rebuild alliances and vassalage from the record. Vassals are rare in a small
@@ -66,5 +66,9 @@ describe('realm ties', () => {
     expect(world.civs.get(vassal.b)!.name).toBe(revolt.data.civ);
     expect(tiesOf(world, vassal.b)).toContain(vassal);
     expect(tiesOf(world, vassal.a)).toContain(vassal);
+    // The map reads the shown year: a vassal the year before the revolt, free from that year on.
+    expect(overlordsAt(world, vassal.to! - 1).get(vassal.b)).toBe(vassal.a);
+    expect(overlordsAt(world, vassal.to!).has(vassal.b)).toBe(false);
+    expect(overlordsAt(world, vassal.to! + 1).has(vassal.b)).toBe(false);
   });
 });

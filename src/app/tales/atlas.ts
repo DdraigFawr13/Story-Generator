@@ -27,6 +27,8 @@ export interface DrawInput {
   towns: readonly Town[];
   /** Cells of holy cities, drawn in Faiths mode. */
   holy: readonly number[];
+  /** Anything else the fills depend on (vassals wearing their overlord's colour), for the layer cache. */
+  variant?: string;
 }
 
 export interface DrawResult {
@@ -1270,7 +1272,7 @@ export function* atlasSteps(
       }
     }
     const { mode, owner } = input;
-    const layerKey = `${mode}|${input.key}`;
+    const layerKey = `${mode}|${input.key}|${input.variant ?? ''}`;
     const kept = layers.get(layerKey);
     if (kept) {
       layers.delete(layerKey);
