@@ -195,6 +195,9 @@ test('old /?next links open their page in the rooms', async ({ page }) => {
 test('a site can be watched: embark, play, inspect a person and return to the map', async ({
   page,
 }) => {
+  // The site plays on to its next notable event (the 60 s wait below) and replays there on reload,
+  // so how long this takes follows the SMOKE world's history rather than the code under test.
+  test.setTimeout(60_000);
   const errors = collectErrors(page);
   const smokeMap = smokeExpected();
   await page.goto(`/?seed=${SMOKE.seed}&size=${SMOKE.size}`);

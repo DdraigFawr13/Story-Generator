@@ -4,7 +4,7 @@
 
 import type { Civ, Id, Person, SimEvent, Site } from '../core/types';
 import { timberShort } from './goods';
-import { cultureOf } from './state';
+import { cultureOf, standingWork } from './state';
 import {
   battleChampions,
   battleOutcome,
@@ -25,6 +25,7 @@ import { allyAid, pactStrength } from './city-states';
 import { swearVassal } from './diplomacy';
 import { faithAfterTaken, faithOf, proclaimHolyWar } from './faith';
 import { decideCivilWar, splitRealm } from './civil-war';
+import { breachWall } from './great-works';
 import { bandCount, removePeople } from './pop';
 import { cellDistance } from './settle';
 import {
@@ -200,6 +201,8 @@ function siteDefence(run: HistoryRun, site: Site, defender: Civ): number {
   bonus *= worn(table[site.kind] ?? 1);
   if (defender.capital === site.id) bonus *= table.capital ?? 1;
   if (defender.free) bonus *= worn(table.freeCity ?? 1);
+  // A great wall counts its multiplier on top (great-works.ts).
+  if (standingWork(site, 'wall')) bonus *= run.content.greatWorks.wallDefence;
   return bonus;
 }
 
@@ -251,6 +254,7 @@ function conquer(
   });
   war.lastEvent = event.id;
   if (!war.civil) war.taken = (war.taken ?? 0) + 1;
+  breachWall(run, site, event.id, attacker);
   faithAfterTaken(run, { site, attacker, defender, event, razed: false, war, lead });
   const fell = civLosesSite(run, defender, site, event.id);
   siteLost(run, { site, attacker, defender, event: event.id, razed: false, lead });

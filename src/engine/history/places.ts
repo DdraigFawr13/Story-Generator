@@ -373,6 +373,15 @@ export function beastParts(
   const civ = civOf(run, home);
   if (!civ || !isLive(home)) return;
   home.goods.luxury += rules.luxuryPerDanger * def.danger;
+  // The remains stay for a mage to enchant (great-works.ts).
+  run.remains.push({
+    creatureId: creature.id,
+    creatureName: creature.name,
+    kindName: def.name,
+    siteId: home.id,
+    year: run.year,
+    eventId: slain,
+  });
   const rng = run.rng.places;
   if (!rng.chance(rules.craftChance)) return;
   const crafter =

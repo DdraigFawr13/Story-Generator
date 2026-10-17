@@ -81,6 +81,10 @@ export const NOTABLES: NotableRules = {
       dragon_courted: 2,
       dragon_unleashed: 2,
       dragon_bounty_taken: 4,
+      // Great works: the builder of a tower, wall, bridge or grove; the mage who binds a spell into an item.
+      great_work_raised: 8,
+      item_enchanted: 4,
+      great_item_made: 8,
     },
   },
   // A ruler (fame 20) adds 2 importance to the events around them; a legend adds the cap.
@@ -275,6 +279,8 @@ export const NOTABLES: NotableRules = {
       expedition_glory: 'beating back {guardians} in {peril}',
       expedition_treasure: 'bringing {item} out of {peril}',
       expedition_lore: 'finding {item} in {peril}',
+      great_work_raised: 'raising {work}',
+      great_item_made: 'making {item}',
     },
   },
 };

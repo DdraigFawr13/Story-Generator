@@ -4,7 +4,15 @@
 import type { DiseaseDef } from '../core/content-types';
 import type { Id, Site } from '../core/types';
 import { bandCount, stochasticRound, takeFromBand, totalPop, type Band } from './pop';
-import { causesOf, civName, isLive, logOf, type DiseaseState, type HistoryRun } from './state';
+import {
+  causesOf,
+  civName,
+  isLive,
+  logOf,
+  standingWork,
+  type DiseaseState,
+  type HistoryRun,
+} from './state';
 
 const BANDS: readonly Band[] = ['child', 'adult', 'elder'];
 
@@ -29,7 +37,8 @@ function infect(
 ): void {
   const rng = run.rng.disease;
   const [lo, hi] = def.severity;
-  const share = rng.between(Math.round(lo * 1000), Math.round(hi * 1000)) / 1000;
+  const warded = standingWork(site, 'grove') ? run.content.greatWorks.grovePlague : 1;
+  const share = (rng.between(Math.round(lo * 1000), Math.round(hi * 1000)) / 1000) * warded;
   let dead = 0;
   for (const band of BANDS) {
     const count = bandCount(site, band);

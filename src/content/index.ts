@@ -7,6 +7,7 @@ import { creatures } from './creatures';
 import { cultures } from './cultures';
 import { diseases } from './diseases';
 import { dragons } from './dragons';
+import { GREAT_WORKS } from './great-works';
 import { places } from './places';
 import { FAITHS, FAITH_EVENTS } from './faiths';
 import { AILMENTS, CONDITIONS, HEALTH, HEALTH_EVENTS, HEALTH_MEMORIES } from './health';
@@ -66,6 +67,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
   history: HISTORY,
   creatures,
   dragons,
+  greatWorks: GREAT_WORKS,
   places,
   faiths: FAITHS,
   diseases,
@@ -114,6 +116,7 @@ export * from './creatures';
 export * from './cultures';
 export * from './diseases';
 export * from './dragons';
+export * from './great-works';
 export * from './places';
 export * from './faiths';
 export * from './health';

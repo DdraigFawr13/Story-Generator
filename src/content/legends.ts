@@ -192,6 +192,8 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'trade_opened',
       'barrow_raised',
       'lair_abandoned',
+      'great_work_raised',
+      'great_work_fell',
     ],
   },
   {
@@ -209,6 +211,8 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
       'expedition_lore',
       'beast_parts_crafted',
       'item_carried_off',
+      'item_enchanted',
+      'great_item_made',
     ],
   },
 ];

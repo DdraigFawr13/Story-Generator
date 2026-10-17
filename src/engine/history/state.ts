@@ -10,7 +10,16 @@ import type {
   RaceDef,
 } from '../core/content-types';
 import { streamFor, type RngStream } from '../core/rng';
-import type { Civ, Goods, Id, SimEvent, Site, WorldCells, WorldState } from '../core/types';
+import type {
+  Civ,
+  GreatWork,
+  Goods,
+  Id,
+  SimEvent,
+  Site,
+  WorldCells,
+  WorldState,
+} from '../core/types';
 import type { SiteLinks, LinkSearch } from './links';
 import { emitScored } from './importance';
 import { nearestAuraSpot, type SettleContent, type SettleSearch } from './settle';
@@ -22,6 +31,7 @@ export type HistoryContent = SettleContent &
     | 'history'
     | 'creatures'
     | 'dragons'
+    | 'greatWorks'
     | 'places'
     | 'faiths'
     | 'diseases'
@@ -238,6 +248,19 @@ export interface IntrigueState {
   usurper?: { civ: Id; person: Id; cause: Id; phrase: string } | undefined;
 }
 
+/** What a slain great or legendary beast left, for a mage to enchant (great-works.ts). */
+export interface Remains {
+  creatureId: Id;
+  /** The beast's own name and its kind's name ("a great boar"). */
+  creatureName: string;
+  kindName: string;
+  siteId: Id;
+  year: number;
+  /** The slaying event. */
+  eventId: Id;
+  used?: boolean;
+}
+
 export interface HistoryRun {
   world: WorldState;
   cells: WorldCells;
@@ -259,6 +282,7 @@ export interface HistoryRun {
     beasts: RngStream;
     dragons: RngStream;
     dragonCourt: RngStream;
+    greatWorks: RngStream;
     places: RngStream;
     trade: RngStream;
     war: RngStream;
@@ -270,6 +294,8 @@ export interface HistoryRun {
     intrigue: RngStream;
     diplomacy: RngStream;
   };
+  /** Remains of slain great beasts, in the order they were left. */
+  remains: Remains[];
   /** Current year, 1..historyYears. */
   year: number;
   logs: Map<Id, SiteLog>;
@@ -400,6 +426,11 @@ export function logOf(run: HistoryRun, siteId: Id): SiteLog {
   return log;
 }
 
+/** A standing great work of this kind at the site, if any. */
+export function standingWork(site: Site, kind: string): GreatWork | undefined {
+  return site.works?.find((w) => w.kind === kind && w.fell === undefined);
+}
+
 /** Live sites in id order (a fresh array, so callers may found sites while iterating). */
 export function liveSites(run: HistoryRun): Site[] {
   const out: Site[] = [];
@@ -470,6 +501,7 @@ export function createRun(
       beasts: streamFor(world, 'history.beasts'),
       dragons: streamFor(world, 'history.dragons'),
       dragonCourt: streamFor(world, 'history.dragonCourt'),
+      greatWorks: streamFor(world, 'history.greatWorks'),
       places: streamFor(world, 'history.places'),
       trade: streamFor(world, 'history.trade'),
       war: streamFor(world, 'history.war'),
@@ -481,6 +513,7 @@ export function createRun(
       intrigue: streamFor(world, 'history.intrigue'),
       diplomacy: streamFor(world, 'history.diplomacy'),
     },
+    remains: [],
     year: 0,
     logs: new Map(),
     lastExpansion: new Map(),

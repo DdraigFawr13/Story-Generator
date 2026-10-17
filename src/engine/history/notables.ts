@@ -589,6 +589,9 @@ export function creditSlaying(run: HistoryRun, person: Person, danger: number, e
   person.fame = Math.min(FAME_MAX, person.fame + gain);
   addDeed(person, event);
   markDeed(run, person);
+  // An enchanted item in their hand takes the slaying into its own story.
+  for (const item of run.world.items.values())
+    if (item.holder === person.id && item.enchanted) item.deeds.push(event);
 }
 
 /** The hero who slays a beast, at the raided site; the name was rolled by the caller. */

@@ -26,6 +26,7 @@ import { runExpansion, runMigration } from './migration';
 import { initLineages, runLineages } from './lineages';
 import { initNotables, runNotables } from './notables';
 import { runBribes, runIntrigue } from './intrigue';
+import { runGreatWorks } from './great-works';
 import { runItems } from './items';
 import { initPlaces, runExpeditions, runPlaces } from './places';
 import { runCivRaids, runDiplomacy } from './raids';
@@ -106,6 +107,7 @@ export function runHistory(
     runIntrigue(run);
     runColleges(run);
     runLineages(run);
+    runGreatWorks(run);
     runCityStates(run);
     runFaith(run);
     if (year % DECADE === 0) runItems(run);

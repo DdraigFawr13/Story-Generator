@@ -25,6 +25,14 @@ export function countEvents(world, { rollupBelow, DAYS_PER_YEAR }) {
 
 const round1 = (v) => Math.round(v * 10) / 10;
 
+/** Works raised per kind, read from the sites. */
+function worksByKind(world) {
+  const out = { wall: 0, bridge: 0, tower: 0, grove: 0 };
+  for (const site of world.sites.values())
+    for (const work of site.works ?? []) out[work.kind] = (out[work.kind] ?? 0) + 1;
+  return out;
+}
+
 /** Notables, families and items (M2.5): counts from the people, items and events. */
 export function notableMetrics(world, n, DAYS_PER_YEAR) {
   let alive = 0;
@@ -120,6 +128,12 @@ export function notableMetrics(world, n, DAYS_PER_YEAR) {
         String(e.data.role ?? '') !== '',
     ).length,
     deadWoke: n.barrow_woke ?? 0,
+    // Great works (tower, wall, bridge, warded grove) and enchanted items.
+    worksRaised: n.great_work_raised ?? 0,
+    worksFell: n.great_work_fell ?? 0,
+    worksByKind: worksByKind(world),
+    itemsEnchanted: n.item_enchanted ?? 0,
+    greatItems: n.great_item_made ?? 0,
     partsCrafted: n.beast_parts_crafted ?? 0,
     carriedOff: n.item_carried_off ?? 0,
   };
