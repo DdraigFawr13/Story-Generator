@@ -645,7 +645,7 @@ Twelve threads have merged since the list was written (#101 to #122, `CHANGELOG.
 - UI halves of built items: a page per faith (8); vassals on the map and "vassal of" in the People room (13).
 - History leftovers: none; other great beasts and the restless dead as individuals (7) are build order 20. The dragon courted, feared or put under bounty (10) is built as build order 17.
 - Not started: the story threads view (11), trade between peoples (14), the world moving while you watch (15).
-- Rough edges carried from earlier threads: child deaths below history's share and orcs at 7% (M4.0 leftovers); only 4 of 111 dwarven holds sit at a pass; the after-play map pauses about 0.4 s when the sharper map swaps in and draws stepped borders at full zoom; `?year=` starts at a different year from where Tales plays.
+- Rough edges carried from earlier threads: the after-play map pauses about 0.4 s when the sharper map swaps in and draws stepped borders at full zoom; `?year=` starts at a different year from where Tales plays. Child deaths, the orc share and holds at passes were fixed in the rough-edges bundle (P8, 2026-10-17); cross-border trade turned out to be 26% to 30% of trades already.
 
 #### Proposed next set (2026-10-17; a proposal, not approved)
 
@@ -660,7 +660,7 @@ For when the picks Morgan has already seen (vassals shown in the UI, the world m
 | P5 | A page per faith | Phase 7 leftover | Gods, holy city, high priests in order, schisms and holy wars, in the People and Book rooms | 3 | S |
 | P6 | Orders and academies | Phase 7 | Picked 2026-10-17; now build order 21 above | 3 | M |
 | P7 | Other great beasts and the restless dead | M5.6 leftover | Picked 2026-10-17; now build order 20 above | 3 | M |
-| P8 | Rough-edges bundle | the list above | The carried rough edges fixed in one short thread; runs beside any other | 3 | S |
+| P8 | Rough-edges bundle | the list above | Picked 2026-10-17; history edges built 2026-10-17 (child deaths, orcs, holds at passes) | 3 | S |
 
 ### Phase 0 — Reset and skeleton (2–3 PRs)
 - **M0.1 Docs reset:**
