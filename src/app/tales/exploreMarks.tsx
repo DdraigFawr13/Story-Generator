@@ -33,6 +33,7 @@ const GLYPHS: Record<PauseKind, Part[]> = {
     },
     { d: 'M12 7.2a4.8 4.8 0 1 0 0 9.6 4.8 4.8 0 0 0 0-9.6z', fill: true },
   ],
+  settlers: [{ d: 'M3 16Q3 6 12 6t9 10z', fill: true }, { d: 'M2 16h20M7 20h.1M17 20h.1' }],
 };
 
 const colourOf = (kind: PauseKind) => PAUSE_KINDS.find((k) => k.id === kind)!.colour;

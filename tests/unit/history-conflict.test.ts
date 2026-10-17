@@ -153,6 +153,15 @@ describe('war', () => {
     let wars = 0;
     for (const seed of ['WAR-A', 'WAR-B', 'WAR-C', 'WAR-D']) {
       const world = generate(seed);
+      // Every battle says where the two hosts set out from; a war's first starts at a site.
+      const siteCells = new Set([...world.sites.values()].map((s) => s.cell));
+      const seen = new Set<unknown>();
+      for (const b of eventsOf(world, 'battle')) {
+        expect(typeof b.data.hostFrom).toBe('number');
+        expect(typeof b.data.enemyHostFrom).toBe('number');
+        if (!seen.has(b.data.war)) expect(siteCells.has(b.data.hostFrom as number)).toBe(true);
+        seen.add(b.data.war);
+      }
       const byId = new Map<Id, SimEvent>(world.events.map((e) => [e.id, e]));
       for (const war of eventsOf(world, 'war_declared')) {
         wars += 1;

@@ -309,10 +309,21 @@ function pickTarget(run: HistoryRun, attacker: Civ, defender: Civ): Site | undef
  * One year's campaign: a battle, then conquest or razing if the attacker won. `flipped` is set
  * when the war's defender marches this year (a civil war's stronger side).
  */
-function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ, flipped = false): void {
+function campaign(
+  run: HistoryRun,
+  war: War,
+  attacker: Civ,
+  defender: Civ,
+  flipped = false,
+): { won: boolean; field: number } | undefined {
   const { rules, rng } = run;
   const target = pickTarget(run, attacker, defender);
-  if (!target) return;
+  if (!target) return undefined;
+  // Each host sets out from where it stands: its seat before the first battle, then the field it
+  // holds or the seat it fell back to.
+  const seatCell = (civ: Civ) => run.world.sites.get(civ.capital)?.cell ?? target.cell;
+  const hostFrom = war.hosts?.[flipped ? 1 : 0] ?? seatCell(attacker);
+  const enemyHostFrom = war.hosts?.[flipped ? 0 : 1] ?? seatCell(defender);
   const attackStrength = civStrength(run, attacker);
   const defendStrength =
     civStrength(run, defender) + allyAid(run, war, attacker, defender, (c) => civStrength(run, c));
@@ -403,6 +414,9 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ, flipp
       // The captains by name: in a civil war a claimant can change realms after the battle.
       attackerLead: attackerLead?.name ?? '',
       defenderLead: defenderLead?.name ?? '',
+      // Where the two hosts set out from (cells), for the march on the map.
+      hostFrom,
+      enemyHostFrom,
       ...(war.civil ? { civil: 1 } : {}),
     },
   });
@@ -419,7 +433,8 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ, flipp
     champions,
     legends,
   });
-  if (!attackerWins) return;
+  const outcome = { won: attackerWins, field: target.cell };
+  if (!attackerWins) return outcome;
   // Kin do not burn their own towns. A civil war ends when the claimant takes the throne city or
   // the claimant's last town falls; a lost seat short of that moves to the next town.
   if (war.civil) {
@@ -428,12 +443,27 @@ function campaign(run: HistoryRun, war: War, attacker: Civ, defender: Civ, flipp
       (defender.rebelOf === undefined || civSites(run, defender).length === 1);
     if (decisive) decideCivilWar(run, war, attacker, defender, battle.id);
     else conquer(run, war, target, attacker, defender, battle.id, lead);
-    return;
+    return outcome;
   }
   const differ = run.races.get(attacker.raceId) !== run.races.get(defender.raceId);
   const razeChance = Math.min(1, rules.razeChance * (differ ? 2 : 1));
   if (rng.war.chance(razeChance)) raze(run, war, target, attacker, defender, battle.id, lead);
   else conquer(run, war, target, attacker, defender, battle.id, lead);
+  return outcome;
+}
+
+/** After a battle the winner holds the field and the loser falls back to its seat. */
+function moveHosts(
+  run: HistoryRun,
+  war: War,
+  outcome: { won: boolean; field: number },
+  flipped: boolean,
+): void {
+  const attackerWon = outcome.won !== flipped;
+  const loser = liveCiv(run, attackerWon ? war.defender : war.attacker);
+  const seat = loser ? run.world.sites.get(loser.capital)?.cell : undefined;
+  const fallback = seat ?? outcome.field;
+  war.hosts = attackerWon ? [outcome.field, fallback] : [fallback, outcome.field];
 }
 
 /**
@@ -481,9 +511,12 @@ function fightWars(run: HistoryRun): void {
     // A claimant marches first; after that the stronger half of a civil war marches each year.
     if (attacker && defender) {
       const first = war.civil && run.year === war.started + 1;
-      if (war.civil && !first && civStrength(run, defender) > civStrength(run, attacker)) {
-        campaign(run, war, defender, attacker, true);
-      } else campaign(run, war, attacker, defender);
+      const flipped =
+        !!war.civil && !first && civStrength(run, defender) > civStrength(run, attacker);
+      const outcome = flipped
+        ? campaign(run, war, defender, attacker, true)
+        : campaign(run, war, attacker, defender);
+      if (outcome) moveHosts(run, war, outcome, flipped);
     }
     const a = liveCiv(run, war.attacker);
     const d = liveCiv(run, war.defender);
