@@ -19,12 +19,15 @@ import { RoomShell, type RoomId } from '../rooms/Rooms';
 import {
   TINT,
   atlasSteps,
-  coastPath,
+  coastSteps,
   createAtlas,
   type Atlas,
+  type DrawInput,
+  type DrawResult,
   type MapMode,
   type Town,
 } from './atlas';
+import { runSliced } from './slices';
 import {
   assignHues,
   assignRaceHues,
@@ -89,6 +92,8 @@ interface Props {
   textOf: (event: SimEvent) => string;
   /** The year to play from. */
   startYear: number;
+  /** Wait at `startYear` for Play (a shared link names its year) instead of playing on. */
+  startPaused?: boolean;
   /** Back to the normal map at a year. */
   onClose: (year: number) => void;
   /** Tales is at this whole year, following this person (for the address bar). */
@@ -228,6 +233,7 @@ function Room({
   data,
   textOf,
   startYear,
+  startPaused,
   onView,
   onOpenEvent,
   onPeople,
@@ -276,7 +282,7 @@ function Room({
   const [chooser, setChooser] = useState(false);
   const [follow, setFollow] = useState<{ id: Id; name: string } | null>(initialFollow ?? null);
   const [speed, setSpeed] = useState<number>(DEFAULT_SPEED);
-  const [playing, setPlaying] = useState(!explore);
+  const [playing, setPlaying] = useState(!explore && !startPaused);
   const [ended, setEnded] = useState(false);
   // Explore: the finished map, zoomable, with marks for the events. Playing never zooms.
   const [exploring, setExploring] = useState(() => !!explore);
@@ -292,6 +298,7 @@ function Room({
   // The sharper terrain for the explore state, built in slices, and the shore as a vector line.
   const [sharp, setSharp] = useState<{ atlas: Atlas; coast: string } | null>(null);
   const [sharpOn, setSharpOn] = useState(false);
+  const [sharpDrawn, setSharpDrawn] = useState(false);
   const [stage, setStage] = useState({ w: 0, h: 0 });
   const [helpOpen, setHelpOpen] = useState(false);
   const [labels, setLabels] = useState<Map<number, { x: number; y: number; n: number }>>(new Map());
@@ -410,7 +417,7 @@ function Room({
       }
       return null;
     };
-    const result = target.draw({
+    const input: DrawInput = {
       mode,
       key: borderKey,
       owner: data.bordersAt(borderKey),
@@ -418,19 +425,34 @@ function Room({
       borderOf: (civ) => borderColour(palette.hue.get(civ) ?? 0),
       towns,
       holy,
+    };
+    const finish = (result: DrawResult) => {
+      setLabels(result.centres);
+      stageEl.current?.setAttribute('data-draw-ms', result.ms.toFixed(0));
+    };
+    if (target === atlas) {
+      finish(target.draw(input));
+      return undefined;
+    }
+    // The sharp map is big: it is drawn in slices and keeps the last picture until the new one
+    // is ready, so a new border year or mode never holds the page.
+    return runSliced(target.drawSteps(input), (result, stats) => {
+      finish(result);
+      stageEl.current?.setAttribute('data-draw-slice-ms', stats.longest.toFixed(0));
+      setSharpDrawn(true);
     });
-    setLabels(result.centres);
-    stageEl.current?.setAttribute('data-draw-ms', result.ms.toFixed(0));
-  }, [target, mode, borderKey, data, palette, realmOf, world]);
-  // Fade the sharp layer in after its first drawing, and out when exploring ends.
+  }, [target, atlas, mode, borderKey, data, palette, realmOf, world]);
+  // Fade the sharp layer in once its first drawing is done, and out when exploring ends.
   useEffect(() => {
     if (!exploring || !sharp) {
       setSharpOn(false);
+      setSharpDrawn(false);
       return undefined;
     }
+    if (!sharpDrawn) return undefined;
     const id = requestAnimationFrame(() => setSharpOn(true));
     return () => cancelAnimationFrame(id);
-  }, [exploring, sharp]);
+  }, [exploring, sharp, sharpDrawn]);
 
   /** Moves the playhead DOM; the heavy parts follow the year state. */
   const sync = () => {
@@ -709,44 +731,27 @@ function Room({
     if (!exploring || !atlas || sharp) return undefined;
     const scale = Math.floor(SHARP_PX / atlas.width);
     if (scale <= atlas.scale) return undefined;
-    let timer = 0;
-    let stopped = false;
     const cells = world.cells!;
-    const steps = atlasSteps(
-      cells,
-      DEFAULT_CONTENT.biomes.map((b) => b.id),
-      scale,
-      { coast: false },
+    const build = function* () {
+      const coast = yield* coastSteps(cells);
+      const made = yield* atlasSteps(
+        cells,
+        DEFAULT_CONTENT.biomes.map((b) => b.id),
+        scale,
+        { coast: false },
+      );
+      return { atlas: made, coast };
+    };
+    return runSliced(
+      build(),
+      (made, stats) => {
+        stageEl.current?.setAttribute('data-sharp-ms', stats.work.toFixed(0));
+        stageEl.current?.setAttribute('data-sharp-slice-ms', stats.longest.toFixed(0));
+        stageEl.current?.setAttribute('data-sharp-slices', String(stats.runs));
+        setSharp(made);
+      },
+      { delayMs: 400 },
     );
-    let coast = '';
-    let slices = 0;
-    let longest = 0;
-    let total = 0;
-    const tick = () => {
-      if (stopped) return;
-      const t = performance.now();
-      let made: Atlas | null = null;
-      if (!coast) coast = coastPath(cells);
-      else {
-        const r = steps.next();
-        if (r.done) made = r.value;
-      }
-      const spent = performance.now() - t;
-      slices += 1;
-      total += spent;
-      longest = Math.max(longest, spent);
-      if (made) {
-        stageEl.current?.setAttribute('data-sharp-ms', total.toFixed(0));
-        stageEl.current?.setAttribute('data-sharp-slice-ms', longest.toFixed(0));
-        stageEl.current?.setAttribute('data-sharp-slices', String(slices));
-        setSharp({ atlas: made, coast });
-      } else timer = window.setTimeout(tick, 24);
-    };
-    timer = window.setTimeout(tick, 400);
-    return () => {
-      stopped = true;
-      window.clearTimeout(timer);
-    };
   }, [exploring, atlas, sharp, world]);
   // Wheel, drag and pinch on the stage, in the explore state only.
   useEffect(() => {

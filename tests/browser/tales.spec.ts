@@ -73,3 +73,15 @@ test('Explore the map stays in Tales: marks follow the Show filter, the map zoom
   await page.locator('[data-testid="town-hit"]').first().click();
   await expect(page.getByRole('dialog', { name: 'Town' })).toBeVisible();
 });
+
+test('a shared Tales link waits at its year until Play', async ({ page }) => {
+  await page.goto('/?seed=SMOKE&size=128&room=tales&year=40');
+  const stage = page.getByTestId('tales-stage');
+  await expect(stage).toBeVisible({ timeout: 30_000 });
+  const year = page.getByRole('slider', { name: 'Year' });
+  await expect(year).toHaveValue('40');
+  await page.waitForTimeout(1000);
+  await expect(year).toHaveValue('40');
+  await page.getByRole('button', { name: 'Play history' }).click();
+  await expect(year).not.toHaveValue('40');
+});
