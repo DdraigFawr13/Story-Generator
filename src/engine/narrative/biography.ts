@@ -43,7 +43,14 @@ export interface Biography {
 
 type BioContent = Pick<
   ContentBundle,
-  'eventTypes' | 'biographies' | 'races' | 'cultures' | 'history' | 'creatures' | 'dragons'
+  | 'eventTypes'
+  | 'biographies'
+  | 'races'
+  | 'cultures'
+  | 'history'
+  | 'creatures'
+  | 'dragons'
+  | 'greatBeasts'
 >;
 
 const keyOf = (kind: LegendKind, id: Id) => `${kind}:${id}`;
@@ -340,6 +347,56 @@ function dragonLines(
   return out;
 }
 
+/** A named great beast's lines (temper, lair, tolls, hoard) or a restless host's (who it was, how it ended). */
+function individualLines(
+  world: WorldState,
+  content: BioContent,
+  beast: Creature,
+  say: (name: string, vars: Record<string, string | number>) => string,
+): string[] {
+  const out: string[] = [];
+  const live = beast.died === undefined;
+  const state = beast.great;
+  if (state) {
+    const temper = content.greatBeasts.tempers.find((t) => t.id === state.temper);
+    out.push(
+      say(live ? 'greatLairLive' : 'greatLair', {
+        temper: temper?.word ?? state.temper,
+        lair: state.lairName,
+      }),
+    );
+    const towns = state.tollFrom.flatMap((id) => world.sites.get(id)?.name ?? []);
+    const kind = content.greatBeasts.kinds.find((k) => k.creatureId === beast.defId);
+    if (state.tolls > 0 && towns.length > 0 && kind) {
+      const n = state.tolls;
+      out.push(
+        say('greatToll', {
+          toll: kind.tollWord,
+          times: n === 1 ? 'once' : `${n} times`,
+          towns: nameList(towns),
+        }),
+      );
+    }
+    const items = (beast.hoard ?? []).flatMap((id) => world.items.get(id)?.name ?? []);
+    if (items.length > 0 && live) out.push(say('greatHoard', { items: nameList(items) }));
+    else if (items.length > 0 && beast.slainBy)
+      out.push(say('greatHoardTaken', { slayer: beast.slainBy, items: nameList(items) }));
+  }
+  const dead = beast.dead;
+  if (dead) {
+    const peril = world.places.get(dead.placeId)?.name;
+    const robbers = dead.robbers === undefined ? undefined : world.civs.get(dead.robbers)?.name;
+    if (peril && robbers)
+      out.push(say(live ? 'deadRisenLive' : 'deadRisen', { ruler: dead.ruler, peril, robbers }));
+    const last = beast.deeds[beast.deeds.length - 1];
+    const end = live ? undefined : world.events.find((e) => e.id === last);
+    if (end?.type === 'dead_rested') out.push(say('deadRested', { civ: String(end.data.civ) }));
+    else if (end?.type === 'dead_laid_to_rest')
+      out.push(say('deadLaid', { priest: String(end.data.priest) }));
+  }
+  return out;
+}
+
 function otherSummary(world: WorldState, content: BioContent, ref: LegendRef): string[] {
   const say = (name: string, vars: Record<string, string | number>) =>
     sentence(content.biographies, ref, name, vars);
@@ -350,7 +407,10 @@ function otherSummary(world: WorldState, content: BioContent, ref: LegendRef): s
     const base = { name: beast.name, kind, born: beast.born };
     const killed = (beast.kills ?? []).flatMap((id) => world.people.get(id)?.name ?? []);
     const kills = killed.length > 0 ? [say('beastKills', { names: nameList(killed) })] : [];
-    const dragon = dragonLines(world, content, beast, say);
+    const dragon = [
+      ...dragonLines(world, content, beast, say),
+      ...individualLines(world, content, beast, say),
+    ];
     if (beast.died === undefined) return [say('beastLive', base), ...dragon, ...kills];
     return [
       say('beastDead', {

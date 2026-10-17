@@ -5,7 +5,8 @@ import { findWorld } from './helpers/find-world';
 
 // Feuds are rarer in a small world, so each test searches a short fixed seed list for a world with
 // the example it checks (first match wins); worlds are generated once per seed and shared.
-const SEEDS = ['FD-1', 'FD-2', 'FD-5', 'FD-15', 'FD-3', 'FD-8', 'FD-10', 'FD-21'];
+// FD-21 leads: it holds a third-generation feud, so the costliest search stops at the first world.
+const SEEDS = ['FD-21', 'FD-1', 'FD-2', 'FD-5', 'FD-15', 'FD-3', 'FD-8', 'FD-10'];
 const make = (seed: string) =>
   generateWorld(seed, { width: 128, height: 128, historyYears: 250 }, DEFAULT_CONTENT);
 const find = (what: string, has: (w: WorldState) => boolean) =>

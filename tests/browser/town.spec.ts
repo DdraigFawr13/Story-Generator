@@ -13,7 +13,8 @@ async function watchFromPeople(page: Page) {
   await page.getByRole('button', { name: 'People', exact: true }).click();
   const index = page.getByTestId('people-index');
   await expect(index).toBeVisible();
-  await index.getByRole('button', { name: 'Legends', exact: true }).click();
+  // Rulers: every world has them, while a small world may end its history with no legend.
+  await index.getByRole('button', { name: 'Rulers', exact: true }).click();
   await index.getByRole('searchbox', { name: 'Search people' }).fill('a');
   const rows = index.locator('.pp-row');
   await expect(rows.first()).toBeVisible();

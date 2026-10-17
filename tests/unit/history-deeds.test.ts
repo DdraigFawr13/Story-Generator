@@ -23,17 +23,17 @@ const FREQUENT = {
 const LEGEND_POWER = 17;
 
 // The tests search this fixed list for a world with the event they check (first match wins).
-// DH-144 and DH-137 lead since the 2026-10-17 feuds change (like the dragon-at-court change before
-// it) left the older seeds without a legend founding or a duel.
+// DH-137 and DH-81 lead since the 2026-10-17 great beasts change: between them they hold every
+// deed, so the "each found in some world" scan builds two worlds instead of eight.
 const SEEDS = [
-  'DH-144',
   'DH-137',
+  'DH-81',
+  'DH-144',
   'DH-60',
   'DH-134',
   'DH-3',
   'DH-37',
   'DH-79',
-  'DH-81',
   'DH-152',
   'DH-34',
   'DH-105',

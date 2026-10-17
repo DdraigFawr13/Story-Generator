@@ -476,7 +476,7 @@ for (const r of rows) {
   const h = r.history;
   const n = (type) => h.typeCount[type] ?? 0;
   process.stdout.write(
-    `${r.seed.padEnd(4)} | ${String(n('beast_appeared')).padStart(3)}/${String(n('beast_slain')).padEnd(3)} | ` +
+    `${r.seed.padEnd(4)} | ${String(n('beast_appeared') + n('great_beast_appeared')).padStart(3)}/${String(n('beast_slain')).padEnd(3)} | ` +
       `${String(n('beast_raid')).padStart(4)}/${String(n('civ_raid')).padEnd(3)} | ${String(n('trade_opened')).padStart(2)}/${String(n('grain_relief')).padEnd(3)} | ` +
       `${h.warsEarly}/${h.warsLate} (${n('war_declared')}) | ${String(h.peaceYears).padStart(3)} | ` +
       `${String(n('battle')).padStart(3)} ${String(n('site_conquered')).padStart(3)} ${String(n('site_razed')).padStart(3)} | ` +

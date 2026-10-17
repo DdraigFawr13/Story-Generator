@@ -31,6 +31,7 @@ export type HistoryContent = SettleContent &
     | 'history'
     | 'creatures'
     | 'dragons'
+    | 'greatBeasts'
     | 'greatWorks'
     | 'places'
     | 'faiths'
@@ -323,6 +324,7 @@ export interface HistoryRun {
     beasts: RngStream;
     dragons: RngStream;
     dragonCourt: RngStream;
+    greatBeasts: RngStream;
     greatWorks: RngStream;
     places: RngStream;
     trade: RngStream;
@@ -547,6 +549,7 @@ export function createRun(
       beasts: streamFor(world, 'history.beasts'),
       dragons: streamFor(world, 'history.dragons'),
       dragonCourt: streamFor(world, 'history.dragonCourt'),
+      greatBeasts: streamFor(world, 'history.greatBeasts'),
       greatWorks: streamFor(world, 'history.greatWorks'),
       places: streamFor(world, 'history.places'),
       trade: streamFor(world, 'history.trade'),

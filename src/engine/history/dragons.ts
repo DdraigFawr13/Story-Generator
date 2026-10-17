@@ -78,7 +78,7 @@ export function hoardedItems(run: HistoryRun): Set<Id> {
 }
 
 /** "second", "third" ... "tenth", then "11th". */
-function ordinal(n: number): string {
+export function ordinal(n: number): string {
   const words = [
     'first',
     'second',
@@ -112,7 +112,7 @@ function holds(cells: readonly number[], cell: number): boolean {
 }
 
 /** "under the {region}" when the lair lies in or by a mountain region, else "near {near}". */
-function placePhrase(run: HistoryRun, lair: number, near: string): string {
+export function placePhrase(run: HistoryRun, lair: number, near: string): string {
   const rules = run.content.dragons;
   let best: Region | undefined;
   let bestDistance = Infinity;

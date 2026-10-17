@@ -15,7 +15,8 @@ test('a person opens from the index, Follow returns to Tales, and back returns t
   await page.getByRole('button', { name: 'People', exact: true }).click();
   const index = page.getByTestId('people-index');
   await expect(index).toBeVisible();
-  await index.getByRole('button', { name: 'Legends', exact: true }).click();
+  // Rulers: every world has them, while a small world may end its history with no legend.
+  await index.getByRole('button', { name: 'Rulers', exact: true }).click();
   await index.getByRole('searchbox', { name: 'Search people' }).fill('a');
   await index.locator('.pp-row').first().click();
   const pageEl = page.getByTestId('person-page');
@@ -91,7 +92,8 @@ test('the Tales chip opens the person and Back returns to the same year and foll
   await page.getByRole('button', { name: 'People', exact: true }).click();
   await expect(page).toHaveURL(/room=people/);
   const index = page.getByTestId('people-index');
-  await index.getByRole('button', { name: 'Legends', exact: true }).click();
+  // Rulers: every world has them, while a small world may end its history with no legend.
+  await index.getByRole('button', { name: 'Rulers', exact: true }).click();
   await index.locator('.pp-row').first().click();
   const pageEl = page.getByTestId('person-page');
   await expect(page).toHaveURL(/open=person:\d+/);

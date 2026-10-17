@@ -729,6 +729,30 @@ export interface DragonState {
   tributeFrom: Id[];
 }
 
+/** What makes a great beast an individual: its temper, lair name, grudge and the tolls it took. */
+export interface GreatBeastState {
+  /** Given name; the full name adds the epithet of its temper. */
+  given: string;
+  /** Id of its temper in the great beast rules. */
+  temper: string;
+  lairName: string;
+  /** A town that fought it and failed: a vengeful beast strikes it until the year `until`. */
+  grudge?: { siteId: Id; until: number; told?: boolean };
+  /** Tolls taken, and the sites that paid, in first-paid order. */
+  tolls: number;
+  tollFrom: Id[];
+}
+
+/** A host of the restless dead as an individual: the buried ruler it was, and who robbed the barrow. */
+export interface RestlessDeadState {
+  /** The buried ruler, if the barrow remembers one. */
+  rulerId?: Id;
+  ruler: string;
+  placeId: Id;
+  /** The civ whose expedition robbed the barrow. */
+  robbers?: Id;
+}
+
 /** A beast with a lair (M2.4). Lairs are cells, not sites. `deeds` are the event ids of its appearance and raids. */
 export interface Creature {
   id: Id;
@@ -750,6 +774,10 @@ export interface Creature {
   kills?: Id[];
   /** Set for the world's dragon (M5.6). */
   dragon?: DragonState;
+  /** Set for a great beast named as an individual (great-beasts.ts). */
+  great?: GreatBeastState;
+  /** Set for a host woken by a robbed barrow (great-beasts.ts). */
+  dead?: RestlessDeadState;
   /** Items a non-dragon great or legendary beast holds (M4.7); dragons keep `dragon.hoard.items`. */
   hoard?: Id[];
   deeds: Id[];

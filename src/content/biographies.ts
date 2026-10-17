@@ -89,6 +89,17 @@ export const BIOGRAPHIES: BiographyRules = {
     dragonTribute: ['It took tribute {times} from {towns}.'],
     dragonHoard: ['Its hoard holds {items}.'],
     dragonHoardTaken: ['{slayer} carried off its hoard: {items}.'],
+    // A named great beast: temper and lair, tolls taken, its hoard (or who carried it off).
+    greatLair: ['It was {temper} and lay in {lair}.'],
+    greatLairLive: ['It is {temper} and lies in {lair}.'],
+    greatToll: ['It took tolls of {toll} {times} from {towns}.'],
+    greatHoard: ['Its hoard holds {items}.'],
+    greatHoardTaken: ['{slayer} carried off its hoard: {items}.'],
+    // The restless dead: the ruler it was, who robbed the barrow and how it ended.
+    deadRisen: ['It was {ruler}, risen from {peril} after the {robbers} robbed it.'],
+    deadRisenLive: ['It is {ruler}, risen from {peril} after the {robbers} robbed it.'],
+    deadRested: ['It went back when the {civ} fell.'],
+    deadLaid: ['It was laid to rest by {priest}.'],
     itemHeld: ['{name}, a {form}, was made in Year {made} and is held by {holder}.'],
     itemLost: ['{name}, a {form}, was made in Year {made} and is lost.'],
     dynasty: ['{Name} was founded in Year {founded} by {founder}{civ}.'],
