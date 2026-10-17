@@ -77,7 +77,14 @@ export function PeopleRoom(props: Props) {
             from={props.from?.kind === 'person' ? props.from.id : undefined}
           />
         ) : found ? (
-          <PersonPage key={found.id} person={found} onFollow={onFollow} onIndex={onIndex} />
+          <PersonPage
+            key={found.id}
+            person={found}
+            onFollow={onFollow}
+            onIndex={onIndex}
+            // Opened from another page: Back returns there rather than to the list.
+            onBack={props.from ? (props.onBack ?? onIndex) : undefined}
+          />
         ) : (
           <PeopleIndex />
         )}
@@ -258,10 +265,12 @@ function PersonPage({
   person,
   onFollow,
   onIndex,
+  onBack,
 }: {
   person: Person;
   onFollow: (person: { id: Id; name: string }) => void;
   onIndex: () => void;
+  onBack?: (() => void) | undefined;
 }) {
   const { world, index, content, textOf, titleOf, finalYear, siteActions } = useLegends();
   const [tab, setTab] = useState<Tab>('life');
@@ -301,8 +310,8 @@ function PersonPage({
   ];
   return (
     <div className="pp-scroll" data-testid="person-page">
-      <button type="button" className="pp-back" onClick={onIndex}>
-        ‹ People
+      <button type="button" className="pp-back" onClick={onBack ?? onIndex}>
+        {onBack ? '‹ Back' : '‹ People'}
       </button>
       <header className="pp-head">
         <Disc name={person.name} civId={person.civId ?? null} legend={legend} big />

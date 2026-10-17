@@ -1212,6 +1212,11 @@ dl.facts dd {
   font: 0.72rem var(--mono);
   text-decoration: underline dotted;
 }
+/* A year not on record, set like the year links beside it. */
+.wm-root .lg-when {
+  color: var(--muted);
+  font: 0.72rem var(--mono);
+}
 .wm-root .lg-ln {
   color: var(--link);
   text-decoration: underline;

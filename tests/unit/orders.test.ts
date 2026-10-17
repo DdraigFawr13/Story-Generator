@@ -92,7 +92,7 @@ describe('orders and academies', () => {
 
   it('lists masters in turn, members with when they joined, and its own chronicle', () => {
     expect(ash!.heads).toEqual([
-      { personId: 1, from: 10, to: 21, event: 10 },
+      { personId: 1, from: 10, to: 20, diedInOffice: true, event: 10 },
       { personId: 2, from: 21, event: 21 },
     ]);
     expect(ash!.members.map((m) => [m.personId, m.joined, m.serving])).toEqual([
@@ -109,11 +109,11 @@ describe('orders and academies', () => {
 
   it('says which spells an academy keeps and which it lost, and when', () => {
     expect(hall!.lore).toEqual([
-      { id: 'spark', name: 'Spark' },
-      { id: 'blaze', name: 'Blaze', lost: 50, lostEvent: 31 },
+      { id: 'spark', name: 'Spark', learnedBy: 0 },
+      { id: 'blaze', name: 'Blaze', lost: 50, lostEvent: 31, learnedBy: 0 },
     ]);
     expect(hall!.serving).toBe(0);
-    expect(hall!.heads[0]!.to).toBe(50);
+    expect(hall!.heads[0]).toMatchObject({ to: 48, diedInOffice: true });
     expect(orderLine(hall!, world)).toBe('Academy of fire · ended');
   });
 

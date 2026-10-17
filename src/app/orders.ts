@@ -30,13 +30,29 @@ const ORDER_TYPES = new Set<string>(ORDER_EVENT_TYPES);
 const HUNT_TYPES = new Set(['beast_slain', 'beast_hunt_failed']);
 /** What counts as a member's deed: the person page's deed groups, and a hunt that failed. */
 const DEED_TYPES = new Set<string>([...DEED_GROUPS.flatMap((g) => g.types), 'beast_hunt_failed']);
+/** Deeds of the kind an order or academy is for (arms, hunts, magic), preferred over the rest. */
+const ORDER_DEEDS = new Set([
+  'beast_slain',
+  'beast_fought',
+  'beast_hunt_failed',
+  'battle',
+  'champion_fought',
+  'legend_duel',
+  'dragon_quest',
+  'spell_cast',
+  'spell_mastered',
+]);
+/** How much an order-kind deed outweighs another of the same importance. */
+const ORDER_DEED_BONUS = 3;
 
 export interface OrderHead {
   personId: Id;
   /** The year they took the mastery (the founding year for the founder). */
   from: number;
-  /** The year the mastery passed on or the order ended; absent while they lead it. */
+  /** The year the mastery passed on, they died, or the order ended; absent while they lead it. */
   to?: number;
+  /** They died as master. */
+  diedInOffice?: boolean;
   event: Id;
 }
 
@@ -45,10 +61,13 @@ export interface OrderMember {
   /** The joining year and event, while the record keeps them (minor joinings are pruned). */
   joined?: number;
   event?: Id;
+  /** When the joining is not on record: the next member's known joining year, by which they had joined. */
+  joinedBy?: number;
   /** Alive, of the order's people, and the order still stands. */
   serving: boolean;
-  /** The member's most important deed since they joined (or since the founding when that is not
-   * on record): spells, battles, plots, works and the like, as the person page groups them. */
+  /** The member's best deed as its doer since they joined (or since the founding when that is not
+   * on record): arms, hunts and magic first, then plots, works and the like as the person page
+   * groups them, by importance. */
   best?: Id;
 }
 
@@ -57,6 +76,8 @@ export interface OrderSpell {
   name: string;
   lost?: number;
   lostEvent?: Id;
+  /** Scholars who learned it at the academy. */
+  learnedBy: number;
 }
 
 export interface OrderInfo {
@@ -64,6 +85,8 @@ export interface OrderInfo {
   kind: Order['kind'];
   name: string;
   founded: number;
+  /** The founding event. */
+  event: Id;
   ended?: number;
   endEvent?: Id;
   founderId: Id;
@@ -71,6 +94,8 @@ export interface OrderInfo {
   civId: Id | null;
   school?: string;
   heads: OrderHead[];
+  /** Where it moved its seat or passed to new lords, oldest first. */
+  moves: { year: number; site: string; civ?: string; event: Id; passed: boolean }[];
   /** Everyone who ever joined, in the order they joined (founder first). */
   members: OrderMember[];
   serving: number;
@@ -142,8 +167,12 @@ function describe(
   });
   heads.forEach((head, k) => {
     const next = heads[k + 1];
-    if (next) head.to = next.from;
-    else if (order.ended !== undefined) head.to = order.ended;
+    const end = next ? next.from : order.ended;
+    const died = world.people.get(head.personId)?.died;
+    if (died !== undefined && (end === undefined || died <= end)) {
+      head.to = died;
+      head.diedInOffice = true;
+    } else if (end !== undefined) head.to = end;
   });
 
   const joinedBy = new Map<Id, SimEvent>();
@@ -174,6 +203,14 @@ function describe(
     });
   }
 
+  // A member whose joining was pruned joined before the next member whose joining is on record.
+  let next: number | undefined;
+  for (let k = members.length - 1; k >= 0; k -= 1) {
+    const m = members[k]!;
+    if (m.joined !== undefined) next = m.joined;
+    else if (next !== undefined) m.joinedBy = next;
+  }
+
   const lostAt = new Map<string, SimEvent>();
   for (const e of events) {
     if (e.type !== 'academy_lore_lost') continue;
@@ -183,11 +220,17 @@ function describe(
       if (!lostAt.has(id) && text.includes(name)) lostAt.set(id, e);
     }
   }
+  const learnedBy = new Map<string, number>();
+  for (const personId of order.members) {
+    for (const l of world.people.get(personId)?.lore?.learned ?? [])
+      if (l.college === order.name) learnedBy.set(l.id, (learnedBy.get(l.id) ?? 0) + 1);
+  }
   const lore: OrderSpell[] = order.lore.map((id) => {
     const lost = order.lost.includes(id) ? lostAt.get(id) : undefined;
     return {
       id,
       name: spellName.get(id) ?? id,
+      learnedBy: learnedBy.get(id) ?? 0,
       ...(lost ? { lost: eventYear(lost), lostEvent: lost.id } : {}),
     };
   });
@@ -212,12 +255,22 @@ function describe(
   const knights = `knights of ${order.name} `;
   const witchHunts = witch.filter((e) => String(e.data.knights).includes(knights)).map((e) => e.id);
   const deeds = [...events.map((e) => e.id), ...witchHunts].sort((a, b) => a - b);
+  const moves = events
+    .filter((e) => e.type === 'order_moved' || e.type === 'order_passed')
+    .map((e) => ({
+      year: eventYear(e),
+      site: String(e.data.site ?? ''),
+      ...(e.type === 'order_passed' ? { civ: String(e.data.civ ?? '') } : {}),
+      event: e.id,
+      passed: e.type === 'order_passed',
+    }));
 
   return {
     id: order.id,
     kind: order.kind,
     name: order.name,
     founded: order.founded,
+    event: order.event,
     ...(order.ended !== undefined ? { ended: order.ended } : {}),
     ...(order.endEvent !== undefined ? { endEvent: order.endEvent } : {}),
     founderId: order.founderId,
@@ -225,6 +278,7 @@ function describe(
     civId: order.civId,
     ...(order.school !== undefined ? { school: order.school } : {}),
     heads,
+    moves,
     members,
     serving: members.filter((m) => m.serving).length,
     lore,
@@ -234,7 +288,9 @@ function describe(
   };
 }
 
-/** The person's most important deed within the years. */
+/** The person's best deed as its doer within the years: order-kind deeds first, then by importance. */
+const weight = (e: SimEvent) => e.importance + (ORDER_DEEDS.has(e.type) ? ORDER_DEED_BONUS : 0);
+
 function bestDeed(
   person: Person,
   byId: ReadonlyMap<Id, SimEvent>,
@@ -244,10 +300,10 @@ function bestDeed(
   let best: SimEvent | undefined;
   for (const id of person.deeds) {
     const e = byId.get(id);
-    if (!e || !DEED_TYPES.has(e.type)) continue;
+    if (!e || !DEED_TYPES.has(e.type) || e.actors[0] !== person.id) continue;
     const year = eventYear(e);
     if (year < from || year > to) continue;
-    if (!best || e.importance > best.importance) best = e;
+    if (!best || weight(e) > weight(best)) best = e;
   }
   return best?.id;
 }

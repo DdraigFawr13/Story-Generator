@@ -1077,6 +1077,21 @@ const spellsOf = (n: number) =>
       ? "both of its founder's spells"
       : `all ${n} of its founder's spells`;
 
+const SMALL_NUMBERS =
+  'no one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen'.split(
+    ' ',
+  );
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+/** "six", "forty-five"; 100 and up as digits. */
+function numberWord(n: number): string {
+  if (n < 20) return SMALL_NUMBERS[n]!;
+  if (n >= 100) return String(n);
+  const tens = TENS[Math.floor(n / 10)]!;
+  return n % 10 === 0 ? tens : `${tens}-${SMALL_NUMBERS[n % 10]}`;
+}
+/** Hunts listed on an order page before "Show all". */
+const HUNTS_SHOWN = 8;
+
 function OrderPage({ id }: { id: Id }) {
   const { world, content, onShow, titleOf, index } = useLegends();
   const order = useMemo(
@@ -1084,19 +1099,48 @@ function OrderPage({ id }: { id: Id }) {
     [world, content, id],
   );
   const [allMembers, setAllMembers] = useState(false);
-  if (!order) return <p className="lg-empty">Unknown order.</p>;
+  const [allHunts, setAllHunts] = useState(false);
+  if (!order) {
+    return (
+      <>
+        <div>
+          <div className="lg-kind">{KIND_LABEL.order}</div>
+          <h3>No such order</h3>
+        </div>
+        <p className="lg-empty flush">
+          This world has no knightly order or academy by that number.
+        </p>
+      </>
+    );
+  }
   const academy = order.kind === 'academy';
   const founder = world.people.get(order.founderId);
   const seat = order.siteId === null ? undefined : world.sites.get(order.siteId);
   const civ = order.civId === null ? undefined : world.civs.get(order.civId);
-  const foundedAt = index.event(order.members[0]?.event ?? -1)?.data.site;
+  const foundedAt = index.event(order.event)?.data.site;
   const head = order.heads[order.heads.length - 1];
   const headPerson = head ? world.people.get(head.personId) : undefined;
   const endEvent = order.endEvent === undefined ? undefined : index.event(order.endEvent);
   const school = order.school ?? 'magic';
+  // Two people of one name on the page are told apart by their birth year.
+  const ids = new Set([
+    ...order.heads.map((h) => h.personId),
+    ...order.members.map((m) => m.personId),
+  ]);
+  const nameCount = new Map<string, number>();
+  for (const pid of ids) {
+    const name = world.people.get(pid)?.name;
+    if (name) nameCount.set(name, (nameCount.get(name) ?? 0) + 1);
+  }
   const person = (pid: Id) => {
     const p = world.people.get(pid);
-    return p ? <Link to={{ kind: 'person', id: pid }}>{p.name}</Link> : '?';
+    if (!p) return '?';
+    return (
+      <>
+        <Link to={{ kind: 'person', id: pid }}>{p.name}</Link>
+        {(nameCount.get(p.name) ?? 0) > 1 && ` (born Year ${yearText(p.born)})`}
+      </>
+    );
   };
   const word = (n: number) => memberWord(order.kind, n);
 
@@ -1108,13 +1152,28 @@ function OrderPage({ id }: { id: Id }) {
       {founder && <> by {person(founder.id)}</>}.
     </>
   );
+  const moves = order.moves.map((m, k) => (
+    <Fragment key={m.event}>
+      {k > 0 && ', then '}
+      {m.passed ? (
+        <>
+          passed with {m.site} to the {m.civ} in{' '}
+        </>
+      ) : (
+        <>moved to {m.site} in </>
+      )}
+      <EventLink id={m.event}>Year {yearText(m.year)}</EventLink>
+    </Fragment>
+  ));
+  const moved = order.moves.length > 0 && <> It {moves}.</>;
+  const served = order.members.length;
   let now: React.ReactNode;
   if (order.ended !== undefined) {
     const reason = endEvent ? String(endEvent.data.reason ?? '') : '';
     now = (
       <>
         It ended in Year {yearText(order.ended)} after {order.heads.length}{' '}
-        {plural(order.heads.length, 'master', 'masters')}
+        {plural(order.heads.length, 'master', 'masters')} and {numberWord(served)} {word(served)}
         {reason && `; ${reason}`}.
       </>
     );
@@ -1122,13 +1181,14 @@ function OrderPage({ id }: { id: Id }) {
     now = (
       <>
         It stands{seat && ` at ${seat.name}`}
-        {academy && civ && <> among the {civ.name}</>}
+        {civ && academy && <> under the {civ.name}</>}
         {headPerson && (
           <>
-            , under its {ordinalWord(order.heads.length)} master, {person(headPerson.id)}
+            , led by its {ordinalWord(order.heads.length)} master, {person(headPerson.id)}
           </>
         )}
-        , with {order.serving} {word(order.serving)}.
+        , with {numberWord(order.serving)} {word(order.serving)} today and {numberWord(served)} in
+        all.
       </>
     );
   }
@@ -1149,7 +1209,14 @@ function OrderPage({ id }: { id: Id }) {
   if (seat) {
     facts.push([
       order.ended === undefined ? 'Seat' : 'Last seat',
-      <Link to={{ kind: 'site', id: seat.id }}>{seat.name}</Link>,
+      <>
+        <Link to={{ kind: 'site', id: seat.id }}>{seat.name}</Link>
+        {' ('}
+        <button type="button" className="lg-ln" onClick={() => onShow(seat.cell)}>
+          show on map
+        </button>
+        )
+      </>,
     ]);
   }
   if (civ) {
@@ -1158,13 +1225,7 @@ function OrderPage({ id }: { id: Id }) {
       <Link to={{ kind: 'civ', id: civ.id }}>{civ.name}</Link>,
     ]);
   }
-  if (order.ended === undefined && headPerson) facts.push(['Master', person(headPerson.id)]);
-  facts.push([
-    cap(word(2)),
-    order.ended === undefined
-      ? `${order.serving} now, ${order.members.length} in all`
-      : `${order.members.length} in all`,
-  ]);
+  if (order.ended === undefined && headPerson) facts.push(['Master now', person(headPerson.id)]);
   facts.push([
     order.ended === undefined ? 'Founded' : 'Years',
     order.ended === undefined
@@ -1178,7 +1239,9 @@ function OrderPage({ id }: { id: Id }) {
     ...order.members.filter((m) => !m.serving),
   ];
   const shown = allMembers ? roll : roll.slice(0, MEMBERS_SHOWN);
-  const headYears = new Map(order.heads.map((h) => [h.personId, h]));
+  const masters = new Set(order.heads.map((h) => h.personId));
+  const died = content.notables.deeds.huntPhrases.died;
+  const hunts = allHunts ? order.hunts : order.hunts.slice(0, HUNTS_SHOWN);
   return (
     <>
       <div>
@@ -1186,17 +1249,11 @@ function OrderPage({ id }: { id: Id }) {
         <h3>{cap(order.name)}</h3>
       </div>
       <p className="lg-summary">
-        {begun} {now}
+        {begun}
+        {moved} {now}
         {loreLine}
       </p>
       <Facts facts={facts} />
-      {seat && (
-        <div className="lg-actions">
-          <button type="button" onClick={() => onShow(seat.cell)}>
-            Show seat on map
-          </button>
-        </div>
-      )}
       <div className="lg-sect">
         <span>Masters · {order.heads.length}</span>
       </div>
@@ -1205,7 +1262,10 @@ function OrderPage({ id }: { id: Id }) {
           <li key={h.personId}>
             <EventLink id={h.event}>Year {yearText(h.from)}</EventLink> {person(h.personId)}
             {k === 0 ? ', the founder' : ''}
-            {h.to !== undefined && `, until Year ${yearText(h.to)}`}
+            {h.to !== undefined &&
+              (h.diedInOffice
+                ? `, died in office Year ${yearText(h.to)}`
+                : `, until Year ${yearText(h.to)}`)}
           </li>
         ))}
       </ol>
@@ -1218,19 +1278,20 @@ function OrderPage({ id }: { id: Id }) {
         {shown.map((m) => {
           const p = world.people.get(m.personId);
           const best = m.best === undefined ? undefined : index.event(m.best);
-          const mastery = headYears.get(m.personId);
           const notes = [
             m.serving ? 'serving' : '',
-            mastery && m.personId !== order.founderId ? 'master' : '',
+            masters.has(m.personId) && m.personId !== order.founderId ? 'master' : '',
             p?.died !== undefined ? `died Year ${yearText(p.died)}` : '',
           ].filter((t) => t);
           return (
             <li key={m.personId}>
-              {m.event !== undefined && m.joined !== undefined && (
-                <>
-                  <EventLink id={m.event}>Year {yearText(m.joined)}</EventLink>{' '}
-                </>
-              )}
+              {m.event !== undefined && m.joined !== undefined ? (
+                <EventLink id={m.event}>Year {yearText(m.joined)}</EventLink>
+              ) : (
+                <span className="lg-when" title="The year they joined is not on record">
+                  {m.joinedBy !== undefined ? `by ${yearText(m.joinedBy)}` : 'early'}
+                </span>
+              )}{' '}
               {person(m.personId)}
               {m.personId === order.founderId ? ', the founder' : ''}
               {notes.length > 0 && `, ${notes.join(', ')}`}
@@ -1268,6 +1329,8 @@ function OrderPage({ id }: { id: Id }) {
                 ) : (
                   ', still taught'
                 )}
+                {sp.learnedBy > 0 &&
+                  `; learned here by ${numberWord(sp.learnedBy)} ${plural(sp.learnedBy, 'scholar', 'scholars')}`}
               </li>
             ))}
           </ul>
@@ -1278,7 +1341,32 @@ function OrderPage({ id }: { id: Id }) {
           <div className="lg-sect">
             <span>Hunts · {order.hunts.length}</span>
           </div>
-          <Chronicle ids={order.hunts} empty="" />
+          <ol className="lg-annals plain">
+            {hunts.map((hid) => {
+              const e = index.event(hid);
+              if (!e) return null;
+              const beast = index.refs(hid).find((r) => r.kind === 'beast');
+              const prey = String(e.data.beast ?? 'a beast');
+              const how =
+                e.type === 'beast_slain'
+                  ? 'slew it'
+                  : e.data.outcome === died
+                    ? 'never came home'
+                    : 'came home scarred';
+              return (
+                <li key={hid}>
+                  <EventLink id={hid}>Year {yearText(eventYear(e))}</EventLink>{' '}
+                  {e.actors[0] !== undefined && person(e.actors[0])} against{' '}
+                  {beast ? <Link to={beast}>{prey}</Link> : prey}, {how}
+                </li>
+              );
+            })}
+          </ol>
+          {order.hunts.length > HUNTS_SHOWN && (
+            <button type="button" className="lg-more" onClick={() => setAllHunts((v) => !v)}>
+              {allHunts ? 'Fewer' : `Show all ${order.hunts.length}`}
+            </button>
+          )}
         </>
       )}
       <div className="lg-sect">
