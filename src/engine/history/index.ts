@@ -27,6 +27,7 @@ import { runExpansion, runMigration } from './migration';
 import { initLineages, runLineages } from './lineages';
 import { initNotables, runNotables } from './notables';
 import { runOrders } from './orders';
+import { runTempers } from './tempers';
 import { runBribes, runIntrigue } from './intrigue';
 import { runGreatWorks } from './great-works';
 import { runItems } from './items';
@@ -118,6 +119,7 @@ export function runHistory(
     runKinds(run);
     runAbandonment(run);
     runPlaces(run);
+    runTempers(run);
     for (const site of world.sites.values()) {
       if (isLive(site)) site.peakPop = Math.max(site.peakPop, totalPop(site));
     }

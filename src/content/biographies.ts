@@ -50,6 +50,12 @@ export const BIOGRAPHIES: BiographyRules = {
       '{He} lived as {title} of the {civ}{house}.',
     ],
     personRoleAlone: ['{He} was known as {title}{house}.'],
+    // H2: a ruler's or legend's temper, and the byname a deed earned.
+    personTemper: ['{He} was {word}, {line}.', 'By temper {he} was {word}, {line}.'],
+    personByname: [
+      '{He} was called {byname}, after {after}.',
+      'Men called {him} {byname}, after {after}.',
+    ],
     personFamily: ['{He} {family}.'],
     personMagic: ['{He} carried {tier} magic.'],
     // M3.9: an awakening; the tier is the one woken to.

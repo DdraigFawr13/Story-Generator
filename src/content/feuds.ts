@@ -51,6 +51,8 @@ export const FEUDS: FeudRules = {
   // Six years abroad before a return; then 15 in 100 a year.
   returnMinYears: 6,
   returnChance: 0.15,
+  // A pious ruler (pardon 3) forgives one they banished four times in five a return comes up; a wary or learned one (1.5) one time in five (H2).
+  forgiveChance: 0.4,
   // A host with a raid's grievance (1), or at war, may let the exile lead a raid home.
   raidGrievance: 1,
   // 24 cells from the host's capital.
@@ -107,6 +109,7 @@ export const FEUDS: FeudRules = {
       pardoned: 'came home from exile among the {host}, pardoned by the new ruler',
       claim: 'came home from exile among the {host} to press a claim to the seat',
       raid: 'led the {host} raiders from exile against {site}, and {dead} died there',
+      forgiven: 'came home from exile among the {host}',
     },
   },
 };

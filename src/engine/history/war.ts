@@ -5,6 +5,7 @@
 import type { Civ, Id, Person, SimEvent, Site } from '../core/types';
 import { timberShort } from './goods';
 import { cultureOf, standingWork } from './state';
+import { rulerTilt } from './tempers';
 import {
   battleChampions,
   battleOutcome,
@@ -140,6 +141,8 @@ function declareWars(run: HistoryRun): void {
   }
   for (const a of civs) {
     if (inWar(run, a)) continue;
+    // The ruler's temper makes a grievance more or less worth a war (H2).
+    const temper = rulerTilt(run, a, 'war');
     let target: Civ | undefined;
     let best = rules.warThreshold;
     for (const b of civs) {
@@ -147,19 +150,25 @@ function declareWars(run: HistoryRun): void {
       if (run.year < (run.truce.get(pairKey(a.id, b.id)) ?? 0)) continue;
       // An overlord and its vassal settle their quarrels by revolt, not by a declaration.
       if (a.overlord === b.id || b.overlord === a.id) continue;
-      const score = warScore(run, a, b, strengths, backed);
+      const score = warScore(run, a, b, strengths, backed) * temper.mul;
       if (score >= best) {
         best = score;
         target = b;
       }
     }
     if (!target) continue;
-    startWar(run, a, target, grievanceEventsOf(run, a.id, target.id).slice(-3));
+    startWar(run, a, target, grievanceEventsOf(run, a.id, target.id).slice(-3), temper.data);
   }
 }
 
 /** Opens a war: the war_declared event, the war record and a holy war if the faiths call for one. */
-export function startWar(run: HistoryRun, attacker: Civ, defender: Civ, causes: Id[]): War {
+export function startWar(
+  run: HistoryRun,
+  attacker: Civ,
+  defender: Civ,
+  causes: Id[],
+  tempered: { why?: string; temper?: string } = {},
+): War {
   const capital = run.world.sites.get(attacker.capital);
   const [attackerCaptain, defenderCaptain] = startCaptains(run, attacker, defender);
   const event = run.emit({
@@ -167,7 +176,12 @@ export function startWar(run: HistoryRun, attacker: Civ, defender: Civ, causes: 
     place: capital?.cell ?? null,
     actors: [attackerCaptain, defenderCaptain].flatMap((p) => (p ? [p.id] : [])),
     causes,
-    data: { civ: attacker.name, enemy: defender.name, war: run.wars.length + 1 },
+    data: {
+      civ: attacker.name,
+      enemy: defender.name,
+      war: run.wars.length + 1,
+      ...tempered,
+    },
   });
   const war: War = {
     id: run.wars.length + 1,

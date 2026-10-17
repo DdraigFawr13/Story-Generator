@@ -8,6 +8,7 @@ import { FEUDS } from './feuds';
 import { INTRIGUE } from './intrigue';
 import { LINEAGES } from './lineages';
 import { ORDERS } from './orders';
+import { TEMPERS } from './tempers';
 import { CITY_STATES, CIVIL_WARS, COLLEGES } from './realms';
 
 export const HISTORY: HistoryRules = {
@@ -177,4 +178,5 @@ export const HISTORY: HistoryRules = {
   diplomacy: DIPLOMACY,
   feuds: FEUDS,
   orders: ORDERS,
+  tempers: TEMPERS,
 };

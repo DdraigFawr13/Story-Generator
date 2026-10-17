@@ -155,6 +155,7 @@ function personSummary(
   const rules = content.biographies;
   const say = (name: string, vars: Record<string, string | number>) =>
     sentence(rules, ref, name, { He: person.sex === 'f' ? 'She' : 'He', ...vars });
+  const he = person.sex === 'f' ? 'she' : 'he';
   const out: string[] = [];
   const civ = person.civId == null ? undefined : world.civs.get(person.civId);
   const dynasty =
@@ -170,7 +171,7 @@ function personSummary(
     .map((id) => world.people.get(id)?.name)
     .filter((n): n is string => n !== undefined);
   const birth = {
-    name: person.name,
+    name: person.byname ? `${person.name} ${person.byname.text}` : person.name,
     where,
     parents: parents.length > 0 ? `, child of ${nameList(parents)}` : '',
   };
@@ -188,6 +189,17 @@ function personSummary(
         : say('personRoleAlone', { title, house }),
     );
   }
+  const temper = content.history.tempers.tempers.find((t) => t.id === person.temper);
+  if (temper) out.push(say('personTemper', { he, word: temper.word, line: temper.line }));
+  const named = person.byname && world.events.find((e) => e.id === person.byname!.event);
+  if (person.byname && named)
+    out.push(
+      say('personByname', {
+        him: person.sex === 'f' ? 'her' : 'him',
+        byname: person.byname.text,
+        after: String(named.data.after ?? ''),
+      }),
+    );
   out.push(...orderLines(world, say, person));
   const spouses = person.family.spouses
     .map((id) => world.people.get(id)?.name)

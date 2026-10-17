@@ -19,7 +19,7 @@ const MIN_TEMPLATES = 3;
 /** Placeholders the narrator fills for every event. */
 /** No item may add more than this to a person's power (the scale ceiling, R-24). */
 const MAX_ITEM_POWER = 20;
-const ALWAYS_KEYS = ['date', 'year', 'actor', 'actor2', 'actor3'];
+const ALWAYS_KEYS = ['date', 'year', 'actor', 'actor2', 'actor3', 'why'];
 
 function templateKeys(template: string | undefined): string[] {
   return [...(template ?? '').matchAll(/\{(\w+)\}/g)].map((m) => m[1]!);
