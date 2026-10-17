@@ -6,6 +6,7 @@ import { useMemo, type CSSProperties } from 'react';
 import { groupTitle, type MarkCluster, type MarkEvent } from './explore';
 import { useFading } from './markers';
 import { PAUSE_KINDS, type PauseKind } from './pauses';
+import { emptiedBy, placeLine, type PlaceInfo, type PlaceKind } from '../places';
 import { workLine, type WorkKind, type WorkMark } from './works';
 
 const INK = '#2d2a25';
@@ -246,6 +247,90 @@ export function WorkMarks({ works, width, height, year, detail, onOpen }: WorkMa
             onClick={() => onOpen(w)}
           >
             <WorkGlyph kind={w.kind} size={detail ? 17 : 12} fallen={fallen} />
+          </button>
+        );
+      })}
+    </>
+  );
+}
+
+/** Perilous places as cool grey stone with an ink outline; an opening is cut out (even-odd). */
+const PLACE_GLYPHS: Record<PlaceKind, string> = {
+  // Two broken columns under a fallen lintel.
+  ruin: 'M4 21V8.5h4.2V21zM15.8 21v-9l2.1-1.6 2.1 1.1V21zM3 6.8l7.6-2.6.8 2.2-7.6 2.6z',
+  // A timbered mouth in the hillside.
+  'old-mine': 'M1.5 21l4.2-13h12.6l4.2 13zM8.6 21v-8.2h6.8V21z',
+  // A long mound with its standing stone.
+  barrow: 'M1.5 20.5a10.5 7.5 0 0 1 21 0zM10.8 3.5h2.6l.7 7h-4z',
+  // A cave mouth under a rounded rock.
+  lair: 'M1.5 21c1.2-7.8 5.4-13 10.5-13s9.3 5.2 10.5 13zM7.8 21a4.2 5.2 0 0 1 8.4 0z',
+  // Three standing stones.
+  aura: 'M3.2 21V11.2l2.4-2.2 2.4 2V21zM9.6 21V5.6l2.4-2.4 2.4 2.4V21zM16 21V11l2.4-2.2 2.4 2.2v10z',
+};
+
+/** One place's shape; an emptied place is outlined in dashes. */
+export function PlaceGlyph({
+  kind,
+  size = 13,
+  emptied = false,
+}: {
+  kind: PlaceKind;
+  size?: number;
+  emptied?: boolean;
+}) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d={PLACE_GLYPHS[kind]}
+        fill={emptied ? 'none' : '#a3a69c'}
+        fillRule="evenodd"
+        stroke={INK}
+        strokeWidth={emptied ? 1.6 : 1.8}
+        strokeDasharray={emptied ? '2.4 1.8' : undefined}
+        strokeLinejoin="round"
+        paintOrder="stroke"
+      />
+    </svg>
+  );
+}
+
+interface PlaceMarksProps {
+  places: readonly PlaceInfo[];
+  width: number;
+  height: number;
+  year: number;
+  /** Zoomed in: larger shapes. */
+  detail: boolean;
+  /** Id of the open place's card. */
+  open: number | null;
+  onOpen: (place: PlaceInfo) => void;
+}
+
+/** The perilous places there were by the year shown, each at its own cell. */
+export function PlaceMarks({ places, width, height, year, detail, open, onOpen }: PlaceMarksProps) {
+  return (
+    <>
+      {places.map((p) => {
+        const emptied = emptiedBy(p, year);
+        const line = placeLine(p, year);
+        return (
+          <button
+            key={p.id}
+            type="button"
+            className={`tr-pl${detail ? '' : ' small'}${emptied ? ' emptied' : ''}${
+              open === p.id ? ' open' : ''
+            }`}
+            data-testid="place-mark"
+            data-kind={p.kind}
+            style={{
+              left: `${(((p.cell % width) + 0.5) / width) * 100}%`,
+              top: `${((Math.floor(p.cell / width) + 0.5) / height) * 100}%`,
+            }}
+            title={line}
+            aria-label={line}
+            onClick={() => onOpen(p)}
+          >
+            <PlaceGlyph kind={p.kind} size={detail ? 16 : 11} emptied={emptied} />
           </button>
         );
       })}

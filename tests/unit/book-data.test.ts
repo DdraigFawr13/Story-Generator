@@ -21,7 +21,8 @@ import {
   fitBox,
   lifeSpanText,
   paragraphsOf,
-  perilsOf,
+  perilousLine,
+  perilousPlaces,
   pickBook,
   roman,
   siteInYear,
@@ -192,19 +193,16 @@ describe('book text', () => {
 });
 
 describe('book places', () => {
-  it('lists perilous places by deaths, each with its beast, from the record', () => {
+  it('lists only places with a story, most storied first, from the record', () => {
     const world = base();
-    const perils = perilsOf(world, DEFAULT_CONTENT);
-    for (const p of perils) {
-      expect(world.sites.get(p.siteId)?.name).toBe(p.name);
-      expect(p.beasts.length).toBeGreaterThan(0);
+    const places = perilousPlaces(world);
+    for (const p of places) {
+      expect(world.places.get(p.id)?.name).toBe(p.name);
+      expect(p.expeditions.length + p.deaths).toBeGreaterThan(0);
+      expect(perilousLine(p).length).toBeGreaterThan(0);
     }
-    for (let k = 1; k < perils.length; k += 1) {
-      expect(perils[k]!.deaths).toBeLessThanOrEqual(perils[k - 1]!.deaths);
-    }
-    const names = new Set(perils.flatMap((p) => p.beasts.map((b) => b.name)));
-    for (const name of names) {
-      expect([...world.creatures.values()].some((c) => c.name === name)).toBe(true);
+    for (let k = 1; k < places.length; k += 1) {
+      expect(places[k]!.deaths).toBeLessThanOrEqual(places[k - 1]!.deaths);
     }
   });
   it("reads a town's owner and size in a given year from the yearly record", () => {

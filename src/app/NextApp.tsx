@@ -215,6 +215,7 @@ function classicLink(search: string): boolean {
 function cellOfPage(state: WorldState, ref: PageRef): number | null {
   if (ref.kind === 'race') return null;
   if (ref.kind === 'event') return state.events.find((e) => e.id === ref.id)?.place ?? null;
+  if (ref.kind === 'place') return state.places.get(ref.id)?.cell ?? null;
   return locate(state, ref);
 }
 
@@ -1479,6 +1480,10 @@ export function NextApp() {
                 onRecords={(id) => {
                   flushTalesUrl();
                   go({ open: { kind: 'site', id } });
+                }}
+                onPlace={(id) => {
+                  flushTalesUrl();
+                  go({ open: { kind: 'place', id } });
                 }}
               />
             ) : (

@@ -24,7 +24,8 @@ import {
   lifeSpanText,
   nearestOther,
   paragraphsOf,
-  perilsOf,
+  perilousLine,
+  perilousPlaces,
   pickBook,
   placesNamed,
   roman,
@@ -149,7 +150,7 @@ function BookView({
     const chosen = rows.filter((r) => legends.has(r.id));
     return (chosen.length >= 4 ? chosen : rows).slice(0, LIVES_SHOWN);
   }, [world, rows]);
-  const perils = useMemo(() => perilsOf(world, content), [world, content]);
+  const perils = useMemo(() => perilousPlaces(world), [world]);
   const famous = useMemo(() => {
     const legends = legendIds(world);
     const fames = [...world.people.values()]
@@ -401,16 +402,10 @@ function BookView({
                   <h2>Perilous places</h2>
                   <ul>
                     {(morePerils ? perils : perils.slice(0, PERILS_SHOWN)).map((p) => (
-                      <li key={p.siteId}>
-                        <Link to={{ kind: 'site', id: p.siteId }} className="bk-life bk-peril">
-                          <span>{p.name}</span>
-                          <small>
-                            {p.beasts
-                              .slice(0, 2)
-                              .map((b) => `${cap(b.name)}, ${b.status}`)
-                              .join('; ')}
-                            {p.beasts.length > 2 ? ` and ${p.beasts.length - 2} more` : ''}
-                          </small>
+                      <li key={p.id}>
+                        <Link to={{ kind: 'place', id: p.id }} className="bk-life bk-peril">
+                          <span>{cap(p.name)}</span>
+                          <small>{perilousLine(p)}</small>
                         </Link>
                       </li>
                     ))}

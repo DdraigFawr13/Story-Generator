@@ -1263,6 +1263,9 @@ dl.facts dd {
   list-style: none;
   color: var(--muted);
 }
+.wm-root .lg-expeditions {
+  list-style: decimal inside;
+}
 .wm-root .lg-annals .yrs {
   color: var(--muted);
   font-size: 0.8rem;

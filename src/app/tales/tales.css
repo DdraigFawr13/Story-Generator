@@ -1407,6 +1407,42 @@
 .tr-root .tr-wk:hover {
   scale: 1.08;
 }
+.tr-root .tr-pl {
+  position: absolute;
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  background: none;
+  display: grid;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: scale 0.25s ease;
+  animation: tr-fade 0.45s ease both;
+}
+.tr-root .tr-pl.small {
+  width: 12px;
+  height: 12px;
+}
+.tr-root .tr-pl svg {
+  display: block;
+  filter: drop-shadow(0 0 1.5px rgba(246, 241, 228, 0.9));
+}
+.tr-root .tr-pl.emptied svg {
+  opacity: 0.75;
+}
+/* A tap target larger than the mark. */
+.tr-root .tr-pl::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+.tr-root .tr-pl:hover,
+.tr-root .tr-pl.open {
+  scale: 1.08;
+}
 .tr-root .tr-pin .tr-works-k {
   margin-top: 8px;
 }
@@ -1425,4 +1461,19 @@
 .tr-root .tr-pin ul.tr-works svg {
   flex: none;
   margin-top: 2px;
+}
+.tr-root .tr-pin ol.tr-trips {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.tr-root .tr-pin ol.tr-trips li {
+  margin-top: 4px;
+}
+.tr-root .tr-pin ol.tr-trips .y {
+  font-family: 'Alegreya Sans SC', sans-serif;
+  letter-spacing: 0.04em;
+  color: var(--soft);
+  margin-right: 4px;
 }

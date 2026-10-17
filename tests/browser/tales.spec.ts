@@ -70,6 +70,12 @@ test('Explore the map stays in Tales: marks follow the Show filter, the map zoom
   await page.getByRole('group', { name: 'Events' }).getByLabel('Show great works').uncheck();
   await expect(works).toHaveCount(0);
   await page.getByRole('group', { name: 'Events' }).getByLabel('Show great works').check();
+  // Perilous places stand at their own cells until unticked.
+  const places = stage.locator('[data-testid="place-mark"]');
+  expect(await places.count()).toBeGreaterThan(0);
+  await page.getByRole('group', { name: 'Events' }).getByLabel('Show perilous places').uncheck();
+  await expect(places).toHaveCount(0);
+  await page.getByRole('group', { name: 'Events' }).getByLabel('Show perilous places').check();
 
   // The key is folded away in explore; the ? button opens it and it lists the marks.
   const key = page.getByTestId('tales-key');

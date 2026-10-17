@@ -7,6 +7,7 @@ import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState
 import { DEFAULT_CONTENT, PLAYBACK_EFFECTS, PLAYBACK_TAGS } from '../../content';
 import type { Id, SimEvent, WorldState } from '../../engine';
 import type { LegendCategory } from '../map-view';
+import { cap } from '../format';
 import {
   buildPlayback,
   census,
@@ -56,7 +57,28 @@ import {
   type MarkCluster,
   type View,
 } from './explore';
-import { ExploreMarks, Glyph, Towns, WorkGlyph, WorkMarks, type TownMark } from './exploreMarks';
+import {
+  ExploreMarks,
+  Glyph,
+  PlaceGlyph,
+  PlaceMarks,
+  Towns,
+  WorkGlyph,
+  WorkMarks,
+  type TownMark,
+} from './exploreMarks';
+import {
+  PLACE_KINDS,
+  allPlaces,
+  dangerWord,
+  emptiedBy,
+  outcomeText,
+  placeKindLabel,
+  placeWhat,
+  placesAt,
+  storyBy,
+  type PlaceInfo,
+} from '../places';
 import { WORK_KINDS, allWorks, workLine, worksAt, type WorkMark } from './works';
 import { settleLabels } from './labels';
 import { PHONE_MAX, cardSide, fitMap, nearestCell } from './layout';
@@ -123,12 +145,15 @@ interface Props {
   onWatch?: (siteId: Id) => void;
   /** Open a town's records. */
   onRecords?: (siteId: Id) => void;
+  /** Open a perilous place's page. */
+  onPlace?: (placeId: Id) => void;
 }
 
 /** What the open place card is about: the events at a cell, or a town (and its events). */
 type Pin =
   | { kind: 'events'; cell: number; cells: number[]; side: 'left' | 'right' | 'mid' }
-  | { kind: 'town'; cell: number; cells: number[]; site: Id; side: 'left' | 'right' | 'mid' };
+  | { kind: 'town'; cell: number; cells: number[]; site: Id; side: 'left' | 'right' | 'mid' }
+  | { kind: 'place'; cell: number; cells: number[]; place: Id; side: 'left' | 'right' | 'mid' };
 
 /** Years a second the clock can run at. */
 export const SPEEDS = [0.5, 1, 2, 4, 8, 15, 30, 60] as const;
@@ -246,6 +271,7 @@ function Room({
   explore,
   onWatch,
   onRecords,
+  onPlace,
 }: Props & { data: PlaybackData }) {
   const palette = useMemo(() => buildPalette(world, data), [world, data]);
   /** A flag's fill: the realm's border colour. */
@@ -294,6 +320,8 @@ function Room({
   const [pin, setPin] = useState<Pin | null>(null);
   // Great works on the explore map (shown until the reader unticks them).
   const [showWorks, setShowWorks] = useState(true);
+  // Perilous places on the explore map, likewise.
+  const [showPlaces, setShowPlaces] = useState(true);
   const [focus, setFocus] = useState<number | null>(explore?.cell ?? null);
   const pendingFocus = useRef<number | null>(explore?.cell ?? null);
   const [year, setYear] = useState(Math.floor(explore?.year ?? startYear));
@@ -1054,6 +1082,27 @@ function Room({
     () => WORK_KINDS.filter((k) => works.some((w) => w.kind === k.id)),
     [works],
   );
+  const everyPlace = useMemo(() => allPlaces(world), [world]);
+  const places = useMemo(
+    () => (exploring && showPlaces && mode !== 'plain' ? placesAt(everyPlace, year) : []),
+    [exploring, showPlaces, mode, everyPlace, year],
+  );
+  const placeKindsShown = useMemo(
+    () => PLACE_KINDS.filter((k) => places.some((p) => p.kind === k.id)),
+    [places],
+  );
+  const pinPlace: PlaceInfo | undefined =
+    pin?.kind === 'place' ? everyPlace.find((p) => p.id === pin.place) : undefined;
+  const openPlace = (p: PlaceInfo) => {
+    setFocus(null);
+    setPin({
+      kind: 'place',
+      cell: p.cell,
+      cells: [p.cell],
+      place: p.id,
+      side: sideOf(p.cell, view),
+    });
+  };
   const openEvents = (c: MarkCluster) => {
     setFocus(null);
     setPin({ kind: 'events', cell: c.cell, cells: c.cells, side: sideOf(c.cell, view) });
@@ -1373,6 +1422,15 @@ function Room({
                   open={pin?.cell ?? null}
                   onOpen={openTown}
                 />
+                <PlaceMarks
+                  places={places}
+                  width={W}
+                  height={H}
+                  year={year}
+                  detail={detail}
+                  open={pin?.kind === 'place' ? pin.place : null}
+                  onOpen={openPlace}
+                />
                 <WorkMarks
                   works={works}
                   width={W}
@@ -1434,11 +1492,13 @@ function Room({
                   <>
                     <small>Show</small>{' '}
                     <span>
-                      {showWorks && everyWork.length > 0
-                        ? shown.size > 0
-                          ? `${pausesLabel(shown)}, great works`
-                          : 'great works'
-                        : pausesLabel(shown)}
+                      {[
+                        shown.size > 0 ? pausesLabel(shown) : '',
+                        showWorks && everyWork.length > 0 ? 'great works' : '',
+                        showPlaces && everyPlace.length > 0 ? 'places' : '',
+                      ]
+                        .filter((part) => part !== '')
+                        .join(', ') || pausesLabel(shown)}
                     </span>
                   </>
                 ) : firstRun ? (
@@ -1497,6 +1557,27 @@ function Room({
                       <input
                         type="checkbox"
                         aria-label="Pause on great works"
+                        checked={false}
+                        disabled
+                      />
+                    </div>
+                  )}
+                  {exploring && everyPlace.length > 0 && (
+                    <div className="row">
+                      <span className="name">
+                        <PlaceGlyph kind="ruin" size={13} />
+                        perilous places
+                        <small>{everyPlace.length}</small>
+                      </span>
+                      <input
+                        type="checkbox"
+                        aria-label="Show perilous places"
+                        checked={showPlaces}
+                        onChange={() => setShowPlaces((on) => !on)}
+                      />
+                      <input
+                        type="checkbox"
+                        aria-label="Pause on perilous places"
                         checked={false}
                         disabled
                       />
@@ -1604,6 +1685,19 @@ function Room({
                     <WorkGlyph kind={k.id} size={12} />
                     <span>
                       {k.label} <small>{works.filter((w) => w.kind === k.id).length}</small>
+                    </span>
+                  </div>
+                ))}
+              </section>
+            )}
+            {exploring && placeKindsShown.length > 0 && (
+              <section className="tr-legend tr-evkey" data-legend="places">
+                <h3>Perilous places</h3>
+                {placeKindsShown.map((k) => (
+                  <div key={k.id}>
+                    <PlaceGlyph kind={k.id} size={12} />
+                    <span>
+                      {k.label} <small>{places.filter((p) => p.kind === k.id).length}</small>
                     </span>
                   </div>
                 ))}
@@ -1736,13 +1830,21 @@ function Room({
               key={`${pin.kind}:${pin.cell}`}
               className={`tr-ask tr-pin ${pin.side}`}
               role="dialog"
-              aria-label={pin.kind === 'town' ? 'Town' : 'Events at this place'}
+              aria-label={
+                pin.kind === 'town'
+                  ? 'Town'
+                  : pin.kind === 'place'
+                    ? 'Perilous place'
+                    : 'Events at this place'
+              }
               data-testid="tales-pin"
             >
               <button type="button" className="x" aria-label="Close" onClick={() => setPin(null)}>
                 ✕
               </button>
-              {pinTown ? (
+              {pinPlace ? (
+                <PlaceCard place={pinPlace} year={year} onPage={onPlace} />
+              ) : pinTown ? (
                 <>
                   <div
                     className="k"
@@ -1794,8 +1896,8 @@ function Room({
                   ))}
                 </ul>
               )}
-              {pinMix && <p className="mix">{pinMix}</p>}
-              {pinRows.length === 0 ? (
+              {!pinPlace && pinMix && <p className="mix">{pinMix}</p>}
+              {pinPlace ? null : pinRows.length === 0 ? (
                 <p className="none">
                   Nothing is marked here for the kinds shown, up to year {year}.
                 </p>
@@ -1980,3 +2082,60 @@ const BeastKey = () => (
     <path d="M2 24 L10 6 L16 17 L22 4 L32 24 Z" fill="#8c2f1f" />
   </svg>
 );
+
+/** Expeditions a place card lists, newest first; its page lists them all. */
+const CARD_TRIPS = 3;
+
+/** The card of a perilous place: what it is, how perilous, and the latest companies that went in. */
+function PlaceCard({
+  place,
+  year,
+  onPage,
+}: {
+  place: PlaceInfo;
+  year: number;
+  onPage: ((id: Id) => void) | undefined;
+}) {
+  const trips = place.expeditions.filter((x) => x.year <= year);
+  const { deaths } = storyBy(place, year);
+  const shown = trips.slice(-CARD_TRIPS).reverse();
+  const what = placeWhat(place);
+  const story =
+    trips.length === 0
+      ? 'No company has gone in yet.'
+      : `${trips.length} ${trips.length === 1 ? 'company has' : 'companies have'} gone in${
+          deaths > 0 ? `; ${deaths} never came back` : ''
+        }.`;
+  return (
+    <>
+      <div className="k">{cap(placeKindLabel(place.kind))}</div>
+      <h2>{cap(place.name)}</h2>
+      <p>
+        {cap(what)}, {dangerWord(place.danger)} to enter. {story}
+        {place.woke && place.woke.year <= year
+          ? ` Robbed, its dead woke in year ${place.woke.year}.`
+          : emptiedBy(place, year)
+            ? ` Nothing has been left to find since year ${place.emptied}.`
+            : ''}
+      </p>
+      {shown.length > 0 && (
+        <ol className="tr-trips" aria-label="Expeditions">
+          {shown.map((x) => (
+            <li key={x.id}>
+              <span className="y">Year {x.year}</span>
+              {cap(x.who)} of {x.from}{' '}
+              {x.endId !== null && x.year <= year ? outcomeText(x) : 'set out'}.
+            </li>
+          ))}
+        </ol>
+      )}
+      {onPage && (
+        <div className="acts">
+          <button type="button" className="p" onClick={() => onPage(place.id)}>
+            Its story
+          </button>
+        </div>
+      )}
+    </>
+  );
+}

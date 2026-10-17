@@ -75,6 +75,7 @@ export const LEGEND_CATEGORIES = [
   'person',
   'dynasty',
   'beast',
+  'place',
   'item',
   'event',
 ] as const;
