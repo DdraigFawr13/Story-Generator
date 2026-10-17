@@ -82,6 +82,7 @@ import {
   pausesLabel,
   type PauseKind,
 } from './pauses';
+import { overlordsAt } from '../ties';
 import './fonts.css';
 import './tales.css';
 
@@ -389,6 +390,8 @@ function Room({
   const borderKey = exploring ? deferredBorders : nowBorders;
   /** The atlas that is drawn on: the sharp one while exploring, once it is built. */
   const target = exploring && sharp ? sharp.atlas : atlas;
+  /** Each vassal's overlord in the border year, rebuilt from the diplomacy events. */
+  const vassals = useMemo(() => overlordsAt(world, borderKey), [world, borderKey]);
   useEffect(() => {
     if (!target) return;
     const sites = data.sitesAt(borderKey);
@@ -406,7 +409,8 @@ function Room({
       if (site && !last.get(site.id)?.ruined) holy.push(site.cell);
     }
     const fillOf = (civ: number): Rgb3 | null => {
-      if (mode === 'realms') return fillColour(palette.hue.get(civ) ?? 0);
+      // A vassal's land wears its overlord's colour; its border keeps its own.
+      if (mode === 'realms') return fillColour(palette.hue.get(vassals.get(civ) ?? civ) ?? 0);
       if (mode === 'peoples') {
         const h = palette.raceHue.get(realmOf.get(civ) ?? '');
         return h === undefined ? null : fillColour(h);
@@ -426,6 +430,7 @@ function Room({
       borderOf: (civ) => borderColour(palette.hue.get(civ) ?? 0),
       towns,
       holy,
+      variant: mode === 'realms' ? [...vassals].map(([v, o]) => `${v}>${o}`).join(',') : '',
     };
     const finish = (result: DrawResult) => {
       setLabels(result.centres);
@@ -442,7 +447,7 @@ function Room({
       stageEl.current?.setAttribute('data-draw-slice-ms', stats.longest.toFixed(0));
       setSharpDrawn(true);
     });
-  }, [target, atlas, mode, borderKey, data, palette, realmOf, world]);
+  }, [target, atlas, mode, borderKey, data, palette, realmOf, world, vassals]);
   // Fade the sharp layer in once its first drawing is done, and out when exploring ends.
   useEffect(() => {
     if (!exploring || !sharp) {
@@ -1146,10 +1151,12 @@ function Room({
         const info = data.civById.get(civ);
         if (!info) continue;
         const hue = palette.hue.get(civ) ?? 0;
+        const lord = vassals.get(civ);
+        const lordName = lord === undefined ? undefined : data.civById.get(lord)?.name;
         rows.push({
           key: `r${civ}`,
-          label: info.name,
-          fill: soft(fillColour(hue)),
+          label: lordName ? `${info.name}, vassal of ${shortRealm(lordName)}` : info.name,
+          fill: soft(fillColour(lord === undefined ? hue : (palette.hue.get(lord) ?? hue))),
           edge: css(borderColour(hue)),
         });
       }
@@ -1196,7 +1203,7 @@ function Room({
       return { title: 'The land', rows, more: 0 };
     }
     return null;
-  }, [mode, labels, data, palette, realmOf, world, year, biomeShare]);
+  }, [mode, labels, data, palette, realmOf, world, year, biomeShare, vassals]);
 
   const openPerson = (id: Id) =>
     onOpenPerson(id, Math.floor(clock.current.t), follow ? { ...follow } : null);
@@ -1282,6 +1289,11 @@ function Room({
                   >
                     <span className="full">{info.name}</span>
                     {short !== info.name && <span className="short">{short}</span>}
+                    {vassals.has(civ) && (
+                      <small className="vassal">
+                        vassal of {shortRealm(data.civById.get(vassals.get(civ)!)?.name ?? '')}
+                      </small>
+                    )}
                   </div>
                 );
               })}
@@ -1436,6 +1448,9 @@ function Room({
           {mode === 'faiths' && (
             <p className="tr-note">Faiths are shown as they stood when history ended.</p>
           )}
+          {mode === 'realms' && vassals.size > 0 && (
+            <p className="tr-note">Vassals wear their overlord's colour inside their own border.</p>
+          )}
           {exploring && (
             <div className="tr-zoom" role="group" aria-label="Zoom">
               <button
@@ -1459,7 +1474,9 @@ function Room({
               </button>
             </div>
           )}
-          <div className={`tr-year${mode === 'faiths' ? ' lower' : ''}`}>
+          <div
+            className={`tr-year${mode === 'faiths' || (mode === 'realms' && vassals.size > 0) ? ' lower' : ''}`}
+          >
             <div data-testid="tales-year" aria-live="off">
               Year {year}
             </div>

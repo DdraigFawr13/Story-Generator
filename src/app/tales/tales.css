@@ -517,6 +517,13 @@
 .tr-root .tr-rg.realm[data-form='short'] .short {
   display: inline;
 }
+.tr-root .tr-rg.realm .vassal {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  font-style: italic;
+  opacity: 0.85;
+}
 .tr-root .tr-ring {
   position: absolute;
   transform: translate(-50%, -50%);
