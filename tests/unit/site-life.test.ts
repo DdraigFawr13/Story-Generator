@@ -20,7 +20,8 @@ import { findWorld } from './helpers/find-world';
 const C = DEFAULT_CONTENT;
 const LIFE = C.life;
 // The fed-town case searches this fixed list (first match wins).
-const SEEDS = ['SITE-B', 'SITE-D', 'SITE-A', 'SITE-C', 'SITE-E', 'SITE-F', 'SITE-G', 'SITE-H'];
+// SITE-E leads since the 2026-10-17 dragon-at-court change left the fed-town search to reach it fifth.
+const SEEDS = ['SITE-E', 'SITE-B', 'SITE-D', 'SITE-A', 'SITE-C', 'SITE-F', 'SITE-G', 'SITE-H'];
 const BREAKDOWNS = new Set([
   LIFE.events.tantrum,
   LIFE.events.despair,
