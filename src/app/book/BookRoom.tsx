@@ -10,6 +10,7 @@ import { eventYear, linkSegments, yearText, type Id, type SimEvent } from '../..
 import { Link, cap, count, plural, useLegends } from '../legends-ctx';
 import type { BookLink } from '../map-view';
 import { RoomShell, type RoomId } from '../rooms/Rooms';
+import { allOrders, orderLine } from '../orders';
 import { indexRows, legendIds, rolesOf, watchOf } from '../people/data';
 import { createAtlas, defaultScale, type Atlas } from '../tales/atlas';
 import {
@@ -151,6 +152,14 @@ function BookView({
     return (chosen.length >= 4 ? chosen : rows).slice(0, LIVES_SHOWN);
   }, [world, rows]);
   const perils = useMemo(() => perilousPlaces(world), [world]);
+  // Standing orders and academies first, then those that ended; each oldest first.
+  const orders = useMemo(
+    () =>
+      allOrders(world, content)
+        .slice()
+        .sort((a, b) => Number(a.ended !== undefined) - Number(b.ended !== undefined)),
+    [world, content],
+  );
   const famous = useMemo(() => {
     const legends = legendIds(world);
     const fames = [...world.people.values()]
@@ -397,6 +406,21 @@ function BookView({
                   ))}
                 </ul>
               </section>
+              {orders.length > 0 && (
+                <section>
+                  <h2>Orders and academies</h2>
+                  <ul>
+                    {orders.map((o) => (
+                      <li key={o.id}>
+                        <Link to={{ kind: 'order', id: o.id }} className="bk-life bk-peril">
+                          <span>{cap(o.name)}</span>
+                          <small>{orderLine(o, world)}</small>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
               {perils.length > 0 && (
                 <section>
                   <h2>Perilous places</h2>

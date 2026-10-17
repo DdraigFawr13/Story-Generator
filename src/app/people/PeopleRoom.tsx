@@ -13,6 +13,7 @@ import {
   type WorldState,
 } from '../../engine';
 import { AllEvents, PageView } from '../LegendPages';
+import { allOrders, personOrder } from '../orders';
 import { RoomShell, type RoomId } from '../rooms/Rooms';
 import { KIND_LABEL, Link, plural, useLegends, type PageRef } from '../legends-ctx';
 import {
@@ -276,6 +277,10 @@ function PersonPage({
   );
   const roles = useMemo(() => rolesOf(world, person, content).line, [world, person, content]);
   const chips = chipsOf(world, person, content, finalYear);
+  const sworn = useMemo(
+    () => personOrder(allOrders(world, content), person.id),
+    [world, content, person.id],
+  );
   const life = useMemo(
     () => lifeRows(world, person, events, textOf, { legend, titleOf }),
     [world, person, events, textOf, titleOf, legend],
@@ -315,6 +320,11 @@ function PersonPage({
                   {c.text}
                 </span>
               ),
+            )}
+            {sworn && (
+              <Link to={{ kind: 'order', id: sworn.order.id }} className="pp-tag">
+                {sworn.title} {sworn.order.name}
+              </Link>
             )}
           </div>
         </div>

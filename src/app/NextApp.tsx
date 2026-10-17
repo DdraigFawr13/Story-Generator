@@ -224,6 +224,10 @@ function cellOfPage(state: WorldState, ref: PageRef): number | null {
   if (ref.kind === 'race') return null;
   if (ref.kind === 'event') return state.events.find((e) => e.id === ref.id)?.place ?? null;
   if (ref.kind === 'place') return state.places.get(ref.id)?.cell ?? null;
+  if (ref.kind === 'order') {
+    const seat = state.orders.get(ref.id)?.siteId;
+    return seat === null || seat === undefined ? null : (state.sites.get(seat)?.cell ?? null);
+  }
   return locate(state, ref);
 }
 

@@ -192,6 +192,17 @@ test('old /?next links open their page in the rooms', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('a knightly order opens its own page with its masters and knights', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/?seed=SMOKE&size=128&open=order:1');
+  const record = page.getByTestId('record-page');
+  await expect(record).toBeVisible({ timeout: 30_000 });
+  await expect(record.getByRole('heading', { level: 3 })).not.toHaveText('');
+  await expect(record.getByText(/Masters · \d+/)).toBeVisible();
+  await expect(record.getByText(/(Knights|Scholars) · \d+/)).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('a site can be watched: embark, play, inspect a person and return to the map', async ({
   page,
 }) => {
