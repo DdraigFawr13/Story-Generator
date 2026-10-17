@@ -193,7 +193,7 @@ export function TownRoom(props: Props) {
 
   useEffect(() => {
     const canvas = canvasRef.current!;
-    const p = new TownPainter(canvas, content.site);
+    const p = new TownPainter(canvas, content.site, content.life.routines.leave.max);
     p.setSite(active, base.ruleWord === 'jarl');
     p.onPaint = () => setPainted(true);
     painter.current = p;
@@ -310,7 +310,14 @@ export function TownRoom(props: Props) {
         painter.current?.refresh(world, pace, latest.current.nameOf);
         setSnapshots((n) => n + 1);
         const delay =
-          who === null ? 0 : leaveDelay(who, pace.spreadMs, world.people.get(who)?.detail?.leaveAt);
+          who === null
+            ? 0
+            : leaveDelay(
+                who,
+                pace.spreadMs,
+                world.people.get(who)?.detail?.leaveAt,
+                content.life.routines.leave.max,
+              );
         if (delay > 0 && held.current) {
           if (!holdTimer.current) {
             holdTimer.current = window.setTimeout(() => {

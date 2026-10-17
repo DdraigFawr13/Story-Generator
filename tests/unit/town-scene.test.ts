@@ -286,24 +286,26 @@ describe('town scene: pace and stagger', () => {
   it('gives each person their own delay inside part of the block, steady for an id', () => {
     const spread = pacing(0.25).spreadMs;
     expect(spread).toBeGreaterThan(0);
-    const delays = Array.from({ length: 200 }, (_, id) => leaveDelay(id + 1, spread));
+    const delays = Array.from({ length: 200 }, (_, id) =>
+      leaveDelay(id + 1, spread, undefined, 0.75),
+    );
     for (const d of delays) {
       expect(d).toBeGreaterThanOrEqual(0);
       expect(d).toBeLessThanOrEqual(spread);
     }
     expect(new Set(delays).size).toBeGreaterThan(100);
-    expect(leaveDelay(77, spread)).toBe(leaveDelay(77, spread));
+    expect(leaveDelay(77, spread, undefined, 0.75)).toBe(leaveDelay(77, spread, undefined, 0.75));
     // Nobody leaves on the beat: not more than a few of 200 have no delay.
     expect(delays.filter((d) => d === 0).length).toBeLessThan(5);
   });
 
   it('uses the engine leave time when there is one, and the id hash when not', () => {
     const spread = 1000;
-    expect(leaveDelay(5, spread, 0)).toBe(0);
-    expect(leaveDelay(5, spread, 0.375)).toBe(500);
-    expect(leaveDelay(5, spread, 0.75)).toBe(spread);
-    expect(leaveDelay(5, spread, 2)).toBe(spread);
-    expect(leaveDelay(5, spread, undefined)).toBe(leaveDelay(5, spread));
+    expect(leaveDelay(5, spread, 0, 0.75)).toBe(0);
+    expect(leaveDelay(5, spread, 0.375, 0.75)).toBe(500);
+    expect(leaveDelay(5, spread, 0.75, 0.75)).toBe(spread);
+    expect(leaveDelay(5, spread, 2, 0.75)).toBe(spread);
+    expect(leaveDelay(5, spread, undefined, 0.75)).toBe(leaveDelay(5, spread, undefined, 0.75));
   });
 
   it('spreads departures over less than a block, and fades instead of walking at fast speeds', () => {

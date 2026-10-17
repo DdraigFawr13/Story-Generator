@@ -304,17 +304,19 @@ export function unitHash(id: number): number {
   return ((h ^ (h >>> 15)) >>> 0) / 4294967296;
 }
 
-/** The engine's latest leave time, as a share of the block (content `routines.leave.max`). */
-const LEAVE_SHARE_MAX = 0.75;
-
 /**
  * How long after the block's beat a person sets off, in ms. With the engine's own leave time
- * (`leaveAt`, a share of the block, 0 to 0.75) it is that share of `spreadMs`; without it, a share
- * from their id.
+ * (`leaveAt`, a share of the block up to the content's `routines.leave.max`, passed as `leaveMax`)
+ * it is that share of `spreadMs`; without it, a share from their id.
  */
-export function leaveDelay(id: number, spreadMs: number, leaveAt?: number): number {
-  if (leaveAt === undefined) return Math.round(unitHash(id) * spreadMs);
-  return Math.round(Math.min(1, Math.max(0, leaveAt / LEAVE_SHARE_MAX)) * spreadMs);
+export function leaveDelay(
+  id: number,
+  spreadMs: number,
+  leaveAt: number | undefined,
+  leaveMax: number,
+): number {
+  if (leaveAt === undefined || leaveMax <= 0) return Math.round(unitHash(id) * spreadMs);
+  return Math.round(Math.min(1, Math.max(0, leaveAt / leaveMax)) * spreadMs);
 }
 
 /** A walk's duration: at least the base time, and long enough that the dot never exceeds the speed cap. */
