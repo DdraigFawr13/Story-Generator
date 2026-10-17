@@ -644,7 +644,7 @@ Items not in the list (M4.5, M5.1, M5.3, M5.4, the rest of Phases 6–9) keep th
 Thirty-eight threads have merged since the list was written (#101 to #138, `CHANGELOG.md`). Thirteen of the sixteen ranked items are built in full, and the proposed next set P1 to P8 is built too (P5, a page per faith, is in review as #136). Left:
 
 - Not started from the ranked list: the story threads view (11), trade between peoples (14; cross-border trade turned out to be 26% to 30% of trades already, so only its story parts remain), the world moving while you watch (15).
-- UI halves: a page per faith is in review (#136); a page per order and academy was picked as S1 below.
+- UI halves: a page per faith built (#136); a page per order and academy was picked as S1 below.
 - Screen edges after the map polish (#125 fixed the swap-in pause, the stepped borders and the waiting year link): borders trail the year by about 0.75 s while scrubbing; some era names carry a double "the"; `?year=` may still open Tales at a different year on a phone (Morgan's report, to be checked).
 
 #### Proposed next set (2026-10-17 morning; all picked and built)
@@ -655,7 +655,7 @@ Thirty-eight threads have merged since the list was written (#101 to #138, `CHAN
 | P2 | Perilous places on the map and a Places page | M4.7 leftover | Picked 2026-10-17; built 2026-10-17 (#134) | 4 | S |
 | P3 | Great works and enchanting | M5.3 | Picked 2026-10-17; built as build order 18 (#129), marks on the map (#132) | 4 | M |
 | P4 | Feuds across generations and exile | M4.5 | Picked 2026-10-17; built as build order 19 (#131), with a Feuds and exiles section on house pages | 4 | M |
-| P5 | A page per faith | Phase 7 leftover | Picked 2026-10-17; in review (#136): gods, holy city, high priests in order, schisms and holy wars, in the People and Book rooms | 3 | S |
+| P5 | A page per faith | Phase 7 leftover | Picked 2026-10-17; built (#136): gods, holy city, high priests in order, schisms and holy wars, in the People and Book rooms | 3 | S |
 | P6 | Orders and academies | Phase 7 | Picked 2026-10-17; built as build order 21 (#135) | 3 | M |
 | P7 | Other great beasts and the restless dead | M5.6 leftover | Picked 2026-10-17; built as build order 20 (#133) | 3 | M |
 | P8 | Rough-edges bundle | the list above | Picked 2026-10-17; built 2026-10-17 (#137: child deaths, orcs, holds at passes) | 3 | S |

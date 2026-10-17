@@ -228,6 +228,10 @@ function cellOfPage(state: WorldState, ref: PageRef): number | null {
     const seat = state.orders.get(ref.id)?.siteId;
     return seat === null || seat === undefined ? null : (state.sites.get(seat)?.cell ?? null);
   }
+  if (ref.kind === 'faith') {
+    const seat = state.faiths.get(ref.id)?.seatSiteId;
+    return seat === undefined ? null : (state.sites.get(seat)?.cell ?? null);
+  }
   return locate(state, ref);
 }
 
