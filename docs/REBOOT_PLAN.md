@@ -631,6 +631,7 @@ After the Phase 3 playtest Morgan asked for additions ranked by value and coding
 
 17. **The dragon at court** (Phase 6 "Legends in politics" leftover, P1 of the proposed next set; value 4, M; picked by Morgan 2026-10-17): built 2026-10-17. Realms near a dragon court it (and it falls on their enemies), fear it and pay a standing tribute, or set a bounty on it; a figure who takes the bounty hunts it with a host the realm lends, and a legend dies about 1 in 10 such hunts. Rules in `content/dragons.ts` (`court`), engine in `engine/history/dragon-court.ts`.
 18. **Great works and enchanting** (M5.3, P3 of the proposed next set; value 4, M; picked by Morgan 2026-10-17): built 2026-10-17. A legend or a rich realm raises one wall, bridge, tower or warded grove in a lifetime, each with an effect on war, wealth, lore or harvest and plague, and it falls with its town; a legend whose town fits none makes a great item. Strong mages who still know a strong spell enchant items from slain beasts' remains or rare ore. Rules in `content/great-works.ts`, engine in `engine/history/great-works.ts`. The map glyph for standing works is still to come.
+19. **Generation feuds and exile** (M4.5, P4 of the proposed next set; value 4, M; picked by Morgan 2026-10-17): built 2026-10-17. A killing between two houses can begin a blood feud that passes to children and grandchildren and flares in killings back and forth until a wedding, a blood price, forgetting or the end of a line; a killer of their own people, a loser of a disputed seat or a beaten claimant goes into exile at a foreign court and may come home pardoned or to claim the seat; an inheritance quarrel can split a house into a branch. Rules in `content/feuds.ts`, engine in `engine/history/feuds.ts`. A house page section for its feuds is still to come.
 
 Items not in the list (M4.5, M5.1, M5.3, M5.4, the rest of Phases 6–9) keep their place and come after it unless a check-in moves them.
 
@@ -653,7 +654,7 @@ For when the picks Morgan has already seen (vassals shown in the UI, the world m
 | P1 | The dragon at court | Phase 6 leftover | Picked 2026-10-17; now build order 17 above | 4 | M |
 | P2 | Perilous places on the map and a Places page | M4.7 leftover | Ruins, barrows and lairs marked on the Tales map under the event filter; a page per place with its hoard, its expeditions and its dead | 4 | S |
 | P3 | Great works and enchanting | M5.3 | Picked 2026-10-17; now build order 18 above | 4 | M |
-| P4 | Feuds across generations and exile | M4.5 | A wrong between two houses outlives both; heirs inherit the grudge, an exiled notable returns, inheritance disputes split a family | 4 | M |
+| P4 | Feuds across generations and exile | M4.5 | Picked 2026-10-17; now build order 19 above | 4 | M |
 | P5 | A page per faith | Phase 7 leftover | Gods, holy city, high priests in order, schisms and holy wars, in the People and Book rooms | 3 | S |
 | P6 | Orders and academies | Phase 7 | A legend founds an order or academy that keeps or loses their lore after them; each culture reveres, regulates or persecutes magic | 3 | M |
 | P7 | Other great beasts and the restless dead | M5.6 leftover | Named giants and wyverns with lairs and tempers; a robbed barrow wakes its dead | 3 | M |

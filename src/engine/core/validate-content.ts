@@ -98,6 +98,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...settlementProblems(content));
   problems.push(...creatureProblems(content));
   problems.push(...dragonProblems(content));
+  problems.push(...feudProblems(content));
   problems.push(...greatWorkProblems(content));
   problems.push(...placeProblems(content));
   problems.push(...faithProblems(content));
@@ -203,6 +204,62 @@ export function cultureProblems(content: ContentBundle): string[] {
     if (!content.cultures.some((c) => c.raceId === race.id)) {
       problems.push(`Race ${race.id} has no culture.`);
     }
+  }
+  return problems;
+}
+
+/** Feuds (feuds.ts): chances 0-1, counts and ranges at least 1, phrases filled. */
+export function feudProblems(content: ContentBundle): string[] {
+  const rules = content.history.feuds;
+  if (!rules) return ['Content has no feud rules.'];
+  const problems: string[] = [];
+  const chances = [
+    'inheritChance',
+    'inheritPerGeneration',
+    'inheritFloor',
+    'actChance',
+    'endBase',
+    'endPerGeneration',
+    'legendTarget',
+    'killChance',
+    'legendKill',
+    'exileChance',
+    'exileKinChance',
+    'disputeExileChance',
+    'wedBase',
+    'wedPerGeneration',
+    'returnChance',
+    'raidKill',
+    'raidKillLegend',
+    'splitChance',
+    'splitFeudChance',
+  ] as const;
+  for (const key of chances) {
+    if (!(rules[key] >= 0 && rules[key] <= 1)) problems.push(`Feuds: ${key} must be 0-1.`);
+  }
+  for (const [cause, chance] of Object.entries(rules.startChance)) {
+    if (!(chance >= 0 && chance <= 1)) problems.push(`Feuds: startChance ${cause} must be 0-1.`);
+  }
+  const counts = [
+    'maxOpen',
+    'quietYears',
+    'endAlliedFactor',
+    'weddingAgeGap',
+    'returnMinYears',
+    'raidRange',
+    'splitMinYears',
+  ] as const;
+  for (const key of counts) {
+    if (!(rules[key] >= 1)) problems.push(`Feuds: ${key} must be at least 1.`);
+  }
+  for (const key of ['strikeGrievance', 'raidGrievance'] as const) {
+    if (!(rules[key] >= 0)) problems.push(`Feuds: ${key} must be 0 or more.`);
+  }
+  const phrases = rules.phrases;
+  if (phrases.generationsOld.length === 0) problems.push('Feuds: no generation phrases.');
+  if (phrases.struck.escaped.length === 0) problems.push('Feuds: no escape phrases.');
+  for (const sex of ['m', 'f'] as const) {
+    if (phrases.kin[sex].length < 4) problems.push(`Feuds: kin words for "${sex}" need 4 entries.`);
   }
   return problems;
 }
@@ -644,6 +701,13 @@ const HISTORY_EVENT_IDS = [
   'succession_disputed',
   'dynasty_founded',
   'oath_sworn',
+  'feud_began',
+  'feud_inherited',
+  'feud_struck',
+  'feud_ended',
+  'house_split',
+  'notable_exiled',
+  'exile_returned',
   'legend_risen',
   'champion_fought',
   'legend_duel',

@@ -14,6 +14,7 @@ import { runCivilWars } from './civil-war';
 import { runCityStates } from './city-states';
 import { runColleges } from './colleges';
 import { callToArms, runAlliances } from './diplomacy';
+import { runFeuds } from './feuds';
 import { runDiseases } from './disease';
 import { pruneEvents, runYearSummary } from './importance';
 import { createPlaybackRecorder, finishPlayback, recordPlaybackYear } from './playback';
@@ -105,6 +106,7 @@ export function runHistory(
     runExpeditions(run);
     runCivilWars(run);
     runIntrigue(run);
+    runFeuds(run);
     runColleges(run);
     runLineages(run);
     runGreatWorks(run);

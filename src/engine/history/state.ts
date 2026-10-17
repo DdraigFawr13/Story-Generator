@@ -138,6 +138,47 @@ export interface War {
   taken?: number;
 }
 
+/** A blood feud between two houses, handed from heir to heir (feuds.ts). */
+export interface Feud {
+  id: number;
+  /** The two houses (dynasty ids), lower first. */
+  houses: [Id, Id];
+  /** The house owed blood now; it acts next. Flips at each killing. */
+  owed: Id;
+  began: number;
+  /** The feud_began event; `last` is the latest event of the feud, cited by the next. */
+  event: Id;
+  last: Id;
+  /** The year of `last`: a bearer does not act in the year they were wronged. */
+  lastYear: number;
+  /** Who carries the feud for each house now (person id per dynasty id). */
+  bearers: Map<Id, Id>;
+  /** The first dead and the first killer (or, for a feud born of a split, the parent and the breakaway). */
+  firstDead: Id;
+  firstKiller: Id;
+  /** 1 at the start; the highest descent of a bearer from their house's first party, plus 1. */
+  generation: number;
+  /** Killings in the feud, the first included. */
+  killings: number;
+  ended?: number;
+}
+
+/** A notable driven from their people and living at a foreign court (feuds.ts). */
+export interface Exile {
+  /** The people they were driven from, and the people that took them in. */
+  home: Id;
+  host: Id;
+  since: number;
+  /** The notable_exiled event. */
+  event: Id;
+  /** The ruler who drove them out (a pardon comes when that ruler is gone). */
+  by: Id | undefined;
+  /** They were a beaten claimant: they may come back to claim the seat. */
+  claimant: boolean;
+  /** They have led their one raid on the home people. */
+  raided?: true;
+}
+
 /** A beaten claimant from this year's successions, who may raise part of the realm (civil-war.ts). */
 export interface Claim {
   civ: Id;
@@ -293,6 +334,7 @@ export interface HistoryRun {
     faith: RngStream;
     intrigue: RngStream;
     diplomacy: RngStream;
+    feuds: RngStream;
   };
   /** Remains of slain great beasts, in the order they were left. */
   remains: Remains[];
@@ -347,6 +389,10 @@ export interface HistoryRun {
     /** Cross-people marriages by `pairKey`: the latest year and marriage event. */
     marriages: Map<string, { year: number; event: Id }>;
   };
+  /** Blood feuds between houses, open and ended, in id order (feuds.ts). */
+  feuds: Feud[];
+  /** Notables living in exile at a foreign court, by person id. */
+  exiles: Map<Id, Exile>;
   /** The latest faith event per `site:${id}` or `faith:${id}`, cited by the next event there. */
   faithEvents: Map<string, Id>;
 }
@@ -512,6 +558,7 @@ export function createRun(
       faith: streamFor(world, 'history.faith'),
       intrigue: streamFor(world, 'history.intrigue'),
       diplomacy: streamFor(world, 'history.diplomacy'),
+      feuds: streamFor(world, 'history.feuds'),
     },
     remains: [],
     year: 0,
@@ -564,6 +611,8 @@ export function createRun(
       turncoats: new Set(),
     },
     diplomacy: { marriages: new Map() },
+    feuds: [],
+    exiles: new Map(),
     faithEvents: new Map(),
   };
   for (const site of world.sites.values()) {

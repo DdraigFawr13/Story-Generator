@@ -2314,6 +2314,84 @@ export interface HistoryRules {
   intrigue: IntrigueRules;
   /** Alliances, calls to arms, betrayal, vassalage and peace by marriage. */
   diplomacy: DiplomacyRules;
+  /** Blood feuds between houses, exile and the inheritance quarrels that split a house. */
+  feuds: FeudRules;
+}
+
+/** Generation feuds and exile (feuds.ts): every number and phrase the feud systems read. */
+export interface FeudRules {
+  /** Chance a killing of a rival house's member (by cause of death) begins a feud; missing causes never do. */
+  startChance: Partial<Record<DeathCause, number>>;
+  /** Most open feuds one house is in. */
+  maxOpen: number;
+  /** Chance an heir takes up a feud at the first generation, less `inheritPerGeneration` per generation, never under `inheritFloor`. */
+  inheritChance: number;
+  inheritPerGeneration: number;
+  inheritFloor: number;
+  /** Yearly chance the house owed blood acts through its bearer. */
+  actChance: number;
+  /** Years after any event of a feud before its house owed blood acts again. */
+  quietYears: number;
+  /** Chance an acting bearer lets the feud end: base plus per generation past the first. */
+  endBase: number;
+  endPerGeneration: number;
+  /** Multiplier on the end chance when the two houses serve one people or sworn allies. */
+  endAlliedFactor: number;
+  /** Greatest age gap, in years, of a pair wed to end a feud. */
+  weddingAgeGap: number;
+  /** Yearly chance a feud ends in a wedding while one member of each house is free to marry: base plus per generation past the first. */
+  wedBase: number;
+  wedPerGeneration: number;
+  /** Chance a legend is the target of a strike (else a lesser member is picked or the bearer waits). */
+  legendTarget: number;
+  /** Chance a strike kills an ordinary target, and a legend. */
+  killChance: number;
+  legendKill: number;
+  /** Grievance a people holds against the striker's people after a feud killing across peoples. */
+  strikeGrievance: number;
+  /** Chance a ruler drives a killer of their own people into exile, and when the killer is the ruler's kin. */
+  exileChance: number;
+  exileKinChance: number;
+  /** Chance the claimant who lost a disputed succession is driven into exile. */
+  disputeExileChance: number;
+  /** Years in exile before a return is possible, and the yearly chance after. */
+  returnMinYears: number;
+  returnChance: number;
+  /** Grievance the host holds against the home people that lets an exile lead a raid home. */
+  raidGrievance: number;
+  /** Greatest distance, in cells, from the host's capital to the site raided. */
+  raidRange: number;
+  /** Chance the home ruler dies in the exile's raid, and when the ruler is a legend. */
+  raidKill: number;
+  raidKillLegend: number;
+  /** Yearly chance an inheritance quarrel splits a house when a ruler, a founder or an artifact's holder dies. */
+  splitChance: number;
+  /** Chance the two houses of a split are in a feud at once. */
+  splitFeudChance: number;
+  /** Years a house must stand before it can split. */
+  splitMinYears: number;
+  phrases: {
+    /** Kin of the first party by descent (child, grandchild, ...) for each sex, and for any other kin. */
+    kin: { m: string[]; f: string[]; other: string };
+    /** How a feud began: `{killer}`, `{dead}`, `{site}`; or over `{what}`. */
+    whyKilled: string;
+    whySplit: string;
+    /** What a split quarrel is over when no artifact is: by the dead's standing. */
+    overSeat: string;
+    overHouse: string;
+    /** The dead parent by sex. */
+    parent: { m: string; f: string };
+    /** How a feud ended, after "ended"; `{a}`, `{b}` (the pair), `{name}`, `{foe}` (a house with no one left at home). */
+    ended: { wed: string; paid: string; forgotten: string; diedOut: string; beyond: string };
+    /** A feud's age by generation (first entry: one generation), for "three generations old". */
+    generationsOld: string[];
+    /** A strike's outcome; `{target}`. A miss picks one of `escaped`. */
+    struck: { slain: string; escaped: string[] };
+    /** Why a notable was driven out; `{dead}`, `{winner}`. */
+    exile: { killing: string; war: string; dispute: string };
+    /** How an exile came back; `{host}`, `{site}`, `{dead}`. */
+    returned: { pardoned: string; claim: string; raid: string };
+  };
 }
 
 /** Spellbooks and lineages (M5.2): apprenticeship, learning, books and lost lore (lineages.ts). */
@@ -2540,6 +2618,8 @@ export interface DiplomacyRules {
     attackRatio: number;
     /** Grievance the victim holds against the betrayer. */
     grievance: number;
+    /** Drift added when the two rulers' houses are in a blood feud. */
+    feud: number;
   };
   vassal: {
     /** Sites the winner must take, and times the loser's strength it must have, to make a vassal. */
@@ -2571,7 +2651,7 @@ export interface DiplomacyRules {
     /** Why an alliance was sworn; `{enemy}`, `{faith}`, `{a}` and `{b}` (the spouses). */
     why: { enemy: string; faith: string; marriage: string; trade: string };
     /** Why an alliance was betrayed; `{victim}`. */
-    betrayed: { faith: string; rivals: string; weak: string; strange: string };
+    betrayed: { faith: string; rivals: string; feud: string; weak: string; strange: string };
     /** How it ended: marched on them, or only renounced the oath (full and short forms). */
     outcome: { war: string; renounced: string };
     outcomeShort: { war: string; renounced: string };

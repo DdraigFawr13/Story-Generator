@@ -8,6 +8,7 @@ import type { Civ, Id, Person, SimEvent } from '../core/types';
 import { cultureValue, strangeness } from './values';
 import { faithOf } from './faith';
 import { linkedCivIds } from './city-states';
+import { housesInFeud } from './feuds';
 import { eligibleToMarry, rulerOf, sharesSpouseName } from './notables';
 import { addDeed, closeKin, eventById, livingPerson, makeRivals, wed } from './people';
 import { bandCount, siteNeed } from './pop';
@@ -315,6 +316,7 @@ function betrayals(run: HistoryRun): void {
         pact.faiths && (pact.faiths[0] !== fa || pact.faiths[1] !== fb) ? rules.faithSplit : 0,
       ],
       [phrases.betrayed.rivals, ra && rb && ra.rivals?.includes(rb.id) ? rules.rivals : 0],
+      [phrases.betrayed.feud, housesInFeud(run, ra?.dynastyId, rb?.dynastyId) ? rules.feud : 0],
       [phrases.betrayed.weak, weak < rules.weakRatio * strong ? rules.weak : 0],
       [phrases.betrayed.strange, strangeness(run, a, b) / typical],
     ];

@@ -81,6 +81,11 @@ export const NOTABLES: NotableRules = {
       dragon_courted: 2,
       dragon_unleashed: 2,
       dragon_bounty_taken: 4,
+      // Feuds: the bearer who strikes, the heir who takes one up, the breakaway, the exile who returns.
+      feud_struck: 4,
+      feud_inherited: 1,
+      house_split: 2,
+      exile_returned: 2,
       // Great works: the builder of a tower, wall, bridge or grove; the mage who binds a spell into an item.
       great_work_raised: 8,
       item_enchanted: 4,

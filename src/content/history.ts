@@ -4,6 +4,7 @@
 
 import type { HistoryRules } from '../engine';
 import { DIPLOMACY } from './diplomacy';
+import { FEUDS } from './feuds';
 import { INTRIGUE } from './intrigue';
 import { LINEAGES } from './lineages';
 import { CITY_STATES, CIVIL_WARS, COLLEGES } from './realms';
@@ -173,4 +174,5 @@ export const HISTORY: HistoryRules = {
   civilWar: CIVIL_WARS,
   intrigue: INTRIGUE,
   diplomacy: DIPLOMACY,
+  feuds: FEUDS,
 };

@@ -33,6 +33,34 @@ function worksByKind(world) {
   return out;
 }
 
+/** Feuds, exile and house splits, read from the events and their data. */
+function feudMetrics(world, n) {
+  const of = (type) => world.events.filter((e) => e.type === type);
+  const ended = of('feud_ended');
+  const returned = of('exile_returned');
+  const struck = of('feud_struck');
+  const kinds = (events, kind) => events.filter((e) => e.data.kind === kind).length;
+  const generations = [...of('feud_inherited'), ...ended].map((e) =>
+    Number(e.data.generation ?? 1),
+  );
+  return {
+    begun: n.feud_began ?? 0,
+    inherited: n.feud_inherited ?? 0,
+    maxGeneration: Math.max(n.feud_began ? 1 : 0, ...generations),
+    killings: (n.feud_began ?? 0) + struck.filter((e) => e.data.slain === 1).length,
+    wed: kinds(ended, 'wed'),
+    paid: kinds(ended, 'paid'),
+    forgotten: kinds(ended, 'forgotten'),
+    diedOut: kinds(ended, 'diedOut') + kinds(ended, 'beyond'),
+    exiles: n.notable_exiled ?? 0,
+    pardoned: kinds(returned, 'pardoned'),
+    claim: kinds(returned, 'claim'),
+    raid: kinds(returned, 'raid'),
+    splits: n.house_split ?? 0,
+    legendsSlain: struck.filter((e) => e.data.legend === 1 && e.data.slain === 1).length,
+  };
+}
+
 /** Notables, families and items (M2.5): counts from the people, items and events. */
 export function notableMetrics(world, n, DAYS_PER_YEAR) {
   let alive = 0;
@@ -136,6 +164,7 @@ export function notableMetrics(world, n, DAYS_PER_YEAR) {
     greatItems: n.great_item_made ?? 0,
     partsCrafted: n.beast_parts_crafted ?? 0,
     carriedOff: n.item_carried_off ?? 0,
+    feuds: feudMetrics(world, n),
   };
 }
 
@@ -223,7 +252,7 @@ export function historyMetrics(
 export function baselineMetrics(metrics) {
   const out = {};
   for (const [key, value] of Object.entries(metrics)) {
-    if (key !== 'historyMs') out[key] = round1(value);
+    if (key !== 'historyMs' && key !== 'feuds') out[key] = round1(value);
   }
   return out;
 }
