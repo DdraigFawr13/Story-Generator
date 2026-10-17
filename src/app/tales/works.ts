@@ -25,6 +25,8 @@ export interface WorkMark {
   fell?: number;
   /** Who raised or made it. */
   by: string | null;
+  /** The maker's home when it is not the site the work stands at ("of Ponteezza"). */
+  home?: string;
   /** Its place among the works at the same site, oldest first (0, 1, ...). */
   slot: number;
 }
@@ -35,6 +37,11 @@ const isKind = (k: string): k is WorkKind => WORK_KINDS.some((w) => w.id === k);
 export function allWorks(world: WorldState): WorkMark[] {
   const out: Omit<WorkMark, 'slot'>[] = [];
   const nameOf = (id: Id | null) => (id == null ? null : (world.people.get(id)?.name ?? null));
+  const homeOf = (id: Id | null, siteId: Id) => {
+    const home = id == null ? null : world.people.get(id)?.siteId;
+    const name = home == null || home === siteId ? undefined : world.sites.get(home)?.name;
+    return name ? { home: name } : {};
+  };
   for (const site of world.sites.values()) {
     for (const w of site.works ?? []) {
       if (!isKind(w.kind)) continue;
@@ -47,6 +54,7 @@ export function allWorks(world: WorldState): WorkMark[] {
         raised: w.raised,
         ...(w.fell !== undefined ? { fell: w.fell } : {}),
         by: nameOf(w.builderId),
+        ...homeOf(w.builderId, site.id),
       });
     }
   }
@@ -71,6 +79,7 @@ export function allWorks(world: WorldState): WorkMark[] {
       cell,
       raised: item.made,
       by: nameOf(item.makerId),
+      ...homeOf(item.makerId, siteId),
     });
   }
   out.sort((a, b) => a.raised - b.raised || a.key.localeCompare(b.key));
@@ -90,7 +99,7 @@ export const worksAt = (works: readonly WorkMark[], year: number): WorkMark[] =>
 export function workLine(w: WorkMark, year: number): string {
   const label = WORK_KINDS.find((k) => k.id === w.kind)!.label;
   const what = w.kind === 'item' ? 'a great item made' : `a ${label} raised`;
-  const by = w.by ? ` by ${w.by}` : '';
+  const by = w.by ? ` by ${w.by}${w.home ? ` of ${w.home}` : ''}` : '';
   const fell = w.fell !== undefined && w.fell <= year ? `; fell in year ${w.fell}` : '';
   const name = w.name.charAt(0).toUpperCase() + w.name.slice(1);
   return `${name}, ${what} in year ${w.raised}${by}${fell}`;

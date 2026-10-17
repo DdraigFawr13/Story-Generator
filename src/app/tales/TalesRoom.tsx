@@ -1425,11 +1425,21 @@ function Room({
                 type="button"
                 className="tr-chooser-btn"
                 aria-expanded={chooser}
-                onClick={() => setChooser((o) => !o)}
+                onClick={() => {
+                  setHelpOpen(false);
+                  setChooser((o) => !o);
+                }}
               >
                 {exploring ? (
                   <>
-                    <small>Show</small> <span>{pausesLabel(shown)}</span>
+                    <small>Show</small>{' '}
+                    <span>
+                      {showWorks && everyWork.length > 0
+                        ? shown.size > 0
+                          ? `${pausesLabel(shown)}, great works`
+                          : 'great works'
+                        : pausesLabel(shown)}
+                    </span>
                   </>
                 ) : firstRun ? (
                   <>
@@ -1561,7 +1571,10 @@ function Room({
             className="tr-help"
             aria-label="Map key"
             aria-expanded={helpOpen}
-            onClick={() => setHelpOpen((o) => !o)}
+            onClick={() => {
+              setChooser(false);
+              setHelpOpen((o) => !o);
+            }}
           >
             ?
           </button>
@@ -1589,7 +1602,9 @@ function Room({
                 {workKindsShown.map((k) => (
                   <div key={k.id}>
                     <WorkGlyph kind={k.id} size={12} />
-                    <span>{k.label}</span>
+                    <span>
+                      {k.label} <small>{works.filter((w) => w.kind === k.id).length}</small>
+                    </span>
                   </div>
                 ))}
               </section>
@@ -1764,11 +1779,16 @@ function Room({
                   <h2>{siteAtCell.get(pin.cell) ?? 'Open country'}</h2>
                 </>
               )}
+              {pinWorks.length > 0 && <div className="k tr-works-k">Great works</div>}
               {pinWorks.length > 0 && (
                 <ul className="tr-works" aria-label="Great works here">
                   {pinWorks.map((w) => (
                     <li key={w.key}>
-                      <WorkGlyph kind={w.kind} size={13} />
+                      <WorkGlyph
+                        kind={w.kind}
+                        size={13}
+                        fallen={w.fell !== undefined && w.fell <= year}
+                      />
                       <span>{workLine(w, year)}.</span>
                     </li>
                   ))}

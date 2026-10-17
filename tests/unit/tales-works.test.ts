@@ -23,8 +23,9 @@ const world = {
         ],
       },
     ],
+    [2, { id: 2, cell: 900, name: 'Penn' }],
   ]),
-  people: new Map([[7, { id: 7, name: 'Ana' }]]),
+  people: new Map([[7, { id: 7, name: 'Ana', siteId: 2 }]]),
   items: new Map([
     [3, { id: 3, name: 'the Star of Dun', great: true, made: 60, makerId: 7, deeds: [12] }],
     [4, { id: 4, name: 'a plain blade', made: 20, makerId: 7, deeds: [13] }],
@@ -48,7 +49,7 @@ describe('great works on the Tales map', () => {
 
   it('says who raised a work and when it fell', () => {
     const [tower, , wall] = allWorks(world);
-    expect(workLine(tower!, 200)).toBe('The Grey Tower, a tower raised in year 40 by Ana');
+    expect(workLine(tower!, 200)).toBe('The Grey Tower, a tower raised in year 40 by Ana of Penn');
     expect(workLine(wall!, 120)).toBe('The Wall of Dun, a wall raised in year 90');
     expect(workLine(wall!, 200)).toBe(
       'The Wall of Dun, a wall raised in year 90; fell in year 150',

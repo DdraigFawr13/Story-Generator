@@ -177,23 +177,32 @@ export function Towns({ towns, width, height, named, skip, open, onOpen }: Towns
 
 /** Great works as engraved ink shapes on a pale fill, on the same 24 by 24 box. */
 const WORK_GLYPHS: Record<WorkKind, string> = {
-  tower: 'M8 22V8H7V3h2.2v2h1.7V3h2.2v2h1.7V3H17v5h-1v14z',
+  tower: 'M12 1.5l4.5 6.5H15v14H9V8H7.5z',
   wall: 'M2 20v-9h2.4V8h3.2v3h2.8V8h3.2v3h2.8V8h3.2v3H22v9z',
-  bridge: 'M2 8h20v4.2c-3.6.3-6 3.4-6.4 7.8H8.4C8 15.6 5.6 12.5 2 12.2z',
+  bridge: 'M1.5 8h21v9H20a4 4 0 0 0-8 0 4 4 0 0 0-8 0H1.5z',
   grove:
-    'M12 2.5a5 5 0 0 1 4.6 7A4.6 4.6 0 0 1 14 18h-1.1v4h-1.8v-4H10a4.6 4.6 0 0 1-2.6-8.5A5 5 0 0 1 12 2.5z',
+    'M7 3a4.5 4.5 0 0 1 1 8.9V21H6v-9.1A4.5 4.5 0 0 1 7 3zM17 3a4.5 4.5 0 0 1 1 8.9V21h-2v-9.1A4.5 4.5 0 0 1 17 3z',
   item: 'M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z',
 };
 
-/** One work's shape: pale stone inside an ink outline. */
-export function WorkGlyph({ kind, size = 13 }: { kind: WorkKind; size?: number }) {
+/** One work's shape: warm stone inside an ink outline; a fallen one is outlined in dashes. */
+export function WorkGlyph({
+  kind,
+  size = 13,
+  fallen = false,
+}: {
+  kind: WorkKind;
+  size?: number;
+  fallen?: boolean;
+}) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
       <path
         d={WORK_GLYPHS[kind]}
-        fill="#d6c093"
+        fill={fallen ? 'none' : '#c19a5b'}
         stroke={INK}
-        strokeWidth="1.8"
+        strokeWidth={fallen ? 1.6 : 2}
+        strokeDasharray={fallen ? '2.4 1.8' : undefined}
         strokeLinejoin="round"
         paintOrder="stroke"
       />
@@ -236,7 +245,7 @@ export function WorkMarks({ works, width, height, year, detail, onOpen }: WorkMa
             aria-label={line}
             onClick={() => onOpen(w)}
           >
-            <WorkGlyph kind={w.kind} size={detail ? 17 : 12} />
+            <WorkGlyph kind={w.kind} size={detail ? 17 : 12} fallen={fallen} />
           </button>
         );
       })}

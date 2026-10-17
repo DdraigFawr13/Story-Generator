@@ -1381,7 +1381,7 @@
   background: none;
   display: grid;
   place-items: center;
-  transform: translate(-50%, -50%) translate(calc(-11px - var(--slot) * 17px), -11px);
+  transform: translate(-50%, -50%) translate(calc(-11px - var(--slot) * 21px), -11px);
   cursor: pointer;
   transition: scale 0.25s ease;
   animation: tr-fade 0.45s ease both;
@@ -1389,17 +1389,26 @@
 .tr-root .tr-wk.small {
   width: 14px;
   height: 14px;
-  transform: translate(-50%, -50%) translate(calc(-8px - var(--slot) * 12px), -8px);
+  transform: translate(-50%, -50%) translate(calc(-8px - var(--slot) * 16px), -8px);
 }
 .tr-root .tr-wk svg {
   display: block;
   filter: drop-shadow(0 0 1.5px rgba(246, 241, 228, 0.9));
 }
 .tr-root .tr-wk.fallen svg {
-  opacity: 0.38;
+  opacity: 0.8;
+}
+/* A larger, invisible tap target, grown away from the town so its own hit target stays clear. */
+.tr-root .tr-wk::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0 0 -6px;
 }
 .tr-root .tr-wk:hover {
-  scale: 1.18;
+  scale: 1.08;
+}
+.tr-root .tr-pin .tr-works-k {
+  margin-top: 8px;
 }
 .tr-root .tr-pin ul.tr-works {
   margin: 6px 0 0;
