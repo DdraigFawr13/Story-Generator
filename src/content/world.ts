@@ -1192,9 +1192,9 @@ export const eventTypes: EventTypeDef[] = [
     links: { site: 'site', civ: 'civ' },
     dataKeys: ['civ'],
     templates: [
-      'In {date} {site} passed from {from} to the {civ}, and {order} taught on under its new lords.',
-      '{date}: the {civ} took {site}, and {order} served them as it had served {from}.',
-      '{order} at {site} passed to the {civ} in {date}, who had taken it from {from}.',
+      'In {date} {site} passed from the {from} to the {civ}, and {order} taught on under its new lords.',
+      '{date}: the {civ} took {site}, and {order} served them as it had served the {from}.',
+      '{order} at {site} passed to the {civ} in {date}, who had taken it from the {from}.',
     ],
   },
   {

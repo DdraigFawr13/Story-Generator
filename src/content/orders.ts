@@ -101,7 +101,7 @@ export const ORDERS: OrderRules = {
     lastDied: 'its last {member} died',
     lost: 'lost with the ruin of {site}',
     headDied: 'the death of {head}',
-    ended: 'the end of {order}',
+    ended: 'the closing of its halls',
     scholarsPassed: 'the passing of its scholars',
     collegeLost: 'with the fall of {site}',
     collegeHunted: 'when {site} passed to the {civ}, who hunt mages',
