@@ -28,6 +28,8 @@ export interface Model {
   figures: Figure[];
   wars: WarHosts[];
   settlers: Settlers[];
+  /** The last year of history: nothing walks once it is reached. */
+  last: number;
 }
 
 export function buildModel(world: WorldState, data: PlaybackData, content: ContentBundle): Model {
@@ -76,6 +78,6 @@ export function buildModel(world: WorldState, data: PlaybackData, content: Conte
   };
   const siteCell = (name: string) => data.siteByName.get(name)?.cell;
   const wars = buildWarHosts(data.events, seatCell, grid, data.last);
-  const settlers = buildSettlers(data.events, siteCell, grid);
-  return { beasts, figures, wars, settlers };
+  const settlers = buildSettlers(data.events, siteCell, grid, data.last);
+  return { beasts, figures, wars, settlers, last: data.last };
 }

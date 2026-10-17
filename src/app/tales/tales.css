@@ -407,7 +407,7 @@
 }
 /* The crossed swords sit just below the field, under the two flags. */
 .tr-root .tr-mk.meet {
-  transform: translate(-50%, -10%);
+  transform: translate(-50%, 0%);
 }
 /* Its words may drop below the flags when they would touch them (labels.ts sets the nudge). */
 .tr-root .tr-mk.meet span {

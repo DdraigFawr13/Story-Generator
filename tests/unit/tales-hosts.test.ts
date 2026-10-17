@@ -87,12 +87,17 @@ describe('war hosts', () => {
     expect(Number.isFinite(ended.vanish)).toBe(true);
     const alder = ended.hosts.find((h) => h.civ === 'Alder')!;
     expect(alder.legs[alder.legs.length - 1]).toMatchObject({ from: 30, to: 10 });
-    expect(hostAt(alder, ended.vanish, W)).toBeNull();
-    expect(hostAt(alder, ended.vanish - FADE_YEARS / 2, W)!.opacity).toBeCloseTo(0.5);
+    expect(hostAt(alder, alder.vanish, W)).toBeNull();
+    expect(hostAt(alder, alder.vanish - FADE_YEARS / 2, W)!.opacity).toBeCloseTo(0.5);
+    // It walks at a steady pace and fades only once it is home.
+    const home = alder.legs[alder.legs.length - 1]!;
+    expect(alder.vanish).toBeCloseTo(home.end + FADE_YEARS);
 
     const open = buildWarHosts([battle(98, 30, 'Alder', 10, 80, 'Alder')], seatCell, grid, 100)[0]!;
-    expect(open.vanish).toBe(Infinity);
-    expect(hostAt(open.hosts[0]!, 99.9, W)).not.toBeNull();
+    // A war still going when history stops fades out by the last year, so nothing stands frozen.
+    expect(open.vanish).toBe(100);
+    expect(hostAt(open.hosts[0]!, 99.5, W)).not.toBeNull();
+    expect(hostAt(open.hosts[0]!, 100, W)).toBeNull();
   });
 });
 
@@ -124,6 +129,7 @@ describe('pickGroups', () => {
     battles: [],
     appear,
     vanish: appear + 10,
+    shownFrom: appear,
   });
   const band = (n: number, start: number) => ({
     key: `s${n}`,
@@ -146,5 +152,21 @@ describe('pickGroups', () => {
     expect(picked.wars.length + picked.settlers.length).toBeLessThanOrEqual(3);
     // Once the first war is gone the waiting one takes its slot.
     expect(pickGroups(wars, [], 11.5).wars.map((w) => w.war)).toEqual([2, 3]);
+  });
+
+  it('a third war waits until a slot has faded out', () => {
+    const events: WalkEvent[] = [1, 2, 3].map((id) => ({
+      ...battle(10 + id * 0.1, 30 + id, 'Alder', 10, 80, 'Alder'),
+      data: {
+        ...battle(10, 30, 'Alder', 10, 80, 'Alder').data,
+        war: id,
+        civ: `A${id}`,
+        winner: `A${id}`,
+      },
+    }));
+    const wars = buildWarHosts(events, seatCell, grid, 100);
+    const third = wars.find((w) => w.war === 3)!;
+    const firstGone = Math.min(...wars.filter((w) => w.war !== 3).map((w) => w.vanish));
+    expect(third.shownFrom).toBeCloseTo(firstGone);
   });
 });

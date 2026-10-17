@@ -30,6 +30,7 @@ import {
   assignRaceHues,
   borderColour,
   fillColour,
+  hlsToRgb,
   labelColour,
   touching,
   type Neighbours,
@@ -55,7 +56,15 @@ import {
 import { ExploreMarks, Glyph, Towns, type TownMark } from './exploreMarks';
 import { settleLabels } from './labels';
 import { PHONE_MAX, cardSide, fitMap, nearestCell } from './layout';
-import { Capitals, MAX_TAGS, Marks, type Clock, type Recent } from './markers';
+import {
+  Capitals,
+  MAX_TAGS,
+  Marks,
+  SettlersIcon,
+  SwordsIcon,
+  type Clock,
+  type Recent,
+} from './markers';
 import { buildModel } from './model';
 import {
   DEFAULT_PAUSES,
@@ -232,10 +241,10 @@ function Room({
 }: Props & { data: PlaybackData }) {
   const palette = useMemo(() => buildPalette(world, data), [world, data]);
   /** A flag's fill: the realm's border colour. */
-  const flagColour = (name: string) => {
+  const flagColour = (name: string, alt = false) => {
     const hue = palette.hue.get(data.civByName.get(name)?.id ?? -1);
-    if (hue === undefined) return '#a0442c';
-    const [r, g, b] = borderColour(hue);
+    if (hue === undefined) return alt ? '#d9826b' : '#a0442c';
+    const [r, g, b] = alt ? hlsToRgb(hue, 0.7, 0.55) : borderColour(hue);
     return `rgb(${r},${g},${b})`;
   };
   const baseModel = useMemo(() => buildModel(world, data, DEFAULT_CONTENT), [world, data]);
@@ -1288,6 +1297,7 @@ function Room({
                 height={H}
                 followId={follow?.id ?? null}
                 maxTags={stage.w <= PHONE_MAX ? 1 : MAX_TAGS}
+                small={stage.w <= PHONE_MAX}
                 recent={recent}
                 flagColour={flagColour}
               />
@@ -1506,9 +1516,21 @@ function Room({
               town
             </div>
             {armies && (
-              <div>
+              <div title="A war's host, in its realm's colour">
                 <FlagKey />
-                army
+                host
+              </div>
+            )}
+            {armies && (
+              <div>
+                <SwordsIcon />
+                battle
+              </div>
+            )}
+            {settling && (
+              <div>
+                <SettlersIcon />
+                settlers
               </div>
             )}
             <div>
@@ -1805,10 +1827,12 @@ function Room({
   );
 }
 
+/** Two flags in two realm colours: each side's host has its realm's colour. */
 const FlagKey = () => (
-  <svg width="12" height="14" viewBox="0 0 14 17" aria-hidden="true">
-    <path d="M2 16V1" stroke="#2d2a25" strokeWidth="1.6" />
-    <path d="M2 1.5h10l-3 3.3 3 3.3H2z" fill="#a0442c" />
+  <svg width="20" height="14" viewBox="0 0 24 17" aria-hidden="true">
+    <path d="M2 16V1M12 16V1" stroke="#2d2a25" strokeWidth="1.6" />
+    <path d="M2 1.5h8l-2.4 3.3 2.4 3.3H2z" fill="#a0442c" />
+    <path d="M12 1.5h10l-3 3.3 3 3.3H12z" fill="#3e7ca6" />
   </svg>
 );
 const StarKey = () => (

@@ -10,12 +10,17 @@ export const MARCH_YEARS = 0.7;
 export const STAY_YEARS = 0.3;
 /** Years the loser takes to fall back to its seat. */
 export const RETREAT_YEARS = 0.4;
-/** Years a host takes to walk home when the war ends. */
-export const HOME_YEARS = 0.6;
+/** Cells a host walks in a year when it falls back after its last battle or walks home. */
+export const WALK_CELLS_PER_YEAR = 40;
+/** Shortest and longest of those walks, in years. */
+export const WALK_MIN_YEARS = 0.3;
+export const WALK_MAX_YEARS = 1.5;
+/** Wars drawn at once; a later war waits for a free slot. */
+export const WAR_SLOTS = 2;
 /** Years a host or a band fades in or out. */
 export const FADE_YEARS = 0.15;
 /** Years settlers walk; they arrive at the start of the founding's year, when the town is drawn. */
-export const SETTLE_YEARS = 0.8;
+export const SETTLE_YEARS = 1;
 /** A war whose last battle is this close to the end of history is still going. */
 const OPEN_WAR_YEARS = 3;
 
@@ -62,6 +67,8 @@ export interface WarHosts {
   battles: WarBattle[];
   appear: number;
   vanish: number;
+  /** When the war gets a slot on the map (its appear, or later when two wars already hold one). */
+  shownFrom: number;
 }
 export interface Settlers {
   key: string;
@@ -80,6 +87,17 @@ const lazyPath = (grid: RoadGrid, from: number, to: number): (() => number[]) =>
   let cache: number[] | null = null;
   return () => (cache ??= roadPath(grid, from, to));
 };
+
+/** Years to walk a path at a steady pace, within the shortest and longest walk. */
+function walkYears(path: readonly number[], width: number): number {
+  let cells = 0;
+  for (let k = 1; k < path.length; k += 1) {
+    const a = path[k - 1]!;
+    const b = path[k]!;
+    cells += Math.hypot((a % width) - (b % width), Math.floor(a / width) - Math.floor(b / width));
+  }
+  return Math.min(WALK_MAX_YEARS, Math.max(WALK_MIN_YEARS, cells / WALK_CELLS_PER_YEAR));
+}
 
 /** One host a side per war, from the war's battles in time order. */
 export function buildWarHosts(
@@ -112,11 +130,9 @@ export function buildWarHosts(
     }
     const peaceT = peace.get(war);
     const open = peaceT === undefined && last - lastBattle.t < OPEN_WAR_YEARS;
-    const end =
-      peaceT !== undefined
-        ? Math.max(peaceT, lastBattle.t + STAY_YEARS)
-        : lastBattle.t + STAY_YEARS + RETREAT_YEARS;
-    const hosts = names.map((name) => buildHost(war, name, list, seatCell, grid, end, open));
+    // Hosts leave the field together as soon as the swords have faded.
+    const end = Math.max(peaceT ?? 0, lastBattle.t + STAY_YEARS);
+    const hosts = names.map((name) => buildHost(war, name, list, seatCell, grid, end, open, last));
     const warBattles = list.map((b, i): WarBattle => {
       const next = list[i + 1];
       return {
@@ -134,7 +150,17 @@ export function buildWarHosts(
       battles: warBattles,
       appear: Math.min(...hosts.map((h) => h.appear)),
       vanish: Math.max(...hosts.map((h) => h.vanish)),
+      shownFrom: Infinity,
     });
+  }
+  // Slots in order of appearance: a war waits until a slot's last host has faded out.
+  const free = Array.from({ length: WAR_SLOTS }, () => -Infinity);
+  for (const w of [...out].sort((a, b) => a.appear - b.appear || a.war - b.war)) {
+    const k = free.indexOf(Math.min(...free));
+    const from = Math.max(w.appear, free[k]!);
+    if (from >= w.vanish) continue;
+    w.shownFrom = from;
+    free[k] = w.vanish;
   }
   return out;
 }
@@ -147,6 +173,7 @@ function buildHost(
   grid: RoadGrid,
   endAt: number,
   open: boolean,
+  last: number,
 ): Host {
   const legs: Leg[] = [];
   const leg = (from: number, to: number, start: number, end: number) =>
@@ -171,26 +198,21 @@ function buildHost(
     leg(from, b.place!, b.t - marchLen, b.t);
   }
   const lastB = list[list.length - 1]!;
-  let at = lastB.place!;
-  let free = lastB.t + STAY_YEARS;
-  if (String(lastB.data.winner) !== name) {
-    const seat = seatCell(name, lastB.y);
-    if (seat !== undefined) {
-      leg(at, seat, free, free + RETREAT_YEARS);
-      at = seat;
-      free += RETREAT_YEARS;
-    }
-  }
-  let vanish = Infinity;
+  const at = lastB.place!;
+  const free = lastB.t + STAY_YEARS;
+  // A war still going when history stops fades out by the last year.
+  let vanish = last;
   if (!open) {
+    // The loser falls back and the winner walks home, both at a steady pace; each fades on arrival.
     const end = Math.max(endAt, free);
-    const seat = seatCell(name, Math.floor(end));
+    const seat = seatCell(name, Math.floor(end)) ?? seatCell(name, lastB.y);
     let gone = end;
     if (seat !== undefined && seat !== at) {
-      leg(at, seat, end, end + HOME_YEARS);
-      gone = end + HOME_YEARS;
+      const path = roadPath(grid, at, seat);
+      gone = end + walkYears(path, grid.width);
+      legs.push({ from: at, to: seat, start: end, end: gone, path: () => path });
     }
-    vanish = gone + FADE_YEARS;
+    vanish = Math.min(last, gone + FADE_YEARS);
   }
   return {
     key: `host:${war}:${name}`,
@@ -207,10 +229,13 @@ export function buildSettlers(
   events: readonly WalkEvent[],
   siteCell: (name: string) => number | undefined,
   grid: RoadGrid,
+  last = Infinity,
 ): Settlers[] {
   const out: Settlers[] = [];
   for (const e of events) {
     if (e.type !== 'site_founded' || e.place === null || !e.data.from) continue;
+    // A band arriving at the very end would stand still under the closing card.
+    if (e.y >= last) continue;
     const fromName = String(e.data.from);
     const from = siteCell(fromName);
     if (from === undefined || from === e.place) continue;
@@ -298,8 +323,8 @@ export function pickGroups(
   max = 3,
 ): { wars: WarHosts[]; settlers: Settlers[] } {
   const live = wars
-    .filter((w) => w.appear <= t && t < w.vanish)
-    .sort((a, b) => a.appear - b.appear || a.war - b.war)
+    .filter((w) => w.shownFrom <= t && t < w.vanish)
+    .sort((a, b) => a.shownFrom - b.shownFrom || a.war - b.war)
     .slice(0, Math.min(maxWars, max));
   const room = Math.min(1, max - live.length);
   const bands = settlers
