@@ -637,30 +637,53 @@ After the Phase 3 playtest Morgan asked for additions ranked by value and coding
 
 Items not in the list (M4.5, M5.1, M5.3, M5.4, the rest of Phases 6–9) keep their place and come after it unless a check-in moves them.
 
-#### Where the list stands (2026-10-17)
+#### Where the list stands (2026-10-17, evening)
 
-Twelve threads have merged since the list was written (#101 to #122, `CHANGELOG.md`), beside the Four rooms UI redesign (#110 to #113, #115, #117) and the faster tests (#119). Thirteen of the sixteen items are built in full or in their history part. Left, in list order:
+Thirty-eight threads have merged since the list was written (#101 to #138, `CHANGELOG.md`). Thirteen of the sixteen ranked items are built in full, and the proposed next set P1 to P8 is built too (P5, a page per faith, is in review as #136). Left:
 
-- Built since: the family tree (item 6), on each house's page in the People room (#124).
-- UI halves of built items: a page per faith (8); vassals on the map and "vassal of" in the People room (13).
-- History leftovers: none; other great beasts and the restless dead as individuals (7) are build order 20. The dragon courted, feared or put under bounty (10) is built as build order 17.
-- Not started: the story threads view (11), trade between peoples (14), the world moving while you watch (15).
-- Rough edges carried from earlier threads: the after-play map pauses about 0.4 s when the sharper map swaps in and draws stepped borders at full zoom; `?year=` starts at a different year from where Tales plays. Child deaths, the orc share and holds at passes were fixed in the rough-edges bundle (P8, 2026-10-17); cross-border trade turned out to be 26% to 30% of trades already.
+- Not started from the ranked list: the story threads view (11), trade between peoples (14; cross-border trade turned out to be 26% to 30% of trades already, so only its story parts remain), the world moving while you watch (15).
+- UI halves: a page per order and academy (orders and academies have no screen yet); a page per faith is in review (#136).
+- Screen edges after the map polish (#125 fixed the swap-in pause, the stepped borders and the waiting year link): borders trail the year by about 0.75 s while scrubbing; some era names carry a double "the"; `?year=` may still open Tales at a different year on a phone (Morgan's report, to be checked).
 
-#### Proposed next set (2026-10-17; a proposal, not approved)
-
-For when the picks Morgan has already seen (vassals shown in the UI, the world moving while you watch) are placed. Ranked by fit with Morgan's recorded taste: personal and story-first screens, famous figures who did things, betrayals, a calm on-theme map with a touch of fantasy, records of how things came to be. Value 1–5; effort S, M or L as above. None starts without Morgan's pick.
+#### Proposed next set (2026-10-17 morning; all picked and built)
 
 | Order | Addition | Where | What you would see | Value | Effort |
 | --- | --- | --- | --- | --- | --- |
-| P1 | The dragon at court | Phase 6 leftover | Picked 2026-10-17; now build order 17 above | 4 | M |
-| P2 | Perilous places on the map and a Places page | M4.7 leftover | Picked 2026-10-17; built 2026-10-17 | 4 | S |
-| P3 | Great works and enchanting | M5.3 | Picked 2026-10-17; now build order 18 above | 4 | M |
-| P4 | Feuds across generations and exile | M4.5 | Picked 2026-10-17; now build order 19 above | 4 | M |
-| P5 | A page per faith | Phase 7 leftover | Gods, holy city, high priests in order, schisms and holy wars, in the People and Book rooms | 3 | S |
-| P6 | Orders and academies | Phase 7 | Picked 2026-10-17; now build order 21 above | 3 | M |
-| P7 | Other great beasts and the restless dead | M5.6 leftover | Picked 2026-10-17; now build order 20 above | 3 | M |
-| P8 | Rough-edges bundle | the list above | Picked 2026-10-17; history edges built 2026-10-17 (child deaths, orcs, holds at passes) | 3 | S |
+| P1 | The dragon at court | Phase 6 leftover | Picked 2026-10-17; built as build order 17 (#126) | 4 | M |
+| P2 | Perilous places on the map and a Places page | M4.7 leftover | Picked 2026-10-17; built 2026-10-17 (#134) | 4 | S |
+| P3 | Great works and enchanting | M5.3 | Picked 2026-10-17; built as build order 18 (#129), marks on the map (#132) | 4 | M |
+| P4 | Feuds across generations and exile | M4.5 | Picked 2026-10-17; built as build order 19 (#131), with a Feuds and exiles section on house pages | 4 | M |
+| P5 | A page per faith | Phase 7 leftover | Picked 2026-10-17; in review (#136): gods, holy city, high priests in order, schisms and holy wars, in the People and Book rooms | 3 | S |
+| P6 | Orders and academies | Phase 7 | Picked 2026-10-17; built as build order 21 (#135) | 3 | M |
+| P7 | Other great beasts and the restless dead | M5.6 leftover | Picked 2026-10-17; built as build order 20 (#133) | 3 | M |
+| P8 | Rough-edges bundle | the list above | Picked 2026-10-17; built 2026-10-17 (#137: child deaths, orcs, holds at passes) | 3 | S |
+
+#### Proposed next set, second round (2026-10-17 evening; a proposal, not approved)
+
+Split into screen builds (`src/app`) and history builds (`src/engine`, `src/content`) so one of each can run side by side without touching the same files. Ranked by fit with Morgan's recorded taste: personal, story-first screens that read well on a phone; famous figures who did things, and a record of why; betrayals; a calm storyteller map. Value 1–5; effort S, M or L as above. None starts without Morgan's pick.
+
+Screen builds:
+
+| Order | Addition | Where | What you would see | Value | Effort |
+| --- | --- | --- | --- | --- | --- |
+| S1 | Orders and academies pages | Phase 7 (P6's UI half) | A page per order and academy in the People room: founder, seat, heads in order, members with their deeds, the spells it keeps or has lost; "Knight of ..." and "Scholar of ..." on person pages; a realm's page lists its orders | 4 | S |
+| S2 | Open stories | M4.6, re-scoped | At any year, the stories still unresolved: feuds burning, exiles abroad, bounties unclaimed, dragons unslain, wars on, seats disputed, lore lost; one line each with who and since when, on the year recap, the Tales end card and in the Book | 4 | M |
+| S3 | The world at a glance | new | The first page after a world is made, phone-first: its three biggest stories so far, the legends alive, its dragons and the realms at war, each a link into Tales, People or Book; reachable from the rail | 3 | S |
+| S4 | Screen edges bundle | UI_ROOMS status | Borders keep up with the scrub, era names lose the double "the", and whatever Morgan still sees on the phone (the year link) | 2 | S |
+
+History builds:
+
+| Order | Addition | Where | What you would see | Value | Effort |
+| --- | --- | --- | --- | --- | --- |
+| H1 | The world keeps moving while you watch | M4.1–M4.3 (item 15) | The world runs monthly during play: refugees and migrants from real troubled towns, caravans with real goods, raids by realms with a real grievance, visiting notables and a passing expedition that recruits a resident; the town's deeds, wealth and new notables go back into the legends | 5 | L |
+| H2 | Rulers with character and bynames | Phase 6 governments | Each ruler and legend gets a temper from their attributes and upbringing (bold, pious, greedy, cruel, cautious, learned) that tilts choices the engine already makes (wars, tribute, persecution, great works, courting a dragon, pardoning an exile), and the chronicle says why; bynames earned from deeds ("the Dragonslayer", "the Oathbreaker") | 4 | M |
+| H3 | Outlaws | M4.5 leftover | An exile with no court, a beaten claimant or a killer takes to the wild land with a band: robbed caravans and raided hamlets, a bounty, orders and heroes who hunt them, pardons, and the rare outlaw who becomes a legend or takes a seat | 4 | M |
+| H4 | Regents and child rulers | Phase 6 | A child inherits and a kinsman rules as regent, who hands the seat back, keeps it, or dies for trying; a minority invites claimants and neighbours | 3 | S |
+| H5 | Guilds and merchant houses | Phase 7 | Craft guilds and merchant houses in cities as notable families: a rich house lends to a realm at war, buys a seat on a free city's council, and falls with a plundered route | 3 | M |
+| H6 | Magic in the land | M5.4 | Gifted children awaken near high-aura places; each great beast carries one ability (a wyvern's fire, an afanc's flood, a water horse's lure); a blighted variant at extreme aura | 3 | M |
+| H7 | Trade between peoples, story parts | M4.4 (item 14) | A port city on a busy route grows rich and famous, an embargo is a cause of war, a plundered caravan a grievance; the cross-border trade itself already happens | 2 | M |
+
+Recommended pair: S1 with H2 (both one thread, no shared files). H1 is the largest and the one Morgan has seen twice; it runs as two or three threads and touches the site tier as well, so it is best started alone once the screen lane is quiet.
 
 ### Phase 0 — Reset and skeleton (2–3 PRs)
 - **M0.1 Docs reset:**
