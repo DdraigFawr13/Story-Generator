@@ -145,7 +145,7 @@ test.describe('on a touch screen', () => {
     await expect(stage).toBeVisible({ timeout: 30_000 });
     await page.getByRole('button', { name: 'Pause history' }).click();
     const cdp = await page.context().newCDPSession(page);
-    const touch = (type: string, pts: [number, number][]) =>
+    const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', pts: [number, number][]) =>
       cdp.send('Input.dispatchTouchEvent', {
         type,
         touchPoints: pts.map(([x, y], id) => ({ x, y, id })),
