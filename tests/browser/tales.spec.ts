@@ -133,3 +133,37 @@ test('a shared Tales link at the present opens as a finished play', async ({ pag
   await expect(page.getByTestId('tales-stage')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole('button', { name: 'Explore the map' })).toBeVisible();
 });
+
+test.describe('on a touch screen', () => {
+  test.use({ hasTouch: true });
+  test('two fingers zoom the map while history plays, and the page itself stays put', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/?seed=SMOKE&size=128');
+    const stage = page.getByTestId('tales-stage');
+    await expect(stage).toBeVisible({ timeout: 30_000 });
+    await page.getByRole('button', { name: 'Pause history' }).click();
+    const cdp = await page.context().newCDPSession(page);
+    const touch = (type: string, pts: [number, number][]) =>
+      cdp.send('Input.dispatchTouchEvent', {
+        type,
+        touchPoints: pts.map(([x, y], id) => ({ x, y, id })),
+      });
+    await touch('touchStart', [
+      [155, 420],
+      [235, 420],
+    ]);
+    for (let i = 1; i <= 6; i++) {
+      await touch('touchMove', [
+        [155 - 12 * i, 420],
+        [235 + 12 * i, 420],
+      ]);
+    }
+    await touch('touchEnd', []);
+    await expect(stage).toHaveAttribute('data-explore', 'false');
+    expect(Number(await stage.getAttribute('data-zoom'))).toBeGreaterThan(1.5);
+    expect(await page.evaluate(() => window.visualViewport?.scale)).toBe(1);
+    await expect(page.getByRole('button', { name: 'Whole map' })).toBeVisible();
+  });
+});

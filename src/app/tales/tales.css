@@ -890,8 +890,11 @@
 }
 
 /* ---- explore: zoom, event marks, town names, place card ---- */
-.tr-root .tr-stage.exploring {
+/* Drag pans and pinch zooms the map, in play and explore; the page itself never zooms here. */
+.tr-root .tr-stage {
   touch-action: none;
+}
+.tr-root .tr-stage.exploring {
   cursor: grab;
 }
 .tr-root .tr-stage.exploring.dragging {

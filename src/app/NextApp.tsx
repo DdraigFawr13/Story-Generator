@@ -58,7 +58,7 @@ import { SiteView, type SiteLinkParts, type TickListener } from './SiteView';
 import { BookRoom } from './book/BookRoom';
 import { booksOf, chapterOfEvent, pickBook } from './book/data';
 import { PeopleRoom } from './people/PeopleRoom';
-import { WorldControlsContext, type RoomId, type WorldControls } from './rooms/Rooms';
+import { RoomsLoading, WorldControlsContext, type RoomId, type WorldControls } from './rooms/Rooms';
 import { TalesRoom } from './tales/TalesRoom';
 import { TownPicker } from './town/TownPicker';
 import { TownRoom } from './town/TownRoom';
@@ -1327,11 +1327,14 @@ export function NextApp() {
   // While a room is shown the classic viewer stays mounted under it but out of reach: no focus,
   // no clicks, nothing read aloud.
   const roomOver = people || book !== null || picker;
-  const covered = roomOver || playback !== null;
+  // In the rooms the first world is made behind a plain page, never the classic viewer.
+  const loading = roomsMode.current && progress !== null && playback === null && !roomOver;
+  const covered = roomOver || playback !== null || loading;
   const away = (on: boolean) => (on ? { inert: true, 'aria-hidden': true } : {});
   return withControls(
     <main className="wm-root" data-revision={revision}>
       <h1>Story Generator — world map</h1>
+      {loading && <RoomsLoading label={progress.label} fraction={progress.fraction} />}
       {CONTENT_PROBLEMS.length > 0 && (
         <pre role="alert" style={{ color: '#b00020' }}>
           {CONTENT_PROBLEMS.join('\n')}
@@ -1448,7 +1451,7 @@ export function NextApp() {
           <span className="progress-label">{progress?.label ?? ''}</span>
         </div>
         <div className="wm-main" data-tab={tab}>
-          <div className="wm-mapcol" {...away(roomOver)}>
+          <div className="wm-mapcol" {...away(roomOver || loading)}>
             {playback ? (
               <TalesRoom
                 key={playback.key}
