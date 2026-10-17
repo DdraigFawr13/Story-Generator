@@ -183,7 +183,7 @@ export const emptiedBy = (p: PlaceInfo, year: number) =>
 /** A word for how dangerous a place is, from its danger in soldier equivalents. */
 export function dangerWord(danger: number): string {
   if (danger <= 3) return 'uneasy';
-  if (danger <= 7) return 'perilous';
+  if (danger <= 7) return 'dangerous';
   if (danger <= 14) return 'deadly';
   return 'dreadful';
 }

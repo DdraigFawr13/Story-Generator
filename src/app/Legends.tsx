@@ -245,7 +245,7 @@ export function Legends(props: Props) {
       ref: { kind: 'civ', id: civ.id },
       name: civ.name,
       years: spanText(civ.founded, civ.fell),
-      meta: `${raceName(civ.raceId)} · ${live.get(civ.id) ?? 0} places`,
+      meta: `${raceName(civ.raceId)} · ${live.get(civ.id) ?? 0} settlements`,
     }));
     const sites: Row[] = [...world.sites.values()]
       .sort((a, b) => b.peakPop - a.peakPop || a.id - b.id)

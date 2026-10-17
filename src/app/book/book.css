@@ -697,3 +697,11 @@
     max-width: 38%;
   }
 }
+
+/* A short line under a contents heading. */
+.bk-root.bk-root .bk-note {
+  margin: 2px 0 6px;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--soft);
+}

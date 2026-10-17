@@ -148,6 +148,11 @@
   color: var(--soft);
 }
 .tr-root .tr-chooser .head span:first-child,
+.tr-root .tr-chooser .row .np {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--soft);
+}
 .tr-root .tr-chooser .row .name {
   justify-self: start;
 }
@@ -1409,7 +1414,7 @@
 }
 .tr-root .tr-pl {
   position: absolute;
-  z-index: 2;
+  z-index: 1;
   width: 18px;
   height: 18px;
   padding: 0;
@@ -1423,8 +1428,21 @@
   animation: tr-fade 0.45s ease both;
 }
 .tr-root .tr-pl.small {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
+}
+/* On the whole map a place is a small stone diamond, apart from the round event dots. */
+.tr-root .tr-pl.small i {
+  display: block;
+  width: 5px;
+  height: 5px;
+  rotate: 45deg;
+  background: #a3a69c;
+  border: 1px solid rgba(45, 42, 37, 0.8);
+}
+.tr-root .tr-pl.small.emptied i {
+  background: none;
+  border-style: dashed;
 }
 .tr-root .tr-pl svg {
   display: block;
@@ -1433,11 +1451,11 @@
 .tr-root .tr-pl.emptied svg {
   opacity: 0.75;
 }
-/* A tap target larger than the mark. */
+/* A tap target a little larger than the mark; a town's own hit target stays on top of it. */
 .tr-root .tr-pl::after {
   content: '';
   position: absolute;
-  inset: -6px;
+  inset: -4px;
 }
 .tr-root .tr-pl:hover,
 .tr-root .tr-pl.open {
@@ -1472,6 +1490,7 @@
   margin-top: 4px;
 }
 .tr-root .tr-pin ol.tr-trips .y {
+  display: inline-block;
   font-family: 'Alegreya Sans SC', sans-serif;
   letter-spacing: 0.04em;
   color: var(--soft);

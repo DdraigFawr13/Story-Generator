@@ -140,13 +140,13 @@ interface Props {
    * Open in the explore state at this year, not playing; with a cell, zoomed on it and ringed
    * ("show on map", the rail's World item).
    */
-  explore?: { year: number; cell: number | null } | null;
+  explore?: { year: number; cell: number | null; place?: Id } | null;
   /** Watch a town day by day (offered at the present only). */
   onWatch?: (siteId: Id) => void;
   /** Open a town's records. */
   onRecords?: (siteId: Id) => void;
   /** Open a perilous place's page. */
-  onPlace?: (placeId: Id) => void;
+  onPlace?: (placeId: Id, year: number) => void;
 }
 
 /** What the open place card is about: the events at a cell, or a town (and its events). */
@@ -324,6 +324,8 @@ function Room({
   const [showPlaces, setShowPlaces] = useState(true);
   const [focus, setFocus] = useState<number | null>(explore?.cell ?? null);
   const pendingFocus = useRef<number | null>(explore?.cell ?? null);
+  /** A place whose card reopens once the map is laid out (coming back from its page). */
+  const pendingPlace = useRef<Id | null>(explore?.place ?? null);
   const [year, setYear] = useState(Math.floor(explore?.year ?? startYear));
   const [card, setCard] = useState<{ event: PlaybackEvent; key: number } | null>(null);
   const [recent, setRecent] = useState<(Recent & { until: number })[]>([]);
@@ -1103,6 +1105,14 @@ function Room({
       side: sideOf(p.cell, view),
     });
   };
+  useEffect(() => {
+    const id = pendingPlace.current;
+    if (id === null || !view || !exploring) return;
+    pendingPlace.current = null;
+    const p = everyPlace.find((x) => x.id === id);
+    if (p) openPlace(p);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, exploring, everyPlace]);
   const openEvents = (c: MarkCluster) => {
     setFocus(null);
     setPin({ kind: 'events', cell: c.cell, cells: c.cells, side: sideOf(c.cell, view) });
@@ -1413,15 +1423,6 @@ function Room({
             )}
             {exploring && (
               <>
-                <Towns
-                  towns={towns}
-                  width={W}
-                  height={H}
-                  named={zoomed}
-                  skip={namedSeats}
-                  open={pin?.cell ?? null}
-                  onOpen={openTown}
-                />
                 <PlaceMarks
                   places={places}
                   width={W}
@@ -1430,6 +1431,15 @@ function Room({
                   detail={detail}
                   open={pin?.kind === 'place' ? pin.place : null}
                   onOpen={openPlace}
+                />
+                <Towns
+                  towns={towns}
+                  width={W}
+                  height={H}
+                  named={zoomed}
+                  skip={namedSeats}
+                  open={pin?.cell ?? null}
+                  onOpen={openTown}
                 />
                 <WorkMarks
                   works={works}
@@ -1567,7 +1577,7 @@ function Room({
                       <span className="name">
                         <PlaceGlyph kind="ruin" size={13} />
                         perilous places
-                        <small>{everyPlace.length}</small>
+                        <small>{mode === 'plain' ? 'not drawn in Plain' : everyPlace.length}</small>
                       </span>
                       <input
                         type="checkbox"
@@ -1575,12 +1585,9 @@ function Room({
                         checked={showPlaces}
                         onChange={() => setShowPlaces((on) => !on)}
                       />
-                      <input
-                        type="checkbox"
-                        aria-label="Pause on perilous places"
-                        checked={false}
-                        disabled
-                      />
+                      <span className="np" title="Places only mark the map; they never pause">
+                        never
+                      </span>
                     </div>
                   )}
                   <p>
@@ -1695,12 +1702,21 @@ function Room({
                 <h3>Perilous places</h3>
                 {placeKindsShown.map((k) => (
                   <div key={k.id}>
-                    <PlaceGlyph kind={k.id} size={12} />
+                    <PlaceGlyph kind={k.id} size={15} />
                     <span>
                       {k.label} <small>{places.filter((p) => p.kind === k.id).length}</small>
                     </span>
                   </div>
                 ))}
+                {places.some((p) => emptiedBy(p, year)) && (
+                  <div>
+                    <PlaceGlyph kind="ruin" size={15} emptied />
+                    <span>
+                      nothing left to find{' '}
+                      <small>{places.filter((p) => emptiedBy(p, year)).length}</small>
+                    </span>
+                  </div>
+                )}
               </section>
             )}
             {legend && (
@@ -1843,7 +1859,11 @@ function Room({
                 ✕
               </button>
               {pinPlace ? (
-                <PlaceCard place={pinPlace} year={year} onPage={onPlace} />
+                <PlaceCard
+                  place={pinPlace}
+                  year={year}
+                  onPage={onPlace && ((id) => onPlace(id, year))}
+                />
               ) : pinTown ? (
                 <>
                   <div
@@ -2122,8 +2142,7 @@ function PlaceCard({
         <ol className="tr-trips" aria-label="Expeditions">
           {shown.map((x) => (
             <li key={x.id}>
-              <span className="y">Year {x.year}</span>
-              {cap(x.who)} of {x.from}{' '}
+              <span className="y">Year {x.year}</span> {cap(x.who)} of {x.from}{' '}
               {x.endId !== null && x.year <= year ? outcomeText(x) : 'set out'}.
             </li>
           ))}

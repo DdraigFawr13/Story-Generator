@@ -922,7 +922,8 @@ function PlacePage({ id }: { id: Id }) {
   if (woke) parts.push(`Robbed, its dead woke in Year ${yearText(woke.year)}.`);
   const facts: Fact[] = [];
   const site = place.siteId === undefined ? undefined : world.sites.get(place.siteId);
-  if (site) facts.push(['Was', <Link to={{ kind: 'site', id: site.id }}>{site.name}</Link>]);
+  if (site)
+    facts.push(['Once the town of', <Link to={{ kind: 'site', id: site.id }}>{site.name}</Link>]);
   const beast = place.creatureId === undefined ? undefined : world.creatures.get(place.creatureId);
   if (beast)
     facts.push(['Lair of', <Link to={{ kind: 'beast', id: beast.id }}>{beast.name}</Link>]);
@@ -959,9 +960,9 @@ function PlacePage({ id }: { id: Id }) {
         limit={MEMBERS_SHOWN}
       />
     ) : place.finds > 0 ? (
-      'Something still unfound'
+      'Something still lies hidden there'
     ) : (
-      'Nothing known'
+      'Nothing is left to find'
     ),
   ]);
   if (deaths > 0) {

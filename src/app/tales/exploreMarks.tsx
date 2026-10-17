@@ -306,7 +306,10 @@ interface PlaceMarksProps {
   onOpen: (place: PlaceInfo) => void;
 }
 
-/** The perilous places there were by the year shown, each at its own cell. */
+/**
+ * The perilous places there were by the year shown, each at its own cell: a small stone diamond
+ * on the whole map, the kind's shape once zoomed in. They sit under the town hit targets.
+ */
 export function PlaceMarks({ places, width, height, year, detail, open, onOpen }: PlaceMarksProps) {
   return (
     <>
@@ -330,7 +333,7 @@ export function PlaceMarks({ places, width, height, year, detail, open, onOpen }
             aria-label={line}
             onClick={() => onOpen(p)}
           >
-            <PlaceGlyph kind={p.kind} size={detail ? 16 : 11} emptied={emptied} />
+            {detail ? <PlaceGlyph kind={p.kind} size={16} emptied={emptied} /> : <i />}
           </button>
         );
       })}

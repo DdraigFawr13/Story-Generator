@@ -400,6 +400,10 @@ function BookView({
               {perils.length > 0 && (
                 <section>
                   <h2>Perilous places</h2>
+                  <p className="bk-note">
+                    The {perils.length} of {world.places.size} where companies went in, most deaths
+                    first. Every place is marked on the Tales map.
+                  </p>
                   <ul>
                     {(morePerils ? perils : perils.slice(0, PERILS_SHOWN)).map((p) => (
                       <li key={p.id}>
