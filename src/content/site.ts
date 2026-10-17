@@ -15,6 +15,8 @@ export const SITE: SiteRules = {
   peoplePerHome: 5,
   // One 7x5 field for every 14 people.
   peoplePerField: 14,
+  // A household of more than 7 followed members gets a double-width home.
+  bigHousehold: 7,
   // A river in a neighbouring cell bends 35% of the way toward the site so a river site sits on its bank.
   riverPull: 0.35,
   // 15% of married men in a leaders-many-spouses culture take a second wife.

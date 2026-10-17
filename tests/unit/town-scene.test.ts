@@ -297,6 +297,15 @@ describe('town scene: pace and stagger', () => {
     expect(delays.filter((d) => d === 0).length).toBeLessThan(5);
   });
 
+  it('uses the engine leave time when there is one, and the id hash when not', () => {
+    const spread = 1000;
+    expect(leaveDelay(5, spread, 0)).toBe(0);
+    expect(leaveDelay(5, spread, 0.375)).toBe(500);
+    expect(leaveDelay(5, spread, 0.75)).toBe(spread);
+    expect(leaveDelay(5, spread, 2)).toBe(spread);
+    expect(leaveDelay(5, spread, undefined)).toBe(leaveDelay(5, spread));
+  });
+
   it('spreads departures over less than a block, and fades instead of walking at fast speeds', () => {
     for (const speed of [0.125, 0.25, 0.5, 1]) {
       const pace = pacing(speed);

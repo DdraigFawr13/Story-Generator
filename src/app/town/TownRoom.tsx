@@ -309,7 +309,8 @@ export function TownRoom(props: Props) {
         const pace = pacing(current);
         painter.current?.refresh(world, pace, latest.current.nameOf);
         setSnapshots((n) => n + 1);
-        const delay = who === null ? 0 : leaveDelay(who, pace.spreadMs);
+        const delay =
+          who === null ? 0 : leaveDelay(who, pace.spreadMs, world.people.get(who)?.detail?.leaveAt);
         if (delay > 0 && held.current) {
           if (!holdTimer.current) {
             holdTimer.current = window.setTimeout(() => {

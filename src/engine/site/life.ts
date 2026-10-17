@@ -261,23 +261,32 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
   const buildings = sortedById(active.buildings.values());
   const fields = buildings.filter((b) => b.defId === 'field' && b.followed);
   const stockpile = buildings.find((b) => b.defId === 'stockpile');
-  const shrine = buildings.find((b) => b.defId === 'shrine');
   const hall = buildings.find((b) => b.defId === 'hall');
-  const alehouse = buildings.find((b) => b.defId === 'alehouse');
-  const wellB = buildings.find((b) => b.defId === 'well');
+  // Buildings serving a role (a def of that id, or one whose `serves` names it), in id order.
+  const serving = (role: 'alehouse' | 'well' | 'shrine') =>
+    buildings.filter(
+      (b) =>
+        b.progress === undefined &&
+        (b.defId === role || rules.buildings.find((d) => d.id === b.defId)?.serves === role),
+    );
+  const shrines = serving('shrine');
+  const alehouses = serving('alehouse');
+  const wells = serving('well');
   const walkable = (k: number) => tileCost(active, rules, life, k) > 0 && map.building[k] === 0;
   // Tiles around the well on which to stand (it is solid), and the square's stall and shopper rings.
-  const wellSides: number[] = [];
-  if (wellB) {
+  const sidesOf = (wellB: Building): number[] => {
+    const sides: number[] = [];
     for (let y = wellB.y - 1; y <= wellB.y + wellB.h; y += 1) {
       for (let x = wellB.x - 1; x <= wellB.x + wellB.w; x += 1) {
         const inside =
           x >= wellB.x && x < wellB.x + wellB.w && y >= wellB.y && y < wellB.y + wellB.h;
         if (!inside && x >= 0 && y >= 0 && x < width && y < map.height && walkable(y * width + x))
-          wellSides.push(y * width + x);
+          sides.push(y * width + x);
       }
     }
-  }
+    return sides;
+  };
+  const wellSides = new Map<Id, number[]>(wells.map((w) => [w.id, sidesOf(w)]));
   const edgeTiles = (r: number): number[] => {
     const tiles: number[] = [];
     for (let y = active.origin[1] - r; y <= active.origin[1] + r; y += 1) {
@@ -290,6 +299,20 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
     return tiles;
   };
   const centreOf = (b: Building): [number, number] => [b.x + (b.w >> 1), b.y + (b.h >> 1)];
+  /** The building nearest (centre to centre) a point; ties go to the lowest id. */
+  const nearest = (list: Building[], x: number, y: number): Building | undefined => {
+    let found: Building | undefined;
+    let least = Infinity;
+    for (const b of list) {
+      const [bx, by] = centreOf(b);
+      const d = manhattan(bx, by, x, y);
+      if (d < least) {
+        least = d;
+        found = b;
+      }
+    }
+    return found;
+  };
   const cellOf = (b: Building | undefined, id: number, salt: number) =>
     b ? b.cells[mix(id, salt) % b.cells.length]! : -1;
   // Homes of families, and how many live alone (see `table` below).
@@ -313,13 +336,21 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
     );
     const slot = household ? household.members.indexOf(id) : 0;
     const [ox, oy] = active.origin;
-    const gx = clamp(ox + (mix(id, 1) % (2 * GREEN_SPREAD + 1)) - GREEN_SPREAD, 0, width - 1);
-    const gy = clamp(oy + (mix(id, 2) % (2 * GREEN_SPREAD + 1)) - GREEN_SPREAD, 0, map.height - 1);
+    // The places nearest their home (or the square), measured centre to centre.
+    const [hx, hy] = home ? centreOf(home) : [ox, oy];
+    const wellB = nearest(wells, hx, hy);
+    const shrine = nearest(shrines, hx, hy);
+    const alehouse = nearest(alehouses, hx, hy);
+    // Children play on the green: the square, or near their own street's well in a big town.
+    const [cx, cy] = wellB && wellB !== wells[0] ? centreOf(wellB) : [ox, oy];
+    const gx = clamp(cx + (mix(id, 1) % (2 * GREEN_SPREAD + 1)) - GREEN_SPREAD, 0, width - 1);
+    const gy = clamp(cy + (mix(id, 2) % (2 * GREEN_SPREAD + 1)) - GREEN_SPREAD, 0, map.height - 1);
     const green = tileCost(active, rules, life, gy * width + gx)
       ? gy * width + gx
-      : oy * width + ox;
-    // The followed field nearest their home (or the green), measured centre to centre.
-    const [hx, hy] = home ? centreOf(home) : [ox, oy];
+      : tileCost(active, rules, life, cy * width + cx)
+        ? cy * width + cx
+        : oy * width + ox;
+    const sides = wellB ? wellSides.get(wellB.id)! : [];
     let field: Building | undefined;
     let best = Infinity;
     for (const f of fields) {
@@ -386,7 +417,7 @@ function buildCache(world: WorldState, content: SiteContent, active: ActiveSite)
       wander: wander < 0 ? green : wander,
       step: step >= 0 && tileCost(active, rules, life, step) ? step : green,
       alehouse: alehouse ? interiorSpot(alehouse, mix(id, 30), width) : -1,
-      well: wellSides.length > 0 ? wellSides[mix(id, 31) % wellSides.length]! : -1,
+      well: sides.length > 0 ? sides[mix(id, 31) % sides.length]! : -1,
       weights: new Map(),
       job: undefined,
       workTile: -1,
@@ -886,7 +917,8 @@ export function stepBlock(world: WorldState, content: SiteContent): SimEvent[] {
   };
   const leaveAt = (p: Profile): number => {
     const leave = routines.leave;
-    const jitter = roll(p.id, 95, day, block) * leave.jitter;
+    const habit = ((hash3(p.id, 96, 0) % 10000) / 10000) * leave.personal;
+    const jitter = habit + roll(p.id, 95, day, block) * leave.jitter;
     if (block === 0 || block === BLOCKS - 1) return round2(Math.min(leave.max, jitter));
     const base = p.job ? (leave.jobBase[p.job.id] ?? leave.defaultBase) : leave.defaultBase;
     const age = p.band === 'child' ? leave.child : p.band === 'elder' ? leave.elder : 0;

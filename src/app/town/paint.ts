@@ -307,7 +307,7 @@ export class TownPainter {
 
   /**
    * Re-reads the site after a snapshot: the buildings, and where each resident now is. Each dot
-   * sets off after its own delay (a share of `pace.spreadMs` from its id, so no one moves on the
+   * sets off after its own delay (a share of `pace.spreadMs` from its engine leave time, so no one moves on the
    * beat) and walks, or fades at fast speeds, to its new place. A zero `glideMs` puts it there.
    */
   refresh(world: WorldState, pace: Pace, nameOf: (id: Id) => string, now = performance.now()) {
@@ -360,7 +360,7 @@ export class TownPainter {
         fy: here.y,
         tx,
         ty,
-        start: now + (duration > 0 ? leaveDelay(id, pace.spreadMs) : 0),
+        start: now + (duration > 0 ? leaveDelay(id, pace.spreadMs, detail?.leaveAt) : 0),
         duration,
         path,
         fade: pace.fade,

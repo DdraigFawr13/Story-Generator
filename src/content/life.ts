@@ -331,8 +331,10 @@ export const LIFE: LifeRules = {
       defaultBase: 0.1,
       child: 0.15,
       elder: 0.3,
-      // Up to this much more, drawn per person and block; the sum stays under `max`.
-      jitter: 0.45,
+      // A person's own habit, early riser to late, the same every day.
+      personal: 0.2,
+      // Up to this much more, drawn per person and block; base + age + personal + jitter stays near `max`.
+      jitter: 0.3,
       max: 0.75,
     },
     shifts: {
