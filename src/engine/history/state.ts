@@ -258,6 +258,7 @@ export interface HistoryRun {
     names: RngStream;
     beasts: RngStream;
     dragons: RngStream;
+    dragonCourt: RngStream;
     places: RngStream;
     trade: RngStream;
     war: RngStream;
@@ -468,6 +469,7 @@ export function createRun(
       names: streamFor(world, 'history.names'),
       beasts: streamFor(world, 'history.beasts'),
       dragons: streamFor(world, 'history.dragons'),
+      dragonCourt: streamFor(world, 'history.dragonCourt'),
       places: streamFor(world, 'history.places'),
       trade: streamFor(world, 'history.trade'),
       war: streamFor(world, 'history.war'),

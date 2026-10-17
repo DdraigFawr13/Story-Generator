@@ -218,10 +218,20 @@ describe('lore', () => {
   });
 
   it('says when a lost book was the last source of a cantrip', () => {
-    const t = fresh({
-      ...SMALL,
-      lore: { ...C.lore, books: { ...C.lore.books, lossPerDay: 1, lendEveryDays: 1 } },
+    // A town whose people hold no book of their own, so the test's book is the only one to lose.
+    const { world: bookless } = findWorld('a town with no book', 'lore', SEEDS, make, (w) => {
+      const town = biggest(w).id;
+      return ![...w.items.values()].some(
+        (i) => i.kind === 'book' && i.holder !== null && w.people.get(i.holder)?.siteId === town,
+      );
     });
+    const t = fresh(
+      {
+        ...SMALL,
+        lore: { ...C.lore, books: { ...C.lore.books, lossPerDay: 1, lendEveryDays: 1 } },
+      },
+      bookless,
+    );
     const owner = t.parent;
     owner.attributes = { ...owner.attributes, intellect: 15 };
     addBook(t.world, t.active, owner.id);

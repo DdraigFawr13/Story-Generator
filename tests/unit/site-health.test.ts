@@ -14,12 +14,12 @@ import {
   type Id,
   type WorldState,
 } from '../../src/engine';
-import { base, biggest } from './helpers/site-fixture';
+import { baseB, biggest } from './helpers/site-fixture';
 
 const C = DEFAULT_CONTENT;
 
 function fresh() {
-  const world = structuredClone(base());
+  const world = structuredClone(baseB());
   const active = embark(world, C, biggest(world).id);
   const { emit, label } = voiceOf(world, C, active);
   // Nobody has a job unless a test gives one; no herbs unless asked.
@@ -128,8 +128,9 @@ describe('health', () => {
   });
 
   it('keeps the dead dead and takes them out of the site counts', () => {
+    // SITE-B: after the 2026-10-17 dragon-court change SITE-A's biggest town lost nobody on leaving.
     // A site that has a notable living in it, so one of the dead keeps a record.
-    const world = structuredClone(base());
+    const world = structuredClone(baseB());
     const home = [...world.people.values()].find(
       (p) =>
         p.died === undefined && p.siteId != null && sitePopulation(world.sites.get(p.siteId)!) > 20,

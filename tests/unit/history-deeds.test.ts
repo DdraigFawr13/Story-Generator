@@ -23,7 +23,8 @@ const FREQUENT = {
 const LEGEND_POWER = 17;
 
 // The tests search this fixed list for a world with the event they check (first match wins).
-const SEEDS = ['DH-134', 'DH-3', 'DH-37', 'DH-79', 'DH-81', 'DH-152', 'DH-34', 'DH-105'];
+// DH-60 leads since the 2026-10-17 dragon-at-court change left the others without a duel.
+const SEEDS = ['DH-60', 'DH-134', 'DH-3', 'DH-37', 'DH-79', 'DH-81', 'DH-152', 'DH-34', 'DH-105'];
 const make = (seed: string) =>
   generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, FREQUENT);
 /** The first world in SEEDS where `has` holds. */
@@ -84,10 +85,11 @@ describe('legend deeds', () => {
   });
 
   it('send only legends on failed hunts, unless a dragon hoard drew the hunter', () => {
-    // M5.6: heroes and great mages may ride for a dragon's hoard too (dragon_quest).
+    // M5.6: heroes and great mages may ride for a dragon's hoard too (dragon_quest), and a hero of
+    // a realm that put a price on a dragon may take it (dragon_bounty_taken).
     const w = withType('beast_hunt_failed');
     for (const e of ofType(w, 'beast_hunt_failed')) {
-      if (cause(w, e, 'dragon_quest')) continue;
+      if (cause(w, e, 'dragon_quest') || cause(w, e, 'dragon_bounty_taken')) continue;
       expect(w.people.get(e.actors[0]!)!.magic.power).toBeGreaterThanOrEqual(LEGEND_POWER);
     }
   });

@@ -259,7 +259,8 @@ describe('book summary', () => {
       }
       const wars = events.filter((e) => e.type === 'war_declared').length;
       const line = summaryOf(c.from, c.to, events);
-      expect(line.includes('war')).toBe(wars > 0);
+      // (A quiet era's line says "No war", so look for a count.)
+      expect(/\d+ wars?/.test(line)).toBe(wars > 0);
       if (wars > 0) expect(line).toContain(`${wars} war`);
     }
   });

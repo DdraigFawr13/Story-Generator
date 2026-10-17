@@ -6,6 +6,7 @@
 import type { CreatureDef, DragonTemper } from '../core/content-types';
 import type { Creature, Id, Person, Region, Site } from '../core/types';
 import { TIERS } from '../people/tiers';
+import { noteDragonHarm } from './dragon-court';
 import { civLosesSite, findRefuge, ruinSite } from './abandon';
 import { NO_NEAR, fightHunt, findLair, livingCreatures, nearestSite } from './beasts';
 import { itemsHeldBy } from './items';
@@ -351,6 +352,7 @@ export function askTribute(
     },
   });
   creature.deeds.push(event.id);
+  noteDragonHarm(run, creature, site.civId, event.id);
   return true;
 }
 
@@ -382,6 +384,7 @@ export function burnAfterRaid(
     data: { beast: creature.name, site: site.name, civ: civ?.name ?? '', dead },
   });
   creature.deeds.push(event.id);
+  noteDragonHarm(run, creature, civ?.id ?? null, event.id);
   if (civ) civLosesSite(run, civ, site, event.id);
   const home = civ && civ.fell === undefined ? world.sites.get(civ.capital) : undefined;
   relocateNotables(run, site, refuge ?? home);
