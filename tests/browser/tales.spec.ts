@@ -85,3 +85,9 @@ test('a shared Tales link waits at its year until Play', async ({ page }) => {
   await page.getByRole('button', { name: 'Play history' }).click();
   await expect(year).not.toHaveValue('40');
 });
+
+test('a shared Tales link at the present opens as a finished play', async ({ page }) => {
+  await page.goto('/?seed=SMOKE&size=128&room=tales&year=999');
+  await expect(page.getByTestId('tales-stage')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('button', { name: 'Explore the map' })).toBeVisible();
+});

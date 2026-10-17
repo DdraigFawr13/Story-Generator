@@ -283,7 +283,8 @@ function Room({
   const [follow, setFollow] = useState<{ id: Id; name: string } | null>(initialFollow ?? null);
   const [speed, setSpeed] = useState<number>(DEFAULT_SPEED);
   const [playing, setPlaying] = useState(!explore && !startPaused);
-  const [ended, setEnded] = useState(false);
+  // A link held at the present opens as a finished play: the end card offers Explore the map.
+  const [ended, setEnded] = useState(() => !explore && !!startPaused && startYear >= data.last);
   // Explore: the finished map, zoomable, with marks for the events. Playing never zooms.
   const [exploring, setExploring] = useState(() => !!explore);
   const [zoom, setZoom] = useState<View | null>(null);

@@ -1219,16 +1219,16 @@ export function* atlasSteps(
         const q = p * 4;
         if (edge) {
           // A dashed line about a pixel wide along the edge, a little inside it.
-          const line = Math.max(0, Math.min(1, 1.3 - Math.abs(sd - 0.4)));
+          const line = Math.max(0, Math.min(1, 1.1 - Math.abs(sd - 0.4)));
           if (line > 0 && (x + y) % 6 < 3 && coastPx(p) > nearCoast) {
-            put(q, [110, 86, 62], Math.round(190 * line));
+            put(q, [110, 86, 62], Math.round(160 * line));
           }
           if (!held) continue;
         }
         // Thin diagonal hatching, with its neighbours lightly inked so it reads as a line.
         const off = (((x - y) % hatch) + hatch) % hatch;
         const across = Math.min(off, hatch - off);
-        if (across <= 1) put(q, [120, 96, 70], Math.round((across === 0 ? 105 : 30) * c));
+        if (across <= 1) put(q, [120, 96, 70], Math.round((across === 0 ? 92 : 14) * c));
       }
     }
     ctx.putImageData(img, 0, 0);
