@@ -112,6 +112,9 @@ export function rolesOf(world: WorldState, person: Person, content: NameContent)
   if (ruler) {
     labels.push('ruler');
     offices.push(civ ? `ruler of the ${civ.name}` : 'ruler');
+    // A sitting ruler of a vassal realm bows to its overlord.
+    const lord = civ?.overlord === undefined ? undefined : world.civs.get(civ.overlord);
+    if (lord && civ?.rulerId === person.id) offices.push(`vassal of the ${lord.name}`);
   }
   if (priest) {
     labels.push('high priest');
