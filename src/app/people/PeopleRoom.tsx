@@ -33,6 +33,7 @@ import {
   magicOf,
   type MagicRecord,
 } from './data';
+import { HousePage } from './HouseTree';
 import '../tales/fonts.css';
 import './people.css';
 
@@ -51,6 +52,8 @@ interface Props {
   onAll?: (all: boolean) => void;
   /** Back from a record page: to the page before it, else the index. */
   onBack?: () => void;
+  /** The person page this one was opened from, if any: the house tree focuses on them. */
+  from?: PageRef | null;
 }
 
 /** Index rows shown at a time; scrolling to the end of the list reveals the next page. */
@@ -70,6 +73,7 @@ export function PeopleRoom(props: Props) {
             all={props.all ?? false}
             onAll={props.onAll ?? (() => undefined)}
             onBack={props.onBack ?? onIndex}
+            from={props.from?.kind === 'person' ? props.from.id : undefined}
           />
         ) : found ? (
           <PersonPage key={found.id} person={found} onFollow={onFollow} onIndex={onIndex} />
@@ -87,17 +91,20 @@ function RecordPage({
   all,
   onAll,
   onBack,
+  from,
 }: {
   page: PageRef;
   all: boolean;
   onAll: (all: boolean) => void;
   onBack: () => void;
+  from?: Id | undefined;
 }) {
   return (
     <div className="pp-scroll" data-testid="record-page">
       <button type="button" className="pp-back" onClick={onBack}>
         ‹ Back
       </button>
+      {page.kind === 'dynasty' && <HousePage id={page.id} focus={from} shade={shade} />}
       <div className="pp-record lg-page" data-kind={KIND_LABEL[page.kind]}>
         <PageView page={page} all={all} onAll={onAll} />
       </div>
@@ -555,6 +562,9 @@ function FamilyTab({ world, person }: { world: WorldState; person: Person }) {
               {line.founder?.id === person.id && ` by ${person.sex === 'f' ? 'her' : 'him'}`}{' '}
               {'\u00b7'} {line.members} {plural(line.members, 'person', 'people')} on record
             </small>
+            <Link to={{ kind: 'dynasty', id: line.id }} className="pp-ln">
+              See the family tree {'\u203a'}
+            </Link>
           </p>
         </div>
       )}
