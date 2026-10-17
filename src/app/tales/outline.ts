@@ -19,6 +19,24 @@ export function contours(
   level: number,
   sub: number,
 ): Outline[] {
+  const steps = contourSteps(plane, w, h, level, sub);
+  for (;;) {
+    const r = steps.next();
+    if (r.done) return r.value;
+  }
+}
+
+/** Grid points traced between pauses, so a big plane does not hold the page for long. */
+const SLICE_POINTS = 1 << 18;
+
+/** The same tracing in slices: each `next()` does a stretch of rows (see `atlasSteps`). */
+export function* contourSteps(
+  plane: Float32Array,
+  w: number,
+  h: number,
+  level: number,
+  sub: number,
+): Generator<void, Outline[], void> {
   const gw = w * sub + 1;
   const gh = h * sub + 1;
   const at = (gx: number, gy: number): number => {
@@ -37,8 +55,11 @@ export function contours(
     return top * (1 - ty) + bottom * ty;
   };
   const field = new Float32Array(gw * gh);
-  for (let gy = 0; gy < gh; gy += 1)
+  const rows = Math.max(1, Math.floor(SLICE_POINTS / gw));
+  for (let gy = 0; gy < gh; gy += 1) {
+    if (gy % rows === rows - 1) yield;
     for (let gx = 0; gx < gw; gx += 1) field[gy * gw + gx] = at(gx, gy);
+  }
 
   // An edge is named by its upper or left grid point: even ids run right, odd ids run down.
   const hEdge = (gx: number, gy: number) => (gy * gw + gx) * 2;
@@ -51,6 +72,7 @@ export function contours(
     links.get(b)!.push(a);
   };
   for (let gy = 0; gy < gh - 1; gy += 1) {
+    if (gy % rows === rows - 1) yield;
     for (let gx = 0; gx < gw - 1; gx += 1) {
       const a = field[gy * gw + gx]! > level ? 1 : 0;
       const b = field[gy * gw + gx + 1]! > level ? 2 : 0;
