@@ -295,3 +295,18 @@ export function RoomShell({
     </div>
   );
 }
+
+/** The rooms' first screen while a world is made: nothing to show yet, so a page of paper. */
+export function RoomsLoading({ label, fraction }: { label: string; fraction: number }) {
+  return (
+    <div className="rm-root rm-loading" data-testid="rooms-loading" role="status">
+      <div className="rm-loading-card">
+        <h2>Making the world</h2>
+        <div className="rm-loading-bar" aria-hidden="true">
+          <i style={{ width: `${Math.round(fraction * 100)}%` }} />
+        </div>
+        <p>{label}</p>
+      </div>
+    </div>
+  );
+}

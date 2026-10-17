@@ -265,3 +265,41 @@
     align-items: center;
   }
 }
+
+/* ---- the first screen while a world is made ---- */
+.rm-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper);
+  padding: 0 16px;
+}
+.rm-loading .rm-loading-card {
+  width: min(360px, 100%);
+  text-align: center;
+}
+.rm-loading h2 {
+  margin: 0 0 18px;
+  font-weight: 500;
+  font-size: 28px;
+}
+.rm-loading .rm-loading-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+.rm-loading .rm-loading-bar i {
+  display: block;
+  height: 100%;
+  background: var(--ink);
+  transition: width 0.3s ease;
+}
+.rm-loading p {
+  margin: 12px 0 0;
+  font-family: 'Alegreya Sans SC', sans-serif;
+  letter-spacing: 0.06em;
+  color: var(--soft);
+}

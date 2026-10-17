@@ -732,16 +732,16 @@ function Room({
     [atlas],
   );
   const reserve = stage.w <= PHONE_MAX ? { top: 52, bottom: 52 } : { top: 0, bottom: 0 };
-  // Where the map sits: the whole-map fit, or the zoomed view kept on the stage (explore only).
+  // Where the map sits: the whole-map fit, or the zoomed view kept on the stage.
   const view = useMemo(() => {
     if (!layout) return null;
     const whole = { z: 1, left: layout.left, top: layout.top, size: layout.size };
-    if (!exploring || !zoom || zoom.z <= 1.001 || !land) return whole;
+    if (!zoom || zoom.z <= 1.001 || !land) return whole;
     const c = clampView(zoom, layout.size, stage, land, reserve);
     return { ...c, size: layout.size * c.z };
     // `reserve` follows the stage.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout, exploring, zoom, land, stage]);
+  }, [layout, zoom, land, stage]);
   const geo = useRef({ layout, view, stage, land, reserve });
   geo.current = { layout, view, stage, land, reserve };
   /** Moves the map to `v` (kept on the stage); `smooth` glides there, a gesture follows at once. */
@@ -803,11 +803,21 @@ function Room({
       { delayMs: 400 },
     );
   }, [exploring, atlas, sharp, world]);
-  // Wheel, drag and pinch on the stage, in the explore state only.
+  // Wheel, drag and pinch on the stage, while history plays and while exploring. A drag may start
+  // on a mark (a finger lands on one easily on a phone); a tap on it still opens it.
   useEffect(() => {
     const el = stageEl.current;
-    if (!exploring || !el) return undefined;
-    const IGNORE = 'button, a, input, select, label, .tr-ask, .tr-chooser, .tr-key, .tr-chip';
+    if (!el) return undefined;
+    const IGNORE = 'input, select, label, .tr-ask, .tr-chooser, .tr-key, .tr-chip, .tr-zoom';
+    /** After a drag or pinch, the click the browser sends at its end is swallowed. */
+    let swallow = false;
+    const onClick = (e: MouseEvent) => {
+      // A keyboard press (detail 0) is never the end of a gesture.
+      if (!swallow || e.detail === 0) return;
+      swallow = false;
+      e.preventDefault();
+      e.stopPropagation();
+    };
     const local = (e: { clientX: number; clientY: number }) => {
       const r = el.getBoundingClientRect();
       return { x: e.clientX - r.left, y: e.clientY - r.top };
@@ -832,20 +842,27 @@ function Room({
       const unit = e.deltaMode === 1 ? 16 : 1;
       zoomBy(Math.exp(-e.deltaY * unit * (e.ctrlKey ? 0.01 : 0.0016)), local(e));
     };
+    // Captured only once the gesture moves, so a tap still lands on the mark it touched.
+    const capture = (id: number) => {
+      try {
+        el.setPointerCapture(id);
+      } catch {
+        // A pointer that is already gone cannot be captured.
+      }
+    };
     const onDown = (e: PointerEvent) => {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       if ((e.target as Element).closest(IGNORE)) return;
       const v = current();
       if (!v) return;
       pts.set(e.pointerId, local(e));
-      try {
-        el.setPointerCapture(e.pointerId);
-      } catch {
-        // A pointer that is already gone cannot be captured.
-      }
-      if (pts.size === 1) drag = { ...local(e), view: v, moved: false };
-      else if (pts.size === 2) {
+      if (pts.size === 1) {
+        swallow = false;
+        drag = { ...local(e), view: v, moved: false };
+      } else if (pts.size === 2) {
         drag = null;
+        swallow = true;
+        pts.forEach((_, id) => capture(id));
         pinch = { ...pair(), view: v };
       }
     };
@@ -874,6 +891,8 @@ function Room({
         const dy = p.y - drag.y;
         if (!drag.moved && Math.hypot(dx, dy) < 4) return;
         drag.moved = true;
+        swallow = true;
+        capture(e.pointerId);
         el.classList.add('dragging');
         setView({ z: drag.view.z, left: drag.view.left + dx, top: drag.view.top + dy }, false);
       }
@@ -887,12 +906,14 @@ function Room({
       if (!pts.size) el.classList.remove('dragging');
     };
     el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('click', onClick, true);
     el.addEventListener('pointerdown', onDown);
     el.addEventListener('pointermove', onMove);
     el.addEventListener('pointerup', onUp);
     el.addEventListener('pointercancel', onUp);
     return () => {
       el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('click', onClick, true);
       el.removeEventListener('pointerdown', onDown);
       el.removeEventListener('pointermove', onMove);
       el.removeEventListener('pointerup', onUp);
@@ -901,7 +922,7 @@ function Room({
     };
     // The handlers read the live view through `geo`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exploring]);
+  }, []);
   // A beast's mark stands on drawn land: its lair's cell, or the nearest cell that is.
   // Armies march in wars and battles; great figures are the legends.
   // While exploring the event marks stand for wars and legends; the play's flags and stars rest.
@@ -1620,7 +1641,7 @@ function Room({
           {mode === 'realms' && vassals.size > 0 && (
             <p className="tr-note">Vassals wear their overlord's colour inside their own border.</p>
           )}
-          {exploring && (
+          {(exploring || (view?.z ?? 1) > 1.001) && (
             <div className="tr-zoom" role="group" aria-label="Zoom">
               <button
                 type="button"
