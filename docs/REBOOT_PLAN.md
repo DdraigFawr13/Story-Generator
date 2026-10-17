@@ -621,13 +621,15 @@ After the Phase 3 playtest Morgan asked for additions ranked by value and coding
 7. **Dragons and great beasts as individuals** (M5.6; value 4, M): dragons built 2026-10-14 (#106), up to three at once; other great beasts and the restless dead still to come.
 8. **Religion: gods, priests, holy wars** (Phase 7, pulled forward; value 4, M): built 2026-10-14 in history (#109: faiths, high priests, prophets, schisms, conversion, holy wars); the People room lists priests and prophets, and a page per faith is still to come.
 9. **Spellbooks and lineages** (M5.2; value 4, M): built 2026-10-16 (#118: apprenticeships, spells, spellbooks, lost and found lore, the People room's Magic tab).
-10. **Court intrigue** (Phase 6 "Legends in politics", pulled forward; value 4, M): built 2026-10-16 (#120: plots and assassinations, honours, seats seized by legends, betrayal, bribes, bounties and hunts); courting or fearing the dragons is still to come.
+10. **Court intrigue** (Phase 6 "Legends in politics", pulled forward; value 4, M): built 2026-10-16 (#120: plots and assassinations, honours, seats seized by legends, betrayal, bribes, bounties and hunts); the dragon at court followed as build order 17.
 11. **Story threads view** (M4.6; value 2, S): not started.
 12. **Expeditions and perilous places** (M4.7; value 5, L): history part built 2026-10-14 (#108: places, barrows, hoards, expeditions, beast parts, the restless dead); the map layer and Places page are still to come.
 13. **Diplomacy: alliances, vassalage, betrayal** (Phase 6; value 5, L): built 2026-10-17 in history (#121: alliances, calls to arms, betrayal, vassals and revolts, peace by marriage); showing vassals on the map and in the People room is still to come.
 14. **Trade between peoples in history** (M4.4; value 3, M): not started.
 15. **The world keeps moving while you watch** (M4.1–M4.3; value 4, L): not started.
 16. **Armies and settlers move on the map** (M4.11; value 3, S; added 2026-10-14 from Morgan's playback notes): one host per side marches through a war and meets the enemy's host, and settlers walk to the land they found. Built 2026-10-17 (#122).
+
+17. **The dragon at court** (Phase 6 "Legends in politics" leftover, P1 of the proposed next set; value 4, M; picked by Morgan 2026-10-17): built 2026-10-17. Realms near a dragon court it (and it falls on their enemies), fear it and pay a standing tribute, or set a bounty on it; a figure who takes the bounty hunts it with a host the realm lends, and a legend dies about 1 in 10 such hunts. Rules in `content/dragons.ts` (`court`), engine in `engine/history/dragon-court.ts`.
 
 Items not in the list (M4.5, M5.1, M5.3, M5.4, the rest of Phases 6–9) keep their place and come after it unless a check-in moves them.
 
@@ -637,7 +639,7 @@ Twelve threads have merged since the list was written (#101 to #122, `CHANGELOG.
 
 - Built since: the family tree (item 6), on each house's page in the People room (#124).
 - UI halves of built items: a page per faith (8); the perilous places map layer and Places page (12); vassals on the map and "vassal of" in the People room (13).
-- History leftovers: other great beasts and the restless dead as individuals (7); the dragon courted, feared or put under bounty (10).
+- History leftovers: other great beasts and the restless dead as individuals (7). The dragon courted, feared or put under bounty (10) is built as build order 17.
 - Not started: the story threads view (11), trade between peoples (14), the world moving while you watch (15).
 - Rough edges carried from earlier threads: child deaths below history's share and orcs at 7% (M4.0 leftovers); village back lanes that bend with the ground; only 4 of 111 dwarven holds sit at a pass; the after-play map pauses about 0.4 s when the sharper map swaps in and draws stepped borders at full zoom; `?year=` starts at a different year from where Tales plays.
 
@@ -647,7 +649,7 @@ For when the picks Morgan has already seen (vassals shown in the UI, the world m
 
 | Order | Addition | Where | What you would see | Value | Effort |
 | --- | --- | --- | --- | --- | --- |
-| P1 | The dragon at court | Phase 6 leftover | Realms court, fear, pay tribute to or set a bounty on a named dragon; a legend who takes the bounty hunts it, and dies more often than not | 4 | M |
+| P1 | The dragon at court | Phase 6 leftover | Picked 2026-10-17; now build order 17 above | 4 | M |
 | P2 | Perilous places on the map and a Places page | M4.7 leftover | Ruins, barrows and lairs marked on the Tales map under the event filter; a page per place with its hoard, its expeditions and its dead | 4 | S |
 | P3 | Great works and enchanting | M5.3 | A legend raises one tower, wall, bridge or warded grove in a lifetime, drawn on the map with a chronicle line; master smiths make named items from beast parts | 4 | M |
 | P4 | Feuds across generations and exile | M4.5 | A wrong between two houses outlives both; heirs inherit the grudge, an exiled notable returns, inheritance disputes split a family | 4 | M |
@@ -810,7 +812,7 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 - **Succession wars and dynasties** (pulled forward 2026-10-14, build order 6): a disputed succession can become a civil war; a pretender raises part of the realm, the realm may split in two or a far town break away as a free city, and a dynasty can end with a new house taking the seat. Dynasties get names and a family tree in the legends browser. Built 2026-10-14; the family tree of each house is on its People room page (#124, 2026-10-17). Rules in `content/realms.ts` (`CIVIL_WARS`), engine in `engine/history/civil-war.ts`.
 - Diplomacy, alliances, vassalage, marriages between houses, betrayals (build order 13, added 2026-10-14: a sworn alliance binds a people to join a war, a lost war can make a people a vassal, a marriage between houses can end a feud, and a betrayal comes when the allies' values drift apart). Built 2026-10-17: rules in `content/diplomacy.ts`, engine in `engine/history/diplomacy.ts`.
 - Armies, battles and sieges; occupations and rebellions.
-- **Legends in politics** (court intrigue, pulled forward 2026-10-14, build order 10; assassination is a notable's deed with cause links back to the grudge): kingdoms court, fear, bribe or try to assassinate the 0–3 living legends. A legend can be a ruler, an ally or a deterrent, but a coalition or a larger host can still bring one down. A legend may seize a seat (a succession dispute won by power, not fame), betray their ruler, or draw a bounty and a coalition against the civ that shelters them (target story 7; added 2026-10-13). Their deaths are world-shaking events. The same applies to the dragon (M5.6): kingdoms court it, fear it or put a bounty on it. Built 2026-10-16 except the dragon part: rules in `content/intrigue.ts`, engine in `engine/history/intrigue.ts`.
+- **Legends in politics** (court intrigue, pulled forward 2026-10-14, build order 10; assassination is a notable's deed with cause links back to the grudge): kingdoms court, fear, bribe or try to assassinate the 0–3 living legends. A legend can be a ruler, an ally or a deterrent, but a coalition or a larger host can still bring one down. A legend may seize a seat (a succession dispute won by power, not fame), betray their ruler, or draw a bounty and a coalition against the civ that shelters them (target story 7; added 2026-10-13). Their deaths are world-shaking events. The same applies to the dragon (M5.6): kingdoms court it, fear it or put a bounty on it. Built 2026-10-16: rules in `content/intrigue.ts`, engine in `engine/history/intrigue.ts`; the dragon part built 2026-10-17 (build order 17).
 - Deep trade, roads and inequality.
 - Switching the watched site, plus 2–3 detailed sites at once if performance allows.
 - A 512×512 world option.

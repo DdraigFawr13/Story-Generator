@@ -41,7 +41,7 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256�
 | `src/engine/core/` | types, rng, clock, scheduler, context, content validation, save |
 | `src/engine/worldgen/` | terrain → erosion → climate → water → biomes → resources → aura → habitat → regions → routes |
 | `src/engine/history/` | settlement, then yearly harvest, demography, famine, plague, migration, expansion |
-| `src/engine/history/` (cont.) | then beasts, trade, raids, war, notables, colleges, lineages (apprentices, spells, spellbooks, lost lore), intrigue (plots, legends at court, bounties), diplomacy (alliances, calls to arms, vassals), items, importance, snapshots; `playback.ts` records display borders per year |
+| `src/engine/history/` (cont.) | then beasts, trade, raids, war, notables, colleges, lineages (apprentices, spells, spellbooks, lost lore), intrigue (plots, legends at court, bounties), the dragon at court (pacts, bounties, courted dragons), diplomacy (alliances, calls to arms, vassals), items, importance, snapshots; `playback.ts` records display borders per year |
 | `src/engine/people/` | attributes, aptitude, magic tiers, combat scale (R-24) |
 | `src/engine/site/` | the watched site: `localmap`, `layout`, `promote`/`demote`, `tick` (day loop), `life` (needs, mood, breakdowns), `health`, `social` (opinions, grudges), `family` (marriage, births, inheritance), `society` (standing, crime and law, holy days, funerals), `path` (A*), `work` (steward and jobs), `stock`, `build`, `outpost` |
 | `src/engine/systems/` | shared daily systems (`weather`) |
