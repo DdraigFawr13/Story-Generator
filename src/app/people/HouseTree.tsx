@@ -1,8 +1,16 @@
 // A house's page head and family tree. The tree is a panning frame of cards joined by elbow lines;
 // nothing is drawn that the history did not log (see tree.ts).
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
-import { yearText, type Id } from '../../engine';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent,
+} from 'react';
+import { locate, yearText, type Id } from '../../engine';
 import { Link, plural, useLegends } from '../legends-ctx';
 import { CARD_H, CARD_W, houseTree, layoutTree, type LaidCard, type TreeRow } from './tree';
 
@@ -16,24 +24,22 @@ export function HousePage({
   focus?: Id | undefined;
   shade: (civId: Id | null) => string;
 }) {
-  const { world, content } = useLegends();
+  const { world, content, onShow } = useLegends();
   const tree = useMemo(() => houseTree(world, id, content, focus), [world, id, content, focus]);
   if (!tree) return null;
   const { header, rows } = tree;
+  const cell = locate(world, { kind: 'dynasty', id });
   return (
     <section className="pp-tree-page" aria-label={`House ${header.name}`}>
       <h1>{header.name}</h1>
       <p className="pp-tree-role">{header.role}</p>
       <ul className="pp-tree-chips">
-        <li>Founded Year {yearText(header.founded)}</li>
         <li>
-          Founder{' '}
+          Founded Year {yearText(header.founded)} by{' '}
           <Link to={{ kind: 'person', id: header.founderId }} className="pp-ln">
             {header.founderName}
-          </Link>
-        </li>
-        <li>
-          {header.members} {plural(header.members, 'person', 'people')} on record
+          </Link>{' '}
+          {'\u00b7'} {header.members} on record
         </li>
         {header.seats > 0 && (
           <li>
@@ -57,6 +63,13 @@ export function HousePage({
             )}
           </li>
         )}
+        {cell !== null && (
+          <li className="act">
+            <button type="button" onClick={() => onShow(cell)}>
+              Show on map
+            </button>
+          </li>
+        )}
       </ul>
       <TreeFrame key={`${id}:${focus ?? ''}`} name={header.name} rows={rows} shade={shade} />
     </section>
@@ -65,6 +78,8 @@ export function HousePage({
 
 /** Narrower than this, the tree becomes the register. */
 const REGISTER_BELOW = 600;
+/** Pixels an arrow key pans the tree. */
+const PAN_STEP = 80;
 
 function TreeFrame({
   name,
@@ -148,6 +163,22 @@ function TreeFrame({
     drag.current = null;
   };
 
+  // Arrow keys pan the frame once it has focus.
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return;
+    const step = PAN_STEP;
+    const by: Record<string, [number, number]> = {
+      ArrowLeft: [-step, 0],
+      ArrowRight: [step, 0],
+      ArrowUp: [0, -step],
+      ArrowDown: [0, step],
+    };
+    const move = by[e.key];
+    if (!move) return;
+    e.preventDefault();
+    e.currentTarget.scrollBy(move[0], move[1]);
+  };
+
   const toggle = (card: LaidCard) => {
     anchor.current = { id: card.row.id, x: card.x, y: card.y };
     setExpanded((was) => {
@@ -165,6 +196,8 @@ function TreeFrame({
         data-testid="house-tree"
         role="group"
         aria-label={`Family tree of ${name}`}
+        tabIndex={register ? undefined : 0}
+        onKeyDown={register ? undefined : onKeyDown}
         style={register ? undefined : { height: `min(70vh, ${layout.height}px)` }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -227,8 +260,20 @@ function TreeFrame({
         <p className="pp-tree-note">No children of this house are on record.</p>
       ) : (
         <p className="pp-tree-note">
-          Heavier line: the line of the seat. {'\u265b'} held a seat.
+          Heavier line: the line of the seat. {'\u265b'} held a seat. Edge colour: their realm.
           {register ? '' : ' Drag the tree to see more of it.'}
+          {expanded.size > 0 && (
+            <>
+              {' '}
+              <button
+                type="button"
+                className="pp-tree-reset"
+                onClick={() => setExpanded(new Set())}
+              >
+                Show the notables only
+              </button>
+            </>
+          )}
         </p>
       )}
     </>
@@ -239,13 +284,12 @@ function Card({ card, shade }: { card: LaidCard; shade: (civId: Id | null) => st
   const { row } = card;
   const spouse = row.spouses[0];
   const more = row.spouses.length - 1;
+  // The crown and the realm they ruled; else their role and the realm they served.
   const what = row.ruled
-    ? row.ruled.realm
-      ? `\u265b Ruler of the ${row.ruled.realm}`
-      : '\u265b Held a seat'
-    : row.legend
-      ? 'Legend'
-      : row.role;
+    ? `\u265b ${row.ruled.realm || 'Held a seat'}`
+    : [row.legend ? 'Legend' : cap(row.role), row.realm].filter(Boolean).join(' \u00b7 ');
+  const tip = row.ruled ? `Ruler of the ${row.ruled.realm || 'realm'}` : what;
+  const who = row.parentName ? `${row.name}, child of ${row.parentName}` : row.name;
   return (
     <div
       className={`pp-tree-card${row.focus ? ' focus' : ''}${row.ruled ? ' ruler' : ''}${
@@ -264,9 +308,10 @@ function Card({ card, shade }: { card: LaidCard; shade: (civId: Id | null) => st
         className="pp-tree-name"
         title={
           row.ruled?.year === undefined
-            ? row.name
-            : `${row.name}: took the seat in Year ${yearText(row.ruled.year)}`
+            ? who
+            : `${who}; took the seat in Year ${yearText(row.ruled.year)}`
         }
+        aria-label={who}
       >
         {row.name}
         {row.legend && <i className="gold" aria-label="legend" />}
@@ -284,7 +329,17 @@ function Card({ card, shade }: { card: LaidCard; shade: (civId: Id | null) => st
               wed for peace
             </em>
           )}
-          {more > 0 && <small> +{more}</small>}
+          {more > 0 && (
+            <small
+              title={`Also wed ${row.spouses
+                .slice(1)
+                .map((o) => o.name)
+                .join(', ')}`}
+            >
+              {' '}
+              +{more}
+            </small>
+          )}
         </span>
       )}
       <span className="pp-tree-years">
@@ -296,7 +351,13 @@ function Card({ card, shade }: { card: LaidCard; shade: (civId: Id | null) => st
           </em>
         )}
       </span>
-      {what && <span className="pp-tree-what">{what}</span>}
+      {what && (
+        <span className="pp-tree-what" title={tip}>
+          {what}
+        </span>
+      )}
     </div>
   );
 }
+
+const cap = (text: string) => (text === '' ? text : text[0]!.toUpperCase() + text.slice(1));

@@ -40,7 +40,11 @@ export interface TreeRow {
   generation: number;
   /** The in-house parent the tree hangs this person from; null for the founder. */
   parentId: Id | null;
+  /** That parent's name, to tell apart relatives who share a name. */
+  parentName?: string;
   civId: Id | null;
+  /** The realm they served, for the card's caption. */
+  realm: string;
   /** Held a seat: the realm and, when an event says so, the year they took it. */
   ruled?: { realm: string; year?: number };
   legend: boolean;
@@ -247,7 +251,9 @@ export function houseTree(
           : `Years ${yearText(p.born)} to ${yearText(p.died)}`,
       generation: generation.get(id)!,
       parentId: parentOf.get(id) ?? null,
+      ...(parentOf.has(id) ? { parentName: world.people.get(parentOf.get(id)!)!.name } : {}),
       civId: p.civId ?? null,
+      realm: civ?.name ?? '',
       ...(ruled ? { ruled } : {}),
       legend: legends.has(id),
       claimed: claimants.has(id),
@@ -290,7 +296,7 @@ export function houseTree(
 
 const pairKey = (a: Id, b: Id) => (a < b ? `${a}:${b}` : `${b}:${a}`);
 
-export const CARD_W = 156;
+export const CARD_W = 184;
 export const CARD_H = 76;
 const GAP_X = 14;
 /** Room under a card for its pill and the connector bus. */

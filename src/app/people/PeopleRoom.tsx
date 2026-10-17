@@ -99,14 +99,21 @@ function RecordPage({
   onBack: () => void;
   from?: Id | undefined;
 }) {
+  const { world } = useLegends();
+  // A house whose founder is on record gets its tree, and the record below keeps only its chronicle.
+  const founder = page.kind === 'dynasty' ? world.dynasties.get(page.id)?.founderId : undefined;
+  const house = founder !== undefined && world.people.has(founder);
   return (
     <div className="pp-scroll" data-testid="record-page">
       <button type="button" className="pp-back" onClick={onBack}>
         ‹ Back
       </button>
-      {page.kind === 'dynasty' && <HousePage id={page.id} focus={from} shade={shade} />}
-      <div className="pp-record lg-page" data-kind={KIND_LABEL[page.kind]}>
-        <PageView page={page} all={all} onAll={onAll} />
+      {house && page.kind === 'dynasty' && <HousePage id={page.id} focus={from} shade={shade} />}
+      <div
+        className={`pp-record lg-page${house ? ' house' : ''}`}
+        data-kind={KIND_LABEL[page.kind]}
+      >
+        <PageView page={page} all={all} onAll={onAll} bare={house} />
       </div>
     </div>
   );

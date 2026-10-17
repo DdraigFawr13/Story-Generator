@@ -358,14 +358,17 @@ export function PageView({
   page,
   all,
   onAll,
+  bare,
 }: {
   page: PageRef;
   all: boolean;
   onAll: (all: boolean) => void;
+  /** Only the chronicle: the page above it (a house's tree) already shows the name and facts. */
+  bare?: boolean;
 }) {
   if (page.kind === 'event') return <EventPage id={page.id} />;
   if (page.kind === 'race') return <RacePage id={page.id} />;
-  return <EntityPage page={page} all={all} onAll={onAll} />;
+  return <EntityPage page={page} all={all} onAll={onAll} bare={bare ?? false} />;
 }
 
 type Fact = [string, React.ReactNode];
@@ -403,10 +406,12 @@ function EntityPage({
   page,
   all: showAll,
   onAll,
+  bare,
 }: {
   page: LegendRef;
   all: boolean;
   onAll: (all: boolean) => void;
+  bare: boolean;
 }) {
   const { world, index, content, narrator, year, finalYear, sitesAt, onShow, siteActions } =
     useLegends();
@@ -564,14 +569,18 @@ function EntityPage({
 
   return (
     <>
-      <div>
-        <div className="lg-kind">{KIND_LABEL[page.kind]}</div>
-        <h3>{bio.name}</h3>
-      </div>
-      {bio.summary.length > 0 && <p className="lg-summary">{cap(bio.summary.join(' '))}</p>}
-      <Facts facts={facts} />
+      {!bare && (
+        <>
+          <div>
+            <div className="lg-kind">{KIND_LABEL[page.kind]}</div>
+            <h3>{bio.name}</h3>
+          </div>
+          {bio.summary.length > 0 && <p className="lg-summary">{cap(bio.summary.join(' '))}</p>}
+          <Facts facts={facts} />
+        </>
+      )}
       {page.kind === 'civ' && <AnnalsSection civId={page.id} />}
-      {cell !== null && (
+      {cell !== null && !bare && (
         <div className="lg-actions">
           <button type="button" onClick={() => onShow(cell)}>
             Show on map

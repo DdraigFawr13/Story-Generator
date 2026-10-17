@@ -677,7 +677,8 @@
 .pp-root .pp-tree-frame {
   position: relative;
   overflow: auto;
-  overscroll-behavior: contain;
+  /* Sideways stays in the tree; up and down hand on to the page at the frame's edge. */
+  overscroll-behavior-x: contain;
   touch-action: pan-x pan-y;
   background: var(--paper);
   border: 3px double var(--line);
@@ -777,6 +778,37 @@
 }
 .pp-root .pp-tree-pill.in {
   transform: translateX(-100%);
+  min-height: 32px;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+.pp-root .pp-tree-frame:focus-visible {
+  outline: 2px solid #2f5d7a;
+  outline-offset: 2px;
+}
+.pp-root .pp-tree-chips li.act {
+  border: 0;
+  padding: 0;
+}
+.pp-root .pp-tree-chips li.act button,
+.pp-root .pp-tree-reset {
+  font: inherit;
+  font-size: 14px;
+  padding: 3px 12px;
+  min-height: 0;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.pp-root .pp-tree-reset {
+  margin-left: 4px;
+  font-size: 13px;
+  padding: 1px 10px;
+}
+.wm-root .pp-root .pp-record.house {
+  max-width: 1120px;
 }
 .pp-root .pp-tree-frame.register .pp-tree-card.kids .pp-tree-name {
   padding-right: 92px;
