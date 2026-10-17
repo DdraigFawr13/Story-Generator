@@ -1370,3 +1370,50 @@
     white-space: nowrap;
   }
 }
+/* Great works: small engraved shapes up and to the left of their town, side by side when two. */
+.tr-root .tr-wk {
+  position: absolute;
+  z-index: 2;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  display: grid;
+  place-items: center;
+  transform: translate(-50%, -50%) translate(calc(-11px - var(--slot) * 17px), -11px);
+  cursor: pointer;
+  transition: scale 0.25s ease;
+  animation: tr-fade 0.45s ease both;
+}
+.tr-root .tr-wk.small {
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%) translate(calc(-8px - var(--slot) * 12px), -8px);
+}
+.tr-root .tr-wk svg {
+  display: block;
+  filter: drop-shadow(0 0 1.5px rgba(246, 241, 228, 0.9));
+}
+.tr-root .tr-wk.fallen svg {
+  opacity: 0.38;
+}
+.tr-root .tr-wk:hover {
+  scale: 1.18;
+}
+.tr-root .tr-pin ul.tr-works {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.tr-root .tr-pin ul.tr-works li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 3px;
+}
+.tr-root .tr-pin ul.tr-works svg {
+  flex: none;
+  margin-top: 2px;
+}

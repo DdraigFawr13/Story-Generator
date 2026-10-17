@@ -2,10 +2,11 @@
 // with an ink outline, the town names and the town hit targets. Positions are percentages of the
 // map; sizes are pixels, so a mark keeps its size however far the map is zoomed.
 
-import { useMemo } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { groupTitle, type MarkCluster, type MarkEvent } from './explore';
 import { useFading } from './markers';
 import { PAUSE_KINDS, type PauseKind } from './pauses';
+import { workLine, type WorkKind, type WorkMark } from './works';
 
 const INK = '#2d2a25';
 
@@ -168,6 +169,75 @@ export function Towns({ towns, width, height, named, skip, open, onOpen }: Towns
               onClick={() => onOpen(t.id)}
             />
           </div>
+        );
+      })}
+    </>
+  );
+}
+
+/** Great works as engraved ink shapes on a pale fill, on the same 24 by 24 box. */
+const WORK_GLYPHS: Record<WorkKind, string> = {
+  tower: 'M8 22V8H7V3h2.2v2h1.7V3h2.2v2h1.7V3H17v5h-1v14z',
+  wall: 'M2 20v-9h2.4V8h3.2v3h2.8V8h3.2v3h2.8V8h3.2v3H22v9z',
+  bridge: 'M2 8h20v4.2c-3.6.3-6 3.4-6.4 7.8H8.4C8 15.6 5.6 12.5 2 12.2z',
+  grove:
+    'M12 2.5a5 5 0 0 1 4.6 7A4.6 4.6 0 0 1 14 18h-1.1v4h-1.8v-4H10a4.6 4.6 0 0 1-2.6-8.5A5 5 0 0 1 12 2.5z',
+  item: 'M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z',
+};
+
+/** One work's shape: pale stone inside an ink outline. */
+export function WorkGlyph({ kind, size = 13 }: { kind: WorkKind; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d={WORK_GLYPHS[kind]}
+        fill="#d6c093"
+        stroke={INK}
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+        paintOrder="stroke"
+      />
+    </svg>
+  );
+}
+
+interface WorkMarksProps {
+  works: readonly WorkMark[];
+  width: number;
+  height: number;
+  year: number;
+  /** Zoomed in: larger shapes. */
+  detail: boolean;
+  onOpen: (work: WorkMark) => void;
+}
+
+/** The great works standing at the year shown, up and to the left of their town; fallen ones fade. */
+export function WorkMarks({ works, width, height, year, detail, onOpen }: WorkMarksProps) {
+  return (
+    <>
+      {works.map((w) => {
+        const fallen = w.fell !== undefined && w.fell <= year;
+        const line = workLine(w, year);
+        return (
+          <button
+            key={w.key}
+            type="button"
+            className={`tr-wk${detail ? '' : ' small'}${fallen ? ' fallen' : ''}`}
+            data-testid="work-mark"
+            data-kind={w.kind}
+            style={
+              {
+                left: `${(((w.cell % width) + 0.5) / width) * 100}%`,
+                top: `${((Math.floor(w.cell / width) + 0.5) / height) * 100}%`,
+                '--slot': w.slot,
+              } as CSSProperties
+            }
+            title={line}
+            aria-label={line}
+            onClick={() => onOpen(w)}
+          >
+            <WorkGlyph kind={w.kind} size={detail ? 17 : 12} />
+          </button>
         );
       })}
     </>
