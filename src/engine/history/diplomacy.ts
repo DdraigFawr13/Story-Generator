@@ -523,6 +523,7 @@ function marriagePeace(run: HistoryRun): void {
         span: yearsPhrase(run, years),
         years,
         dead: war.dead,
+        war: war.id,
       },
     });
     addDeed(bride, event.id);

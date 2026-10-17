@@ -3,7 +3,16 @@
 // reader switches on and off together.
 
 export type PauseKind =
-  'legend' | 'war' | 'realm' | 'battle' | 'ruler' | 'town' | 'hardship' | 'treasure' | 'faith';
+  | 'legend'
+  | 'war'
+  | 'realm'
+  | 'battle'
+  | 'ruler'
+  | 'town'
+  | 'hardship'
+  | 'treasure'
+  | 'faith'
+  | 'settlers';
 
 export interface PauseKindInfo {
   id: PauseKind;
@@ -15,6 +24,8 @@ export interface PauseKindInfo {
   on: boolean;
   /** Shown on the map and the ribbon until the reader changes it. */
   shown: boolean;
+  /** Walks on the map only; never pauses, no ribbon dots or explore marks. */
+  quiet?: true;
 }
 
 export const PAUSE_KINDS: readonly PauseKindInfo[] = [
@@ -27,6 +38,7 @@ export const PAUSE_KINDS: readonly PauseKindInfo[] = [
   { id: 'hardship', label: 'famine and plague', colour: '#8f8a3a', on: false, shown: false },
   { id: 'treasure', label: 'treasure', colour: '#2f8a5c', on: false, shown: false },
   { id: 'faith', label: 'faith', colour: '#3e7ca6', on: false, shown: false },
+  { id: 'settlers', label: 'settlers', colour: '#8a7a4e', on: false, shown: true, quiet: true },
 ];
 
 export const DEFAULT_PAUSES: ReadonlySet<PauseKind> = new Set(
@@ -44,6 +56,7 @@ const KIND_OF: Record<string, { kind: PauseKind; min?: number; show?: true }> = 
   war_declared: { kind: 'war' },
   civil_war_began: { kind: 'war' },
   peace_made: { kind: 'war', show: true },
+  site_founded: { kind: 'settlers', show: true },
   civ_founded: { kind: 'realm' },
   realm_split: { kind: 'realm' },
   civ_fell: { kind: 'realm' },

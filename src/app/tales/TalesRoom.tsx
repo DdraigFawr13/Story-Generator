@@ -30,6 +30,7 @@ import {
   assignRaceHues,
   borderColour,
   fillColour,
+  hlsToRgb,
   labelColour,
   touching,
   type Neighbours,
@@ -55,7 +56,15 @@ import {
 import { ExploreMarks, Glyph, Towns, type TownMark } from './exploreMarks';
 import { settleLabels } from './labels';
 import { PHONE_MAX, cardSide, fitMap, nearestCell } from './layout';
-import { Capitals, MAX_TAGS, Marks, type Clock, type Recent } from './markers';
+import {
+  Capitals,
+  MAX_TAGS,
+  Marks,
+  SettlersIcon,
+  SwordsIcon,
+  type Clock,
+  type Recent,
+} from './markers';
 import { buildModel } from './model';
 import {
   DEFAULT_PAUSES,
@@ -231,6 +240,13 @@ function Room({
   onRecords,
 }: Props & { data: PlaybackData }) {
   const palette = useMemo(() => buildPalette(world, data), [world, data]);
+  /** A flag's fill: the realm's border colour. */
+  const flagColour = (name: string, alt = false) => {
+    const hue = palette.hue.get(data.civByName.get(name)?.id ?? -1);
+    if (hue === undefined) return alt ? '#d9826b' : '#a0442c';
+    const [r, g, b] = alt ? hlsToRgb(hue, 0.7, 0.55) : borderColour(hue);
+    return `rgb(${r},${g},${b})`;
+  };
   const baseModel = useMemo(() => buildModel(world, data, DEFAULT_CONTENT), [world, data]);
   const eventById = useMemo(() => new Map(world.events.map((e) => [e.id, e])), [world]);
   const realmOf = useMemo(
@@ -293,6 +309,11 @@ function Room({
   const pausing = useMemo(
     () => (firstRun ? new Set<PauseKind>() : new Set([...kinds].filter((k) => shown.has(k)))),
     [firstRun, kinds, shown],
+  );
+  /** The shown kinds that mark the ribbon and the explore map (settlers only walk). */
+  const loud = useMemo(
+    () => new Set([...shown].filter((k) => !PAUSE_KINDS.find((i) => i.id === k)?.quiet)),
+    [shown],
   );
   const live = useRef({ kinds: pausing, shown, follow, speed, mode, firstRun });
   live.current = { kinds: pausing, shown, follow, speed, mode, firstRun };
@@ -830,22 +851,25 @@ function Room({
   // Armies march in wars and battles; great figures are the legends.
   // While exploring the event marks stand for wars and legends; the play's flags and stars rest.
   const armies = !exploring && (shown.has('war') || shown.has('battle'));
+  const settling = !exploring && shown.has('settlers');
   const legends = !exploring && shown.has('legend');
   const model = useMemo(() => {
-    const marches = armies ? baseModel.marches : [];
+    const wars = armies ? baseModel.wars : [];
+    const settlers = settling ? baseModel.settlers : [];
     const figures = legends ? baseModel.figures : [];
-    if (!atlas) return { ...baseModel, marches, figures };
+    if (!atlas) return { ...baseModel, wars, settlers, figures };
     const ok = (c: number) => atlas.inland[c] === 1;
     return {
       ...baseModel,
-      marches,
+      wars,
+      settlers,
       figures,
       beasts: baseModel.beasts.map((b) => ({
         ...b,
         cell: nearestCell(b.cell, atlas.width, atlas.height, ok),
       })),
     };
-  }, [baseModel, atlas, armies, legends]);
+  }, [baseModel, atlas, armies, settling, legends]);
   /** Key rows for marks only while the map can draw them in the shown year. */
   const keyMarks = useMemo(
     () => ({
@@ -934,8 +958,8 @@ function Room({
   const detail = (view?.z ?? 1) >= GLYPH_ZOOM;
   const zQuarter = Math.round((view?.z ?? 1) * 4) / 4;
   const groups = useMemo(
-    () => (exploring ? groupMarks(data.events, year, shown, detail ? MAX_MARKS : MAX_DOTS) : []),
-    [exploring, data, year, shown, detail],
+    () => (exploring ? groupMarks(data.events, year, loud, detail ? MAX_MARKS : MAX_DOTS) : []),
+    [exploring, data, year, loud, detail],
   );
   const clusters = useMemo(
     () => clusterMarks(groups, W, (layout?.size ?? 0) * zQuarter),
@@ -970,7 +994,7 @@ function Room({
   /** What the place card lists: the shown events there up to the year shown, newest first. */
   const pinRows = useMemo(() => {
     if (!pin) return [];
-    const all = eventsAt(data.events, new Set(pin.cells), year, shown);
+    const all = eventsAt(data.events, new Set(pin.cells), year, loud);
     return all.map((e) => {
       const event = eventById.get(e.id);
       const person = e.actors.map((id) => world.people.get(id)).find((p) => p !== undefined);
@@ -984,11 +1008,11 @@ function Room({
     });
     // `textOf` is a new function each render; the rows follow the place, the year and the filter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pin, data, year, shown, eventById, world]);
+  }, [pin, data, year, loud, eventById, world]);
   /** The kinds of the events at the open place: "3 wars · 2 legends". */
   const pinMix = useMemo(
-    () => kindMix(pin ? eventsAt(data.events, new Set(pin.cells), year, shown) : []),
-    [pin, data, year, shown],
+    () => kindMix(pin ? eventsAt(data.events, new Set(pin.cells), year, loud) : []),
+    [pin, data, year, loud],
   );
   const pinTown = pin?.kind === 'town' ? towns.find((t) => t.id === pin.site) : undefined;
   const openEvents = (c: MarkCluster) => {
@@ -1018,14 +1042,14 @@ function Room({
   const ticks = useMemo(() => {
     const out: { key: number; year: number; colour: string; kind: string; title: string }[] = [];
     for (const e of data.events) {
-      if (!shown.size) break;
+      if (!loud.size) break;
       const kind = pauseKindOf(e.type, e.importance);
-      if (!kind || !shown.has(kind)) continue;
+      if (!kind || !loud.has(kind)) continue;
       const colour = PAUSE_KINDS.find((k) => k.id === kind)!.colour;
       out.push({ key: e.id, year: e.y, colour, kind, title: `Year ${e.y} · ${e.title}` });
     }
     return out;
-  }, [data, shown]);
+  }, [data, loud]);
   // The dots are built once per filter: rebuilding a few hundred of them every frame of play
   // slowed each render enough to trip React's nested-update guard.
   const tickDots = useMemo(
@@ -1273,7 +1297,9 @@ function Room({
                 height={H}
                 followId={follow?.id ?? null}
                 maxTags={stage.w <= PHONE_MAX ? 1 : MAX_TAGS}
+                small={stage.w <= PHONE_MAX}
                 recent={recent}
+                flagColour={flagColour}
               />
             )}
             {exploring && (
@@ -1371,8 +1397,8 @@ function Room({
                       <input
                         type="checkbox"
                         aria-label={`Pause on ${k.label}`}
-                        checked={shown.has(k.id) && kinds.has(k.id)}
-                        disabled={!shown.has(k.id)}
+                        checked={!k.quiet && shown.has(k.id) && kinds.has(k.id)}
+                        disabled={!shown.has(k.id) || !!k.quiet}
                         onChange={() => togglePause(k.id)}
                       />
                     </div>
@@ -1382,7 +1408,7 @@ function Room({
                       ? 'Marks are grouped by place: one mark stands for every ticked event there, drawn as the most important kind, and its card lists them all. Click a mark to read it. The Pause ticks apply when you play on.'
                       : firstRun
                         ? 'The first play runs to the present (or until you skip) without pausing. Replays pause on the ticked events.'
-                        : 'Shown events are marked on the map and the ribbon; paused ones stop to ask. Peace is shown with wars but never pauses.'}
+                        : 'Shown events are marked on the map and the ribbon; paused ones stop to ask. Peace is shown with wars, and settlers only walk the map; neither pauses.'}
                   </p>
                 </div>
               )}
@@ -1452,10 +1478,10 @@ function Room({
             onClick={() => setHelpOpen(false)}
             data-testid="tales-key"
           >
-            {exploring && shown.size > 0 && (
+            {exploring && loud.size > 0 && (
               <section className="tr-legend tr-evkey" data-legend="events">
                 <h3>Events</h3>
-                {PAUSE_KINDS.filter((k) => shown.has(k.id)).map((k) => (
+                {PAUSE_KINDS.filter((k) => shown.has(k.id) && !k.quiet).map((k) => (
                   <div key={k.id}>
                     <Glyph kind={k.id} size={12} />
                     <span>{k.label}</span>
@@ -1490,9 +1516,21 @@ function Room({
               town
             </div>
             {armies && (
-              <div>
+              <div title="A war's host, in its realm's colour">
                 <FlagKey />
-                army
+                host
+              </div>
+            )}
+            {armies && (
+              <div>
+                <SwordsIcon />
+                battle
+              </div>
+            )}
+            {settling && (
+              <div>
+                <SettlersIcon />
+                settlers
               </div>
             )}
             <div>
@@ -1715,7 +1753,7 @@ function Room({
             )}
           </div>
           <div className="tr-keyrow">
-            {PAUSE_KINDS.filter((k) => shown.has(k.id)).map((k) => (
+            {PAUSE_KINDS.filter((k) => shown.has(k.id) && !k.quiet).map((k) => (
               <span key={k.id}>
                 <i style={{ background: k.colour }} />
                 {k.label}
@@ -1789,10 +1827,12 @@ function Room({
   );
 }
 
+/** Two flags in two realm colours: each side's host has its realm's colour. */
 const FlagKey = () => (
-  <svg width="12" height="14" viewBox="0 0 14 17" aria-hidden="true">
-    <path d="M2 16V1" stroke="#2d2a25" strokeWidth="1.6" />
-    <path d="M2 1.5h10l-3 3.3 3 3.3H2z" fill="#a0442c" />
+  <svg width="20" height="14" viewBox="0 0 24 17" aria-hidden="true">
+    <path d="M2 16V1M12 16V1" stroke="#2d2a25" strokeWidth="1.6" />
+    <path d="M2 1.5h8l-2.4 3.3 2.4 3.3H2z" fill="#a0442c" />
+    <path d="M12 1.5h10l-3 3.3 3 3.3H12z" fill="#3e7ca6" />
   </svg>
 );
 const StarKey = () => (

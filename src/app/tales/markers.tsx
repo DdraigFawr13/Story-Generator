@@ -1,17 +1,24 @@
-// The DOM layer over the Tales canvas: capital names, great beasts, great figures, armies on the
-// road and short event tags. Positions are percentages of the map, so the layer scales with it.
+// The DOM layer over the Tales canvas: capital names, great beasts, great figures, the hosts of a
+// war, settlers on the road and short event tags. Positions are percentages of the map, so the layer scales with it.
 // Things glide and fade; nothing pops, and at most three short tags show at once.
 
-import { useEffect, useMemo, useState, type MutableRefObject } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type MutableRefObject } from 'react';
 import { PLAYBACK_TAGS } from '../../content';
 import type { PlaybackData } from '../playback/data';
 import { shortRealm } from '../playback/data';
-import { pointAlong } from './march';
-import { MARCH_YEARS, STAY_YEARS, type Model } from './model';
+import { FADE_YEARS, hostAt, pickGroups, settlersAt } from './hosts';
+import type { Model } from './model';
 
 export const MAX_TAGS = 3;
-/** Armies drawn at once. */
-const MAX_ARMIES = 4;
+/** Colour of a flag with no realm colour. */
+const FLAG_FILL = '#a0442c';
+/** Hosts closer than this many cells stand apart, up to this many pixels each side. */
+const MEET_CELLS = 1.5;
+const MEET_NUDGE_PX = 8;
+/** On a phone's small map the flags stand further apart, clear of the swords. */
+const MEET_NUDGE_SMALL_PX = 11;
+/** A host standing between marches is drawn a little fainter. */
+const RESTING_OPACITY = 0.65;
 
 export interface Clock {
   /** History years, with the day as a fraction. */
@@ -80,10 +87,26 @@ export const BeastIcon = () => (
     <path d="M2 24 L10 6 L16 17 L22 4 L32 24 Z" fill="#8c2f1f" stroke="#5a1c12" strokeWidth="2" />
   </svg>
 );
-export const FlagIcon = () => (
+export const FlagIcon = ({ colour = FLAG_FILL }: { colour?: string }) => (
   <svg width="14" height="17" viewBox="0 0 14 17" aria-hidden="true">
     <path d="M2 16V1" stroke="#2d2a25" strokeWidth="1.6" />
-    <path d="M2 1.5h10l-3 3.3 3 3.3H2z" fill="#a0442c" stroke="#5a1c12" strokeWidth="1" />
+    <path d="M2 1.5h10l-3 3.3 3 3.3H2z" fill={colour} stroke="#3a1a10" strokeWidth="1" />
+  </svg>
+);
+/** Crossed swords: two hosts meeting at a field. */
+export const SwordsIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M5 4l14 15M19 4L5 19" stroke="#2d2a25" strokeWidth="2.4" strokeLinecap="round" />
+    <path d="M4 17l4 4M20 17l-4 4" stroke="#2d2a25" strokeWidth="2.4" strokeLinecap="round" />
+  </svg>
+);
+/** A small covered wagon: settlers on the road. */
+export const SettlersIcon = () => (
+  <svg width="17" height="13" viewBox="0 0 26 20" aria-hidden="true">
+    <path d="M3 13Q3 3 12 3t9 10z" fill="#c9b48a" stroke="#3a2f1c" strokeWidth="1.8" />
+    <path d="M2 13h20" stroke="#3a2f1c" strokeWidth="2" />
+    <circle cx="8" cy="16" r="2.6" fill="#6b5a3a" stroke="#3a2f1c" strokeWidth="1.4" />
+    <circle cx="18" cy="16" r="2.6" fill="#6b5a3a" stroke="#3a2f1c" strokeWidth="1.4" />
   </svg>
 );
 
@@ -99,8 +122,12 @@ interface MarksProps {
   height: number;
   followId: number | null;
   recent: readonly Recent[];
+  /** A flag's fill (CSS colour) for the realm of that name; `alt` is a lighter shade of it. */
+  flagColour: (civName: string, alt?: boolean) => string;
   /** Tags at once (3 by default; phones show 1). */
   maxTags?: number;
+  /** A phone-sized map. */
+  small?: boolean;
 }
 
 /** Beasts, figures, armies and tags; re-renders when the clock moves by a fiftieth of a year. */
@@ -111,7 +138,9 @@ export function Marks({
   height,
   followId,
   recent,
+  flagColour,
   maxTags = MAX_TAGS,
+  small = false,
 }: MarksProps) {
   const [t, setT] = useState(clock.current.t);
   useEffect(() => {
@@ -142,30 +171,83 @@ export function Marks({
     return true;
   };
 
-  // Armies in a war: a flag walking the road, with a dotted trail behind it.
-  const armies: {
+  // Moving parties, at most three at once: the hosts of up to two wars (a flag a side, crossed swords
+  // where they meet), then a band of settlers. Each walks the road with a dotted trail behind.
+  // At the last year nothing walks: the closing card never sits over frozen flags.
+  const picked =
+    t >= model.last ? { wars: [], settlers: [] } : pickGroups(model.wars, model.settlers, t);
+  const cellPos = (p: Pos): Pos => ({ x: p.x - 0.5, y: p.y - 0.5 });
+  const hosts: {
+    key: string;
+    x: number;
+    y: number;
+    opacity: number;
+    moving: boolean;
+    trail: Pos[];
+    civ: string;
+    colour: string;
+    /** The war's key. */
+    war: string;
+    /** Pixels sideways, apart from the other host on the same field. */
+    nudge: number;
+  }[] = [];
+  const swords: { key: string; war: string; cell: number; opacity: number; site: string }[] = [];
+  for (const war of picked.wars) {
+    const poses = war.hosts.map((h) => hostAt(h, t, width));
+    // Two hosts closing on one field stand a few pixels apart, so both flags show above the swords.
+    const [pa, pb] = poses;
+    const near = pa && pb ? clamp01(1 - Math.hypot(pa.x - pb.x, pa.y - pb.y) / MEET_CELLS) : 0;
+    // A war that waited for a slot fades in rather than appearing mid-march.
+    const entry = war.shownFrom > war.appear ? clamp01((t - war.shownFrom) / FADE_YEARS) : 1;
+    // Two realms with the same colour: the second flag takes a lighter shade of it.
+    const same =
+      war.hosts.length > 1 && flagColour(war.hosts[0]!.civ) === flagColour(war.hosts[1]!.civ);
+    war.hosts.forEach((h, i) => {
+      const pose = poses[i];
+      if (!pose) return;
+      hosts.push({
+        key: h.key,
+        ...cellPos(pose),
+        opacity: entry * pose.opacity * (pose.moving ? 1 : RESTING_OPACITY),
+        moving: pose.moving,
+        trail: pose.moving ? pose.trail : [],
+        civ: h.civ,
+        colour: flagColour(h.civ, same && i === 1),
+        war: war.key,
+        nudge: (i === 0 ? -1 : 1) * (small ? MEET_NUDGE_SMALL_PX : MEET_NUDGE_PX) * near,
+      });
+    });
+    const meet = war.battles.find((b) => t >= b.t && t <= b.t + b.stay);
+    if (meet && poses.some((p) => p)) {
+      const opacity = clamp01(Math.min((t - meet.t) / 0.05, (meet.t + meet.stay - t) / 0.05));
+      swords.push({
+        key: `${war.key}:swords`,
+        war: war.key,
+        cell: meet.cell,
+        opacity: entry * opacity,
+        site: meet.site,
+      });
+    }
+  }
+  const bands: {
     key: string;
     x: number;
     y: number;
     opacity: number;
     trail: Pos[];
-    civ: string;
+    from: string;
   }[] = [];
-  for (const m of model.marches) {
-    const start = m.at - MARCH_YEARS;
-    if (t < start || t > m.at + STAY_YEARS) continue;
-    const p = clamp01((t - start) / MARCH_YEARS);
-    const here = pointAlong(m.path(), width, p);
-    armies.push({
-      key: m.key,
-      x: here.x - 0.5,
-      y: here.y - 0.5,
-      opacity: Math.min(1, (t - start) / 0.08, (m.at + STAY_YEARS - t) / 0.1),
-      trail: here.upTo.map(([x, y]) => ({ x, y })),
-      civ: m.civ,
+  for (const s of picked.settlers) {
+    const pose = settlersAt(s, t, width);
+    if (!pose) continue;
+    bands.push({
+      key: s.key,
+      ...cellPos(pose),
+      opacity: pose.opacity,
+      trail: pose.trail,
+      from: s.fromName,
     });
   }
-  armies.splice(0, Math.max(0, armies.length - MAX_ARMIES));
 
   const window_ = (from: number, to: number) =>
     clamp01((t - from) / 1.5) * clamp01((to + 0.8 - t) / 0.8);
@@ -176,13 +258,25 @@ export function Marks({
     .map((b) => ({ b, opacity: window_(b.from, b.to) }))
     .filter((x) => x.opacity > 0.02);
 
-  // Tag priority: the followed figure, armies, what just happened, then figures and beasts.
+  // Tag priority: the followed figure, moving parties, what just happened, then figures and beasts.
   const followed = new Set<number>();
   if (followId !== null && figures.some((x) => x.f.id === followId)) {
     if (take()) followed.add(followId);
   }
-  const armyTag = new Set<string>();
-  for (const a of [...armies].reverse()) if (take()) armyTag.add(a.key);
+  const partyTag = new Set<string>();
+  // One tag a war, so a band of settlers keeps a tag too: the meeting's, else a marching host's.
+  const warTagged = new Set<string>();
+  for (const w of swords) {
+    if (!take()) continue;
+    partyTag.add(w.key);
+    warTagged.add(w.war);
+  }
+  for (const h of hosts) {
+    if (!h.moving || warTagged.has(h.war) || !take()) continue;
+    partyTag.add(h.key);
+    warTagged.add(h.war);
+  }
+  for (const b of bands) if (take()) partyTag.add(b.key);
   const recentShown: Recent[] = [];
   for (const r of recent) if (take(tagText(r.type, r.data) !== '')) recentShown.push(r);
   const figureTag = new Set<number>();
@@ -199,11 +293,21 @@ export function Marks({
         preserveAspectRatio="none"
         aria-hidden="true"
       >
-        {armies.map((a) => (
+        {hosts
+          .filter((h) => h.moving)
+          .map((h) => (
+            <polyline
+              key={h.key}
+              points={h.trail.map((p) => `${p.x},${p.y}`).join(' ')}
+              style={{ opacity: h.opacity * 0.9 }}
+            />
+          ))}
+        {bands.map((b) => (
           <polyline
-            key={a.key}
-            points={a.trail.map((p) => `${p.x},${p.y}`).join(' ')}
-            style={{ opacity: a.opacity * 0.9 }}
+            key={b.key}
+            className="settlers"
+            points={b.trail.map((p) => `${p.x},${p.y}`).join(' ')}
+            style={{ opacity: b.opacity * 0.9 }}
           />
         ))}
       </svg>
@@ -235,17 +339,51 @@ export function Marks({
           </span>
         </div>
       ))}
-      {armies.map((a) => (
+      {hosts.map((h) => (
         <div
-          key={a.key}
+          key={h.key}
           className="tr-mk army"
-          style={{ ...css({ x: a.x, y: a.y }), opacity: a.opacity }}
-          title={`The host of ${shortRealm(a.civ)}`}
+          style={
+            {
+              ...css({ x: h.x, y: h.y }),
+              opacity: h.opacity,
+              '--nx': `${h.nudge.toFixed(1)}px`,
+            } as CSSProperties
+          }
+          title={`The host of ${shortRealm(h.civ)}`}
           data-testid="mark-army"
         >
-          <FlagIcon />
-          <span data-lbl="tag" className={armyTag.has(a.key) ? '' : 'off'}>
-            {shortRealm(a.civ)} host
+          <FlagIcon colour={h.colour} />
+          <span data-lbl="tag" className={partyTag.has(h.key) ? '' : 'off'}>
+            {shortRealm(h.civ)} host
+          </span>
+        </div>
+      ))}
+      {swords.map((w) => (
+        <div
+          key={w.key}
+          className="tr-mk meet"
+          style={{ ...css(at(w.cell)), opacity: w.opacity }}
+          title={tagText('battle', { site: w.site })}
+          data-testid="mark-battle"
+        >
+          <SwordsIcon />
+          <span data-lbl="tag" className={partyTag.has(w.key) ? '' : 'off'}>
+            {tagText('battle', { site: w.site })}
+          </span>
+        </div>
+      ))}
+      {bands.map((b) => (
+        <div
+          key={b.key}
+          className="tr-mk settlers"
+          style={{ ...css({ x: b.x, y: b.y }), opacity: b.opacity }}
+          title={`Settlers from ${b.from}`}
+          data-testid="mark-settlers"
+        >
+          <SettlersIcon />
+          <span data-lbl="tag" className={partyTag.has(b.key) ? '' : 'off'}>
+            Settlers from {b.from}
           </span>
         </div>
       ))}

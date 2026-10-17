@@ -119,6 +119,11 @@ export interface War {
   holy?: boolean;
   /** The defender's allies have been called to arms (diplomacy.ts). */
   called?: boolean;
+  /**
+   * Where each side's host stands, as cells (attacker's, defender's): unset until the first
+   * battle; after one the winner holds the field and the loser falls back to its seat.
+   */
+  hosts?: [number, number];
   /** Sites the attacker took or razed from the defender in this war (not civil, not flipped). */
   taken?: number;
 }

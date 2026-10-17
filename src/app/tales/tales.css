@@ -348,6 +348,9 @@
   height: 100%;
   pointer-events: none;
 }
+.tr-root .tr-trails polyline.settlers {
+  stroke: #6b5a3a;
+}
 .tr-root .tr-trails polyline {
   fill: none;
   stroke: #7a2a1c;
@@ -400,7 +403,15 @@
 }
 .tr-root .tr-mk.army {
   color: var(--ink);
-  transform: translate(-3px, -85%);
+  transform: translate(calc(-3px + var(--nx, 0px)), -85%);
+}
+/* The crossed swords sit just below the field, under the two flags. */
+.tr-root .tr-mk.meet {
+  transform: translate(-50%, 0%);
+}
+/* Its words may drop below the flags when they would touch them (labels.ts sets the nudge). */
+.tr-root .tr-mk.meet span {
+  transform: translate(var(--dx, 0px), var(--dy, 0px));
 }
 .tr-root .tr-tag {
   position: absolute;

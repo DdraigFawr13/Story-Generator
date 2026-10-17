@@ -1,10 +1,10 @@
 // What the Tales map marks besides the land: great beasts, great figures and armies, built once
-// from a finished world. No DOM. Armies are drawn from the battles the history logged: a host walks
-// the roads from its realm's capital to the battle in the year before the fight.
+// from a finished world. No DOM. Hosts and settlers come from the battles and foundings the history
+// logged (see hosts.ts).
 
 import type { ContentBundle, Id, WorldState } from '../../engine';
 import type { PlaybackData } from '../playback/data';
-import { roadPath } from './march';
+import { buildSettlers, buildWarHosts, type Settlers, type WarHosts } from './hosts';
 
 export interface Beast {
   id: Id;
@@ -23,27 +23,14 @@ export interface Figure {
   to: number;
   fame: number;
 }
-export interface March {
-  key: string;
-  /** The attacking realm's name. */
-  civ: string;
-  /** The battle's year, with the day as a fraction. */
-  at: number;
-  /** Where the host starts and the battle site, as cells. */
-  from: number;
-  to: number;
-  /** The road path, found when first needed. */
-  path: () => number[];
-}
 export interface Model {
   beasts: Beast[];
   figures: Figure[];
-  marches: March[];
+  wars: WarHosts[];
+  settlers: Settlers[];
+  /** The last year of history: nothing walks once it is reached. */
+  last: number;
 }
-
-/** Years an army walks before its battle, and stays after it. */
-export const MARCH_YEARS = 0.7;
-export const STAY_YEARS = 0.3;
 
 export function buildModel(world: WorldState, data: PlaybackData, content: ContentBundle): Model {
   const cells = world.cells!;
@@ -83,30 +70,14 @@ export function buildModel(world: WorldState, data: PlaybackData, content: Conte
   }
   figures.sort((a, b) => b.fame - a.fame || a.id - b.id);
 
-  const marches: March[] = [];
-  for (const event of data.events) {
-    if (event.type !== 'battle' || event.place === null) continue;
-    const civName = String(event.data.civ ?? '');
+  const grid = { width: cells.width, height: cells.height, roads: cells.roads };
+  const seatCell = (civName: string, year: number) => {
     const civ = data.civByName.get(civName);
-    if (!civ) continue;
-    const capitalId = data.seatsAt(event.y).get(civ.id) ?? civ.capital;
-    const from = data.sites.get(capitalId)?.cell;
-    if (from === undefined || from === event.place) continue;
-    const to = event.place;
-    let cache: number[] | null = null;
-    marches.push({
-      key: `march:${event.id}`,
-      civ: civName,
-      at: event.t,
-      from,
-      to,
-      path: () =>
-        (cache ??= roadPath(
-          { width: cells.width, height: cells.height, roads: cells.roads },
-          from,
-          to,
-        )),
-    });
-  }
-  return { beasts, figures, marches };
+    const seat = civ ? data.seatsAt(year).get(civ.id) : undefined;
+    return seat === undefined ? undefined : data.sites.get(seat)?.cell;
+  };
+  const siteCell = (name: string) => data.siteByName.get(name)?.cell;
+  const wars = buildWarHosts(data.events, seatCell, grid, data.last);
+  const settlers = buildSettlers(data.events, siteCell, grid, data.last);
+  return { beasts, figures, wars, settlers, last: data.last };
 }

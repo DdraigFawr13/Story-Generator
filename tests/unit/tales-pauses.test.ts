@@ -44,8 +44,11 @@ describe('pause filter', () => {
     expect(pauseKindOf('site_conquered', 6)).toBe('town');
     expect(pauseKindOf('famine', 7)).toBe('hardship');
     expect(pauseKindOf('plague', 6)).toBeNull();
-    // Shown by default: the paused kinds; the busy kinds stay off the ribbon.
-    expect([...DEFAULT_SHOWN].sort()).toEqual(['legend', 'realm', 'war']);
+    // Shown by default: the paused kinds and the settlers' quiet walk; the busy kinds stay off.
+    expect([...DEFAULT_SHOWN].sort()).toEqual(['legend', 'realm', 'settlers', 'war']);
+    // Settlers only walk the map: shown, but never pausing.
+    expect(pauseKindOf('site_founded', 3)).toBe('settlers');
+    expect(shouldPause(ev('site_founded', 9), new Set<PauseKind>(['settlers']), null)).toBe(false);
     // A peace is shown with the wars but never stops the playback.
     expect(shouldPause(ev('peace_made', 9), DEFAULT_PAUSES, null)).toBe(false);
     for (const kind of DEFAULT_PAUSES) expect(DEFAULT_SHOWN.has(kind)).toBe(true);

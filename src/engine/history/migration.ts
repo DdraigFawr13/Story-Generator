@@ -177,7 +177,8 @@ function settleParty(
     place: site.cell,
     actors: founder ? [founder.id] : [],
     causes: causesOf(cause),
-    data: { site: site.name, civ: civName(run, site), kind: site.kind },
+    // The town the settlers set out from, for their walk on the map.
+    data: { site: site.name, civ: civName(run, site), kind: site.kind, from: source.name },
   });
   logOf(run, site.id).origin = event.id;
   if (legend) legendFounded(run, legend, source, site, event.id);
@@ -241,7 +242,7 @@ export function runMigration(run: HistoryRun): void {
       place: founded.cell,
       actors: founder ? [founder.id] : [],
       causes: [migration.id],
-      data: { site: founded.name, civ: civName(run, founded), kind: founded.kind },
+      data: { site: founded.name, civ: civName(run, founded), kind: founded.kind, from: site.name },
     });
     logOf(run, founded.id).origin = event.id;
     if (legend) legendFounded(run, legend, site, founded, event.id);
