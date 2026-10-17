@@ -5,7 +5,7 @@
 
 import type { WorldCells } from '../../engine';
 import { type Rgb3 } from './colours';
-import { contours, pathOf } from './outline';
+import { contourSteps, pathOf } from './outline';
 
 export type MapMode = 'land' | 'realms' | 'peoples' | 'faiths' | 'plain';
 
@@ -27,6 +27,8 @@ export interface DrawInput {
   towns: readonly Town[];
   /** Cells of holy cities, drawn in Faiths mode. */
   holy: readonly number[];
+  /** Anything else the fills depend on (vassals wearing their overlord's colour), for the layer cache. */
+  variant?: string;
 }
 
 export interface DrawResult {
@@ -149,13 +151,40 @@ function blurPlane(
   return out;
 }
 
-/** Calls `put(pixelIndex, value)` for every pixel of the plane upscaled `S` times, bilinear. */
+/** Pixels worked between pauses in a sliced build (a few milliseconds of work). */
+const SLICE_PX = 1 << 18;
+/** Milliseconds of light work run together before a pause. */
+const SLICE_MS = 8;
+/** Rows of a plane this many pixels wide worked between pauses. */
+const sliceRows = (width: number) => Math.max(1, Math.floor(SLICE_PX / width));
+
+/** `upscale` in slices of rows. */
+function* upscaleSteps(
+  plane: Float32Array,
+  w: number,
+  h: number,
+  S: number,
+  put: (p: number, v: number) => void,
+): Generator<void, void, void> {
+  const rows = sliceRows(w * S);
+  for (let y = 0; y < h * S; y += rows) {
+    if (y > 0) yield;
+    upscale(plane, w, h, S, put, y, Math.min(h * S, y + rows));
+  }
+}
+
+/**
+ * Calls `put(pixelIndex, value)` for every pixel of the plane upscaled `S` times, bilinear, in
+ * the pixel rows `from` to `to`.
+ */
 function upscale(
   plane: Float32Array,
   w: number,
   h: number,
   S: number,
   put: (p: number, v: number) => void,
+  from = 0,
+  to = h * S,
 ): void {
   const P = w * S;
   const x0 = new Int32Array(P);
@@ -168,7 +197,7 @@ function upscale(
     x1[x] = Math.min(w - 1, i + 1);
     tx[x] = f - i;
   }
-  for (let y = 0; y < h * S; y += 1) {
+  for (let y = from; y < to; y += 1) {
     const f = (y + 0.5) / S - 0.5;
     const j = Math.floor(f);
     const ty = f - j;
@@ -189,14 +218,14 @@ function upscale(
  * A cell mask (0 or 255 a cell) smoothed and upscaled to `S` pixels a cell: blurred at cell
  * size (sigma in cells), then interpolated and cut at `thr` (0-255). Returns 1 where it holds.
  */
-function smoothMask(
+function* smoothMaskSteps(
   cellsAlpha: Uint8Array,
   w: number,
   h: number,
   S: number,
   sigmaCells: number,
   thr: number,
-): Uint8Array {
+): Generator<void, Uint8Array, void> {
   const plane = blurPlane(
     Float32Array.from(cellsAlpha, (v) => v / 255),
     w,
@@ -205,27 +234,88 @@ function smoothMask(
   );
   const out = new Uint8Array(w * S * h * S);
   const cut = thr / 255;
-  upscale(plane, w, h, S, (p, v) => {
+  yield* upscaleSteps(plane, w, h, S, (p, v) => {
     out[p] = v > cut ? 1 : 0;
   });
   return out;
 }
 
+/** The smoothed mask's values before the cut (0-1 a pixel), for edges drawn with coverage. */
+function* smoothFieldSteps(
+  cellsAlpha: Uint8Array,
+  w: number,
+  h: number,
+  S: number,
+  sigmaCells: number,
+): Generator<void, Float32Array, void> {
+  const plane = blurPlane(
+    Float32Array.from(cellsAlpha, (v) => v / 255),
+    w,
+    h,
+    sigmaCells,
+  );
+  const out = new Float32Array(w * S * h * S);
+  yield* upscaleSteps(plane, w, h, S, (p, v) => {
+    out[p] = v;
+  });
+  return out;
+}
+
+/**
+ * How much of pixel `q` of a smoothed field (`pw` wide, `ph` high) lies inside its cut, 0-1: the
+ * signed distance to the cut line from the local slope, so a shape's edge is drawn smooth (not
+ * stepped) when the map is zoomed in.
+ */
+function coverage(field: Float32Array, q: number, pw: number, ph: number, cut: number): number {
+  return Math.max(0, Math.min(1, 0.5 + signedAt(field, q, pw, ph, cut)));
+}
+
+/** Pixels from pixel `q`'s centre to the field's cut line (positive inside), from the slope. */
+function signedAt(field: Float32Array, q: number, pw: number, ph: number, cut: number): number {
+  const x = q % pw;
+  const y = (q - x) / pw;
+  const l = x > 0 ? field[q - 1]! : field[q]!;
+  const r = x < pw - 1 ? field[q + 1]! : field[q]!;
+  const u = y > 0 ? field[q - pw]! : field[q]!;
+  const d = y < ph - 1 ? field[q + pw]! : field[q]!;
+  const slope = Math.hypot(r - l, d - u) / 2;
+  return (field[q]! - cut) / Math.max(slope, 1e-4);
+}
+
 /** The shore as an SVG path in cell units: the smoothed land mask's edge, smooth at any zoom. */
 export function coastPath(cells: WorldCells): string {
+  return runSteps(coastSteps(cells));
+}
+
+/** The same path in slices (see `atlasSteps`). */
+export function* coastSteps(cells: WorldCells): Generator<void, string, void> {
   const W = cells.width;
   const H = cells.height;
   const land = Float32Array.from(cells.water, (v) => (v === 2 || v === 3 ? 0 : 1));
   // The same blur and cut as the raster map (smoothMask at sigma 1.75, threshold 127).
-  return pathOf(contours(blurPlane(land, W, H, 1.75), W, H, 127 / 255, 4));
+  return pathOf(yield* contourSteps(blurPlane(land, W, H, 1.75), W, H, 127 / 255, 4));
+}
+
+/** Runs a sliced build to the end at once. */
+export function runSteps<T>(steps: Generator<void, T, void>): T {
+  for (;;) {
+    const r = steps.next();
+    if (r.done) return r.value;
+  }
 }
 
 const FAR = 30000;
-/** Chamfer (3-4) distance to the nearest set pixel of `source`, in thirds of a pixel. */
-function distanceTo(source: Uint8Array, w: number, h: number): Uint16Array {
+/** Chamfer (3-4) distance to the nearest set pixel of `source`, in thirds of a pixel; sliced. */
+function* distanceSteps(
+  source: Uint8Array,
+  w: number,
+  h: number,
+): Generator<void, Uint16Array, void> {
+  const rows = sliceRows(w);
   const d = new Uint16Array(w * h);
   for (let i = 0; i < d.length; i += 1) d[i] = source[i] ? 0 : FAR;
   for (let y = 0; y < h; y += 1) {
+    if (y % rows === rows - 1) yield;
     for (let x = 0; x < w; x += 1) {
       const i = y * w + x;
       let v = d[i]!;
@@ -240,6 +330,7 @@ function distanceTo(source: Uint8Array, w: number, h: number): Uint16Array {
     }
   }
   for (let y = h - 1; y >= 0; y -= 1) {
+    if (y % rows === 0) yield;
     for (let x = w - 1; x >= 0; x -= 1) {
       const i = y * w + x;
       let v = d[i]!;
@@ -289,6 +380,8 @@ export interface Atlas {
   /** The longest single slice of that work, in milliseconds. */
   maxSliceMs: number;
   draw: (input: DrawInput) => DrawResult;
+  /** The same drawing in slices, for the sharper map: the canvas changes only at the last one. */
+  drawSteps: (input: DrawInput) => Generator<void, DrawResult, void>;
 }
 
 /** Pixels a cell the Tales map uses for a world this many cells wide. */
@@ -336,6 +429,16 @@ export function* atlasSteps(
     busy += spent;
     longest = Math.max(longest, spent);
   };
+  /** Runs a helper's slices as slices of this build. */
+  function* inSlices<T>(steps: Generator<void, T, void>): Generator<void, T, void> {
+    for (;;) {
+      const r = steps.next();
+      if (r.done) return r.value;
+      lap();
+      yield;
+      mark = performance.now();
+    }
+  }
   const W = cells.width;
   const H = cells.height;
   const N = W * H;
@@ -350,22 +453,22 @@ export function* atlasSteps(
 
   // Land and lake masks, smoothed.
   const landCells = Uint8Array.from(isLand, (v) => (v ? 255 : 0));
-  const landPx = smoothMask(landCells, W, H, S, 1.75, 127);
+  const landPx = yield* inSlices(smoothMaskSteps(landCells, W, H, S, 1.75, 127));
   lap();
   yield;
   mark = performance.now();
   const lakeCells = Uint8Array.from(water, (v) => (v === 2 ? 255 : 0));
-  const lakePx = smoothMask(lakeCells, W, H, S, 0.9, 30);
+  const lakePx = yield* inSlices(smoothMaskSteps(lakeCells, W, H, S, 0.9, 30));
   lap();
   yield;
   mark = performance.now();
   const sea = new Uint8Array(P * P);
   for (let i = 0; i < sea.length; i += 1) sea[i] = landPx[i] ? 0 : 1;
-  const seaDist = distanceTo(sea, P, P);
+  const seaDist = yield* inSlices(distanceSteps(sea, P, P));
   lap();
   yield;
   mark = performance.now();
-  const landDist = distanceTo(landPx, P, P);
+  const landDist = yield* inSlices(distanceSteps(landPx, P, P));
   /** Pixels from the nearest water (land) or land (sea). */
   const coastPx = (p: number) => (landPx[p] ? seaDist[p]! : landDist[p]!) / 3;
 
@@ -382,9 +485,11 @@ export function* atlasSteps(
     mark = performance.now();
     const plane = new Float32Array(N);
     for (let i = 0; i < N; i += 1) plane[i] = (TINT[biomeAt(i)] ?? PAPER)[ch]!;
-    upscale(blurPlane(plane, W, H, 1.5, true), W, H, S, (p, v) => {
-      tintPx[p * 3 + ch] = v;
-    });
+    yield* inSlices(
+      upscaleSteps(blurPlane(plane, W, H, 1.5, true), W, H, S, (p, v) => {
+        tintPx[p * 3 + ch] = v;
+      }),
+    );
   }
   const ripples = [
     [10 * k, 90],
@@ -940,14 +1045,15 @@ export function* atlasSteps(
   }
   const nearCoast = 0.4 * S;
 
-  function shapeOf(
+  /** One realm's shape, built in slices; its edge is drawn with coverage, so it stays smooth. */
+  function* shapeSteps(
     civ: number,
     own: Uint16Array,
     x0: number,
     y0: number,
     x1: number,
     y1: number,
-  ): Shape {
+  ): Generator<void, Shape, void> {
     const pad = 3;
     const cx0 = Math.max(0, x0 - pad);
     const cy0 = Math.max(0, y0 - pad);
@@ -961,29 +1067,49 @@ export function* atlasSteps(
         if (own[(cy0 + y) * W + cx0 + x] === civ) alpha[y * cw + x] = 255;
       }
     }
-    const soft = smoothMask(alpha, cw, ch, S, 1.25, 127);
+    const field = yield* smoothFieldSteps(alpha, cw, ch, S, 1.25);
+    const cut = 127 / 255;
     const pw = cw * S;
     const ph = ch * S;
     const rx = cx0 * S;
     const ry = cy0 * S;
+    const rows = sliceRows(pw);
     const mask = new Uint8Array(pw * ph);
     const fill = new Uint8Array(pw * ph);
+    /** Coverage (1-255) of the pixels either side of the edge; 0 elsewhere. */
+    const cover = new Uint8Array(pw * ph);
+    /** Pixels just outside the edge that it partly covers. */
+    const fringe: number[] = [];
+    const inside = (q: number) => field[q]! > cut;
     for (let y = 0; y < ph; y += 1) {
+      if (y % rows === rows - 1) yield;
       for (let x = 0; x < pw; x += 1) {
         const q = y * pw + x;
-        if (!soft[q]) continue;
+        const held = inside(q);
+        const edge =
+          (x > 0 && inside(q - 1) !== held) ||
+          (x < pw - 1 && inside(q + 1) !== held) ||
+          (y > 0 && inside(q - pw) !== held) ||
+          (y < ph - 1 && inside(q + pw) !== held);
+        if (!held && !edge) continue;
+        const c = edge ? coverage(field, q, pw, ph, cut) : 1;
+        if (c <= 0) continue;
         const p = (ry + y) * P + rx + x;
-        if (landPx[p]) {
-          mask[q] = 1;
-          fill[q] = 255;
-        } else if (lakePx[p]) mask[q] = 1;
+        const wet = !landPx[p] && lakePx[p];
+        if (!landPx[p] && !wet) continue;
+        if (edge) cover[q] = Math.max(1, Math.round(c * 255));
+        if (landPx[p]) fill[q] = Math.round(c * 255);
+        if (held) mask[q] = 1;
+        else fringe.push(q);
       }
     }
+    yield;
     // Distance (thirds of a pixel) from the mask's edge, only where a band can reach: seed from the
     // edge pixels and spread a few pixels in, which is far cheaper than a whole-box distance pass.
     const near = new Uint8Array(pw * ph);
     const touched: number[] = [];
     for (let y = 1; y < ph - 1; y += 1) {
+      if (y % rows === rows - 1) yield;
       for (let x = 1; x < pw - 1; x += 1) {
         const q = y * pw + x;
         if (!mask[q] || (mask[q - 1] && mask[q + 1] && mask[q - pw] && mask[q + pw])) continue;
@@ -1002,17 +1128,29 @@ export function* atlasSteps(
         }
       }
     }
+    yield;
     const band = new Uint8Array(pw * ph);
     const thin = new Uint8Array(pw * ph);
-    for (const q of touched) {
-      const d = near[q]! / 3;
+    const coastFade = (q: number) => {
       const y = Math.floor(q / pw);
       const c = coastPx((ry + y) * P + rx + (q - y * pw));
-      const k2 = Math.max(0, Math.min(1, c - nearCoast + 1));
+      return Math.max(0, Math.min(1, c - nearCoast + 1));
+    };
+    for (const q of touched) {
+      const d = near[q]! / 3;
+      const k2 = coastFade(q) * (cover[q] ? cover[q]! / 255 : 1);
       const wide = Math.max(0, Math.min(1, bandWidth + 0.5 - d)) * k2;
       const slim = Math.max(0, Math.min(1, thinWidth + 0.5 - d)) * k2;
       if (wide > 0) band[q] = Math.round(wide * 255);
       if (slim > 0) thin[q] = Math.round(slim * 255);
+    }
+    // The outer half of the edge: the part of the line that falls on the pixels just outside.
+    for (const q of fringe) {
+      const a = Math.round(coastFade(q) * cover[q]!);
+      if (a <= 0) continue;
+      band[q] = a;
+      thin[q] = a;
+      touched.push(q);
     }
     return { x0: rx, y0: ry, w: pw, h: ph, fill, band, thin, edge: Uint32Array.from(touched) };
   }
@@ -1046,34 +1184,53 @@ export function* atlasSteps(
     return canvas;
   };
 
-  function wildCanvas(key: string, own: Uint16Array): HTMLCanvasElement {
+  /** The wild land's hatching, built in slices; its dashed edge is drawn with coverage. */
+  function* wildSteps(key: string, own: Uint16Array): Generator<void, HTMLCanvasElement, void> {
     if (wildCache?.key === key) return wildCache.canvas;
     const alpha = new Uint8Array(N);
     for (let i = 0; i < N; i += 1) if (isLand[i] && !own[i]) alpha[i] = 255;
-    const soft = smoothMask(alpha, W, H, S, 1.25, 127);
+    const field = yield* smoothFieldSteps(alpha, W, H, S, 1.25);
+    const cut = 127 / 255;
     const canvas = canvasOf(P, P);
     const ctx = ctxOf(canvas);
     const img = ctx.createImageData(P, P);
     const hatch = Math.round(14 * k);
+    const rows = sliceRows(P);
+    const put = (q: number, rgb: Rgb3, a: number) => {
+      if (a <= img.data[q + 3]!) return;
+      img.data[q] = rgb[0];
+      img.data[q + 1] = rgb[1];
+      img.data[q + 2] = rgb[2];
+      img.data[q + 3] = a;
+    };
     for (let y = 1; y < P - 1; y += 1) {
+      if (y % rows === rows - 1) yield;
       for (let x = 1; x < P - 1; x += 1) {
         const p = y * P + x;
-        if (!soft[p] || !landPx[p]) continue;
+        const v = field[p]!;
+        if (!landPx[p] || v < cut - 0.25) continue;
+        const held = v > cut;
+        const edge =
+          field[p - 1]! > cut !== held ||
+          field[p + 1]! > cut !== held ||
+          field[p - P]! > cut !== held ||
+          field[p + P]! > cut !== held;
+        if (!held && !edge) continue;
+        const sd = edge ? signedAt(field, p, P, P, cut) : 1;
+        const c = Math.max(0, Math.min(1, 0.5 + sd));
         const q = p * 4;
-        const edge = !soft[p - 1] || !soft[p + 1] || !soft[p - P] || !soft[p + P];
         if (edge) {
-          if ((x + y) % 6 < 3 && coastPx(p) > nearCoast) {
-            img.data[q] = 110;
-            img.data[q + 1] = 86;
-            img.data[q + 2] = 62;
-            img.data[q + 3] = 190;
+          // A dashed line about a pixel wide along the edge, a little inside it.
+          const line = Math.max(0, Math.min(1, 1.1 - Math.abs(sd - 0.4)));
+          if (line > 0 && (x + y) % 6 < 3 && coastPx(p) > nearCoast) {
+            put(q, [110, 86, 62], Math.round(160 * line));
           }
-        } else if ((((x - y) % hatch) + hatch) % hatch === 0) {
-          img.data[q] = 120;
-          img.data[q + 1] = 96;
-          img.data[q + 2] = 70;
-          img.data[q + 3] = 105;
+          if (!held) continue;
         }
+        // Thin diagonal hatching, with its neighbours lightly inked so it reads as a line.
+        const off = (((x - y) % hatch) + hatch) % hatch;
+        const across = Math.min(off, hatch - off);
+        if (across <= 1) put(q, [120, 96, 70], Math.round((across === 0 ? 92 : 14) * c));
       }
     }
     ctx.putImageData(img, 0, 0);
@@ -1089,22 +1246,55 @@ export function* atlasSteps(
   const layers = new Map<string, { canvas: HTMLCanvasElement; centres: DrawResult['centres'] }>();
 
   function draw(input: DrawInput): DrawResult {
-    const start = performance.now();
+    return runSteps(drawSteps(input));
+  }
+
+  /**
+   * The same drawing in slices: the realms' shapes, tints and the wild land are made first, a
+   * slice at a time, then the map is put together at once, so a half-drawn map is never shown.
+   */
+  function* drawSteps(input: DrawInput): Generator<void, DrawResult, void> {
+    let work = 0;
+    let mark = performance.now();
+    /** Ends a slice: adds its time to the work done. */
+    function* pause(): Generator<void, void, void> {
+      work += performance.now() - mark;
+      yield;
+      mark = performance.now();
+    }
+    const done = () => work + performance.now() - mark;
+    /** Runs a helper's slices as slices of this drawing. */
+    function* paced<T>(steps: Generator<void, T, void>): Generator<void, T, void> {
+      for (;;) {
+        const r = steps.next();
+        if (r.done) return r.value;
+        yield* pause();
+      }
+    }
     const { mode, owner } = input;
-    const layerKey = `${mode}|${input.key}`;
+    const layerKey = `${mode}|${input.key}|${input.variant ?? ''}`;
     const kept = layers.get(layerKey);
     if (kept) {
       layers.delete(layerKey);
       layers.set(layerKey, kept);
       dctx.globalAlpha = 1;
       dctx.drawImage(kept.canvas, 0, 0);
-      return { ms: performance.now() - start, centres: kept.centres };
+      return { ms: done(), centres: kept.centres };
     }
     const fills = FILL_MODES.includes(mode);
-    dctx.globalAlpha = 1;
-    dctx.drawImage(mode === 'plain' ? paperBase : landBase, 0, 0);
+    // Put together on a spare canvas (kept for the next visit), then shown in one copy.
+    let page: HTMLCanvasElement;
+    if (layers.size >= LAYER_CACHE) {
+      const oldest = layers.keys().next().value!;
+      page = layers.get(oldest)!.canvas;
+      layers.delete(oldest);
+    } else page = canvasOf(P, P);
+    const cctx = ctxOf(page);
     const centres = new Map<number, { x: number; y: number; n: number }>();
-    if (mode !== 'plain') {
+    if (mode === 'plain') {
+      cctx.globalAlpha = 1;
+      cctx.drawImage(paperBase, 0, 0);
+    } else {
       // Ownership with each lake given to the realm round most of its shore.
       const own = Uint16Array.from(owner, (v, i) => (isLand[i] || water[i] === 2 ? v : 0));
       for (const members of lakes) {
@@ -1181,7 +1371,8 @@ export function* atlasSteps(
         const key = `${civ}:${a.h}:${a.x0},${a.y0},${a.x1},${a.y1}`;
         let shape = shapes.get(key);
         if (!shape) {
-          shape = shapeOf(civ, own, a.x0, a.y0, a.x1, a.y1);
+          yield* pause();
+          shape = yield* paced(shapeSteps(civ, own, a.x0, a.y0, a.x1, a.y1));
           if (shapes.size > 80) shapes.clear();
           shapes.set(key, shape);
         } else {
@@ -1191,23 +1382,40 @@ export function* atlasSteps(
         live.push([key, civ, shape]);
         centres.set(civ, { x: a.sx / a.n + 0.5, y: a.sy / a.n + 0.5, n: a.n });
       }
+      const slim = THIN_MODES.includes(mode);
+      // Tint ahead (the pieces are kept), a few realms a slice.
+      for (const [key, civ, shape] of live) {
+        const colour = fills ? input.fillOf(civ) : null;
+        if (colour) tintOf(`${key}|f`, shape.fill, shape, colour);
+        tintOf(
+          `${key}|${slim ? 't' : 'b'}`,
+          slim ? shape.thin : shape.band,
+          shape,
+          input.borderOf(civ),
+          shape.edge,
+        );
+        if (performance.now() - mark > SLICE_MS) yield* pause();
+      }
+      const wild = wildCount > 0 ? yield* paced(wildSteps(`${wildHash}:${wildCount}`, own)) : null;
+      yield* pause();
+      cctx.globalAlpha = 1;
+      cctx.drawImage(landBase, 0, 0);
       if (fills) {
-        dctx.globalAlpha = FILL_STRENGTH;
+        cctx.globalAlpha = FILL_STRENGTH;
         for (const [key, civ, shape] of live) {
           const colour = input.fillOf(civ);
           if (colour)
-            dctx.drawImage(tintOf(`${key}|f`, shape.fill, shape, colour), shape.x0, shape.y0);
+            cctx.drawImage(tintOf(`${key}|f`, shape.fill, shape, colour), shape.x0, shape.y0);
         }
       }
-      dctx.globalAlpha = fills ? 0.8 : 1;
-      dctx.drawImage(symbols, 0, 0);
-      dctx.globalAlpha = 1;
-      dctx.drawImage(rivers, 0, 0);
-      if (wildCount > 0) dctx.drawImage(wildCanvas(`${wildHash}:${wildCount}`, own), 0, 0);
-      dctx.globalAlpha = MODE_STRENGTH[mode];
-      const slim = THIN_MODES.includes(mode);
+      cctx.globalAlpha = fills ? 0.8 : 1;
+      cctx.drawImage(symbols, 0, 0);
+      cctx.globalAlpha = 1;
+      cctx.drawImage(rivers, 0, 0);
+      if (wild) cctx.drawImage(wild, 0, 0);
+      cctx.globalAlpha = MODE_STRENGTH[mode];
       for (const [key, civ, shape] of live) {
-        dctx.drawImage(
+        cctx.drawImage(
           tintOf(
             `${key}|${slim ? 't' : 'b'}`,
             slim ? shape.thin : shape.band,
@@ -1219,26 +1427,26 @@ export function* atlasSteps(
           shape.y0,
         );
       }
-      dctx.globalAlpha = 1;
-      dctx.drawImage(roads, 0, 0);
+      cctx.globalAlpha = 1;
+      cctx.drawImage(roads, 0, 0);
       // Towns, small first so the big ones sit on top.
       const towns = [...input.towns].sort((a, b) => a.pop - b.pop);
-      dctx.lineWidth = 2 * k;
+      cctx.lineWidth = 2 * k;
       for (const town of towns) {
         const cx = ((town.cell % W) + 0.5) * S;
         const cy = (Math.floor(town.cell / W) + 0.5) * S;
         const r = (town.pop >= 800 ? 7 : town.pop >= 300 ? 5 : 3.2) * k;
-        dctx.beginPath();
-        dctx.arc(cx, cy, r, 0, Math.PI * 2);
-        dctx.fillStyle = 'rgb(250,246,236)';
-        dctx.fill();
-        dctx.strokeStyle = 'rgb(70,62,52)';
-        dctx.stroke();
+        cctx.beginPath();
+        cctx.arc(cx, cy, r, 0, Math.PI * 2);
+        cctx.fillStyle = 'rgb(250,246,236)';
+        cctx.fill();
+        cctx.strokeStyle = 'rgb(70,62,52)';
+        cctx.stroke();
         if (town.capital) {
-          dctx.beginPath();
-          dctx.arc(cx, cy, r + 4 * k, 0, Math.PI * 2);
-          dctx.strokeStyle = 'rgba(70,62,52,0.9)';
-          dctx.stroke();
+          cctx.beginPath();
+          cctx.arc(cx, cy, r + 4 * k, 0, Math.PI * 2);
+          cctx.strokeStyle = 'rgba(70,62,52,0.9)';
+          cctx.stroke();
         }
       }
       if (mode === 'faiths') {
@@ -1246,38 +1454,31 @@ export function* atlasSteps(
           const cx = ((cell % W) + 0.5) * S;
           const cy = (Math.floor(cell / W) + 0.5) * S;
           const r = 8 * k;
-          dctx.beginPath();
-          dctx.moveTo(cx, cy - r * 1.5);
-          dctx.lineTo(cx + r * 0.5, cy - r * 0.5);
-          dctx.lineTo(cx + r * 1.5, cy);
-          dctx.lineTo(cx + r * 0.5, cy + r * 0.5);
-          dctx.lineTo(cx, cy + r * 1.5);
-          dctx.lineTo(cx - r * 0.5, cy + r * 0.5);
-          dctx.lineTo(cx - r * 1.5, cy);
-          dctx.lineTo(cx - r * 0.5, cy - r * 0.5);
-          dctx.closePath();
-          dctx.fillStyle = 'rgb(236,200,96)';
-          dctx.fill();
-          dctx.strokeStyle = 'rgb(96,70,30)';
-          dctx.lineWidth = 1.4 * k;
-          dctx.stroke();
+          cctx.beginPath();
+          cctx.moveTo(cx, cy - r * 1.5);
+          cctx.lineTo(cx + r * 0.5, cy - r * 0.5);
+          cctx.lineTo(cx + r * 1.5, cy);
+          cctx.lineTo(cx + r * 0.5, cy + r * 0.5);
+          cctx.lineTo(cx, cy + r * 1.5);
+          cctx.lineTo(cx - r * 0.5, cy + r * 0.5);
+          cctx.lineTo(cx - r * 1.5, cy);
+          cctx.lineTo(cx - r * 0.5, cy - r * 0.5);
+          cctx.closePath();
+          cctx.fillStyle = 'rgb(236,200,96)';
+          cctx.fill();
+          cctx.strokeStyle = 'rgb(96,70,30)';
+          cctx.lineWidth = 1.4 * k;
+          cctx.stroke();
         }
       }
     }
-    if (options.coast !== false) dctx.drawImage(coast, 0, 0);
-    // Keep a copy for the next visit (the caller's key stands for the towns and colours too).
-    let spare: HTMLCanvasElement;
-    if (layers.size >= LAYER_CACHE) {
-      const oldest = layers.keys().next().value!;
-      spare = layers.get(oldest)!.canvas;
-      layers.delete(oldest);
-    } else spare = canvasOf(P, P);
-    const sctx = ctxOf(spare);
-    sctx.globalAlpha = 1;
-    sctx.clearRect(0, 0, P, P);
-    sctx.drawImage(display, 0, 0);
-    layers.set(layerKey, { canvas: spare, centres });
-    return { ms: performance.now() - start, centres };
+    if (options.coast !== false) cctx.drawImage(coast, 0, 0);
+    // The caller's key stands for the towns and colours too.
+    layers.set(layerKey, { canvas: page, centres });
+    yield* pause();
+    dctx.globalAlpha = 1;
+    dctx.drawImage(page, 0, 0);
+    return { ms: done(), centres };
   }
 
   return {
@@ -1291,5 +1492,6 @@ export function* atlasSteps(
     terrainMs,
     maxSliceMs,
     draw,
+    drawSteps,
   };
 }

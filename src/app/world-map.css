@@ -1116,7 +1116,7 @@ dl.facts dd {
   gap: 6px;
   margin: 6px 0 2px;
   padding-left: 12px;
-  border-left: 2px solid var(--line);
+  border-left: 2px solid color-mix(in srgb, var(--muted) 45%, transparent);
   font-size: 0.85rem;
 }
 .wm-root .lg-also {
@@ -1265,6 +1265,23 @@ dl.facts dd {
 }
 .wm-root .lg-annals .yrs {
   color: var(--muted);
+  font-size: 0.8rem;
+}
+/* Realm ties: a vassalage stands apart with a thin rule; ties made after the year shown are dimmed. */
+.wm-root .lg-ties > li[data-tie='vassal'] {
+  border-left: 2px solid color-mix(in srgb, var(--muted) 45%, transparent);
+  padding-left: 8px;
+}
+.wm-root :is(.lg-ties > li, .lg-pacts span).later {
+  opacity: 0.55;
+}
+.wm-root .lg-pacts {
+  margin: 8px 0 2px;
+  font-size: 0.85rem;
+  max-width: 62ch;
+  color: var(--muted);
+}
+.wm-root .lg-pacts .yrs {
   font-size: 0.8rem;
 }
 .wm-root .lg-beats {

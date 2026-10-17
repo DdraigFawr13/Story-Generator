@@ -19,6 +19,8 @@ import {
   type SimEvent,
 } from '../engine';
 import { WatchCard } from './EmbarkCards';
+import { TiesSection } from './TiesSection';
+import { standingAt } from './ties';
 import {
   KIND_LABEL,
   Link,
@@ -443,6 +445,28 @@ function EntityPage({
     if (ruler) {
       facts.push(['Ruler', <Link to={{ kind: 'person', id: ruler.id }}>{ruler.name}</Link>]);
     }
+    const standing = standingAt(world, civ.id, year);
+    if (standing.overlord !== undefined) {
+      const lord = world.civs.get(standing.overlord)!;
+      facts.push([
+        'Vassal of',
+        <>
+          <Link to={{ kind: 'civ', id: lord.id }}>{lord.name}</Link>
+          {standing.since !== undefined && ` since Year ${yearText(standing.since)}`}
+        </>,
+      ]);
+    }
+    const civRefs = (ids: Id[]) =>
+      ids.flatMap((id) => {
+        const c = world.civs.get(id);
+        return c ? [{ to: { kind: 'civ', id } as PageRef, label: c.name }] : [];
+      });
+    if (standing.vassals.length > 0) {
+      facts.push(['Vassals', <LinkList refs={civRefs(standing.vassals)} limit={PLACES_SHOWN} />]);
+    }
+    if (standing.allies.length > 0) {
+      facts.push(['Allies', <LinkList refs={civRefs(standing.allies)} limit={PLACES_SHOWN} />]);
+    }
     const enemies = warsAt(civ.id, year);
     if (enemies.length > 0) {
       facts.push([
@@ -579,6 +603,7 @@ function EntityPage({
           <Facts facts={facts} />
         </>
       )}
+      {page.kind === 'civ' && <TiesSection civId={page.id} />}
       {page.kind === 'civ' && <AnnalsSection civId={page.id} />}
       {cell !== null && !bare && (
         <div className="lg-actions">

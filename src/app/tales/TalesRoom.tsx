@@ -19,12 +19,15 @@ import { RoomShell, type RoomId } from '../rooms/Rooms';
 import {
   TINT,
   atlasSteps,
-  coastPath,
+  coastSteps,
   createAtlas,
   type Atlas,
+  type DrawInput,
+  type DrawResult,
   type MapMode,
   type Town,
 } from './atlas';
+import { runSliced } from './slices';
 import {
   assignHues,
   assignRaceHues,
@@ -79,6 +82,7 @@ import {
   pausesLabel,
   type PauseKind,
 } from './pauses';
+import { overlordsAt } from '../ties';
 import './fonts.css';
 import './tales.css';
 
@@ -89,6 +93,8 @@ interface Props {
   textOf: (event: SimEvent) => string;
   /** The year to play from. */
   startYear: number;
+  /** Wait at `startYear` for Play (a shared link names its year) instead of playing on. */
+  startPaused?: boolean;
   /** Back to the normal map at a year. */
   onClose: (year: number) => void;
   /** Tales is at this whole year, following this person (for the address bar). */
@@ -228,6 +234,7 @@ function Room({
   data,
   textOf,
   startYear,
+  startPaused,
   onView,
   onOpenEvent,
   onPeople,
@@ -276,8 +283,9 @@ function Room({
   const [chooser, setChooser] = useState(false);
   const [follow, setFollow] = useState<{ id: Id; name: string } | null>(initialFollow ?? null);
   const [speed, setSpeed] = useState<number>(DEFAULT_SPEED);
-  const [playing, setPlaying] = useState(!explore);
-  const [ended, setEnded] = useState(false);
+  const [playing, setPlaying] = useState(!explore && !startPaused);
+  // A link held at the present opens as a finished play: the end card offers Explore the map.
+  const [ended, setEnded] = useState(() => !explore && !!startPaused && startYear >= data.last);
   // Explore: the finished map, zoomable, with marks for the events. Playing never zooms.
   const [exploring, setExploring] = useState(() => !!explore);
   const [zoom, setZoom] = useState<View | null>(null);
@@ -292,6 +300,7 @@ function Room({
   // The sharper terrain for the explore state, built in slices, and the shore as a vector line.
   const [sharp, setSharp] = useState<{ atlas: Atlas; coast: string } | null>(null);
   const [sharpOn, setSharpOn] = useState(false);
+  const [sharpDrawn, setSharpDrawn] = useState(false);
   const [stage, setStage] = useState({ w: 0, h: 0 });
   const [helpOpen, setHelpOpen] = useState(false);
   const [labels, setLabels] = useState<Map<number, { x: number; y: number; n: number }>>(new Map());
@@ -381,6 +390,19 @@ function Room({
   const borderKey = exploring ? deferredBorders : nowBorders;
   /** The atlas that is drawn on: the sharp one while exploring, once it is built. */
   const target = exploring && sharp ? sharp.atlas : atlas;
+  /** Each vassal's overlord in the border year, rebuilt from the diplomacy events. */
+  // Read for the shown year, not the border snapshot's, so a revolt clears the cue that year. The
+  // pairs are keyed as text so the layer redraws only when they change.
+  const vassalKey = [...overlordsAt(world, year)].map(([v, o]) => `${v}>${o}`).join(',');
+  const vassals = useMemo(
+    () =>
+      new Map(
+        vassalKey === ''
+          ? []
+          : vassalKey.split(',').map((pair) => pair.split('>').map(Number) as [number, number]),
+      ),
+    [vassalKey],
+  );
   useEffect(() => {
     if (!target) return;
     const sites = data.sitesAt(borderKey);
@@ -398,7 +420,8 @@ function Room({
       if (site && !last.get(site.id)?.ruined) holy.push(site.cell);
     }
     const fillOf = (civ: number): Rgb3 | null => {
-      if (mode === 'realms') return fillColour(palette.hue.get(civ) ?? 0);
+      // A vassal's land wears its overlord's colour; its border keeps its own.
+      if (mode === 'realms') return fillColour(palette.hue.get(vassals.get(civ) ?? civ) ?? 0);
       if (mode === 'peoples') {
         const h = palette.raceHue.get(realmOf.get(civ) ?? '');
         return h === undefined ? null : fillColour(h);
@@ -410,7 +433,7 @@ function Room({
       }
       return null;
     };
-    const result = target.draw({
+    const input: DrawInput = {
       mode,
       key: borderKey,
       owner: data.bordersAt(borderKey),
@@ -418,19 +441,35 @@ function Room({
       borderOf: (civ) => borderColour(palette.hue.get(civ) ?? 0),
       towns,
       holy,
+      variant: mode === 'realms' ? vassalKey : '',
+    };
+    const finish = (result: DrawResult) => {
+      setLabels(result.centres);
+      stageEl.current?.setAttribute('data-draw-ms', result.ms.toFixed(0));
+    };
+    if (target === atlas) {
+      finish(target.draw(input));
+      return undefined;
+    }
+    // The sharp map is big: it is drawn in slices and keeps the last picture until the new one
+    // is ready, so a new border year or mode never holds the page.
+    return runSliced(target.drawSteps(input), (result, stats) => {
+      finish(result);
+      stageEl.current?.setAttribute('data-draw-slice-ms', stats.longest.toFixed(0));
+      setSharpDrawn(true);
     });
-    setLabels(result.centres);
-    stageEl.current?.setAttribute('data-draw-ms', result.ms.toFixed(0));
-  }, [target, mode, borderKey, data, palette, realmOf, world]);
-  // Fade the sharp layer in after its first drawing, and out when exploring ends.
+  }, [target, atlas, mode, borderKey, data, palette, realmOf, world, vassals]);
+  // Fade the sharp layer in once its first drawing is done, and out when exploring ends.
   useEffect(() => {
     if (!exploring || !sharp) {
       setSharpOn(false);
+      setSharpDrawn(false);
       return undefined;
     }
+    if (!sharpDrawn) return undefined;
     const id = requestAnimationFrame(() => setSharpOn(true));
     return () => cancelAnimationFrame(id);
-  }, [exploring, sharp]);
+  }, [exploring, sharp, sharpDrawn]);
 
   /** Moves the playhead DOM; the heavy parts follow the year state. */
   const sync = () => {
@@ -709,44 +748,27 @@ function Room({
     if (!exploring || !atlas || sharp) return undefined;
     const scale = Math.floor(SHARP_PX / atlas.width);
     if (scale <= atlas.scale) return undefined;
-    let timer = 0;
-    let stopped = false;
     const cells = world.cells!;
-    const steps = atlasSteps(
-      cells,
-      DEFAULT_CONTENT.biomes.map((b) => b.id),
-      scale,
-      { coast: false },
+    const build = function* () {
+      const coast = yield* coastSteps(cells);
+      const made = yield* atlasSteps(
+        cells,
+        DEFAULT_CONTENT.biomes.map((b) => b.id),
+        scale,
+        { coast: false },
+      );
+      return { atlas: made, coast };
+    };
+    return runSliced(
+      build(),
+      (made, stats) => {
+        stageEl.current?.setAttribute('data-sharp-ms', stats.work.toFixed(0));
+        stageEl.current?.setAttribute('data-sharp-slice-ms', stats.longest.toFixed(0));
+        stageEl.current?.setAttribute('data-sharp-slices', String(stats.runs));
+        setSharp(made);
+      },
+      { delayMs: 400 },
     );
-    let coast = '';
-    let slices = 0;
-    let longest = 0;
-    let total = 0;
-    const tick = () => {
-      if (stopped) return;
-      const t = performance.now();
-      let made: Atlas | null = null;
-      if (!coast) coast = coastPath(cells);
-      else {
-        const r = steps.next();
-        if (r.done) made = r.value;
-      }
-      const spent = performance.now() - t;
-      slices += 1;
-      total += spent;
-      longest = Math.max(longest, spent);
-      if (made) {
-        stageEl.current?.setAttribute('data-sharp-ms', total.toFixed(0));
-        stageEl.current?.setAttribute('data-sharp-slice-ms', longest.toFixed(0));
-        stageEl.current?.setAttribute('data-sharp-slices', String(slices));
-        setSharp({ atlas: made, coast });
-      } else timer = window.setTimeout(tick, 24);
-    };
-    timer = window.setTimeout(tick, 400);
-    return () => {
-      stopped = true;
-      window.clearTimeout(timer);
-    };
   }, [exploring, atlas, sharp, world]);
   // Wheel, drag and pinch on the stage, in the explore state only.
   useEffect(() => {
@@ -1136,14 +1158,25 @@ function Room({
     });
     if (mode === 'realms') {
       const rows: Row[] = [];
+      // Each overlord and its vassals lead the key, so the cue is named; then the rest by size.
+      const order: number[] = [];
+      const lords = new Set(vassals.values());
       for (const [civ] of held) {
+        if (!lords.has(civ)) continue;
+        order.push(civ);
+        for (const [v] of held) if (vassals.get(v) === civ) order.push(v);
+      }
+      for (const [civ] of held) if (!order.includes(civ)) order.push(civ);
+      for (const civ of order) {
         const info = data.civById.get(civ);
         if (!info) continue;
         const hue = palette.hue.get(civ) ?? 0;
+        const lord = vassals.get(civ);
+        const lordName = lord === undefined ? undefined : data.civById.get(lord)?.name;
         rows.push({
           key: `r${civ}`,
-          label: info.name,
-          fill: soft(fillColour(hue)),
+          label: lordName ? `${info.name}, vassal of ${shortRealm(lordName)}` : info.name,
+          fill: soft(fillColour(lord === undefined ? hue : (palette.hue.get(lord) ?? hue))),
           edge: css(borderColour(hue)),
         });
       }
@@ -1190,7 +1223,7 @@ function Room({
       return { title: 'The land', rows, more: 0 };
     }
     return null;
-  }, [mode, labels, data, palette, realmOf, world, year, biomeShare]);
+  }, [mode, labels, data, palette, realmOf, world, year, biomeShare, vassals]);
 
   const openPerson = (id: Id) =>
     onOpenPerson(id, Math.floor(clock.current.t), follow ? { ...follow } : null);
@@ -1276,6 +1309,11 @@ function Room({
                   >
                     <span className="full">{info.name}</span>
                     {short !== info.name && <span className="short">{short}</span>}
+                    {vassals.has(civ) && (
+                      <small className="vassal">
+                        vassal of {shortRealm(data.civById.get(vassals.get(civ)!)?.name ?? '')}
+                      </small>
+                    )}
                   </div>
                 );
               })}
@@ -1430,6 +1468,9 @@ function Room({
           {mode === 'faiths' && (
             <p className="tr-note">Faiths are shown as they stood when history ended.</p>
           )}
+          {mode === 'realms' && vassals.size > 0 && (
+            <p className="tr-note">Vassals wear their overlord's colour inside their own border.</p>
+          )}
           {exploring && (
             <div className="tr-zoom" role="group" aria-label="Zoom">
               <button
@@ -1453,7 +1494,9 @@ function Room({
               </button>
             </div>
           )}
-          <div className={`tr-year${mode === 'faiths' ? ' lower' : ''}`}>
+          <div
+            className={`tr-year${mode === 'faiths' || (mode === 'realms' && vassals.size > 0) ? ' lower' : ''}`}
+          >
             <div data-testid="tales-year" aria-live="off">
               Year {year}
             </div>
