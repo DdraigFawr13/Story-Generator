@@ -149,6 +149,9 @@ describe('war', () => {
       'ally_answered',
       'alliance_betrayed',
       'vassal_revolt',
+      // Feuds: a strike across peoples is a wrong, and an exile's raid home is a wrong from the home people to the host.
+      'feud_struck',
+      'exile_returned',
     ];
     let wars = 0;
     for (const seed of ['WAR-A', 'WAR-B', 'WAR-C', 'WAR-D']) {

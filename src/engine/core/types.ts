@@ -328,6 +328,8 @@ export interface Dynasty {
   civId: Id | null;
   /** History year. */
   founded: number;
+  /** The house this one split from in an inheritance quarrel (feuds.ts). */
+  branchOf?: Id;
 }
 
 /** An artifact or book (M2.5). `holder` is a person id; null while lost. */

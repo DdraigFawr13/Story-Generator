@@ -64,11 +64,15 @@ describe('dragon at court', () => {
       const courting = world.events.find((e) => e.id === event.causes[0]);
       expect(courting?.type).toBe('dragon_courted');
       expect(courting?.data.civ).toBe(event.data.civ);
+      // A war is declared, or a civil war begins between the parent realm and the rebel's.
       const war = world.events.find(
         (e) =>
-          e.type === 'war_declared' &&
-          ((e.data.civ === event.data.civ && e.data.enemy === event.data.struck) ||
-            (e.data.civ === event.data.struck && e.data.enemy === event.data.civ)),
+          (e.type === 'war_declared' &&
+            ((e.data.civ === event.data.civ && e.data.enemy === event.data.struck) ||
+              (e.data.civ === event.data.struck && e.data.enemy === event.data.civ))) ||
+          (e.type === 'civil_war_began' &&
+            ((e.data.civ === event.data.civ && e.data.from === event.data.struck) ||
+              (e.data.civ === event.data.struck && e.data.from === event.data.civ))),
       );
       expect(war, `unleashed ${event.id}`).toBeDefined();
       const raid = world.events.find((e) => e.type === 'beast_raid' && e.causes.includes(event.id));

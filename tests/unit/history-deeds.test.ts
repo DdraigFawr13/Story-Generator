@@ -23,8 +23,21 @@ const FREQUENT = {
 const LEGEND_POWER = 17;
 
 // The tests search this fixed list for a world with the event they check (first match wins).
-// DH-60 leads since the 2026-10-17 dragon-at-court change left the others without a duel.
-const SEEDS = ['DH-60', 'DH-134', 'DH-3', 'DH-37', 'DH-79', 'DH-81', 'DH-152', 'DH-34', 'DH-105'];
+// DH-144 and DH-137 lead since the 2026-10-17 feuds change (like the dragon-at-court change before
+// it) left the older seeds without a legend founding or a duel.
+const SEEDS = [
+  'DH-144',
+  'DH-137',
+  'DH-60',
+  'DH-134',
+  'DH-3',
+  'DH-37',
+  'DH-79',
+  'DH-81',
+  'DH-152',
+  'DH-34',
+  'DH-105',
+];
 const make = (seed: string) =>
   generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, FREQUENT);
 /** The first world in SEEDS where `has` holds. */

@@ -84,13 +84,14 @@ describe('colleges and spells', () => {
   const DH_SEEDS = ['DH-3', 'DH-21', 'DH-22', 'DH-1', 'DH-2', 'DH-4', 'DH-5', 'DH-6'];
   const makeMagic = (seed: string) =>
     generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, MAGICAL);
-  const magicWith = (type: string) =>
-    findWorld(`a ${type} event`, 'magic', DH_SEEDS, makeMagic, (x) =>
+  const magicWith = (type: string, seeds = DH_SEEDS) =>
+    findWorld(`a ${type} event`, 'magic', seeds, makeMagic, (x) =>
       x.events.some((e) => e.type === type),
     ).world;
 
   it('are worked only by Exceptional casters, against the trouble they name', () => {
-    const w = magicWith('spell_cast');
+    // DH-8 leads since the 2026-10-17 feuds change left the others without a spell cast.
+    const w = magicWith('spell_cast', ['DH-8', ...DH_SEEDS]);
     const spells = ofType(w, 'spell_cast');
     const troubles = new Set([
       'dry_years_began',

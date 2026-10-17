@@ -45,6 +45,8 @@ export const DIPLOMACY: DiplomacyRules = {
     graceYears: 10,
     // A betrayal is remembered like a murder, a little less (intrigue murder 3).
     grievance: 3,
+    // A blood feud between the rulers' houses is one more reason to part.
+    feud: 1,
   },
   vassal: {
     // Two towns lost and a rival twice as strong: the loser may bend the knee.
@@ -80,6 +82,7 @@ export const DIPLOMACY: DiplomacyRules = {
     betrayed: {
       faith: 'their gods had parted',
       rivals: 'their rulers were rivals',
+      feud: 'the blood feud between their houses',
       weak: 'the {victim} had grown weak',
       strange: 'their ways had grown apart',
     },

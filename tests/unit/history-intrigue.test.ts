@@ -27,8 +27,20 @@ const content = {
 const yearOf = (e: SimEvent) => Math.floor(e.day / DAYS_PER_YEAR);
 
 function find() {
-  // IN-18 joined the list after the 2026-10-17 dragon-at-court change left IN-1 to IN-8 without one.
-  for (const seed of ['IN-1', 'IN-2', 'IN-3', 'IN-4', 'IN-5', 'IN-6', 'IN-7', 'IN-8', 'IN-18']) {
+  // IN-18 joined the list after the 2026-10-17 dragon-at-court change left IN-1 to IN-8 without one,
+  // and IN-26 leads since the feuds change left the others without one too.
+  for (const seed of [
+    'IN-26',
+    'IN-1',
+    'IN-2',
+    'IN-3',
+    'IN-4',
+    'IN-5',
+    'IN-6',
+    'IN-7',
+    'IN-8',
+    'IN-18',
+  ]) {
     const world = generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, content);
     const of = (type: string) => world.events.filter((e) => e.type === type);
     if (
@@ -38,7 +50,7 @@ function find() {
     )
       return { world, of };
   }
-  throw new Error('No seed of IN-1 to IN-8 or IN-18 has a plot, a seat seized and a bribe.');
+  throw new Error('No seed of IN-26, IN-1 to IN-8 or IN-18 has a plot, a seat seized and a bribe.');
 }
 const { world, of } = find();
 

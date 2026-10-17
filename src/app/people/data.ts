@@ -416,6 +416,8 @@ function killPair(event: SimEvent): { killer: Id; victim: Id } | undefined {
       return /\bkilled\b/.test(text('outcome')) ? { killer: a, victim: b } : undefined;
     // actors: avenger, enemy.
     case 'vengeance_raid':
+    // actors: striker, target; the target died when the outcome says so.
+    case 'feud_struck':
       return /\b(slain|killed)\b/.test(text('outcome')) ? { killer: a, victim: b } : undefined;
     default:
       return undefined;
@@ -497,6 +499,19 @@ export const DEED_GROUPS = [
       'legend_bribed',
       'bounty_set',
       'legend_hunted',
+    ],
+  },
+  {
+    id: 'feuds',
+    label: 'Feuds and exiles',
+    types: [
+      'feud_began',
+      'feud_inherited',
+      'feud_struck',
+      'feud_ended',
+      'house_split',
+      'notable_exiled',
+      'exile_returned',
     ],
   },
   {

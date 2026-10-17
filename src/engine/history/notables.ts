@@ -19,6 +19,7 @@ import { cultureGivenName } from '../people/names';
 import { BIRTH_TIER_IDS, TIERS, legendSlotOpen, tierOfPower } from '../people/tiers';
 import { legendFactor, noticeFactor } from './colleges';
 import { hoardItems, hoards } from './dragons';
+import { exileClaimant, feudOnDeath, feudWeddings, inheritanceQuarrel, quarrelOver } from './feuds';
 import { buryRuler, leaveItemsAt } from './places';
 import { passItems, primarySchool, stealItem, itemsHeldBy } from './items';
 import {
@@ -97,13 +98,18 @@ export function rulerOf(run: HistoryRun, civ: Civ): Person | undefined {
 
 // --- dynasties --------------------------------------------------------------------------------
 
-function foundDynasty(run: HistoryRun, founder: Person, causes: Id[]): Dynasty {
+/** The name a house founded by this person would take. */
+export function houseNameFor(run: HistoryRun, founder: Person): string {
+  const pattern = run.content.notables.dynastyNames[founder.cultureId ?? ''] ?? '{name}';
+  return pattern.replace('{name}', founder.name);
+}
+
+/** A person founds a house: the dynasty record and its `dynasty_founded` event. */
+export function foundDynasty(run: HistoryRun, founder: Person, causes: Id[]): Dynasty {
   const { world } = run;
-  const rules = run.content.notables;
-  const pattern = rules.dynastyNames[founder.cultureId ?? ''] ?? '{name}';
   const dynasty: Dynasty = {
     id: world.nextId.dynasty,
-    name: pattern.replace('{name}', founder.name),
+    name: houseNameFor(run, founder),
     founderId: founder.id,
     civId: founder.civId ?? null,
     founded: run.year,
@@ -270,7 +276,7 @@ function deathChance(run: HistoryRun, person: Person): number {
 }
 
 /** Is the ruler or kin (spouse, child, parent, sibling) of the civ's ruler. */
-function rulerKin(run: HistoryRun, civ: Civ, person: Person): boolean {
+export function rulerKin(run: HistoryRun, civ: Civ, person: Person): boolean {
   const ruler = rulerOf(run, civ);
   if (!ruler) return false;
   return (
@@ -406,6 +412,10 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
     // A legend's kills abroad are remembered by the people they harmed (bounties, intrigue.ts).
     if (isLegend(killer)) addHarm(run, killer.id, person.civId, event.id);
   }
+  // A ruler, a house's founder or an artifact's holder may leave an inheritance to quarrel over.
+  const heirloom = quarrelOver(run, person, civ);
+  // A killing between houses may begin a feud, and a dead bearer's heir may take one up (feuds.ts).
+  feudOnDeath(run, person, killer, options.cause, event.id);
   // A ruler of a standing people may be buried with an artifact, unless a hoarding beast took them
   // or they died in a perilous place.
   const hoarder = beast !== undefined && hoards(run, beast);
@@ -417,6 +427,8 @@ export function killNotable(run: HistoryRun, person: Person, options: DeathOptio
   else if (options.peril) leaveItemsAt(run, person, options.peril, event.id);
   else passItems(run, person, event.id);
   if (civ && civ.fell === undefined && civ.rulerId === person.id) succeed(run, civ, person, event);
+  if (heirloom !== undefined && !beast && !options.peril)
+    inheritanceQuarrel(run, person, event.id, heirloom);
   return event;
 }
 
@@ -1240,8 +1252,10 @@ function succeed(run: HistoryRun, civ: Civ, dead: Person, death: SimEvent): void
       .replace('{rival}', loser.name);
     heir = winner;
     causes.push(dispute.id);
-    // The beaten claimant may raise part of the realm (civil-war.ts, later this year).
+    // The beaten claimant may raise part of the realm (civil-war.ts, later this year), unless the
+    // winner drives them into exile first (feuds.ts); an exile may come back to claim it.
     run.claims.push({ civ: civ.id, claimant: loser.id, ruler: winner.id, dispute: dispute.id });
+    exileClaimant(run, loser, civ, dispute.id, winner);
   }
   if (!heir) {
     phrase = rules.noHeirPhrase;
@@ -1311,7 +1325,7 @@ export function sharesSpouseName(run: HistoryRun, a: Person, b: Person): boolean
 }
 
 /** Civs sharing a link between their sites with the given civ, not at war with it. */
-function linkedCivs(run: HistoryRun, civId: Id): Set<Id> {
+export function linkedCivs(run: HistoryRun, civId: Id): Set<Id> {
   const out = new Set<Id>();
   for (const site of liveSites(run)) {
     if (site.civId !== civId) continue;
@@ -1410,6 +1424,8 @@ function siteHasRoom(run: HistoryRun, counts: Map<Id, number>, siteId: Id | null
 }
 
 function runMarriages(run: HistoryRun): void {
+  // Houses in a feud may end it with a match before the year's other marriages are made.
+  feudWeddings(run);
   const rules = run.content.notables;
   const rng = run.rng.notables;
   const cap = rules.notableCap;

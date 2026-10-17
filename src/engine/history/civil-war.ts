@@ -6,6 +6,7 @@
 
 import type { Civ, Id, Person, Site } from '../core/types';
 import { swearPact } from './city-states';
+import { exileNotable } from './feuds';
 import { killNotable, rulerOf, seatHouse } from './notables';
 import { isAdult, livingList, livingPerson } from './people';
 import { bandCount, totalPop } from './pop';
@@ -252,8 +253,16 @@ export function decideCivilWar(
   if (executed) {
     killNotable(run, beaten, { cause: 'execution', killer: victor, causes: [event.id] });
   } else {
-    beaten.civId = null;
-    beaten.siteId = null;
+    // A grown claimant seeks a foreign court (feuds.ts) and may return; with none to take them, or
+    // as a child, they are homeless.
+    const why = run.rules.feuds.phrases.exile.war;
+    const exiled = isAdult(run, beaten)
+      ? exileNotable(run, beaten, old, event.id, victor, true, why)
+      : undefined;
+    if (exiled === undefined) {
+      beaten.civId = null;
+      beaten.siteId = null;
+    }
   }
 }
 

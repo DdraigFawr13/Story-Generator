@@ -570,6 +570,18 @@ for (const r of rows) {
   );
 }
 
+process.stdout.write(
+  '\nfeuds: seed | begun | inherited | max generation | killings | ended wed / paid / forgotten / died out | exiles | returned pardoned / claim / raid | houses split | legends slain\n',
+);
+for (const r of rows) {
+  const f = r.history.feuds;
+  process.stdout.write(
+    `${r.seed.padEnd(4)} | ${String(f.begun).padStart(3)} | ${String(f.inherited).padStart(3)} | ${String(f.maxGeneration).padStart(2)} | ` +
+      `${String(f.killings).padStart(3)} | ${f.wed} / ${f.paid} / ${f.forgotten} / ${f.diedOut} | ${String(f.exiles).padStart(3)} | ` +
+      `${f.pardoned} / ${f.claim} / ${f.raid} | ${String(f.splits).padStart(3)} | ${f.legendsSlain}\n`,
+  );
+}
+
 if (siteMode) {
   process.stdout.write(
     `\nsite tier (${siteYears} years of site play after ${years} of history):\n`,
