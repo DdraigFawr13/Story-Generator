@@ -117,6 +117,10 @@ export interface War {
   civil?: boolean;
   /** A holy war: the faiths clash or a faith's wrong began it (faith.ts). */
   holy?: boolean;
+  /** The defender's allies have been called to arms (diplomacy.ts). */
+  called?: boolean;
+  /** Sites the attacker took or razed from the defender in this war (not civil, not flipped). */
+  taken?: number;
 }
 
 /** A beaten claimant from this year's successions, who may raise part of the realm (civil-war.ts). */
@@ -173,7 +177,7 @@ export interface Student {
   event: Id;
 }
 
-/** A pact of defence between two civs (city-states.ts). */
+/** A pact between two civs: free cities' defence (city-states.ts), alliances and vassalage (diplomacy.ts). */
 export interface Pact {
   a: Id;
   b: Id;
@@ -182,6 +186,13 @@ export interface Pact {
   event: Id;
   /** Wars the ally already came to, so the aid line is written once per war. */
   aided: number[];
+  /** Absent: the free city's pact of defence. `alliance`: sworn allies. `vassal`: `a` is the overlord, `b` the vassal (diplomacy.ts). */
+  kind?: 'alliance' | 'vassal';
+  /** Wars the ally answered the call to, and wars it refused. */
+  answered?: number[];
+  refused?: number[];
+  /** The faith of `a` and `b` when sworn, to see whether the gods have parted. */
+  faiths?: [Id | undefined, Id | undefined];
 }
 
 /** Per-run notable bookkeeping (notables.ts); the people themselves live in `world.people`. */
@@ -251,6 +262,7 @@ export interface HistoryRun {
     civilWar: RngStream;
     faith: RngStream;
     intrigue: RngStream;
+    diplomacy: RngStream;
   };
   /** Current year, 1..historyYears. */
   year: number;
@@ -298,6 +310,11 @@ export interface HistoryRun {
   claims: Claim[];
   /** Plots, honours, harm, bounties and bribes. */
   intrigue: IntrigueState;
+  /** Alliances, vassals and marriages between peoples (diplomacy.ts). */
+  diplomacy: {
+    /** Cross-people marriages by `pairKey`: the latest year and marriage event. */
+    marriages: Map<string, { year: number; event: Id }>;
+  };
   /** The latest faith event per `site:${id}` or `faith:${id}`, cited by the next event there. */
   faithEvents: Map<string, Id>;
 }
@@ -455,6 +472,7 @@ export function createRun(
       civilWar: streamFor(world, 'history.civilWar'),
       faith: streamFor(world, 'history.faith'),
       intrigue: streamFor(world, 'history.intrigue'),
+      diplomacy: streamFor(world, 'history.diplomacy'),
     },
     year: 0,
     logs: new Map(),
@@ -505,6 +523,7 @@ export function createRun(
       bribed: new Map(),
       turncoats: new Set(),
     },
+    diplomacy: { marriages: new Map() },
     faithEvents: new Map(),
   };
   for (const site of world.sites.values()) {

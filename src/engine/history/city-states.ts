@@ -10,6 +10,7 @@ import type { CultureDef } from '../core/content-types';
 import { streamFor } from '../core/rng';
 import type { Civ, Id, Person, SimEvent, Site, WorldState } from '../core/types';
 import { culturePlaceName } from '../people/names';
+import { freeVassal } from './diplomacy';
 import { faithOf, siteFaith } from './faith';
 import { emptyGoods } from './goods';
 import { seatHouse } from './notables';
@@ -34,6 +35,7 @@ import {
   logOf,
   pairKey,
   type HistoryRun,
+  type Pact,
   type War,
 } from './state';
 
@@ -284,7 +286,7 @@ function breakAway(run: HistoryRun, old: Civ, site: Site, causes: Id[]): void {
 
 // --- pacts -------------------------------------------------------------------------------------
 
-function linkedCivIds(run: HistoryRun, civ: Civ): Id[] {
+export function linkedCivIds(run: HistoryRun, civ: Civ): Id[] {
   const out = new Set<Id>();
   for (const site of liveSites(run)) {
     if (site.civId !== civ.id) continue;
@@ -313,8 +315,14 @@ function keepPacts(run: HistoryRun): void {
   run.pacts = run.pacts.filter((pact) => {
     const a = run.world.civs.get(pact.a);
     const b = run.world.civs.get(pact.b);
-    if (!a || !b || a.fell !== undefined || b.fell !== undefined) return false;
-    if (!atWar(run, pact.a, pact.b)) return true;
+    if (!a || !b || a.fell !== undefined || b.fell !== undefined) {
+      // An overlord's fall frees its vassal (diplomacy.ts keeps the other pacts' ends in its own lines).
+      if (pact.kind === 'vassal' && a?.fell !== undefined && b && b.fell === undefined)
+        freeVassal(run, pact, a, b);
+      else if (pact.kind === 'vassal' && b) delete b.overlord;
+      return false;
+    }
+    if (pact.kind !== undefined || !atWar(run, pact.a, pact.b)) return true;
     run.emit({
       type: 'pact_broken',
       place: run.world.sites.get(a.capital)?.cell ?? null,
@@ -366,28 +374,35 @@ export function swearPact(run: HistoryRun, civ: Civ): void {
   run.pacts.push({ a: civ.id, b: partner.id, since: run.year, event: event.id, aided: [] });
 }
 
-/** The living allies of a civ. */
-function alliesOf(run: HistoryRun, civ: Civ): Civ[] {
-  const out: Civ[] = [];
+/** The living pacts of a civ with the civ at the other end of each. */
+function pactsOf(run: HistoryRun, civ: Civ): { pact: Pact; ally: Civ }[] {
+  const out: { pact: Pact; ally: Civ }[] = [];
   for (const pact of run.pacts) {
     const other = pact.a === civ.id ? pact.b : pact.b === civ.id ? pact.a : undefined;
     const ally = other === undefined ? undefined : run.world.civs.get(other);
-    if (ally && ally.fell === undefined) out.push(ally);
+    if (ally && ally.fell === undefined) out.push({ pact, ally });
   }
   return out;
+}
+
+/** Share of an ally's strength a pact lends: a free city's pact and an alliance each have their own. */
+function aidShareOf(run: HistoryRun, pact: Pact): number {
+  return pact.kind === undefined
+    ? run.rules.cityStates.pact.aidShare
+    : run.rules.diplomacy.alliance.aidShare;
 }
 
 /** Strength a civ's allies would lend it, for weighing a war (no line is written). */
 export function pactStrength(run: HistoryRun, civ: Civ, strengthOf: (c: Civ) => number): number {
   let total = 0;
-  for (const ally of alliesOf(run, civ))
-    total += strengthOf(ally) * run.rules.cityStates.pact.aidShare;
+  for (const { pact, ally } of pactsOf(run, civ)) total += strengthOf(ally) * aidShareOf(run, pact);
   return total;
 }
 
 /**
- * Allies stand behind a defender in battle: a share of their strength joins it. The first time
- * in a war, `ally_aided` says so and the attacker resents the ally.
+ * Allies stand behind a defender in battle: a share of their strength joins it. A free city's
+ * pact holds the first time in a war, `ally_aided` says so and the attacker resents the ally.
+ * An alliance or a vassal's pact lends strength only in wars it answered (diplomacy.ts wrote the line).
  */
 export function allyAid(
   run: HistoryRun,
@@ -398,12 +413,13 @@ export function allyAid(
 ): number {
   const rules = run.rules.cityStates.pact;
   let total = 0;
-  for (const ally of alliesOf(run, defender)) {
+  for (const { pact, ally } of pactsOf(run, defender)) {
     if (ally.id === attacker.id || atWar(run, ally.id, defender.id)) continue;
+    if (pact.kind !== undefined) {
+      if (pact.answered?.includes(war.id)) total += strengthOf(ally) * aidShareOf(run, pact);
+      continue;
+    }
     total += strengthOf(ally) * rules.aidShare;
-    const pact = run.pacts.find(
-      (p) => (p.a === ally.id && p.b === defender.id) || (p.b === ally.id && p.a === defender.id),
-    )!;
     if (pact.aided.includes(war.id)) continue;
     pact.aided.push(war.id);
     const event = run.emit({

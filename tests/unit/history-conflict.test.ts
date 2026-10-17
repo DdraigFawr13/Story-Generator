@@ -144,6 +144,11 @@ describe('war', () => {
       'holy_city_taken',
       // M5.2 lineages: a barrow's treasure carried out wrongs the owning civ (places.ts barrowGrievance), and history now hits it.
       'expedition_treasure',
+      // Diplomacy: an oath refused, an ally who came, a betrayal or a vassal's revolt is a wrong, and a betrayal or revolt opens a war at once.
+      'call_refused',
+      'ally_answered',
+      'alliance_betrayed',
+      'vassal_revolt',
     ];
     let wars = 0;
     for (const seed of ['WAR-A', 'WAR-B', 'WAR-C', 'WAR-D']) {

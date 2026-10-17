@@ -3,6 +3,7 @@
 // Tune the numbers here; the history stage in engine/history/ reads only this table.
 
 import type { HistoryRules } from '../engine';
+import { DIPLOMACY } from './diplomacy';
 import { INTRIGUE } from './intrigue';
 import { LINEAGES } from './lineages';
 import { CITY_STATES, CIVIL_WARS, COLLEGES } from './realms';
@@ -171,4 +172,5 @@ export const HISTORY: HistoryRules = {
   cityStates: CITY_STATES,
   civilWar: CIVIL_WARS,
   intrigue: INTRIGUE,
+  diplomacy: DIPLOMACY,
 };

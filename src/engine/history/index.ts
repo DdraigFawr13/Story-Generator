@@ -13,6 +13,7 @@ import { runClimate } from './climate';
 import { runCivilWars } from './civil-war';
 import { runCityStates } from './city-states';
 import { runColleges } from './colleges';
+import { callToArms, runAlliances } from './diplomacy';
 import { runDiseases } from './disease';
 import { pruneEvents, runYearSummary } from './importance';
 import { createPlaybackRecorder, finishPlayback, recordPlaybackYear } from './playback';
@@ -97,7 +98,8 @@ export function runHistory(
     runMigration(run);
     runExpansion(run);
     runBribes(run);
-    runWar(run);
+    runWar(run, callToArms);
+    runAlliances(run);
     runNotables(run);
     runExpeditions(run);
     runCivilWars(run);

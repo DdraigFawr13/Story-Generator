@@ -77,6 +77,9 @@ describe('court intrigue', () => {
         (e) =>
           (e.type === 'champion_fought' || e.type === 'legend_duel') &&
           e.actors.includes(legend) &&
+          // In the bribed war: against the people who paid (in the year it ends, the legend may
+          // already fight another war).
+          Object.values(e.data).includes(bribe.data.enemyCiv!) &&
           yearOf(e) >= yearOf(bribe) &&
           yearOf(e) <= until,
       );
