@@ -623,7 +623,7 @@ After the Phase 3 playtest Morgan asked for additions ranked by value and coding
 9. **Spellbooks and lineages** (M5.2; value 4, M): built 2026-10-16 (#118: apprenticeships, spells, spellbooks, lost and found lore, the People room's Magic tab).
 10. **Court intrigue** (Phase 6 "Legends in politics", pulled forward; value 4, M): built 2026-10-16 (#120: plots and assassinations, honours, seats seized by legends, betrayal, bribes, bounties and hunts); the dragon at court followed as build order 17.
 11. **Story threads view** (M4.6; value 2, S): not started.
-12. **Expeditions and perilous places** (M4.7; value 5, L): history part built 2026-10-14 (#108: places, barrows, hoards, expeditions, beast parts, the restless dead); the map layer and Places page are still to come.
+12. **Expeditions and perilous places** (M4.7; value 5, L): history part built 2026-10-14 (#108: places, barrows, hoards, expeditions, beast parts, the restless dead); the map layer and a page per place built 2026-10-17 (P2).
 13. **Diplomacy: alliances, vassalage, betrayal** (Phase 6; value 5, L): built 2026-10-17 in history (#121: alliances, calls to arms, betrayal, vassals and revolts, peace by marriage); showing vassals on the map and in the People room is still to come.
 14. **Trade between peoples in history** (M4.4; value 3, M): not started.
 15. **The world keeps moving while you watch** (M4.1–M4.3; value 4, L): not started.
@@ -642,7 +642,7 @@ Items not in the list (M4.5, M5.1, M5.3, M5.4, the rest of Phases 6–9) keep th
 Twelve threads have merged since the list was written (#101 to #122, `CHANGELOG.md`), beside the Four rooms UI redesign (#110 to #113, #115, #117) and the faster tests (#119). Thirteen of the sixteen items are built in full or in their history part. Left, in list order:
 
 - Built since: the family tree (item 6), on each house's page in the People room (#124).
-- UI halves of built items: a page per faith (8); the perilous places map layer and Places page (12); vassals on the map and "vassal of" in the People room (13).
+- UI halves of built items: a page per faith (8); vassals on the map and "vassal of" in the People room (13).
 - History leftovers: none; other great beasts and the restless dead as individuals (7) are build order 20. The dragon courted, feared or put under bounty (10) is built as build order 17.
 - Not started: the story threads view (11), trade between peoples (14), the world moving while you watch (15).
 - Rough edges carried from earlier threads: child deaths below history's share and orcs at 7% (M4.0 leftovers); only 4 of 111 dwarven holds sit at a pass; the after-play map pauses about 0.4 s when the sharper map swaps in and draws stepped borders at full zoom; `?year=` starts at a different year from where Tales plays.
@@ -654,7 +654,7 @@ For when the picks Morgan has already seen (vassals shown in the UI, the world m
 | Order | Addition | Where | What you would see | Value | Effort |
 | --- | --- | --- | --- | --- | --- |
 | P1 | The dragon at court | Phase 6 leftover | Picked 2026-10-17; now build order 17 above | 4 | M |
-| P2 | Perilous places on the map and a Places page | M4.7 leftover | Ruins, barrows and lairs marked on the Tales map under the event filter; a page per place with its hoard, its expeditions and its dead | 4 | S |
+| P2 | Perilous places on the map and a Places page | M4.7 leftover | Picked 2026-10-17; built 2026-10-17 | 4 | S |
 | P3 | Great works and enchanting | M5.3 | Picked 2026-10-17; now build order 18 above | 4 | M |
 | P4 | Feuds across generations and exile | M4.5 | Picked 2026-10-17; now build order 19 above | 4 | M |
 | P5 | A page per faith | Phase 7 leftover | Gods, holy city, high priests in order, schisms and holy wars, in the People and Book rooms | 3 | S |
@@ -776,7 +776,7 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 - **M4.4 Politics and trade (medium):** allegiance, tribute and taxes, conscription in war, civ decisions affecting the site, routes and scarcity-driven prices. **Trade between peoples in history** (added 2026-10-14, build order 14): cross-border trade is almost absent today, so caravans travel the routes between realms, a port city on a busy route grows rich and famous, an embargo is a cause of war, and a plundered caravan is a grievance.
 - **M4.5 Life deepening:** multi-generation feuds, inheritance disputes, customs and cultural drift, marriages between families from different sites, exile.
 - **M4.6 Story threads** (build order 11): a derived view of unresolved situations, mentioned in recaps.
-- **M4.7 Perilous places, hoards and expeditions** (about 1,200 lines; added 2026-10-12; build order 12; history part built 2026-10-14, leaders also include a noble of the ruling kin and bands of commoners; the map layer, the Places page and the site hook are still to come):
+- **M4.7 Perilous places, hoards and expeditions** (about 1,200 lines; added 2026-10-12; build order 12; history part built 2026-10-14, leaders also include a noble of the ruling kin and bands of commoners; the map layer and a page per place built 2026-10-17; the site hook is still to come):
   - `content/places.ts` defines ruin, barrow, lair, old mine and aura place, each with danger, hoard and lore odds; the ruins and lairs that already exist become places with no new data.
   - Hoards: great beasts and dragons gather items lost near their lair and what their raids carry off; slaying one releases the hoard to the slayers. Rulers are buried with one item by culture custom, which seeds barrows.
   - A yearly expedition step: bounties from sites with a grievance against a beast or a ruin nearby; the strongest willing figure of the civ leads a party drawn from the site's counts (legend, then exceptional mage, then hero, then captain; added 2026-10-13), so a legend can face a great beast or the dragon and claim its hoard, or die in the lair; outcomes roll against danger and party strength under R-24: death, loot, lore (a book) or fame, each a chronicled event with cause links. A commoner who returns with something becomes a notable.

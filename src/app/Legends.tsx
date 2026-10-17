@@ -17,12 +17,14 @@ import {
   type WorldState,
 } from '../engine';
 import { PageView } from './LegendPages';
+import { allPlaces, placeKindLabel } from './places';
 import {
   LegendsContext,
   Marked,
   cap,
   count,
   plainClick,
+  plural,
   refName,
   spanText,
   useLegends,
@@ -80,6 +82,7 @@ const CATEGORIES: { id: CategoryId; label: string; blurb: string }[] = [
   { id: 'person', label: 'Figures', blurb: 'Notable people' },
   { id: 'dynasty', label: 'Families', blurb: 'Founded lines' },
   { id: 'beast', label: 'Beasts', blurb: 'Lairs and monsters' },
+  { id: 'place', label: 'Places', blurb: 'Ruins, barrows and lairs' },
   { id: 'item', label: 'Artifacts', blurb: 'Artifacts and books' },
   { id: 'event', label: 'Events', blurb: 'Everything the chroniclers noted, greatest first' },
 ];
@@ -205,6 +208,7 @@ export function Legends(props: Props) {
       const event = index.event(ref.id);
       return event ? titleOf(event) : '?';
     }
+    if (ref.kind === 'place') return world.places.get(ref.id)?.name ?? '?';
     return refName(world, ref);
   };
 
@@ -241,7 +245,7 @@ export function Legends(props: Props) {
       ref: { kind: 'civ', id: civ.id },
       name: civ.name,
       years: spanText(civ.founded, civ.fell),
-      meta: `${raceName(civ.raceId)} · ${live.get(civ.id) ?? 0} places`,
+      meta: `${raceName(civ.raceId)} · ${live.get(civ.id) ?? 0} settlements`,
     }));
     const sites: Row[] = [...world.sites.values()]
       .sort((a, b) => b.peakPop - a.peakPop || a.id - b.id)
@@ -298,6 +302,17 @@ export function Legends(props: Props) {
       years: spanText(beast.born, beast.died),
       meta: content.creatures.find((def) => def.id === beast.defId)?.name ?? beast.defId,
     }));
+    const places: Row[] = allPlaces(world).map((place) => {
+      const n = place.expeditions.length;
+      return {
+        ref: { kind: 'place', id: place.id },
+        name: place.name,
+        years: spanText(place.since, place.emptied),
+        meta: `${placeKindLabel(place.kind)}${
+          n > 0 ? ` · ${n} ${plural(n, 'expedition', 'expeditions')}` : ''
+        }`,
+      };
+    });
     const items: Row[] = [...world.items.values()].map((item) => ({
       ref: { kind: 'item', id: item.id },
       name: item.name,
@@ -311,6 +326,7 @@ export function Legends(props: Props) {
       person: people,
       dynasty: dynasties,
       beast: beasts,
+      place: places,
       item: items,
     };
     for (const rows of Object.values(named)) {
@@ -329,6 +345,7 @@ export function Legends(props: Props) {
       person: people,
       dynasty: dynasties,
       beast: beasts,
+      place: places,
       item: items,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -406,6 +423,7 @@ export function Legends(props: Props) {
     person: lists.person.length,
     dynasty: lists.dynasty.length,
     beast: lists.beast.length,
+    place: lists.place.length,
     item: lists.item.length,
     event: world.events.length,
   };

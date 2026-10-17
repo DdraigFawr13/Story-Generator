@@ -149,6 +149,14 @@ interface EntryState {
   trail?: string[];
   all?: boolean;
   scroll?: number;
+  /** Tales was exploring when this entry was left for a place's page: reopen it there. */
+  talesExplore?: { year: number; cell: number | null; place: Id };
+}
+
+/** The explored Tales map an entry was left from, if its state names one. */
+function exploreOf(entry: EntryState | null): EntryState['talesExplore'] {
+  const e = entry?.talesExplore;
+  return e && Number.isInteger(e.year) && Number.isInteger(e.place) ? e : undefined;
 }
 /** The slider year and Legends place a world is shown with. */
 interface Restore {
@@ -215,6 +223,7 @@ function classicLink(search: string): boolean {
 function cellOfPage(state: WorldState, ref: PageRef): number | null {
   if (ref.kind === 'race') return null;
   if (ref.kind === 'event') return state.events.find((e) => e.id === ref.id)?.place ?? null;
+  if (ref.kind === 'place') return state.places.get(ref.id)?.cell ?? null;
   return locate(state, ref);
 }
 
@@ -891,7 +900,13 @@ export function NextApp() {
           const follow = who ? { id: who.id, name: who.name } : null;
           talesRef.current = { year: place.tales.from, follow };
           playbackKey.current += 1;
-          setPlayback({ from: place.tales.from, key: playbackKey.current, follow });
+          const explore = exploreOf(window.history.state);
+          setPlayback({
+            from: place.tales.from,
+            key: playbackKey.current,
+            follow,
+            ...(explore ? { explore } : {}),
+          });
           setTab('map');
         }
         if (
@@ -1479,6 +1494,14 @@ export function NextApp() {
                 onRecords={(id) => {
                   flushTalesUrl();
                   go({ open: { kind: 'site', id } });
+                }}
+                onPlace={(id, year) => {
+                  flushTalesUrl();
+                  // Back from the page reopens the explored map with this place's card.
+                  const cell = world.current.places.get(id)?.cell ?? null;
+                  const talesExplore = { year, cell, place: id };
+                  window.history.replaceState({ ...window.history.state, talesExplore }, '');
+                  go({ open: { kind: 'place', id } });
                 }}
               />
             ) : (

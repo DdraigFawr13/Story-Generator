@@ -148,6 +148,11 @@
   color: var(--soft);
 }
 .tr-root .tr-chooser .head span:first-child,
+.tr-root .tr-chooser .row .np {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--soft);
+}
 .tr-root .tr-chooser .row .name {
   justify-self: start;
 }
@@ -1407,6 +1412,55 @@
 .tr-root .tr-wk:hover {
   scale: 1.08;
 }
+.tr-root .tr-pl {
+  position: absolute;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  background: none;
+  display: grid;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: scale 0.25s ease;
+  animation: tr-fade 0.45s ease both;
+}
+.tr-root .tr-pl.small {
+  width: 10px;
+  height: 10px;
+}
+/* On the whole map a place is a small stone diamond, apart from the round event dots. */
+.tr-root .tr-pl.small i {
+  display: block;
+  width: 5px;
+  height: 5px;
+  rotate: 45deg;
+  background: #a3a69c;
+  border: 1px solid rgba(45, 42, 37, 0.8);
+}
+.tr-root .tr-pl.small.emptied i {
+  background: none;
+  border-style: dashed;
+}
+.tr-root .tr-pl svg {
+  display: block;
+  filter: drop-shadow(0 0 1.5px rgba(246, 241, 228, 0.9));
+}
+.tr-root .tr-pl.emptied svg {
+  opacity: 0.75;
+}
+/* A tap target a little larger than the mark; a town's own hit target stays on top of it. */
+.tr-root .tr-pl::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+.tr-root .tr-pl:hover,
+.tr-root .tr-pl.open {
+  scale: 1.08;
+}
 .tr-root .tr-pin .tr-works-k {
   margin-top: 8px;
 }
@@ -1425,4 +1479,20 @@
 .tr-root .tr-pin ul.tr-works svg {
   flex: none;
   margin-top: 2px;
+}
+.tr-root .tr-pin ol.tr-trips {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.tr-root .tr-pin ol.tr-trips li {
+  margin-top: 4px;
+}
+.tr-root .tr-pin ol.tr-trips .y {
+  display: inline-block;
+  font-family: 'Alegreya Sans SC', sans-serif;
+  letter-spacing: 0.04em;
+  color: var(--soft);
+  margin-right: 4px;
 }

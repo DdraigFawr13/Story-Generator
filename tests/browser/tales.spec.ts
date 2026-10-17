@@ -70,6 +70,27 @@ test('Explore the map stays in Tales: marks follow the Show filter, the map zoom
   await page.getByRole('group', { name: 'Events' }).getByLabel('Show great works').uncheck();
   await expect(works).toHaveCount(0);
   await page.getByRole('group', { name: 'Events' }).getByLabel('Show great works').check();
+  // Perilous places stand at their own cells until unticked.
+  const places = stage.locator('[data-testid="place-mark"]');
+  expect(await places.count()).toBeGreaterThan(0);
+  await page.getByRole('group', { name: 'Events' }).getByLabel('Show perilous places').uncheck();
+  await expect(places).toHaveCount(0);
+  await page.getByRole('group', { name: 'Events' }).getByLabel('Show perilous places').check();
+  // A place's card opens its page, and Back returns to the explored map with the card open.
+  await page.locator('.tr-chooser-btn').click();
+  await places.first().dispatchEvent('click');
+  const placeCard = page.getByRole('dialog', { name: 'Perilous place' });
+  await expect(placeCard).toBeVisible();
+  await placeCard.getByRole('button', { name: 'Its story' }).click();
+  await expect(page.getByTestId('record-page').locator('.lg-kind')).toHaveText('Perilous place');
+  await page.goBack();
+  await expect(stage).toHaveAttribute('data-explore', 'true');
+  await expect(placeCard).toBeVisible();
+  await placeCard.getByRole('button', { name: 'Close' }).click();
+  // It comes back centred on the place; start the rest from the whole map.
+  await page.getByRole('button', { name: 'Whole map' }).click();
+  await expect(stage).toHaveAttribute('data-zoom', '1.00');
+  await page.locator('.tr-chooser-btn').click();
 
   // The key is folded away in explore; the ? button opens it and it lists the marks.
   const key = page.getByTestId('tales-key');
