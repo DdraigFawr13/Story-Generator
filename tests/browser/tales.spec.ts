@@ -1,6 +1,21 @@
 // The Tales room on a phone: the stage never scrolls sideways, the event filter opens from the
 // chip and the key (with the mode's legend) sits behind a "?" button.
 import { expect, test } from '@playwright/test';
+import { allWorks } from '../../src/app/tales/works';
+import { DEFAULT_CONTENT } from '../../src/content';
+import { generateWorld } from '../../src/engine';
+
+/**
+ * The first seed whose 128 world raised a great work or made a great item, found in Node at test
+ * time: a history change can leave any one seed (SMOKE since the great beasts change) with none.
+ */
+function worksSeed(): string {
+  for (const seed of ['SMOKE', 'TALES', 'S1', 'S2', 'S3']) {
+    const world = generateWorld(seed, { width: 128, height: 128 }, DEFAULT_CONTENT);
+    if (allWorks(world).length > 0) return seed;
+  }
+  throw new Error('No world has a great work; searched SMOKE, TALES, S1, S2, S3. Add seeds.');
+}
 
 test('the Tales stage stays put on a phone and the key opens from the ? button', async ({
   page,
@@ -32,7 +47,7 @@ test('the Tales stage stays put on a phone and the key opens from the ? button',
 test('Explore the map stays in Tales: marks follow the Show filter, the map zooms', async ({
   page,
 }) => {
-  await page.goto('/?seed=SMOKE&size=128');
+  await page.goto(`/?seed=${worksSeed()}&size=128`);
   const stage = page.getByTestId('tales-stage');
   await expect(stage).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Skip to the present' }).click();
