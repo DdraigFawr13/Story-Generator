@@ -24,6 +24,7 @@ import {
   type War,
 } from './state';
 import { civStrength, endWar, reachable, startWar } from './war';
+import { rulerTilt, tilt, whyOf } from './tempers';
 
 const DECADE = 10;
 
@@ -320,10 +321,15 @@ function betrayals(run: HistoryRun): void {
       [phrases.betrayed.weak, weak < rules.weakRatio * strong ? rules.weak : 0],
       [phrases.betrayed.strange, strangeness(run, a, b) / typical],
     ];
+    // The betrayer's ruler's temper (H2): a greedy or cruel ruler adds a reason to break the oath.
+    const betrayerRuler = betrayer === a ? ra : rb;
+    const bent = tilt(run, betrayerRuler, 'betray');
+    terms.push([whyOf(run, betrayerRuler, 'betray'), Math.max(0, bent - 1) * rules.temperWeight]);
     const drift = terms.reduce((sum, [, v]) => sum + v, 0);
     if (!rng.chance(Math.min(1, rules.chance * drift))) continue;
     let why = terms[0]!;
     for (const term of terms) if (term[1] > why[1]) why = term;
+    const byTemper = why === terms[terms.length - 1] && betrayerRuler?.temper;
     const marches =
       strong >= rules.attackRatio * weak && reachable(run, betrayer, victim).length > 0;
     const outcome = marches ? phrases.outcome.war : phrases.outcome.renounced;
@@ -338,6 +344,7 @@ function betrayals(run: HistoryRun): void {
         why: why[0].replace('{victim}', victim.name),
         outcome,
         outcomeShort: marches ? phrases.outcomeShort.war : phrases.outcomeShort.renounced,
+        ...(byTemper ? { temper: byTemper } : {}),
       },
     });
     dropPact(run, pact);
@@ -363,13 +370,20 @@ export function swearVassal(
   if (war.civil || (war.taken ?? 0) < rules.minTaken) return;
   if (defender.overlord !== undefined || attacker.overlord !== undefined) return;
   if (civStrength(run, attacker) < rules.strengthRatio * civStrength(run, defender)) return;
-  if (!run.rng.diplomacy.chance(rules.chance)) return;
+  // A greedy or cruel victor wants tribute more than towns (H2).
+  const temper = rulerTilt(run, attacker, 'tribute');
+  if (!run.rng.diplomacy.chance(Math.min(1, rules.chance * temper.mul))) return;
   const event = run.emit({
     type: 'vassal_sworn',
     place: capitalCell(run, attacker),
     actors: rulerIds(run, defender, attacker),
     causes: [peace.id],
-    data: { civ: defender.name, overlord: attacker.name, sites: war.taken ?? 0 },
+    data: {
+      civ: defender.name,
+      overlord: attacker.name,
+      sites: war.taken ?? 0,
+      ...temper.data,
+    },
   });
   defender.overlord = attacker.id;
   // A vassal's friends are its overlord's: its alliances lapse.

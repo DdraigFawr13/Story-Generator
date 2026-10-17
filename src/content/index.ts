@@ -35,6 +35,7 @@ import { RESOURCES } from './resources';
 import { SETTLEMENT } from './settlement';
 import { SITE } from './site';
 import { ENVIRONMENT, WEATHER_EVENTS } from './weather';
+import { TEMPER_EVENTS } from './tempers';
 import { eventTypes, rules, weather } from './world';
 
 export const DEFAULT_CONTENT: ContentBundle = {
@@ -61,6 +62,7 @@ export const DEFAULT_CONTENT: ContentBundle = {
     ...POLITICS_EVENTS,
     ...CHRONICLE_EVENTS,
     ...FAITH_EVENTS,
+    ...TEMPER_EVENTS,
   ],
   typeGroups: TYPE_GROUPS,
   rules,

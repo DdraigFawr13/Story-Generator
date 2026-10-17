@@ -257,6 +257,10 @@ export interface Person {
   awakening?: { id: string; day: number; eventId: Id };
   /** M5.2: how a mage learned their magic and from whom (world tier). */
   lore?: MageLore;
+  /** H2: a ruler's or legend's temper (a `TemperDef` id), set when they first rule or rise. */
+  temper?: string;
+  /** H2: the byname earned from a deed ("the Dragonslayer") and the event that gave it. */
+  byname?: { text: string; event: Id };
 }
 
 /** M5.2: how a mage learned their magic and from whom. */

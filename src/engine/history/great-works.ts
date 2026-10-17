@@ -13,6 +13,7 @@ import { addDeed, eventById, isAdult, isElder, livingList, rebuildIndex } from '
 import { cellDistance } from './settle';
 import { causesOf, isLive, liveSites, logOf, standingWork, type HistoryRun } from './state';
 import { DAYS_PER_YEAR } from '../core/clock';
+import { temperData, tilt } from './tempers';
 
 interface WorksMemory {
   /** People who have raised a work or made a great item: once in a life. */
@@ -241,6 +242,7 @@ function raise(
       site: site.name,
       civ: civ.name,
       years,
+      ...temperData(run, builder, 'works'),
     },
   });
   (site.works ??= []).push({
@@ -438,7 +440,7 @@ function legendWorks(run: HistoryRun): void {
     const site = run.world.sites.get(person.siteId);
     const civ = liveCiv(run, person.civId);
     if (!site || !isLive(site) || !civ || site.civId !== civ.id) continue;
-    if (!rng.chance(rules.legendChance)) continue;
+    if (!rng.chance(Math.min(1, rules.legendChance * tilt(run, person, 'works')))) continue;
     const order = strongestSpell(run, person) ? rules.legendOrder.mage : rules.legendOrder.warrior;
     raiseFirst(run, order, person, site, civ);
   }
@@ -456,7 +458,7 @@ function realmWorks(run: HistoryRun): void {
     if (capital.wealth < rules.realmWealthMin || builders.has(ruler.id)) continue;
     const last = lastRealm.get(civ.id);
     if (last !== undefined && run.year - last < rules.realmGapYears) continue;
-    if (!rng.chance(rules.realmChance)) continue;
+    if (!rng.chance(Math.min(1, rules.realmChance * tilt(run, ruler, 'works')))) continue;
     if (raiseFirst(run, rules.realmOrder, ruler, capital, civ)) lastRealm.set(civ.id, run.year);
   }
 }

@@ -46,6 +46,7 @@ import {
   type Feud,
   type HistoryRun,
 } from './state';
+import { temperData, tilt } from './tempers';
 
 /** Steps up a family tree that count as descent from a first party. */
 const DESCENT_STEPS = 4;
@@ -570,16 +571,38 @@ function runExiles(run: HistoryRun): void {
       how: fill(how, { host: host.name, site }),
       kind,
     });
+    const forgive = tilt(run, ruler, 'pardon');
     if (!ruler || exile.by === undefined || ruler.id !== exile.by) {
+      // A cruel new ruler pardons no one; a bold one only some years (H2).
+      if (forgive < 1 && !rng.chance(forgive)) continue;
       const seat = bringHome(run, person, home);
+      // A forgiving temper names the ruler who pardoned, and why.
+      const tempered = temperData(run, ruler, 'pardon');
+      const how = tempered.why ? phrases.forgiven : phrases.pardoned;
       const event = run.emit({
         type: 'exile_returned',
         place: seat?.cell ?? null,
         actors: [person.id, ...(ruler ? [ruler.id] : [])],
         causes: [exile.event],
-        data: data('pardoned', phrases.pardoned, seat?.name ?? home.name),
+        data: { ...data('pardoned', how, seat?.name ?? home.name), ...tempered },
       });
       addDeed(person, event.id);
+      markDeed(run, person);
+    } else if (!exile.claimant && forgive > 1 && rng.chance((forgive - 1) * rules.forgiveChance)) {
+      // The ruler who drove them out forgives them, by temper (H2).
+      const seat = bringHome(run, person, home);
+      const event = run.emit({
+        type: 'exile_returned',
+        place: seat?.cell ?? null,
+        actors: [person.id, ruler.id],
+        causes: [exile.event],
+        data: {
+          ...data('forgiven', phrases.forgiven, seat?.name ?? home.name),
+          ...temperData(run, ruler, 'pardon'),
+        },
+      });
+      addDeed(person, event.id);
+      addDeed(ruler, event.id);
       markDeed(run, person);
     } else if (exile.claimant) {
       const seat = bringHome(run, person, home);

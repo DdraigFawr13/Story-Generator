@@ -513,9 +513,9 @@ export const eventTypes: EventTypeDef[] = [
     links: { beast: 'beast', civ: 'civ' },
     dataKeys: ['outcome'],
     templates: [
-      'In {date} {ruler} of the {civ} sent gifts to {beast}, {outcome}.',
-      '{date}: at war, {ruler} of the {civ} courted {beast} with gifts, {outcome}.',
-      '{ruler} sent envoys to the lair of {beast} in {date}, {outcome}.',
+      'In {date} {ruler} of the {civ} sent gifts to {beast}{why}, {outcome}.',
+      '{date}: at war, {ruler} of the {civ} courted {beast} with gifts{why}, {outcome}.',
+      '{ruler} sent envoys to the lair of {beast} in {date}{why}, {outcome}.',
     ],
   },
   {
@@ -673,9 +673,9 @@ export const eventTypes: EventTypeDef[] = [
     precision: 'year',
     links: { civ: 'civ', enemy: 'civ' },
     templates: [
-      'In {date} the {civ} went to war with the {enemy}.',
-      '{date}: wrongs unforgiven, the {civ} marched against the {enemy}.',
-      'War began in {date} between the {civ} and the {enemy}.',
+      'In {date} the {civ} went to war with the {enemy}{why}.',
+      '{date}: wrongs unforgiven, the {civ} marched against the {enemy}{why}.',
+      'War began in {date} between the {civ} and the {enemy}{why}.',
     ],
   },
   {
@@ -972,7 +972,11 @@ export const eventTypes: EventTypeDef[] = [
     precision: 'year',
     links: { civ: 'civ', host: 'civ', site: 'site' },
     dataKeys: ['civ', 'host', 'site', 'kind'],
-    templates: ['In {date} {name} {how}.', '{date}: {name} {how}.', '{name} {how} in {date}.'],
+    templates: [
+      'In {date} {name} {how}{why}.',
+      '{date}: {name} {how}{why}.',
+      '{name} {how} in {date}{why}.',
+    ],
   },
   {
     id: 'champion_fought',
@@ -1233,9 +1237,9 @@ export const eventTypes: EventTypeDef[] = [
     precision: 'year',
     links: { site: 'site', civ: 'civ' },
     templates: [
-      'In {date} the {civ} hunted {name} of {site} as a witch{knights}; {name} {outcome}.',
-      '{date}: {name} was named a witch at {site}{knights}, and {outcome}.',
-      'The {civ} turned on {name} of {site} in {date}{knights}; {name} {outcome}.',
+      'In {date} the {civ} hunted {name} of {site} as a witch{knights}{why}; {name} {outcome}.',
+      '{date}: {name} was named a witch at {site}{knights}{why}, and {outcome}.',
+      'The {civ} turned on {name} of {site} in {date}{knights}{why}; {name} {outcome}.',
     ],
   },
   {
@@ -1673,9 +1677,9 @@ export const eventTypes: EventTypeDef[] = [
     links: { civ: 'civ', overlord: 'civ' },
     dataKeys: ['sites'],
     templates: [
-      'In {date}, after losing {sites} towns, the {civ} bent the knee to the {overlord} and paid them tribute.',
-      '{date}: beaten in war, the {civ} became vassals of the {overlord}.',
-      'The {overlord} took the {civ} as vassals in {date}, with tribute every year.',
+      'In {date}, after losing {sites} towns, the {civ} bent the knee to the {overlord} and paid them tribute{why}.',
+      '{date}: beaten in war, the {civ} became vassals of the {overlord}{why}.',
+      'The {overlord} took the {civ} as vassals in {date}, with tribute every year{why}.',
     ],
   },
   {
@@ -2061,9 +2065,9 @@ export const eventTypes: EventTypeDef[] = [
     links: { site: 'site', civ: 'civ' },
     dataKeys: ['civ'],
     templates: [
-      'In {date} {builder} finished {work} at {site}, a {word} that took {years} years to raise.',
-      '{date}: {work} stood complete at {site}; {builder} had given {years} years to the {word}.',
-      'Over {years} years {builder} of the {civ} raised {work}, a {word} at {site}, finished in {date}.',
+      'In {date} {builder} finished {work} at {site}, a {word} that took {years} years to raise{why}.',
+      '{date}: {work} stood complete at {site}; {builder} had given {years} years to the {word}{why}.',
+      'Over {years} years {builder} of the {civ} raised {work}, a {word} at {site}, finished in {date}{why}.',
     ],
   },
   {

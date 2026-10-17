@@ -5,7 +5,7 @@
 import { DAYS_PER_YEAR, formatDate } from '../core/clock';
 import type { ContentBundle, EventTypeDef } from '../core/content-types';
 import { hashString } from '../core/rng';
-import type { Id, SimEvent } from '../core/types';
+import type { Id, Person, SimEvent } from '../core/types';
 
 export interface Narrator {
   renderEvent(event: SimEvent): string;
@@ -54,22 +54,38 @@ export function countWord(n: number): string {
 /**
  * The placeholder values for an event: `date`, `year` (history year), its data, and its actors
  * as `actor`, `actor2`, ... History events carry no real day, so `precision: 'year'` types print "Year N".
+ * `why` is "" unless the event carries one (H2). With `personOf`, an actor who had earned a byname
+ * before the event is named with it ("Aed the Dragonslayer"), in the actor slots and in any data
+ * value that is exactly their name.
  */
 export function eventVars(
   event: SimEvent,
   nameOf: (id: Id) => string,
   def?: EventTypeDef,
+  personOf?: (id: Id) => Person | undefined,
 ): Record<string, string | number> {
   const year = Math.floor(event.day / DAYS_PER_YEAR);
   const vars: Record<string, string | number> = {
     date: def?.precision === 'year' ? `Year ${year}` : formatDate(event.day),
     year,
+    why: '',
   };
   for (const [key, value] of Object.entries(event.data))
     vars[key] = typeof value === 'number' && !/year/i.test(key) ? grouped(value) : String(value);
+  const styled = new Map<string, string>();
   event.actors.forEach((id, index) => {
-    vars[index === 0 ? 'actor' : `actor${index + 1}`] = nameOf(id);
+    const person = personOf?.(id);
+    const byname = person?.byname && person.byname.event < event.id ? person.byname.text : '';
+    if (person && byname) styled.set(person.name, `${person.name} ${byname}`);
+    const name = nameOf(id);
+    vars[index === 0 ? 'actor' : `actor${index + 1}`] =
+      byname && name === person?.name ? `${name} ${byname}` : name;
   });
+  if (styled.size > 0)
+    for (const key of Object.keys(event.data)) {
+      const full = styled.get(String(vars[key]));
+      if (full) vars[key] = full;
+    }
   return vars;
 }
 
@@ -77,13 +93,17 @@ export function eventVars(
  * Local template narrator. The variant is chosen from the event id, so prose
  * is stable across reloads without consuming simulation RNG.
  */
-export function templateNarrator(content: ContentBundle, nameOf: (id: Id) => string): Narrator {
+export function templateNarrator(
+  content: ContentBundle,
+  nameOf: (id: Id) => string,
+  personOf?: (id: Id) => Person | undefined,
+): Narrator {
   const types = new Map(content.eventTypes.map((def) => [def.id, def]));
   const render = (event: SimEvent, pick: (count: number) => number): string => {
     const def = types.get(event.type);
     if (!def || def.templates.length === 0) return `[${event.type}]`;
     const template = def.templates[pick(def.templates.length)]!;
-    return fillTemplate(template, eventVars(event, nameOf, def));
+    return fillTemplate(template, eventVars(event, nameOf, def, personOf));
   };
   return {
     renderEvent: (event) => render(event, (count) => hashString(`${event.id}`) % count),

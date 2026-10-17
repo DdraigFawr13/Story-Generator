@@ -342,7 +342,12 @@ export function NextApp() {
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const narrator = useMemo(
-    () => templateNarrator(DEFAULT_CONTENT, (id) => world.current.people.get(id)?.name ?? `#${id}`),
+    () =>
+      templateNarrator(
+        DEFAULT_CONTENT,
+        (id) => world.current.people.get(id)?.name ?? `#${id}`,
+        (id) => world.current.people.get(id),
+      ),
     [],
   );
 

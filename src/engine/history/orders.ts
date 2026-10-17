@@ -27,6 +27,7 @@ import {
 } from './people';
 import { cellDistance } from './settle';
 import { cultureOf, isLive, type HistoryRun } from './state';
+import { rulerTilt } from './tempers';
 
 const STRONG = TIERS.strong.minPower;
 const LEGENDARY = TIERS.legendary.minPower;
@@ -612,10 +613,13 @@ function witchHunts(run: HistoryRun): void {
     // The knights of the order hunt for the realm and are not hunted themselves.
     if (order && isMember(run, order, person.id)) continue;
     const legend = isLegend(person);
+    // A pious or cruel ruler hunts harder, a learned one hardly at all (H2).
+    const temper = rulerTilt(run, civ, 'hunt');
     const chance =
       rules.hunt.chance *
       (legend ? rules.hunt.legendFactor : 1) *
-      (order ? rules.hunt.orderFactor : 1);
+      (order ? rules.hunt.orderFactor : 1) *
+      temper.mul;
     if (!rng.chance(chance)) continue;
     hunted.add(person.id);
     const head = order ? headOf(run, order) : undefined;
@@ -642,6 +646,7 @@ function witchHunts(run: HistoryRun): void {
             ? fillIn(rules.phrases.knights, { order: order.name, head: head.name })
             : '',
         outcome,
+        ...temper.data,
       },
     });
     addDeed(person, hunt.id);

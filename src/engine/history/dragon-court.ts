@@ -14,6 +14,7 @@ import { bandCount } from './pop';
 import { cellDistance } from './settle';
 import { addGrievance, atWar, causesOf, isLive, liveSites, type HistoryRun } from './state';
 import { cultureValue } from './values';
+import { temperData, tilt } from './tempers';
 
 /** What one dragon's neighbours have done about it. */
 interface Court {
@@ -202,6 +203,7 @@ function court_(run: HistoryRun, dragon: Creature, civ: Civ, ruler: Person, cour
       ruler: ruler.name,
       civ: civ.name,
       outcome: accepted ? rules.court.phrases.courtAccepted : rules.court.phrases.courtRefused,
+      ...temperData(run, ruler, 'court'),
     },
   });
   dragon.deeds.push(event.id);
@@ -369,7 +371,7 @@ export function runDragonCourt(run: HistoryRun): void {
         !court.courtedBy &&
         dragon.dragon.asleepUntil === undefined &&
         warNearLair(run, civ, dragon) &&
-        rng.chance(c.courtChance)
+        rng.chance(Math.min(1, c.courtChance * tilt(run, ruler, 'court')))
       )
         court_(run, dragon, civ, ruler, court);
     }

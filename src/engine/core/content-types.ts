@@ -5,6 +5,7 @@
 import type { Cadence, Season } from './clock';
 import type { SimContext } from './context';
 import type {
+  AttributeKey,
   Attributes,
   DeathCause,
   GoodId,
@@ -2388,6 +2389,67 @@ export interface HistoryRules {
   feuds: FeudRules;
   /** Knightly orders and magic academies founded by legends, and how each people treats magic. */
   orders: OrderRules;
+  /** H2: rulers' and legends' tempers, the choices they tilt, and bynames earned from deeds. */
+  tempers: TemperRules;
+}
+
+/** H2: the choices a temper tilts; each is a multiplier on the engine's existing odds or score. */
+export type TemperChoice = 'war' | 'tribute' | 'hunt' | 'works' | 'court' | 'pardon' | 'betray';
+
+/** H2: one temper (tempers.ts). */
+export interface TemperDef {
+  id: string;
+  /** The adjective in biographies ("bold"). */
+  word: string;
+  /** Biography clause after the word ("quick to draw a sword and slow to count the cost"). */
+  line: string;
+  /** Score weights: per attribute point above 10, per culture value point above 5. */
+  attributes: Partial<Record<AttributeKey, number>>;
+  values: Partial<Record<CultureValue, number>>;
+  /** Score bonus for these notable roles, and for a mage of Strong power or more. */
+  roles?: Partial<Record<NotableRole, number>>;
+  mage?: number;
+  /** Multipliers on the choices this temper tilts (absent = 1). */
+  tilts: Partial<Record<TemperChoice, number>>;
+  /** The chronicle's "why" clauses per tilted choice (one picked by hash); `{ruler}` is the chooser's name. */
+  why: Partial<Record<TemperChoice, string[]>>;
+  /** The byname earned by choices this temper made, and what it was for. */
+  byname: string;
+  bynameAfter: string;
+}
+
+/** H2: a byname earned from deeds: `min` events of `types` where the person is the subject. */
+export interface BynameRule {
+  types: string[];
+  /** Whose deed: the event's actor at this index, or the ruler of the realm the data key names. */
+  who: { actor: number } | { ruler: string };
+  min?: number;
+  /** Data values the event must carry (any listed value matches). */
+  data?: Record<string, string[]>;
+  /** Only a person of this temper earns it. */
+  temper?: string;
+  /** Only when the event's first two actors are parent, child or siblings. */
+  kin?: boolean;
+  /** Bynames to choose from (the first not worn by a living person of the realm). */
+  words: string[];
+  /** What the byname was for; `{key}` placeholders are the deciding event's data. */
+  after: string;
+}
+
+/** H2: tempers and bynames (tempers.ts): every number and phrase. */
+export interface TemperRules {
+  tempers: TemperDef[];
+  /** Each temper's score gets 0 to this much from a hash of the person, so peers differ. */
+  jitter: number;
+  /** Score bonus for a parent's temper, and for a parent killed by a notable (to `cruel`). */
+  parentTemper: number;
+  orphanedCruel: number;
+  /** In priority order: the first rule a deed completes gives the byname; one per life. */
+  bynames: BynameRule[];
+  /** Whose choice an event with a temper's "why" was, per event type. */
+  temperedBy: Record<string, { actor: number } | { ruler: string }>;
+  /** A person whose temper decided this many events and who has no byname gets their temper's. */
+  temperedChoices: number;
 }
 
 /** How a people treats magic, from its values (orders.ts). */
@@ -2527,6 +2589,8 @@ export interface FeudRules {
   /** Years in exile before a return is possible, and the yearly chance after. */
   returnMinYears: number;
   returnChance: number;
+  /** H2: chance per point a ruler's `pardon` tilt is over 1 that they forgive an exile they drove out. */
+  forgiveChance: number;
   /** Grievance the host holds against the home people that lets an exile lead a raid home. */
   raidGrievance: number;
   /** Greatest distance, in cells, from the host's capital to the site raided. */
@@ -2560,7 +2624,7 @@ export interface FeudRules {
     /** Why a notable was driven out; `{dead}`, `{winner}`. */
     exile: { killing: string; war: string; dispute: string };
     /** How an exile came back; `{host}`, `{site}`, `{dead}`. */
-    returned: { pardoned: string; claim: string; raid: string };
+    returned: { pardoned: string; claim: string; raid: string; forgiven: string };
   };
 }
 
@@ -2790,6 +2854,8 @@ export interface DiplomacyRules {
     grievance: number;
     /** Drift added when the two rulers' houses are in a blood feud. */
     feud: number;
+    /** H2: drift per point a betrayer ruler's temper tilts betrayal over 1. */
+    temperWeight: number;
   };
   vassal: {
     /** Sites the winner must take, and times the loser's strength it must have, to make a vassal. */

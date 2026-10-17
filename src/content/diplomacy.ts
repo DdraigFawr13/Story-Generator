@@ -47,6 +47,8 @@ export const DIPLOMACY: DiplomacyRules = {
     grievance: 3,
     // A blood feud between the rulers' houses is one more reason to part.
     feud: 1,
+    // A greedy (betray 1.8) or cruel (1.6) ruler adds 4 or 3 strangers' drift (H2).
+    temperWeight: 5,
   },
   vassal: {
     // Two towns lost and a rival twice as strong: the loser may bend the knee.
