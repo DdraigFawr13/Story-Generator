@@ -98,6 +98,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...settlementProblems(content));
   problems.push(...creatureProblems(content));
   problems.push(...dragonProblems(content));
+  problems.push(...greatWorkProblems(content));
   problems.push(...placeProblems(content));
   problems.push(...faithProblems(content));
   problems.push(...diseaseProblems(content));
@@ -283,6 +284,65 @@ export function dragonProblems(content: ContentBundle): string[] {
     if (!(court[key] >= 0)) problems.push(`Dragon court: ${key} must not be negative.`);
   }
   if (court.phrases.prices.length === 0) problems.push('Dragon court: no bounty prices.');
+  return problems;
+}
+
+/** Great works: known kinds and schools, forms that exist, names with fillable placeholders, numbers in range. */
+export function greatWorkProblems(content: ContentBundle): string[] {
+  const rules = content.greatWorks;
+  if (!rules) return ['Content has no great work rules.'];
+  const problems: string[] = [];
+  const kinds = new Set<string>();
+  const schools = new Set(content.abilities.flatMap((a) => (a.school ? [a.school] : [])));
+  const forms = new Set(content.items.flatMap((i) => i.forms ?? []));
+  for (const kind of rules.kinds) {
+    if (kinds.has(kind.id)) problems.push(`Duplicate great work kind "${kind.id}".`);
+    kinds.add(kind.id);
+    if (!kind.thing && kind.names.length === 0) problems.push(`Great work ${kind.id}: no names.`);
+    for (const name of kind.names) {
+      if (/\{(?!builder\}|epithet\}|site\})/.test(name))
+        problems.push(`Great work ${kind.id}: unknown placeholder in "${name}".`);
+    }
+    for (const school of kind.builder.schools)
+      if (!schools.has(school)) problems.push(`Great work ${kind.id}: unknown school "${school}".`);
+    for (const cost of Object.values(kind.cost))
+      if (!(cost >= 0)) problems.push(`Great work ${kind.id}: cost must not be negative.`);
+  }
+  for (const id of [...rules.legendOrder.mage, ...rules.legendOrder.warrior, ...rules.realmOrder])
+    if (!kinds.has(id)) problems.push(`Great works: unknown kind "${id}" in an order.`);
+  for (const id of rules.realmOrder)
+    if (rules.kinds.find((k) => k.id === id)?.thing)
+      problems.push(`Great works: realmOrder cannot hold the item kind "${id}".`);
+  for (const key of ['legendChance', 'realmChance', 'wallRaidShare'] as const)
+    if (!(rules[key] >= 0 && rules[key] <= 1)) problems.push(`Great works: ${key} must be 0-1.`);
+  for (const key of ['wallDefence', 'groveHarvest', 'bridgeWealth', 'realmWealthMin'] as const)
+    if (!(rules[key] >= 0)) problems.push(`Great works: ${key} must not be negative.`);
+  if (!(rules.grovePlague >= 0 && rules.grovePlague <= 1))
+    problems.push('Great works: grovePlague must be 0-1.');
+  if (!(rules.maxPerSite >= 1 && rules.realmGapYears >= 1))
+    problems.push('Great works: maxPerSite and realmGapYears must be at least 1.');
+  if (!(rules.years[0] >= 1 && rules.years[0] <= rules.years[1]))
+    problems.push('Great works: years needs 1 <= min <= max.');
+  if (rules.epithets.length === 0) problems.push('Great works: no epithets.');
+  const enchant = rules.enchant;
+  for (const key of ['chance', 'giftChance'] as const)
+    if (!(enchant[key] >= 0 && enchant[key] <= 1))
+      problems.push(`Great works enchant: ${key} must be 0-1.`);
+  for (const key of ['remainsYears', 'remainsRange'] as const)
+    if (!(enchant[key] >= 1)) problems.push(`Great works enchant: ${key} must be at least 1.`);
+  if (enchant.epithets.length === 0 || enchant.greatNames.length === 0)
+    problems.push('Great works enchant: epithets and greatNames need entries.');
+  for (const school of schools) {
+    const def = enchant.schools[school];
+    if (!def) {
+      problems.push(`Great works enchant: school "${school}" has no item.`);
+      continue;
+    }
+    if (!forms.has(def.form))
+      problems.push(`Great works enchant: ${school} form "${def.form}" is not an item form.`);
+    if (def.beastNames.length === 0 || def.oreNames.length === 0)
+      problems.push(`Great works enchant: ${school} needs beast and ore names.`);
+  }
   return problems;
 }
 
@@ -606,6 +666,10 @@ const HISTORY_EVENT_IDS = [
   'dragon_unleashed',
   'dragon_bounty_taken',
   'dragon_bounty_claimed',
+  'great_work_raised',
+  'great_work_fell',
+  'item_enchanted',
+  'great_item_made',
   'item_hoarded',
   'artifact_made',
   'book_written',

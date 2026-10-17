@@ -558,6 +558,18 @@ for (const r of rows) {
   );
 }
 
+process.stdout.write(
+  '\ngreat works: seed | raised (wall / bridge / tower / grove) | fell | enchanted items | great items\n',
+);
+for (const r of rows) {
+  const h = r.history;
+  const k = h.worksByKind;
+  process.stdout.write(
+    `${r.seed.padEnd(4)} | ${String(h.worksRaised).padStart(3)} (${k.wall} / ${k.bridge} / ${k.tower} / ${k.grove}) | ` +
+      `${String(h.worksFell).padStart(3)} | ${String(h.itemsEnchanted).padStart(3)} | ${String(h.greatItems).padStart(3)}\n`,
+  );
+}
+
 if (siteMode) {
   process.stdout.write(
     `\nsite tier (${siteYears} years of site play after ${years} of history):\n`,

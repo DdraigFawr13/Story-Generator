@@ -18,7 +18,8 @@ const content = {
     },
   },
 };
-const SEEDS = Array.from({ length: 16 }, (_, k) => `DI-${k + 1}`);
+// DI-15 leads since the 2026-10-17 great works change left DI-1 to DI-14 without a refused call.
+const SEEDS = ['DI-15', ...Array.from({ length: 16 }, (_, k) => `DI-${k + 1}`)];
 
 function example(what: string, has: (w: WorldState) => boolean): WorldState {
   return findWorld(

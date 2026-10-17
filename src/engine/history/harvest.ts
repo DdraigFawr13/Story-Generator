@@ -4,7 +4,15 @@
 import { epochAt } from './climate';
 import { goodNeed } from './goods';
 import { removePeople, siteNeed, stochasticRound, totalPop } from './pop';
-import { causesOf, civName, liveSites, logOf, type Epoch, type HistoryRun } from './state';
+import {
+  causesOf,
+  civName,
+  liveSites,
+  logOf,
+  standingWork,
+  type Epoch,
+  type HistoryRun,
+} from './state';
 
 /** Weather chance inside an epoch: scaled up, but never under the epoch's floor. */
 function inEpoch(chance: number, epoch: Epoch | undefined, effect: { mul: number; floor: number }) {
@@ -32,6 +40,8 @@ export function runHarvest(run: HistoryRun): void {
     if (cold) yieldFactor *= rules.climate.cold.yield;
     if (drought) yieldFactor *= rules.droughtYield;
     if (winter) yieldFactor *= rules.winterYield;
+    // A warded grove blesses the fields around it (great-works.ts).
+    if (standingWork(site, 'grove')) yieldFactor *= run.content.greatWorks.groveHarvest;
     const need = siteNeed(site, run.races);
     const produced = Math.min(pop * rules.workerOutput, site.capacity) * (need / pop) * yieldFactor;
     // Food spoils without salt, so a site short of salt stores less.

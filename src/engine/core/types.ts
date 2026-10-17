@@ -350,6 +350,10 @@ export interface Item {
   school?: string;
   /** M5.2: history year it burned (holder null, never lost or found). */
   burned?: number;
+  /** Great works: the spell a mage bound into it, and what it was made from (`beast` names the slain creature). */
+  enchanted?: { school: string; spell: string; from: 'beast' | 'ore'; beast?: string };
+  /** A legend's great item, the one work of their life. */
+  great?: true;
 }
 
 /** A perilous place (M4.7): a ruin, old mine, barrow, empty lair or aura place in the wild. */
@@ -684,6 +688,23 @@ export interface Site {
   peakPop: number;
   /** The faith its people keep, which may differ from its realm's (faith.ts). */
   faithId?: Id;
+  /** Great works raised here (great-works.ts), oldest first. */
+  works?: GreatWork[];
+}
+
+/** A tower, wall, bridge or warded grove: one builder's or realm's great work at a site. */
+export interface GreatWork {
+  /** A `GreatWorkKindDef` id. */
+  kind: string;
+  name: string;
+  /** The legend, mage or ruler who raised it. */
+  builderId: Id | null;
+  /** History year it was finished. */
+  raised: number;
+  /** The `great_work_raised` event. */
+  eventId: Id;
+  /** History year it fell, once it has. */
+  fell?: number;
 }
 
 /** What makes a dragon an individual (M5.6): its temper, its sleep and what it has hoarded. */

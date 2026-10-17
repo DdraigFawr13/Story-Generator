@@ -9,6 +9,7 @@ import type { Id, Item, MageLore, Person, Site } from '../core/types';
 import { meetsRequirements } from '../people/aptitude';
 import { TIERS } from '../people/tiers';
 import { collegeOf } from './colleges';
+import { towerSpells } from './great-works';
 import { fill, isSpell, newItem, primarySchool, spellPower, uniqueName } from './items';
 import {
   addDeed,
@@ -112,6 +113,11 @@ function survey(run: HistoryRun): Survey {
   for (const college of run.colleges) {
     if (college.closed !== undefined || !civOk(college.civId)) continue;
     for (const id of college.lore) if (isSpell(run, id)) now.add(key(college.civId, id));
+  }
+  // A standing tower keeps its builder's strong spells for the realm that holds it.
+  for (const site of run.world.sites.values()) {
+    if (!site.works || !civOk(site.civId)) continue;
+    for (const id of towerSpells(run, site)) now.add(key(site.civId, id));
   }
   return { now, keeper, books };
 }

@@ -38,7 +38,17 @@ import { addDeed } from './people';
 import { beastParts, carryOff, lairAbandoned } from './places';
 import { bandCount, removePeople, stochasticRound, totalPop } from './pop';
 import { cellDistance } from './settle';
-import { causesOf, civName, cultureOf, isLive, liveSites, logOf, type HistoryRun } from './state';
+import {
+  causesOf,
+  civName,
+  cultureOf,
+  isLive,
+  liveSites,
+  logOf,
+  standingWork,
+  type HistoryRun,
+} from './state';
+import { enchantedEdge } from './great-works';
 
 /** Years between spawn rolls. */
 const DECADE = 10;
@@ -224,7 +234,9 @@ function trySlay(
   const need = def.danger * rules.slayAdultsPerDanger;
   // A figure rides out only when the town is outmatched; ordinary beasts still make new heroes.
   const slayer = bandCount(site, 'adult') < need ? slayerFor(run, site) : undefined;
-  const fighters = bandCount(site, 'adult') + (slayer ? deedSoldiers(run, slayer) : 0);
+  const fighters =
+    bandCount(site, 'adult') +
+    (slayer ? deedSoldiers(run, slayer) + enchantedEdge(run, slayer) : 0);
   const strength = Math.min(1, fighters / need);
   const chance = rules.slayBase * strength * rules.slayTierFactor[def.tier];
   if (!rng.chance(chance)) {
@@ -324,7 +336,9 @@ function raid(run: HistoryRun, creature: Creature, def: CreatureDef): void {
   if (!unleashed && creature.dragon && askTribute(run, creature, def, site)) return;
   const factor = rng.between(500, 1500) / 1000;
   const pop = totalPop(site);
-  const wanted = Math.min(pop * rules.raidKillCap, def.danger * rules.raidKillPerDanger * factor);
+  const walled = standingWork(site, 'wall') ? run.content.greatWorks.wallRaidShare : 1;
+  const wanted =
+    Math.min(pop * rules.raidKillCap, def.danger * rules.raidKillPerDanger * factor) * walled;
   const dead = removePeople(site, stochasticRound(rng, wanted), ['adult', 'child', 'elder']);
   site.goods.food *= 1 - rules.raidStoresLoss;
   const event = run.emit({
@@ -366,7 +380,9 @@ export function fightHunt(
   const deeds = run.content.notables.deeds;
   markDeed(run, hunter);
   const need = def.danger * rules.slayAdultsPerDanger;
-  const soldiers = deedSoldiers(run, hunter) + aid;
+  // An enchanted item at the hunter's side counts as soldiers (great-works.ts).
+  const edge = enchantedEdge(run, hunter);
+  const soldiers = deedSoldiers(run, hunter) + aid + edge;
   const strength = Math.min(1, soldiers / need);
   const near = nearestSite(run, whereIs(prey), Infinity) ?? home;
   const chance = Math.min(1, rules.slayBase * strength * rules.slayTierFactor[def.tier] * odds);
@@ -397,7 +413,7 @@ export function fightHunt(
     beastParts(run, def, prey, hunter, home, event.id);
     return;
   }
-  const dies = rng.chance(beastKillChance(run, hunter, def.danger, aid));
+  const dies = rng.chance(beastKillChance(run, hunter, def.danger, aid + edge));
   const event = run.emit({
     type: 'beast_hunt_failed',
     place: whereIs(prey),

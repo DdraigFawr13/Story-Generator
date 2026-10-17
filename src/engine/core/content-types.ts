@@ -232,6 +232,8 @@ export interface ContentBundle {
   creatures: CreatureDef[];
   /** The dragon as an individual (M5.6). */
   dragons: DragonRules;
+  /** Great works and enchanted items (great-works.ts). */
+  greatWorks: GreatWorkRules;
   /** Perilous places, hoards and expeditions (M4.7). */
   places: PlaceRules;
   /** Gods, high priests, prophets and holy wars (faith.ts). */
@@ -1603,6 +1605,91 @@ export interface DragonRules {
   spoilsWord: string;
   /** Realms that court, pay or put a price on a dragon. */
   court: DragonCourtRules;
+}
+
+/** One kind of great work (great-works.ts): where it may stand, who may raise it, what it costs. */
+export interface GreatWorkKindDef {
+  id: string;
+  /** The word the chronicle uses: "tower". */
+  word: string;
+  /** A legend's great item is made, not built: it has no site and stands in no list of works. */
+  thing?: boolean;
+  /** Name patterns: `{builder}`, `{epithet}`, `{site}`. */
+  names: string[];
+  /** Site kinds it may stand in (empty: any). */
+  siteKinds: SiteKind[];
+  /** The site needs one of these features (empty: none needed). */
+  features: SiteFeature[];
+  /** The builder needs this power, and one of these schools as their strongest or one of these races. */
+  builder: { minPower: number; schools: string[]; raceIds: string[] };
+  /** Goods the site pays. */
+  cost: Partial<Record<GoodId, number>>;
+}
+
+/** What one school's enchanted item is and what it is called (`{Beast}`, `{beast}`, `{Epithet}`, `{Form}`, `{maker}`). */
+export interface EnchantSchoolDef {
+  form: string;
+  /** Names for an item made from a slain beast's remains. */
+  beastNames: string[];
+  /** Names for an item made from rare ore. */
+  oreNames: string[];
+}
+
+/** Great works and enchanted items: who raises them, what they do, and the words they use. */
+export interface GreatWorkRules {
+  kinds: GreatWorkKindDef[];
+  /** The kinds a living legend tries in order, by whether they are a mage with a strong spell. */
+  legendOrder: { mage: string[]; warrior: string[] };
+  /** The kinds a ruler tries in order. */
+  realmOrder: string[];
+  /** Yearly chance a legend who has raised nothing raises a work. */
+  legendChance: number;
+  /** Yearly chance a ruler at a rich capital raises one; a realm raises at most one per `realmGapYears`. */
+  realmChance: number;
+  /** Capital wealth a realm needs before its ruler may raise a work. */
+  realmWealthMin: number;
+  realmGapYears: number;
+  /** Standing works at one site (one of each kind). */
+  maxPerSite: number;
+  /** Years a work took, drawn uniformly from this range. */
+  years: [number, number];
+  epithets: string[];
+  /** Wall: the defence multiplier of its site, and the share of a beast raid's dead that remain. */
+  wallDefence: number;
+  wallRaidShare: number;
+  /** Bridge: wealth the site gains each year. */
+  bridgeWealth: number;
+  /** Grove: the site's harvest multiplier and its plague deaths multiplier. */
+  groveHarvest: number;
+  grovePlague: number;
+  /** Tower: the spells of this power or more its builder knew do not count as lost for its realm. */
+  towerKeepPower: number;
+  /** How a work fell: `{site}` and `{civ}` (the taker) are filled in. */
+  fallPhrases: { ruined: string; breached: string };
+  /** Events that name what ruined a site, when a work falls with it. */
+  fallCauses: string[];
+  enchant: {
+    /** A mage needs this power and a spell of this power in their strongest school. */
+    minPower: number;
+    spellPower: number;
+    /** Chance per decade a fit mage enchants an item. */
+    chance: number;
+    /** Remains stay usable this many years, within this many cells of the mage's site. */
+    remainsYears: number;
+    remainsRange: number;
+    /** Chance the mage gives the item to their realm's ruler, hero or captain. */
+    giftChance: number;
+    /** Soldiers an enchanted item adds to its holder's fights against beasts. */
+    fightEdge: number;
+    schools: Record<string, EnchantSchoolDef>;
+    /** Names for a legend's great item (`{builder}`, `{Epithet}`, `{Form}`). */
+    greatNames: string[];
+    epithets: string[];
+    /** The material, said in the events: `{beast}` or `{site}` is filled in. */
+    materials: { beast: string; ore: string };
+    /** What became of the item: `{holder}` is filled in. */
+    fates: { kept: string; gift: string };
+  };
 }
 
 /** One kind of perilous place (M4.7). Ranges run low to high. */
