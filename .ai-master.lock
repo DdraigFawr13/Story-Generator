@@ -1,7 +1,7 @@
 {
-  "version": "v0.2.0",
-  "commit": "5c86d0eae373be0787a96cb01758a2cda7159b28",
-  "manifest": "23a01fc1fcd4242791207e7a12f3ab829dbe0a7906eea9d56820337f31ce5198",
+  "version": "v0.3.0",
+  "commit": "603505d70e799136de4971238ad09de4c224cee5",
+  "manifest": "e523ae8bea66fe4a3a83eb8c7a729c59afd40881ca3539afa10fdb3339fdd0fb",
   "budget": {
     "lines": 200,
     "bytes": 24576
@@ -9,10 +9,11 @@
   "files": {
     ".claude/agents/ci-fixer.md": "8386605e148c2d22b067e3fb3b6a2ee84057d1da550656ab02626983d572b55c",
     ".claude/agents/implementer.md": "05f9e4ea5e8a2e3a2c2cd60b2c14644c9d97087b0aace536851024d3406ca319",
+    ".claude/agents/reader.md": "4a4e94b6f3a383c5934cf98ddafae89757ad0982ca33ce31fc01d204dd352418",
     ".claude/agents/reviewer.md": "98278f07c43f0ffa5329f50f098c0c8f05d51e29923e9c41a09db675859bdeb2",
     ".claude/agents/test-runner.md": "f6d59450c2d1e3d82db75d7e6645274c1ce44931ff1bddf02b75b9e45f26d85d",
     ".claude/hooks/session-start.sh": "a5936b916dffaf98d8ab875600c5ca195d88194053f22b444bf2d8767d57bfd1",
-    ".claude/master/RULES.md": "0fe402ea487b9d51f8fe2f03407aceaff4f155583e5a9305a4d8e37d99fe9da2",
+    ".claude/master/RULES.md": "d30a4b891a7c30b93e528ef1a4451f114701ec3be3a0f5b14fd1e722d3ed5239",
     ".claude/master/sync.mjs": "b253d8cb3c22780bc00b951b1e9cc024aa5ad615243277a822093f8240544d70",
     ".claude/skills/efficient-github-actions/references/agent-policy.md": "a45580c978190bbadf21f2977c78936e9ef9aefd9396ca938d2641cf37e484d6",
     ".claude/skills/efficient-github-actions/references/patterns.md": "1ac338cf8f235b47e3b09999fe9620047dcdd0f23c4d28188af3fc03971d505a",

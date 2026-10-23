@@ -10,6 +10,7 @@ package-lock.json
 .ai-master.lock
 .claude/agents/ci-fixer.md
 .claude/agents/implementer.md
+.claude/agents/reader.md
 .claude/agents/reviewer.md
 .claude/agents/test-runner.md
 .claude/hooks/session-start.sh
