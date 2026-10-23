@@ -583,7 +583,7 @@ export interface Chip {
   key: string;
   text: string;
   /** A page the chip opens, when it names one. */
-  to?: { kind: 'dynasty' | 'civ' | 'site'; id: Id };
+  to?: { kind: 'dynasty' | 'civ' | 'site' | 'faith'; id: Id };
 }
 
 /** The header chips: race, birth, age or death, line, fame, faith. */
@@ -617,7 +617,7 @@ export function chipsOf(
   if (dynasty)
     chips.push({ key: 'line', text: dynasty.name, to: { kind: 'dynasty', id: dynasty.id } });
   chips.push({ key: 'fame', text: `Fame ${person.fame}` });
-  if (faith) chips.push({ key: 'faith', text: faith.name });
+  if (faith) chips.push({ key: 'faith', text: faith.name, to: { kind: 'faith', id: faith.id } });
   return chips;
 }
 

@@ -203,6 +203,16 @@ test('a knightly order opens its own page with its masters and knights', async (
   expect(errors).toEqual([]);
 });
 
+test('a faith opens its own page with its high priests', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/?seed=SMOKE&size=128&open=faith:1');
+  const record = page.getByTestId('record-page');
+  await expect(record).toBeVisible({ timeout: 30_000 });
+  await expect(record.getByRole('heading', { level: 3 })).not.toHaveText('');
+  await expect(record.getByText(/High priests · \d+/)).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('a site can be watched: embark, play, inspect a person and return to the map', async ({
   page,
 }) => {

@@ -17,6 +17,7 @@ import {
   type WorldState,
 } from '../engine';
 import { PageView } from './LegendPages';
+import { allFaiths, byFollowing, faithLine } from './faiths';
 import { allOrders, orderLine } from './orders';
 import { allPlaces, placeKindLabel } from './places';
 import {
@@ -80,6 +81,7 @@ const CATEGORIES: { id: CategoryId; label: string; blurb: string }[] = [
   { id: 'civ', label: 'Civs', blurb: 'Peoples who ruled, oldest first' },
   { id: 'site', label: 'Sites', blurb: 'Settlements and ruins' },
   { id: 'race', label: 'Races', blurb: 'The peoples of this world' },
+  { id: 'faith', label: 'Faiths', blurb: 'Gods, holy cities and schisms' },
   { id: 'person', label: 'Figures', blurb: 'Notable people' },
   { id: 'dynasty', label: 'Families', blurb: 'Founded lines' },
   { id: 'beast', label: 'Beasts', blurb: 'Lairs and monsters' },
@@ -212,6 +214,7 @@ export function Legends(props: Props) {
     }
     if (ref.kind === 'place') return world.places.get(ref.id)?.name ?? '?';
     if (ref.kind === 'order') return cap(world.orders.get(ref.id)?.name ?? '?');
+    if (ref.kind === 'faith') return world.faiths.get(ref.id)?.name ?? '?';
     return refName(world, ref);
   };
 
@@ -272,6 +275,14 @@ export function Legends(props: Props) {
         [...world.people.values()].filter((p) => p.raceId === race.id).length
       } figures`,
     }));
+    const faiths: Row[] = allFaiths(world)
+      .sort(byFollowing)
+      .map((f) => ({
+        ref: { kind: 'faith', id: f.id },
+        name: f.name,
+        years: spanText(f.founded, f.forgotten),
+        meta: faithLine(f),
+      }));
     const people: Row[] = [...world.people.values()]
       .sort((a, b) => b.fame - a.fame || a.id - b.id)
       .map((person) => {
@@ -333,6 +344,7 @@ export function Legends(props: Props) {
     const named = {
       civ: civs,
       site: sites,
+      faith: faiths,
       person: people,
       dynasty: dynasties,
       beast: beasts,
@@ -353,6 +365,7 @@ export function Legends(props: Props) {
       civ: civs,
       site: sites,
       race: races,
+      faith: faiths,
       person: people,
       dynasty: dynasties,
       beast: beasts,
@@ -432,6 +445,7 @@ export function Legends(props: Props) {
     civ: lists.civ.length,
     site: lists.site.length,
     race: lists.race.length,
+    faith: lists.faith.length,
     person: lists.person.length,
     dynasty: lists.dynasty.length,
     beast: lists.beast.length,
