@@ -687,6 +687,27 @@ History builds:
 
 Recommended pair: S1 with H2 (both one thread, no shared files). H1 is the largest and the one Morgan has seen twice; it runs as two or three threads and touches the site tier as well, so it is best started alone once the screen lane is quiet.
 
+#### Proposed next set, third round (2026-10-25; from the World-Sim assessment)
+
+Morgan asked for world.world-sim.uk to be assessed as a model and then for every addition from the assessment to go into the plan ([assessment](https://claude.ai/artifact/SsAu2LwH9vQaXFsZ8qtASP); a copy is in `/mnt/project-files/worldgen/research/world-sim/`). World-Sim is closed source (no repository, licence or credits anywhere public), runs one persistent world on a Node server, and has Claude "elders" and a local model writing each person's dreams and decisions; only its design carries over. These are additions to pick from when the project resumes (paused since 2026-10-23). None starts without Morgan's pick. Value 1–5; effort S, M or L as above.
+
+| Order | Addition | Where | What you would see | Value | Effort |
+| --- | --- | --- | --- | --- | --- |
+| W1 | Named discoverers and lost crafts | Phase 7 guilds, the M5.2 lineage pattern | Crafts as content entries with a first maker per people; a craft passes master to apprentice and is lost when the last master dies untaught, found again by reinvention or a written book; the chronicle names the discoverer and the loss | 4 | M |
+| W2 | Follow a house, with alerts | U2 Follow, a step to Phase 8 | Follow a house or legend from any page: the chronicle filters to them, playback pauses on their events, and the year recap opens with what happened to them | 4 | S |
+| W3 | Feed tabs and a notable filter | U3 Book room | Lives, Stories, Trade, Conflict and Feasts tabs on the Book's chronicle, and a weight per event so the quiet lines can be hidden | 3 | S |
+| W4 | Someone to know | S3 world at a glance | A named person suggested on the opening page and the world-at-a-glance page, with one line on them and a jump to their page | 3 | S |
+| W5 | Gods from the land | Phase 7 religion | Each faith's gods come from its home biome and its early deaths (the river, the wolf, the sun, the winter), with a taboo and a rite as data that later events respect; faith pages say where the god came from | 4 | M |
+| W6 | Wander-years and masterpieces | Phase 7 guilds (with H5) | A craftsperson leaves on wander-years, learns abroad and comes home a master with a masterpiece; a famous masterpiece is a great item | 3 | M |
+| W7 | Night sky and climate record | Phase 9+ flavour | A page per people naming its constellations after its legends, and a yearly record of weather and the years of famine | 2 | M |
+| W8 | Seed of the week | new, screen | The opening page offers one shared seed that changes weekly, so everyone who visits watches the same world; a cheap stand-in for a persistent world | 2 | S |
+
+S2 Open stories gains one line from the assessment: each open story carries a chapter count, and the Book lists the stories running now above the chronicle.
+
+**A decision for Morgan, not an addition (W-D): a server-backed living world.** What makes World-Sim feel alive is a persistent world that never resets and a language model writing each person's inner life and the elders' decrees. Both need a server, an API key and a running bill, which R-16 and the browser-only decision rule out. Phase 9+ keeps an optional narrator behind a backend decision; W-D widens that decision to a persistent shared world and model-written inner life. It is Morgan's call at a check-in, with the monthly cost estimated first (§13).
+
+Recommended pair when work resumes: W1 with W2 (no shared files; W2 is small enough to run beside S2).
+
 ### Phase 0 — Reset and skeleton (2–3 PRs)
 - **M0.1 Docs reset:**
   - `git mv` the old docs, ADRs, probes and evidence into `docs/archive/`.
@@ -867,7 +888,8 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 ### Phase 9+ — Expansion and polish
 - Illustrated Minimal art pass, world-gen sliders, more races and cultures.
 - Z-levels as a decision gate, starting with a caves prototype.
-- Optional LLM narrator (needs a backend decision).
+- Optional LLM narrator (needs a backend decision); the World-Sim round (W-D, §9) widens it to a persistent shared world with model-written inner life.
+- World-Sim flavour pages: a night sky per people and a climate record (W7, §9).
 - Save slots, legends export, accessibility and phone polish.
 - Possibly a beta save-compatibility lock.
 
@@ -1001,3 +1023,4 @@ Extras approved on 2026-10-11 (erosion, volcanoes, fertility, wildness, strategi
 - The institutions brief (Phase 7).
 - The order of Phases 7 and 8 (Phase 6 check-in).
 - Z-levels, the LLM narrator, more races, sliders, a beta save lock (Phase 9+).
+- A server-backed living world (W-D, §9 third round, 2026-10-25): a persistent world that never resets and model-written inner life and decrees. Needs a server, an API key and a running bill against R-16 and the browser-only decision; asked as a card at a check-in once the monthly cost is estimated.
