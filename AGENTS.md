@@ -28,7 +28,7 @@ Shared rules come from AI-Master-Instructions and load through CLAUDE.md (`.clau
 
 - While iterating: run only the related tests (`npx vitest run tests/unit/<file>.test.ts`, about 4 s for two files); run the full check once before each push.
 - Every push: `npm run check` (format of the changed files, typecheck, boundaries, unit tests, speed guard, build). CI formats every file.
-- A test that needs an example event (a wedding, a beast slain) leads with the seed known to hold it and then searches the shared list in `tests/unit/helpers/find-world.ts`, whose cache is keyed by world size and content so files share the worlds they generate; if a history change loses an example, put the seed that holds it first rather than re-pinning. The browser smoke computes its world digests in Node at test time (`tests/browser/smoke-expected.ts`), so nothing is re-saved after a history change.
+- A test that needs an example event (a wedding, a beast slain) leads with the seed known to hold it and then searches the shared list in `tests/unit/helpers/find-world.ts`, whose cache is keyed by world size and content so files share the worlds they generate; each search leads with its key's cover seeds. If a history change loses an example, re-run the seed survey (`scripts/seed-cover.mjs` says how) and update the cover rather than re-pinning. The browser smoke computes its world digests in Node at test time (`tests/browser/smoke-expected.ts`), so nothing is re-saved after a history change.
 - If the site speed guard misses its limit in a thread container, don't re-run main to compare: it misses there too, and CI decides.
 - UI or browser-test changes: also `npm run test:browser`.
 - Worldgen changes: the `worldgen-check` skill.

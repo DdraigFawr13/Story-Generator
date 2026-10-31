@@ -81,7 +81,8 @@ describe('colleges and spells', () => {
     ...D,
     notables: { ...D.notables, legendChance: 1 },
   };
-  const DH_SEEDS = ['DH-3', 'DH-21', 'DH-22', 'DH-1', 'DH-2', 'DH-4', 'DH-5', 'DH-6'];
+  // DH-22 holds both examples (surveyed 2026-10-31), so it leads.
+  const DH_SEEDS = ['DH-22', 'DH-3', 'DH-21', 'DH-1', 'DH-2', 'DH-4', 'DH-5', 'DH-6'];
   const makeMagic = (seed: string) =>
     generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, MAGICAL);
   const magicWith = (type: string, seeds = DH_SEEDS) =>
@@ -91,7 +92,7 @@ describe('colleges and spells', () => {
 
   it('are worked only by Exceptional casters, against the trouble they name', () => {
     // DH-8 leads since the 2026-10-17 feuds change left the others without a spell cast.
-    const w = magicWith('spell_cast', ['DH-8', ...DH_SEEDS]);
+    const w = magicWith('spell_cast', [...DH_SEEDS, 'DH-8']);
     const spells = ofType(w, 'spell_cast');
     const troubles = new Set([
       'dry_years_began',
@@ -126,7 +127,8 @@ describe('succession wars', () => {
     ...D,
     history: { ...D.history, civilWar: { ...cw, chance: 1, minSites: 2 } },
   };
-  const CW_SEEDS = ['CW-116', 'CW-2', 'CW-24', 'CW-37', 'CW-43', 'CW-13', 'CW-117', 'CW-118'];
+  // CW-2 and CW-24 hold every example between them (surveyed 2026-10-31), so they lead.
+  const CW_SEEDS = ['CW-2', 'CW-24', 'CW-116', 'CW-37', 'CW-43', 'CW-13', 'CW-117', 'CW-118'];
   const makeWar = (seed: string) =>
     generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, RESTLESS);
   const warWith = (type: string) =>

@@ -27,7 +27,8 @@ const content = {
   },
 };
 // DI-18 leads since the 2026-10-17 feuds change left DI-12 and DI-1 to DI-8 without a peace by marriage.
-const SEEDS = ['DI-18', 'DI-12', 'DI-1', 'DI-2', 'DI-3', 'DI-4', 'DI-5', 'DI-6', 'DI-7', 'DI-8'];
+// DI-3 and DI-18 hold every example between them (surveyed 2026-10-31), so they lead.
+const SEEDS = ['DI-3', 'DI-18', 'DI-12', 'DI-1', 'DI-2', 'DI-4', 'DI-5', 'DI-6', 'DI-7', 'DI-8'];
 const yearOf = (e: SimEvent) => Math.floor(e.day / DAYS_PER_YEAR);
 
 function example(what: string, seeds: string[], type: string) {
