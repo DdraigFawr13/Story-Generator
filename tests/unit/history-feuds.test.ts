@@ -6,10 +6,9 @@ import { findWorld, seedsFrom128 } from './helpers/find-world';
 // Feuds are rarer in a small world, so each test searches a short fixed seed list for a world with
 // the example it checks (first match wins); worlds are generated once per seed and shared.
 const SEEDS = seedsFrom128('FD-21', ['FD-1', 'FD-2', 'FD-5', 'FD-15', 'FD-3', 'FD-8', 'FD-10']);
-// The third-generation search leads with FD-21, whose first such feud cites back to its feud_began.
-// FD-1 and FD-2 hold third-generation feuds whose cause chains stop short of feud_began (an engine
-// defect in feuds.ts passBearer, to be fixed in its own change); until then this search keeps FD-21.
-const GEN3_SEEDS = ['FD-21', ...SEEDS.filter((s) => s !== 'FD-21')];
+// The third-generation search leads with FD-1, which holds one; the cover's first seed (FD-2) has none,
+// and building both 128x128 worlds inside one test can pass its 5 s limit.
+const GEN3_SEEDS = ['FD-1', ...SEEDS.filter((s) => s !== 'FD-1')];
 const make = (seed: string) =>
   generateWorld(seed, { width: 128, height: 128, historyYears: 250 }, DEFAULT_CONTENT);
 const find = (what: string, has: (w: WorldState) => boolean) =>
@@ -20,7 +19,7 @@ const generationThree = (w: WorldState) =>
   ofType(w, 'feud_inherited').filter((e) => Number(e.data.generation) >= 3);
 
 describe('generation feuds', () => {
-  it('hands a feud down three generations, each step citing the one before', () => {
+  it('hands a feud down three generations, each step citing back to how it began', () => {
     const world = findWorld(
       'a feud inherited into a third generation',
       'd128',
@@ -29,24 +28,26 @@ describe('generation feuds', () => {
       (w) => generationThree(w).length > 0,
     ).world;
     const byId = new Map(world.events.map((e) => [e.id, e]));
-    const inherited = generationThree(world)[0]!;
-    // Walk the causes back: the chain must end at the feud_began of the same two houses.
-    const seen = new Set<number>();
-    const queue = [...inherited.causes];
-    let began: SimEvent | undefined;
-    while (queue.length > 0 && !began) {
-      const event = byId.get(queue.shift()!);
-      if (!event || seen.has(event.id)) continue;
-      seen.add(event.id);
-      if (event.type === 'feud_began') began = event;
-      else queue.push(...event.causes);
+    // Every inheritance in the world, not only the third generation: walk the causes back until the
+    // feud_began of the same two houses (a killing in the feud must not cut the chain).
+    for (const inherited of ofType(world, 'feud_inherited')) {
+      const houses = [inherited.data.house, inherited.data.foe].sort();
+      const seen = new Set<number>();
+      const queue = [...inherited.causes];
+      let began: SimEvent | undefined;
+      while (queue.length > 0 && !began) {
+        const event = byId.get(queue.shift()!);
+        if (!event || seen.has(event.id)) continue;
+        seen.add(event.id);
+        const same = [event.data.house, event.data.foe].sort();
+        if (event.type === 'feud_began' && same[0] === houses[0] && same[1] === houses[1])
+          began = event;
+        else queue.push(...event.causes);
+      }
+      expect(began, `feud_inherited ${inherited.id}`).toBeDefined();
+      expect(Number(inherited.data.beganYear)).toBe(yearOf(began!));
+      expect(inherited.data.kin).toBeTruthy();
     }
-    expect(began, `feud_inherited ${inherited.id}`).toBeDefined();
-    expect([began!.data.house, began!.data.foe].sort()).toEqual(
-      [inherited.data.house, inherited.data.foe].sort(),
-    );
-    expect(Number(inherited.data.beganYear)).toBe(yearOf(began!));
-    expect(inherited.data.kin).toBeTruthy();
   });
 
   it('drives a notable to a foreign court, and some come home', () => {

@@ -157,7 +157,7 @@ function endFeud(
     type: 'feud_ended',
     place,
     actors,
-    causes: causesOf(feud.last),
+    causes: causesOf(feud.blood, feud.last),
     data: {
       house: houseName(run, feud.houses[0]),
       foe: houseName(run, feud.houses[1]),
@@ -170,6 +170,7 @@ function endFeud(
     },
   });
   feud.last = event.id;
+  delete feud.blood;
   feud.lastYear = run.year;
   for (const id of actors) {
     const person = run.world.people.get(id);
@@ -279,7 +280,7 @@ function passBearer(run: HistoryRun, feud: Feud, house: Id, dead: Person, deathE
     type: 'feud_inherited',
     place: placeOf(run, heir) ?? place,
     actors: [heir.id, ...(foeBearer ? [foeBearer.id] : [])],
-    causes: causesOf(deathEvent, feud.last),
+    causes: causesOf(deathEvent, feud.blood, feud.last),
     data: {
       name: heir.name,
       // An heir named for the dead is called their namesake, so the line never reads as a slip.
@@ -295,6 +296,7 @@ function passBearer(run: HistoryRun, feud: Feud, house: Id, dead: Person, deathE
     },
   });
   feud.last = event.id;
+  delete feud.blood;
   feud.lastYear = run.year;
   addDeed(heir, event.id);
 }
@@ -328,7 +330,7 @@ export function feudOnDeath(
     if (feud) {
       feud.killings += 1;
       feud.owed = sideOf(feud, dead, here)!;
-      feud.last = deathEvent;
+      feud.blood = deathEvent;
       feud.lastYear = run.year;
     } else {
       const chance = rules.startChance[cause] ?? 0;
@@ -784,7 +786,7 @@ function strike(run: HistoryRun, feud: Feud, striker: Person, foe: Id): void {
     type: 'feud_struck',
     place: homeSite?.cell ?? placeOf(run, target),
     actors: [striker.id, target.id],
-    causes: causesOf(feud.last),
+    causes: causesOf(feud.blood, feud.last),
     data: {
       name: striker.name,
       house: houseName(run, feud.owed),
@@ -797,6 +799,7 @@ function strike(run: HistoryRun, feud: Feud, striker: Person, foe: Id): void {
     },
   });
   feud.last = event.id;
+  delete feud.blood;
   feud.lastYear = run.year;
   addDeed(striker, event.id);
   addDeed(target, event.id);
