@@ -5,7 +5,6 @@ import {
   effectivePower,
   embark,
   foodMeals,
-  generateWorld,
   goodAmount,
   GOODS,
   heldItems,
@@ -22,14 +21,21 @@ import {
   type WorldState,
 } from '../../src/engine';
 import { biggest, copy } from './helpers/site-fixture';
-import { findWorld } from './helpers/find-world';
+import { findWorld, seedsFrom, smallWorld } from './helpers/find-world';
 
 const C = DEFAULT_CONTENT;
 const ST = C.steward;
 
 /** The food-shortage case searches this list for a world whose biggest site is not already at the food-worker ceiling when fed. */
-const SEEDS = ['SITE-D', 'SITE-A', 'SITE-B', 'SITE-C', 'SITE-E', 'SITE-F', 'SITE-G', 'SITE-H'];
-const makeSmall = (seed: string) => generateWorld(seed, { width: 64, height: 64 }, C);
+const SEEDS = seedsFrom('SITE-D', [
+  'SITE-A',
+  'SITE-B',
+  'SITE-C',
+  'SITE-E',
+  'SITE-F',
+  'SITE-G',
+  'SITE-H',
+]);
 const bandOf = (world: WorldState, p: Person) => {
   const race = C.races.find((r) => r.id === p.raceId)!;
   const age = world.params.historyYears - p.born;
@@ -96,9 +102,9 @@ describe('work', () => {
     // A fed town already at the ceiling cannot show the shift, so take the first world that can.
     const { world } = findWorld(
       'a town that puts more people on food when short',
-      'work',
+      'd64',
       SEEDS,
-      makeSmall,
+      smallWorld,
       (w) => {
         const t = trial(w);
         return onFood(t.short, t.b) > onFood(t.fed, t.a);

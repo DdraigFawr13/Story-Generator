@@ -5,7 +5,6 @@ import {
   envOf,
   freeToCourt,
   embark,
-  generateWorld,
   killPerson,
   runFamily,
   applySiteSnapshot,
@@ -21,23 +20,13 @@ import {
   type Site,
   type WorldState,
 } from '../../src/engine';
-import { findWorld } from './helpers/find-world';
+import { findWorld, seedsFrom, smallWorld } from './helpers/find-world';
 
 const C = DEFAULT_CONTENT;
 
 // Both worlds are found by searching a fixed seed list (first match wins), lazily and once.
-const SEEDS = ['SITE-I', 'SITE-A', 'SITE-K', 'SITE-L', 'SITE-M', 'SITE-B', 'SITE-C', 'SITE-D'];
-const MARRY_SEEDS = [
-  'SITE-M',
-  'SITE-K',
-  'SITE-L',
-  'SITE-A',
-  'SITE-I',
-  'SITE-B',
-  'SITE-C',
-  'SITE-D',
-];
-const make = (seed: string) => generateWorld(seed, { width: 64, height: 64 }, C);
+const SEEDS = seedsFrom('SITE-I', ['SITE-A', 'SITE-K', 'SITE-L', 'SITE-M']);
+const MARRY_SEEDS = seedsFrom('SITE-M', ['SITE-K', 'SITE-L', 'SITE-A', 'SITE-I']);
 const marriedWife = (world: WorldState, active: ActiveSite) =>
   active.residents
     .map((id) => world.people.get(id)!)
@@ -50,7 +39,7 @@ const marriedWife = (world: WorldState, active: ActiveSite) =>
 /** A world whose biggest town has a married wife at home, for the childbirth and mirror cases. */
 let shared: WorldState | undefined;
 const base = () =>
-  (shared ??= findWorld('a biggest town with a married wife', 'fam', SEEDS, make, (w) => {
+  (shared ??= findWorld('a biggest town with a married wife', 'd64', SEEDS, smallWorld, (w) => {
     const copy = structuredClone(w);
     return marriedWife(copy, embark(copy, C, biggest(copy).id)) !== undefined;
   }).world);
@@ -69,10 +58,16 @@ const yearOfEvents = (world: WorldState) => {
 };
 let weddings: WorldState | undefined;
 const marrying = () =>
-  (weddings ??= findWorld('a wedding and a birth in a year', 'fam', MARRY_SEEDS, make, (w) => {
-    const types = yearOfEvents(w);
-    return types.has(C.family.events.married) && types.has(C.family.events.birth);
-  }).world);
+  (weddings ??= findWorld(
+    'a wedding and a birth in a year',
+    'd64',
+    MARRY_SEEDS,
+    smallWorld,
+    (w) => {
+      const types = yearOfEvents(w);
+      return types.has(C.family.events.married) && types.has(C.family.events.birth);
+    },
+  ).world);
 function fresh(content = C, from = base) {
   const world = structuredClone(from());
   const active = embark(world, content, biggest(world).id);

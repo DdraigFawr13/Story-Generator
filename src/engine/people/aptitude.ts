@@ -3,6 +3,7 @@
 // No spontaneous talent beyond inheritance variance.
 
 import type { AbilityDef, RaceDef } from '../core/content-types';
+import { clamp } from '../core/math';
 import type { RngStream } from '../core/rng';
 import { ATTRIBUTE_KEYS, type Attributes, type Magic, type Person } from '../core/types';
 import { BIRTH_TIER_IDS, TIERS, tierOfPower, type BirthTierId } from './tiers';
@@ -21,8 +22,6 @@ export interface Aptitude {
   potential: Attributes;
   magic: Magic;
 }
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 /** Bell-shaped offset in −6..6 from three small uniforms (no pow/exp, §7.2). */
 function bell(rng: RngStream): number {

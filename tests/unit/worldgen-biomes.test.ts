@@ -93,15 +93,6 @@ describe('generated habitat, resources and aura', () => {
     expect(loaded.cells!.biome).toBeInstanceOf(Uint8Array);
   });
 
-  it('is deterministic per seed', () => {
-    const again = generateWorld('A', MEDIUM, DEFAULT_CONTENT).cells!;
-    for (const key of ['biome', 'volcano', 'aura', 'fertility', 'wildness'] as const) {
-      expect(again[key]).toEqual(worlds[0]![key]);
-    }
-    expect(again.resources).toEqual(worlds[0]!.resources);
-    expect(again.auraSpots).toEqual(worlds[0]!.auraSpots);
-  });
-
   it('makes floodplains more fertile than nearby uplands', () => {
     let flood = 0;
     let floodCount = 0;

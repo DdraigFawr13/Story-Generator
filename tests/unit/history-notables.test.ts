@@ -177,7 +177,7 @@ describe('notables', () => {
       );
     const { world } = findWorld(
       'a razing death',
-      'default',
+      'd64',
       RAZED_SEEDS,
       (seed) => generate(seed),
       (w) => burned(w).length > 0,
@@ -206,7 +206,7 @@ describe('notables', () => {
     };
     const { world } = findWorld(
       'a settled dispute',
-      'quarrelsome',
+      'quarrelsome64',
       RAZED_SEEDS,
       (seed) => generate(seed, YEARS, quarrelsome),
       disputes,

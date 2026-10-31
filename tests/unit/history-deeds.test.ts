@@ -44,7 +44,7 @@ const make = (seed: string) =>
   generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, FREQUENT);
 /** The first world in SEEDS where `has` holds. */
 const find = (what: string, has: (w: WorldState) => boolean) =>
-  findWorld(what, 'deeds', SEEDS, make, has).world;
+  findWorld(what, 'frequent64', SEEDS, make, has).world;
 const hasType = (type: string) => (w: WorldState) => w.events.some((e) => e.type === type);
 const withType = (type: string) => find(`a ${type} event`, hasType(type));
 const ofType = (w: WorldState, type: string) => w.events.filter((e) => e.type === type);

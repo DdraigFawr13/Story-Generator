@@ -33,7 +33,7 @@ const yearOf = (e: SimEvent) => Math.floor(e.day / DAYS_PER_YEAR);
 function example(what: string, seeds: string[], type: string) {
   const { world } = findWorld(
     what,
-    'diplomacy',
+    'diplomacy64',
     seeds,
     (seed) => generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, content),
     (w) => w.events.some((e) => e.type === type),
@@ -45,7 +45,7 @@ function example(what: string, seeds: string[], type: string) {
   };
 }
 
-describe('diplomacy', () => {
+describe('diplomacy64', () => {
   it('ends a war by a wedding of two spouses and no battle between the peoples follows', () => {
     const { world, of } = example('a peace by marriage', SEEDS, 'peace_by_marriage');
     for (const peace of of('peace_by_marriage')) {

@@ -24,7 +24,7 @@ const SEEDS = ['DI-15', ...Array.from({ length: 16 }, (_, k) => `DI-${k + 1}`)];
 function example(what: string, has: (w: WorldState) => boolean): WorldState {
   return findWorld(
     what,
-    'realm-ties',
+    'ties64',
     SEEDS,
     (seed) => generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, content),
     has,

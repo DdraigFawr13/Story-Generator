@@ -21,23 +21,24 @@ Shared rules come from AI-Master-Instructions and load through CLAUDE.md (`.clau
 - Tuning is time-boxed: at most 15 minutes or three runs per question, then a numbers table and a decision card. The status line is refreshed at every step, and a worker that runs longer than 20 minutes without a status change is stopped and asked for its numbers.
 - Ask the user on design forks. End each phase with the playtest check-in from REBOOT_PLAN §1E.
 - When the plan is silent, follow REBOOT_PLAN §1B: connect more systems, prefer data over code, make consequences visible.
-- Bulk coding goes to the synced `implementer` agent (DEL-01 to DEL-05); give it the AGENT_BRIEF rules that apply. Run `npm run check` and `npm run test:browser` directly (DEL-02: each takes under 30 s); only multi-seed drama, sweep or baseline runs go to `test-runner`.
+- Bulk coding goes to the synced `implementer` agent (DEL-01 to DEL-05); give it the AGENT_BRIEF rules that apply. Long reads that need no judgement go to the `reader` (DEL-03). Run `npm run check` and `npm run test:browser` directly (DEL-02: a cold agent takes longer to start than they take to run; the measured times are in AGENT_BRIEF "Commands"); only multi-seed drama, sweep or baseline runs go to `test-runner`.
+- A thread brief has five parts under headings, each a few lines: Goal (one sentence in the user's words), Read first (the phase spec section and at most five files), Deliverable (what exists when done), Done when (checks that pass or fail, such as "`npm run check` green and the 10-seed baseline diff empty"), Report (under 15 lines, with the command and its output for each check). Standing rules (phone-readable artifacts, the short label, brief replies after each task) are named by reference to the project instructions, not restated.
 
 ## Local checks (run before pushing)
 
 - While iterating: run only the related tests (`npx vitest run tests/unit/<file>.test.ts`, about 4 s for two files); run the full check once before each push.
-- Every push: `npm run check` (format, typecheck, boundaries, unit tests, build).
-- A test that needs an example event (a wedding, a beast slain) searches a fixed seed list with `tests/unit/helpers/find-world.ts` instead of pinning one seed; if a history change empties the list, add seeds rather than re-pinning. The browser smoke computes its world digests in Node at test time (`tests/browser/smoke-expected.ts`), so nothing is re-saved after a history change.
+- Every push: `npm run check` (format of the changed files, typecheck, boundaries, unit tests, speed guard, build). CI formats every file.
+- A test that needs an example event (a wedding, a beast slain) leads with the seed known to hold it and then searches the shared list in `tests/unit/helpers/find-world.ts`, whose cache is keyed by world size and content so files share the worlds they generate; if a history change loses an example, put the seed that holds it first rather than re-pinning. The browser smoke computes its world digests in Node at test time (`tests/browser/smoke-expected.ts`), so nothing is re-saved after a history change.
 - If the site speed guard misses its limit in a thread container, don't re-run main to compare: it misses there too, and CI decides.
 - UI or browser-test changes: also `npm run test:browser`.
 - Worldgen changes: the `worldgen-check` skill.
 - After a sync: `node .claude/master/sync.mjs --check`.
 
-Cloud sessions: the synced session hook installs Node 24.19.0 and npm 11.9.0 and sets `PLAYWRIGHT_CHROMIUM_PATH` (read by `playwright.config.ts`). Don't download Node by hand or keep a local Playwright config.
+Cloud sessions: the synced session hook installs Node 24.19.0 and npm 11.9.0 and sets `PLAYWRIGHT_CHROMIUM_PATH` (read by `playwright.config.ts`). Take Node and Chromium from it; if `node -v` is wrong, run the hook again as AGENT_BRIEF "Commands" shows.
 
 ## What CI runs
 
-- **CI** (`ci.yml`): `core` (AI-master drift check, format, typecheck, boundaries, unit tests, build) and `browser` (Chromium smoke against the production build, two workers, Chromium download cached) on every PR and `main` push. Target: under 5 minutes.
+- **CI** (`ci.yml`): `core` (AI-master drift check, format of every file, typecheck, boundaries, unit tests, build) and `browser` (Chromium smoke against the production build, two workers, Chromium download cached) on every PR and `main` push. Target: under 5 minutes.
 - **Delete merged PR branches** (`prune-merged-branches.yml`, synced): after a merge, until GitHub's native auto-delete setting is on.
 
 ## Deployment

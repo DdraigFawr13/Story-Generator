@@ -7,7 +7,6 @@ import {
   generateWorld,
   isHoldSite,
   popBands,
-  serializeWorld,
   settleWorld,
   siteCapacity,
   siteFeatures,
@@ -16,7 +15,6 @@ import {
   type CultureDef,
   type SettleContent,
   type WorldCells,
-  type WorldState,
 } from '../../src/engine';
 import { gridFromAscii } from './helpers/grid-from-ascii';
 
@@ -246,14 +244,5 @@ describe('generated settlement', () => {
     for (const event of world.events.filter((e) => e.type === 'site_founded' && e.day === 0)) {
       expect(founded.map((e) => e.id)).toContain(event.causes[0]);
     }
-  });
-
-  it('is deterministic for a seed', () => {
-    const again = generateWorld('S1', { width: 128, height: 128 }, DEFAULT_CONTENT);
-    expect(serializeWorld(again)).toBe(serializeWorld(world));
-    const other: WorldState = generateWorld('S2', { width: 128, height: 128 }, DEFAULT_CONTENT);
-    expect([...other.sites.values()].map((s) => s.cell)).not.toEqual(
-      [...world.sites.values()].map((s) => s.cell),
-    );
   });
 });

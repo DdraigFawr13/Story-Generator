@@ -282,11 +282,6 @@ function signedAt(field: Float32Array, q: number, pw: number, ph: number, cut: n
   return (field[q]! - cut) / Math.max(slope, 1e-4);
 }
 
-/** The shore as an SVG path in cell units: the smoothed land mask's edge, smooth at any zoom. */
-export function coastPath(cells: WorldCells): string {
-  return runSteps(coastSteps(cells));
-}
-
 /** The same path in slices (see `atlasSteps`). */
 export function* coastSteps(cells: WorldCells): Generator<void, string, void> {
   const W = cells.width;

@@ -22,7 +22,7 @@ const CS_SEEDS = ['CS-21', 'CS-20', 'CS-18', 'CS-16', 'CS-17', 'CS-19', 'CS-22',
 const makeFree = (seed: string) =>
   generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, BUSY);
 const freeWith = (type: string) =>
-  findWorld(`a ${type} event`, 'cs', CS_SEEDS, makeFree, (w) =>
+  findWorld(`a ${type} event`, 'busy64', CS_SEEDS, makeFree, (w) =>
     w.events.some((e) => e.type === type),
   ).world;
 const ofType = (w: WorldState, type: string) => w.events.filter((e) => e.type === type);
@@ -85,7 +85,7 @@ describe('colleges and spells', () => {
   const makeMagic = (seed: string) =>
     generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, MAGICAL);
   const magicWith = (type: string, seeds = DH_SEEDS) =>
-    findWorld(`a ${type} event`, 'magic', seeds, makeMagic, (x) =>
+    findWorld(`a ${type} event`, 'magical64', seeds, makeMagic, (x) =>
       x.events.some((e) => e.type === type),
     ).world;
 
@@ -130,7 +130,7 @@ describe('succession wars', () => {
   const makeWar = (seed: string) =>
     generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, RESTLESS);
   const warWith = (type: string) =>
-    findWorld(`a ${type} event`, 'cw', CW_SEEDS, makeWar, (x) =>
+    findWorld(`a ${type} event`, 'restless64', CW_SEEDS, makeWar, (x) =>
       x.events.some((e) => e.type === type),
     ).world;
   const find = (w: WorldState, id: number) => w.events.find((e) => e.id === id);
@@ -176,7 +176,7 @@ describe('succession wars', () => {
   });
 
   it('never burn a town, and hand a seized throne to the claimant', () => {
-    const w = findWorld('a civil battle', 'cw', CW_SEEDS, makeWar, (x) =>
+    const w = findWorld('a civil battle', 'restless64', CW_SEEDS, makeWar, (x) =>
       ofType(x, 'battle').some((b) => b.data.civil === 1),
     ).world;
     const civilBattles = new Set(

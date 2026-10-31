@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
 import { DAYS_PER_YEAR, generateWorld, type SimEvent, type WorldState } from '../../src/engine';
-import { findWorld } from './helpers/find-world';
+import { findWorld, seedsFrom128 } from './helpers/find-world';
 
 // Feuds are rarer in a small world, so each test searches a short fixed seed list for a world with
 // the example it checks (first match wins); worlds are generated once per seed and shared.
 // FD-21 leads: it holds a third-generation feud, so the costliest search stops at the first world.
-const SEEDS = ['FD-21', 'FD-1', 'FD-2', 'FD-5', 'FD-15', 'FD-3', 'FD-8', 'FD-10'];
+const SEEDS = seedsFrom128('FD-21', ['FD-1', 'FD-2', 'FD-5', 'FD-15', 'FD-3', 'FD-8', 'FD-10']);
 const make = (seed: string) =>
   generateWorld(seed, { width: 128, height: 128, historyYears: 250 }, DEFAULT_CONTENT);
 const find = (what: string, has: (w: WorldState) => boolean) =>
-  findWorld(what, 'feuds', SEEDS, make, has).world;
+  findWorld(what, 'd128', SEEDS, make, has).world;
 const yearOf = (e: SimEvent) => Math.floor(e.day / DAYS_PER_YEAR);
 const ofType = (w: WorldState, type: string) => w.events.filter((e) => e.type === type);
 const generationThree = (w: WorldState) =>

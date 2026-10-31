@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
 import {
   embark,
-  generateWorld,
   loreProblems,
   refreshWork,
   sitePopulation,
@@ -15,15 +14,22 @@ import {
   type Site,
   type WorldState,
 } from '../../src/engine';
-import { cached, findWorld } from './helpers/find-world';
+import { cached, findWorld, seedsFrom, smallWorld } from './helpers/find-world';
 
 const C = DEFAULT_CONTENT;
 const SMALL = { ...C, site: { ...C.site, followCap: 30 } };
 
 // Most cases share the first world; the waking case searches the list for a site where one person wakes.
-const SEEDS = ['SITE-C', 'SITE-A', 'SITE-B', 'SITE-D', 'SITE-E', 'SITE-F', 'SITE-G', 'SITE-H'];
-const make = (seed: string) => generateWorld(seed, { width: 64, height: 64 }, C);
-const base = () => cached('lore', SEEDS[0]!, make);
+const SEEDS = seedsFrom('SITE-C', [
+  'SITE-A',
+  'SITE-B',
+  'SITE-D',
+  'SITE-E',
+  'SITE-F',
+  'SITE-G',
+  'SITE-H',
+]);
+const base = () => cached('d64', SEEDS[0]!, smallWorld);
 const biggest = (world: WorldState): Site =>
   [...world.sites.values()]
     .filter((s) => s.ruinedYear === undefined && sitePopulation(s) > 0)
@@ -171,9 +177,9 @@ describe('lore', () => {
     // Other readers of the book would wake too, so search for a site where only the holder does.
     const { world } = findWorld(
       'a site where the book wakes one reader',
-      'lore',
+      'd64',
       SEEDS,
-      make,
+      smallWorld,
       (w) => wake(w).active.lore.stats.awakenings === 1,
     );
     const t = wake(world);
@@ -226,7 +232,7 @@ describe('lore', () => {
 
   it('says when a lost book was the last source of a cantrip', () => {
     // A town whose people hold no book of their own, so the test's book is the only one to lose.
-    const { world: bookless } = findWorld('a town with no book', 'lore', SEEDS, make, (w) => {
+    const { world: bookless } = findWorld('a town with no book', 'd64', SEEDS, smallWorld, (w) => {
       const town = biggest(w).id;
       return ![...w.items.values()].some(
         (i) => i.kind === 'book' && i.holder !== null && w.people.get(i.holder)?.siteId === town,

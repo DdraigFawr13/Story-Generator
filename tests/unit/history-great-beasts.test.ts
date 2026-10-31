@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
 import { generateWorld, type WorldState } from '../../src/engine';
-import { findWorld } from './helpers/find-world';
+import { findWorld, seedsFrom128 } from './helpers/find-world';
 
 // Each test searches a short fixed seed list for a world with the example it checks (first match
 // wins); worlds are generated once per seed and shared.
-const SEEDS = ['GB-1', 'GB-2', 'GB-3', 'GB-4', 'GB-5', 'GB-6', 'GB-7', 'GB-8'];
+const SEEDS = seedsFrom128('GB-1', ['GB-2', 'GB-3', 'GB-4', 'GB-5', 'GB-6', 'GB-7', 'GB-8']);
 const make = (seed: string) =>
   generateWorld(seed, { width: 128, height: 128, historyYears: 250 }, DEFAULT_CONTENT);
 const find = (what: string, has: (w: WorldState) => boolean) =>
-  findWorld(what, 'great-beasts', SEEDS, make, has).world;
+  findWorld(what, 'd128', SEEDS, make, has).world;
 const ofType = (w: WorldState, type: string) => w.events.filter((e) => e.type === type);
 const great = (w: WorldState) => [...w.creatures.values()].filter((c) => c.great);
 const hosts = (w: WorldState) => [...w.creatures.values()].filter((c) => c.dead);

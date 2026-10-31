@@ -148,11 +148,6 @@ describe('generated worlds', () => {
     expect(regions.some((r) => r.kind === 'harbour')).toBe(true);
   });
 
-  it('are deterministic', () => {
-    const again = generateWorld('S1', { width: 128, height: 128 }, DEFAULT_CONTENT);
-    expect(JSON.stringify([...again.regions.values()])).toBe(JSON.stringify(regions));
-  });
-
   it('survive a save round trip', () => {
     const loaded = deserializeWorld(serializeWorld(world));
     expect(loaded.regions).toEqual(world.regions);

@@ -4,7 +4,6 @@ import {
   dailyCrops,
   embark,
   foodMeals,
-  generateWorld,
   planMeals,
   siteCodes,
   spoilStock,
@@ -16,12 +15,20 @@ import {
   type WorldState,
 } from '../../src/engine';
 import { base, baseC, biggest } from './helpers/site-fixture';
-import { findWorld } from './helpers/find-world';
+import { findWorld, seedsFrom, smallWorld } from './helpers/find-world';
 
 const C = DEFAULT_CONTENT;
 const DAYS = 336;
 // The normal-year case searches this fixed list (first match wins).
-const SEEDS = ['SITE-C', 'SITE-A', 'SITE-B', 'SITE-D', 'SITE-E', 'SITE-F', 'SITE-G', 'SITE-H'];
+const SEEDS = seedsFrom('SITE-C', [
+  'SITE-A',
+  'SITE-B',
+  'SITE-D',
+  'SITE-E',
+  'SITE-F',
+  'SITE-G',
+  'SITE-H',
+]);
 
 function fresh(from = base) {
   const world = structuredClone(from());
@@ -181,9 +188,9 @@ describe('a normal year at a site', () => {
     let a: ReturnType<typeof run> | undefined;
     const { world } = findWorld(
       'a biggest town that keeps over 0.6 of its stores in a normal year',
-      'env',
+      'd64',
       SEEDS,
-      (seed) => generateWorld(seed, { width: 64, height: 64 }, C),
+      smallWorld,
       (w) => {
         a = run(w);
         return a.share === 1 && a.ratio > 0.6;
