@@ -12,7 +12,7 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256Ã
 - Prefer a content entry over an engine special case; put tunable numbers in `src/content/` with a one-line comment, so a balance change is a data change.
 - Every state change a person would notice emits an event with a content template and cause links. Chronicle text never invents facts.
 - A name a reader takes as identity never repeats in the same role (a person's spouses, items); a repeated life event says what changed (LESSONS 2026-10-13).
-- Tests are light: tiny fixtures, one determinism test per tier (world in `history.test.ts`, site in `site-environment.test.ts`), invariant checkers, one Chromium smoke. A test that needs an example event leads with the seed known to hold it and then searches the shared list in `tests/unit/helpers/find-world.ts`, which also shares the generated worlds across files; a battery of seeds belongs in `npm run drama`. Never skip or weaken a test to get green.
+- Tests are light: tiny fixtures, one determinism test per tier (world in `history.test.ts`, site in `site-environment.test.ts`), invariant checkers, one Chromium smoke. A test that needs an example event searches with `tests/unit/helpers/find-world.ts`: its key's cover seeds first (a few seeds that hold every example, chosen with `scripts/seed-cover.mjs`), then the seed known to hold it, then the shared list; the generated worlds are shared across files; a battery of seeds belongs in `npm run drama`. Never skip or weaken a test to get green.
 - No new runtime dependencies, API keys or backend without the user.
 
 ## How work flows
@@ -26,7 +26,7 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256Ã
 
 ## Commands
 
-- `npm run check`: format (changed files only; CI checks all), typecheck, boundaries, unit tests, the site speed guard, build. Run before every push. Measured 2026-10-31 on a 4-core container: about 60 s, of which the unit tests are 46 s (528 tests in 75 files). The speed guard misses by about 1% in thread containers, on main too; CI decides it.
+- `npm run check`: format (changed files only; CI checks all), typecheck, boundaries, unit tests, the site speed guard, build. Run before every push. Measured 2026-10-31 on a 4-core container: about 55 s, of which the unit tests are 41 s (528 tests in 75 files, 33 worlds built). The speed guard misses by about 1% in thread containers, on main too; CI decides it.
 - `npm run test:browser`: the Chromium smoke, against a production build with two workers; run for UI or browser-test changes (25 tests, about 125 s with the build, 2026-10-31).
 - While iterating, run only the related tests: `npx vitest run tests/unit/<file>.test.ts`.
 - `npm run drama -- --seeds 5`: world and history statistics per seed (a tool, not a gate).

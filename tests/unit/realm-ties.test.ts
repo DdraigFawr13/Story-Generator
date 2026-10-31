@@ -19,7 +19,10 @@ const content = {
   },
 };
 // DI-15 leads since the 2026-10-17 great works change left DI-1 to DI-14 without a refused call.
-const SEEDS = ['DI-15', ...Array.from({ length: 16 }, (_, k) => `DI-${k + 1}`)];
+// DI-15 and DI-14 hold every example between them (surveyed 2026-10-31), so they lead.
+const SEEDS = [
+  ...new Set(['DI-15', 'DI-14', ...Array.from({ length: 16 }, (_, k) => `DI-${k + 1}`)]),
+];
 
 function example(what: string, has: (w: WorldState) => boolean): WorldState {
   return findWorld(

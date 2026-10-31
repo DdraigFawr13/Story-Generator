@@ -89,11 +89,15 @@ describe('great works', () => {
 
   it('renders every new event type through its templates', () => {
     const types = new Map(DEFAULT_CONTENT.eventTypes.map((d) => [d.id, d]));
+    const family = /^(great_work_|item_enchanted|great_item_made)/;
+    const all = DEFAULT_CONTENT.eventTypes.filter((d) => family.test(d.id)).length;
     const seen = new Set<string>();
+    // Stops once every type in the family has been seen; until then it takes the next world.
     for (const seed of SEEDS) {
+      if (seen.size === all) break;
       const w = cached('frequent96', seed, make);
       for (const event of w.events) {
-        if (!/^(great_work_|item_enchanted|great_item_made)/.test(event.type)) continue;
+        if (!family.test(event.type)) continue;
         seen.add(event.type);
         const def = types.get(event.type)!;
         for (const template of def.templates)
