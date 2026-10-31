@@ -96,9 +96,6 @@ export interface PlaybackData {
 const TITLE_RE = new RegExp(`^(${REALM_TITLES.join('|')}) of `);
 /** "Kingdom of Ash" is "Ash". */
 export const shortRealm = (name: string): string => name.replace(TITLE_RE, '');
-/** "Kingdom of Ash" is "Kingdom of"; a name with no title gives "". */
-export const realmTitle = (name: string): string =>
-  name.slice(0, name.length - shortRealm(name).length).trim();
 
 /** Decoded borders kept at once; scrubbing back and forth decodes each only once. */
 const BORDER_CACHE = 14;
@@ -109,11 +106,6 @@ const TRADE_FULL = 120;
 export function isBig(event: Pick<PlaybackEvent, 'type' | 'importance'>): boolean {
   const row = PLAYBACK_EFFECTS[event.type];
   return row?.beat === true && event.importance >= (row.minImportance ?? 0);
-}
-/** A rare moment: a legend rising, a legendary work, a great beast slain. */
-export function isRare(event: Pick<PlaybackEvent, 'type' | 'importance'>): boolean {
-  const row = PLAYBACK_EFFECTS[event.type];
-  return row?.rare === true && event.importance >= (row.minImportance ?? 0);
 }
 
 /** Builds the playback of a finished world; null when it has no playback log or cells. */
@@ -272,11 +264,4 @@ export function census(data: PlaybackData, year: number) {
     if (site.civ) realms.add(site.civ);
   }
   return { realms: realms.size, settlements, people };
-}
-
-/** Years with a big event after year 0, for the playback time estimate. */
-export function beatYears(data: PlaybackData): number[] {
-  const years = new Set<number>();
-  for (const event of data.events) if (event.y > 0 && isBig(event)) years.add(event.y);
-  return [...years].sort((a, b) => a - b);
 }

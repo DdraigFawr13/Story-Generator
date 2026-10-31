@@ -26,7 +26,7 @@ const SEEDS = ['GW-1', 'GW-2', 'GW-3', 'GW-4', 'GW-5', 'GW-6', 'GW-7', 'GW-8'];
 const make = (seed: string) =>
   generateWorld(seed, { width: 96, height: 96, historyYears: 250 }, FREQUENT);
 const find = (what: string, has: (w: WorldState) => boolean) =>
-  findWorld(what, 'great-works', SEEDS, make, has).world;
+  findWorld(what, 'frequent96', SEEDS, make, has).world;
 const ofType = (w: WorldState, type: string) => w.events.filter((e) => e.type === type);
 const hasType = (type: string) => (w: WorldState) => ofType(w, type).length > 0;
 
@@ -91,7 +91,7 @@ describe('great works', () => {
     const types = new Map(DEFAULT_CONTENT.eventTypes.map((d) => [d.id, d]));
     const seen = new Set<string>();
     for (const seed of SEEDS) {
-      const w = cached('great-works', seed, make);
+      const w = cached('frequent96', seed, make);
       for (const event of w.events) {
         if (!/^(great_work_|item_enchanted|great_item_made)/.test(event.type)) continue;
         seen.add(event.type);

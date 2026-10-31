@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
-import { buildLegendIndex, generateWorld, playByPlay, type WorldState } from '../../src/engine';
-import { findWorld } from './helpers/find-world';
+import { buildLegendIndex, playByPlay, type WorldState } from '../../src/engine';
+import { findWorld, seedsFrom, smallWorld } from './helpers/find-world';
 
-const SEEDS = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'];
-const make = (seed: string) =>
-  generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, DEFAULT_CONTENT);
+const SEEDS = seedsFrom('S1', ['S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8']);
 
 const FIGHTS = ['battle', 'beast_slain', 'beast_fought', 'beast_hunt_failed'];
 
@@ -25,9 +23,9 @@ describe('play-by-play', () => {
     };
     const { world } = findWorld(
       'epic battles, beast fights and untold fights',
-      'pbp',
+      'd64',
       SEEDS,
-      make,
+      smallWorld,
       told,
     );
     const index = buildLegendIndex(world, DEFAULT_CONTENT);

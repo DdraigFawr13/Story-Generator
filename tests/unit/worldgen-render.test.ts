@@ -11,7 +11,11 @@ function firstCell(cells: WorldCells, water: number): number {
 }
 
 describe('renderLayer water option', () => {
-  const world = generateWorld('RENDER', { width: 64, height: 64 }, DEFAULT_CONTENT);
+  const world = generateWorld(
+    'RENDER',
+    { width: 64, height: 64, historyYears: 0 },
+    DEFAULT_CONTENT,
+  );
   const cells = world.cells!;
   const sea = firstCell(cells, 3);
   const river = firstCell(cells, 1);

@@ -8,46 +8,47 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256�
 
 ## Rules that bind
 
-- `src/engine` and `src/content` are pure: no DOM, `Date`, `Math.random`, timers, I/O, `**`, or `Math.sin/cos/exp/pow/log`. Named RNG stream per system (`streamFor(world, 'name')`), iterate in id order. `npm run boundaries` enforces the layer table in [ARCHITECTURE.md](ARCHITECTURE.md).
-- Prefer a content entry over an engine special case; put tunable numbers in `src/content/` with a one-line comment.
+- `src/engine` and `src/content` are pure: no DOM, `Date`, `Math.random`, timers or I/O, and no `**` or `Math.sin/cos/exp/pow/log`, whose last bits differ between browsers and would break replay by seed. Every random draw comes from a named stream (`streamFor(world, 'name')`) and loops run in id order, so adding a system or rebuilding a map leaves every other seed's history unchanged. `npm run boundaries` enforces the layer table in [ARCHITECTURE.md](ARCHITECTURE.md).
+- Prefer a content entry over an engine special case; put tunable numbers in `src/content/` with a one-line comment, so a balance change is a data change.
 - Every state change a person would notice emits an event with a content template and cause links. Chronicle text never invents facts.
 - A name a reader takes as identity never repeats in the same role (a person's spouses, items); a repeated life event says what changed (LESSONS 2026-10-13).
-- Tests are light: tiny fixtures, one determinism test, invariant checkers, one Chromium smoke. No seed batteries; a test that needs an example event searches a short fixed seed list (`tests/unit/helpers/find-world.ts`) instead of pinning one seed. Never skip or weaken a test to get green.
+- Tests are light: tiny fixtures, one determinism test per tier (world in `history.test.ts`, site in `site-environment.test.ts`), invariant checkers, one Chromium smoke. A test that needs an example event leads with the seed known to hold it and then searches the shared list in `tests/unit/helpers/find-world.ts`, which also shares the generated worlds across files; a battery of seeds belongs in `npm run drama`. Never skip or weaken a test to get green.
 - No new runtime dependencies, API keys or backend without the user.
 
 ## How work flows
 
 1. One phase at a time, one thread per milestone, run as a pipeline: the next milestone's mock-up starts when the current build starts (AGENTS.md "Working style"). A phase gets a spec of at most two pages in `docs/phases/PHASE_N.md`, approved by the user, before code. Each milestone there carries a reading list; open those files first and grep for the rest. Ask only on genuine design forks; record other defaults in the spec.
    - Lean mock-up round: a screen mock-up with one coordinator pass for UI milestones; an output mock-up (numbers table, sample lines) straight to the user for engine-only milestones. The user's mock-up approval is also the merge approval: merge on green CI with no second card. Tuning gets 15 minutes or three runs, then a numbers table and a card.
-2. The main session plans, writes specs, reviews diffs, commits and merges. Bulk coding goes to the synced `implementer` agent (Sonnet) with a written spec that names the rules above; run `npm run check` and `npm run test:browser` directly (under 30 s each, measured 2026-10-12), since a cold `test-runner` agent takes longer to start than the checks take to run. Send only multi-seed drama, sweep or baseline runs to `test-runner` (Haiku). Keep one-line fixes local.
-3. PRs of roughly 300–1,500 lines, one milestone each, squash-merged when CI is green. Branch pushes without a PR run no CI; push at reviewable checkpoints. Never retry a run blocked by a billing or runner message.
+2. The main session plans, writes specs, reviews diffs, commits and merges. Bulk coding goes to the synced `implementer` agent (Sonnet) with a written spec that names the rules above; reading that would load more than about 8 KB you will not edit goes to the `reader` (Haiku). Run `npm run check` and `npm run test:browser` yourself (times under Commands): a cold `test-runner` agent takes longer to start than the checks take to run. Send only multi-seed drama, sweep or baseline runs to `test-runner` (Haiku). Keep one-line fixes local.
+3. PRs of roughly 300–1,500 lines, one milestone each, squash-merged when CI is green; smaller PRs review faster and merge sooner. Branch pushes without a PR run no CI; push at reviewable checkpoints. Never retry a run blocked by a billing or runner message.
 4. Each milestone: update the phase spec status, `docs/ROADMAP.md` and `CHANGELOG.md`; save sample maps and drama output under `/mnt/project-files/worldgen/<milestone>/`.
 5. Production deploys from `main` only; confirm the live site after a merge ([DEPLOYMENT.md](DEPLOYMENT.md)).
 
 ## Commands
 
-- `npm run check`: format, typecheck, boundaries, unit tests, build. Run before every push (about 49 s locally on 2026-10-16, of which the unit tests are 31 s; the format check takes under 1 s on a re-run).
-- `npm run test:browser`: the Chromium smoke, against a production build with two workers; run for UI or browser-test changes.
+- `npm run check`: format (changed files only; CI checks all), typecheck, boundaries, unit tests, the site speed guard, build. Run before every push. Measured 2026-10-31 on a 4-core container: about 60 s, of which the unit tests are 46 s (528 tests in 75 files). The speed guard misses by about 1% in thread containers, on main too; CI decides it.
+- `npm run test:browser`: the Chromium smoke, against a production build with two workers; run for UI or browser-test changes (25 tests, about 125 s with the build, 2026-10-31).
+- While iterating, run only the related tests: `npx vitest run tests/unit/<file>.test.ts`.
 - `npm run drama -- --seeds 5`: world and history statistics per seed (a tool, not a gate).
 - `npm run drama -- --seeds 10 --years 250 --baseline tests/baseline/drama-10-seeds.json`: diff history numbers against the saved baseline (`--write-baseline FILE` regenerates it).
 - `npm run sweep -- --rule expandChance --values 0.1,0.3 --seeds 5`: one history summary line per rule value.
 - `npm run worldmap -- --seed S1 --layer all --out tmp/worldmap`: PNGs per layer.
-- Node 24.19.0 and npm 11.9.0 are pinned. Cloud sessions get them from the synced `.claude/hooks/session-start.sh`; if `node -v` differs, prepend `~/.cache/node/node-v24.19.0-linux-x64/bin` to `PATH`.
+- Node 24.19.0 and npm 11.9.0 are pinned. Take them from the synced `.claude/hooks/session-start.sh`, which cloud sessions run at start; if `node -v` differs, run the hook again (`CLAUDE_CODE_REMOTE=true bash .claude/hooks/session-start.sh`) or prepend `~/.cache/node/node-v24.19.0-linux-x64/bin` to `PATH`.
 
 ## Map of the code
 
+One phrase per directory; `ls` and the phase spec's reading list give the rest.
+
 | Path | Holds |
 | --- | --- |
-| `src/engine/core/` | types, rng, clock, scheduler, context, content validation, save |
+| `src/engine/core/` | types, content types and validation, rng, clock, scheduler, context, math helpers, save |
 | `src/engine/worldgen/` | terrain → erosion → climate → water → biomes → resources → aura → habitat → regions → routes |
-| `src/engine/history/` | settlement, then yearly harvest, demography, famine, plague, migration, expansion |
-| `src/engine/history/` (cont.) | then beasts, trade, raids, war, notables, colleges, lineages (apprentices, spells, spellbooks, lost lore), intrigue (plots, legends at court, bounties), feuds (house feuds, exile, house splits), the dragon at court (pacts, bounties, courted dragons), great beasts (names, tempers, tolls, grudges; the restless dead's vengeance and rest), orders and academies (founding, recruits, heads, lost lore, knights' hunts; each people's attitude to magic and witch hunts), diplomacy (alliances, calls to arms, vassals), tempers and bynames (rulers' and legends' tempers tilt choices; bynames from deeds), items, importance, snapshots; `playback.ts` records display borders per year |
+| `src/engine/history/` | settlement, then the yearly loop in `index.ts` calling one file per system (harvest to tempers); `playback.ts` records display borders per year |
 | `src/engine/people/` | attributes, aptitude, magic tiers, combat scale (R-24) |
-| `src/engine/site/` | the watched site: `localmap`, `layout`, `promote`/`demote`, `tick` (day loop), `life` (needs, mood, breakdowns), `health`, `social` (opinions, grudges), `family` (marriage, births, inheritance), `society` (standing, crime and law, holy days, funerals), `path` (A*), `work` (steward and jobs), `stock`, `build`, `outpost` |
-| `src/engine/systems/` | shared daily systems (`weather`) |
+| `src/engine/site/` | the watched site: local map and layout, the day loop in `tick.ts`, one file per life domain (needs, health, social, family, society, work, stock, build, threats, lore, recap) |
 | `src/engine/narrative/` | biographies, legend pages, chronicle text rendering |
-| `src/content/` | one file per content type: races, cultures, biomes, resources, names, history rules, settlement, diseases, notables, legends, biographies, map layers and why-lines, playback effects; site content in `site`, `life`, `jobs`, `items`, `buildings`, `abilities`, `creatures` |
+| `src/content/` | one file per content type (races, cultures, biomes, names, history rules, legends, map layers, playback effects); site content in `content/site` |
 | `src/platform/` | IndexedDB saves, the world-gen and site workers and their hosts |
-| `src/app/` | React: `WorldMap`, `MapPanels`, `YearSlider`, `tales/` (Tales room, atlas and markers), `town/` (Town room, canvas and scene model), `playback/data.ts`, `Legends` and `LegendPages`, `EmbarkCards`, `SiteView` with `site-panels` and `site-render` |
-| `scripts/` | boundaries check, drama and baseline diff, sweep, worldmap, site, biographies |
-| `tests/unit/`, `tests/browser/` | Vitest units (57 files, 455 tests, 31 s), the Playwright smoke (17 tests, 70 s with the build) |
+| `src/app/` | React: the four rooms (`tales/`, `people/`, `book/`, `town/`) in the `rooms/` shell; the classic viewer (`WorldMap`, `Legends`, `SiteView`, `site-panels`) behind `?room=classic` |
+| `scripts/` | boundaries check, drama and baseline diff, sweep, worldmap, site, biographies, changed-files format check |
+| `tests/unit/`, `tests/speed/`, `tests/browser/` | Vitest units with the shared world helpers in `tests/unit/helpers/`, the site speed guard, the Playwright smoke |

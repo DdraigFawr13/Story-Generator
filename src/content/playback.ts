@@ -29,12 +29,8 @@ const WAR: Rgb = [214, 58, 46];
 const GOLD: Rgb = [236, 190, 80];
 const SICK: Rgb = [130, 190, 70];
 const FAMINE: Rgb = [214, 150, 60];
-const COLD: Rgb = [150, 200, 245];
-const DRY: Rgb = [222, 170, 90];
 const WONDER: Rgb = [255, 228, 150];
 const FIRE: Rgb = [255, 110, 40];
-
-export const PLAYBACK_COLOURS = { war: WAR, gold: GOLD, cold: COLD, dry: DRY } as const;
 
 /** One row per event type; a type with no row draws nothing. */
 export const PLAYBACK_EFFECTS: Record<string, PlaybackEffect> = {
@@ -154,29 +150,7 @@ export const PLAYBACK_EFFECTS: Record<string, PlaybackEffect> = {
   },
 };
 
-/** Event types whose banner is red: the realm is being hurt. */
-export const PLAYBACK_RED_TYPES: readonly string[] = [
-  'war_declared',
-  'site_razed',
-  'site_conquered',
-];
-
-/**
- * Sprite cost of each effect. At most `PLAYBACK_POOL` cost is live at once; the rest wait.
- */
-export const PLAYBACK_COST: Record<PlaybackFx, number> = {
-  shock: 4,
-  battle: 10,
-  wipe: 2,
-  fire: 40,
-  stain: 4,
-  crown: 4,
-  wonder: 16,
-  peace: 3,
-};
 export const PLAYBACK_POOL = 400;
-/** Most effects on the map at once; quieter ones are dropped. Big and rare ones always show. */
-export const PLAYBACK_MAX_ON_MAP = 3;
 
 /** A tag with data placeholders (as in the story lines); `plain` is used when data is missing. */
 export interface PlaybackTag {
@@ -199,54 +173,6 @@ export const PLAYBACK_TAGS: Record<string, PlaybackTag> = {
   seat_seized: { text: 'Seat seized' },
   realm_split: { text: '{civ} stands apart', plain: 'Realm split' },
 };
-
-/**
- * One line in story voice under a banner title, chosen from the list by the event's year and
- * importance. `{key}` is the event's data value; `{key|word}` falls back to `word` when the event
- * has none. `{civ}` and `{enemy}` are the realm names without their title ("Kingdom of Ash" is
- * "Ash").
- */
-export const PLAYBACK_STORY: Record<string, string[]> = {
-  civ_founded: ['Under one banner, {site|a hall} gathers its people.'],
-  war_declared: ['Spears are sharpened in {civ}.', '{civ} marches on {enemy}.'],
-  peace_made: ['After {years|long} years and {dead|many} dead, the war is done.'],
-  site_razed: ['Smoke over {site} for a week.', '{site} burns; {dead|many} do not see spring.'],
-  site_conquered: ["{site} wakes under {civ}'s banner."],
-  succession_disputed: ['Two claimants, one throne, and the hall divided.'],
-  civil_war_began: ['{name|A claimant} will not kneel; {from} turns its spears on itself.'],
-  throne_seized: ['{name|The claimant} sits the throne {prior|the old ruler} lost.'],
-  seat_seized: ['{name|A legend} takes the seat {prior|the old ruler} held.'],
-  alliance_betrayed: ['{civ|A realm} breaks its oath to {victim|an ally}.'],
-  vassal_sworn: ['{civ|A beaten realm} kneels to {overlord|its conqueror}.'],
-  vassal_revolt: ['{civ|The vassal} will pay {overlord|its master} no more.'],
-  peace_by_marriage: ['{a|A bride} and {b|a groom} are wed, and the spears are lowered.'],
-  realm_split: ['Neither half could win: {from} and {civ} go their own ways.'],
-  legend_risen: ['Songs will carry the name {name}.'],
-  artifact_made: ['{maker|A master} makes {item}, and it will outlive them.'],
-  item_stolen: ['{item} vanishes from {site} in the night.'],
-  beast_slain: ["{hero} returns with {beast}'s head."],
-};
-
-/** A slider tick type: its own colour, and other event types that share it. */
-export interface PlaybackTick {
-  type: string;
-  colour: Rgb;
-  /** Other event types drawn as this one. */
-  also?: string[];
-  /** The least importance that gets a tick. */
-  minImportance?: number;
-}
-
-/** The slider ticks and the key under it, in key order. */
-export const PLAYBACK_TICKS: PlaybackTick[] = [
-  { type: 'war_declared', colour: WAR },
-  { type: 'site_razed', colour: FIRE },
-  { type: 'civ_founded', colour: GOLD },
-  { type: 'legend_risen', colour: WONDER },
-  { type: 'site_conquered', colour: [150, 40, 40] },
-  { type: 'plague', colour: SICK, also: ['fever', 'pox'], minImportance: 8 },
-  { type: 'famine', colour: FAMINE, minImportance: 8 },
-];
 
 /** Titles a realm's short name drops, as in "Kingdom of Ash" becoming "Ash" on the map and in story lines. */
 export const REALM_TITLES: readonly string[] = [

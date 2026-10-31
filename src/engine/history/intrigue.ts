@@ -6,6 +6,7 @@
 // event linked to the wrong that caused it. Draws come from the `intrigue` stream.
 
 import type { Civ, Id, Person, SimEvent } from '../core/types';
+import { clamp } from '../core/math';
 import {
   canSpend,
   deedSoldiers,
@@ -43,8 +44,6 @@ type Motive = 'rival' | 'vengeance' | 'fear' | 'ownFear';
 
 /** 1000 -> "1,000", as the chronicle writes numbers. */
 const thousands = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 /** "the A", "the A and the B", "the A, the B and the C". */
 function listOf(names: readonly string[]): string {

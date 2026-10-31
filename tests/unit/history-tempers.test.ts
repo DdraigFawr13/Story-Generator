@@ -8,7 +8,7 @@ const SEEDS = ['TM-1', 'TM-2', 'TM-3', 'TM-4', 'TM-5', 'TM-6', 'TM-7', 'TM-8'];
 const make = (seed: string) =>
   generateWorld(seed, { width: 96, height: 96, historyYears: 250 }, DEFAULT_CONTENT);
 const find = (what: string, has: (w: WorldState) => boolean) =>
-  findWorld(what, 'tempers', SEEDS, make, has).world;
+  findWorld(what, 'd96', SEEDS, make, has).world;
 const narratorOf = (w: WorldState) =>
   templateNarrator(
     DEFAULT_CONTENT,

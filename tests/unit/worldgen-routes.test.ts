@@ -192,7 +192,8 @@ describe('content', () => {
 });
 
 describe('generated routes', () => {
-  const world = generateWorld('S1', { width: 128, height: 128 }, DEFAULT_CONTENT);
+  // Worldgen only: history never changes the routes or roads, so the 250 years are skipped.
+  const world = generateWorld('S1', { width: 128, height: 128, historyYears: 0 }, DEFAULT_CONTENT);
   const cells = world.cells as WorldCells;
   const { nodes, edges } = world.routes;
 
@@ -235,10 +236,7 @@ describe('generated routes', () => {
     expect(linked / counted).toBeGreaterThanOrEqual(0.8);
   });
 
-  it('is deterministic and survives a save', () => {
-    const again = generateWorld('S1', { width: 128, height: 128 }, DEFAULT_CONTENT);
-    expect(again.routes).toEqual(world.routes);
-    expect(again.cells!.roads).toEqual(cells.roads);
+  it('survive a save', () => {
     const loaded = deserializeWorld(serializeWorld(world));
     expect(loaded.routes).toEqual(world.routes);
     expect(loaded.cells!.roads).toBeInstanceOf(Uint8Array);

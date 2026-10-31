@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
 import {
   embark,
-  generateWorld,
   findRoute,
   foodDaysLeft,
   memoryMood,
@@ -15,13 +14,21 @@ import {
   type WorldState,
 } from '../../src/engine';
 import { biggest, copy } from './helpers/site-fixture';
-import { findWorld } from './helpers/find-world';
+import { findWorld, seedsFrom, smallWorld } from './helpers/find-world';
 
 const C = DEFAULT_CONTENT;
 const LIFE = C.life;
 // The fed-town case searches this fixed list (first match wins).
 // SITE-E leads since the 2026-10-17 dragon-at-court change left the fed-town search to reach it fifth.
-const SEEDS = ['SITE-E', 'SITE-B', 'SITE-D', 'SITE-A', 'SITE-C', 'SITE-F', 'SITE-G', 'SITE-H'];
+const SEEDS = seedsFrom('SITE-E', [
+  'SITE-B',
+  'SITE-D',
+  'SITE-A',
+  'SITE-C',
+  'SITE-F',
+  'SITE-G',
+  'SITE-H',
+]);
 const BREAKDOWNS = new Set([
   LIFE.events.tantrum,
   LIFE.events.despair,
@@ -95,9 +102,9 @@ describe('daily life', () => {
       );
     const { world: found } = findWorld(
       'a fed, housed biggest town with no need at zero on day 60',
-      'life',
+      'd64',
       SEEDS,
-      (seed) => generateWorld(seed, { width: 64, height: 64 }, C),
+      smallWorld,
       (w) => {
         const t = play(w);
         return fed(t.world, t.active);

@@ -5,21 +5,18 @@ import {
   biography,
   buildLegendIndex,
   eventVars,
-  generateWorld,
   templateNarrator,
   validateContent,
   type LegendKind,
   type SimEvent,
   type WorldState,
 } from '../../src/engine';
-import { cached, findWorld } from './helpers/find-world';
+import { cached, findWorld, seedsFrom, smallWorld } from './helpers/find-world';
 
 /** Fixed seed list: the cases share the first world; the one needing a notable born in the records searches the list. */
-const SEEDS = ['NOT-B', 'NOT-A', 'NOT-C', 'NOT-D', 'NOT-E', 'NOT-F', 'NOT-G', 'NOT-H'];
-const make = (seed: string) =>
-  generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, DEFAULT_CONTENT);
+const SEEDS = seedsFrom('NOT-B', ['NOT-A', 'NOT-C', 'NOT-D', 'NOT-E', 'NOT-F', 'NOT-G', 'NOT-H']);
 /** One 64x64, 250-year world shared by the cases. */
-const base = () => cached('bio', SEEDS[0]!, make);
+const base = () => cached('d64', SEEDS[0]!, smallWorld);
 
 const narratorOf = (world: WorldState) =>
   templateNarrator(DEFAULT_CONTENT, (id) => world.people.get(id)?.name ?? `#${id}`);
@@ -101,9 +98,9 @@ describe('biographies', () => {
     // A prophet born before the records reads "20 years before the first settlements"; this checks one born in them.
     const { world } = findWorld(
       'a notable born in the records who died',
-      'bio',
+      'd64',
       SEEDS,
-      make,
+      smallWorld,
       (w) => diedInRecords(w).length > 0,
     );
     const index = buildLegendIndex(world, DEFAULT_CONTENT);

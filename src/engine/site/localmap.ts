@@ -2,6 +2,7 @@
 // cells. Deterministic: all noise seeds come from the world seed and a key.
 
 import type { ContentBundle } from '../core/content-types';
+import { clamp } from '../core/math';
 import { hashString } from '../core/rng';
 import type { LocalMap, WorldState } from '../core/types';
 import { D8_DX, D8_DY } from '../worldgen/grid';
@@ -36,8 +37,6 @@ const RIVER_FLOW_MEDIUM = 200;
 /** Steps drawn along each river segment, and its largest sideways meander in tiles. */
 const RIVER_STEPS = 96;
 const RIVER_MEANDER = 6;
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 /** Builds the map for the cell `siteCell`; `seedKey` (the site id or cell) varies the noise. */
 export function buildLocalMap(

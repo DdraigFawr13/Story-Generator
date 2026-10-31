@@ -1,18 +1,12 @@
-import { DEFAULT_CONTENT } from '../../../src/content';
-import { generateWorld, sitePopulation, type Site, type WorldState } from '../../../src/engine';
+import { sitePopulation, type Site, type WorldState } from '../../../src/engine';
+import { cached, smallWorld } from './find-world';
 
-/** The small 64x64 world the site tests share; built once per test file, never mutated. */
-let shared: WorldState | undefined;
-export const base = () =>
-  (shared ??= generateWorld('SITE-A', { width: 64, height: 64 }, DEFAULT_CONTENT));
+/** The small 64x64 worlds the site tests share (with every file that uses key 'd64'); never mutated. */
+export const base = () => cached('d64', 'SITE-A', smallWorld);
 /** A second 64x64 world, for village-life targets that one village alone would make seed-bound. */
-let sharedB: WorldState | undefined;
-export const baseB = () =>
-  (sharedB ??= generateWorld('SITE-B', { width: 64, height: 64 }, DEFAULT_CONTENT));
+export const baseB = () => cached('d64', 'SITE-B', smallWorld);
 /** A third 64x64 world, whose biggest town is human (SITE-B's is a halfling shire since the 2026-10-13 roster). */
-let sharedC: WorldState | undefined;
-export const baseC = () =>
-  (sharedC ??= generateWorld('SITE-C', { width: 64, height: 64 }, DEFAULT_CONTENT));
+export const baseC = () => cached('d64', 'SITE-C', smallWorld);
 /** A private copy a test may change. */
 export const copy = () => structuredClone(base());
 /** The most populous live site (lowest id breaks a tie). */

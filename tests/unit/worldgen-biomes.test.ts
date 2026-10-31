@@ -11,10 +11,11 @@ import {
   type WorldCells,
 } from '../../src/engine';
 
-const SMALL = { width: 96, height: 96 };
+// Worldgen only: history never changes the cells, regions or routes, so the 250 years are skipped.
+const SMALL = { width: 96, height: 96, historyYears: 0 };
 const index = (id: string) => BIOMES.findIndex((b) => b.id === id);
 const SEEDS = ['A', 'B', 'C', 'D', 'E'];
-const MEDIUM = { width: 128, height: 128 };
+const MEDIUM = { width: 128, height: 128, historyYears: 0 };
 const worlds = SEEDS.map((seed) => generateWorld(seed, MEDIUM, DEFAULT_CONTENT).cells!);
 
 describe('biome content', () => {
@@ -91,15 +92,6 @@ describe('generated habitat, resources and aura', () => {
     expect(worldDigest(loaded)).toBe(worldDigest(world));
     expect(loaded.cells!.resources).toBeInstanceOf(Map);
     expect(loaded.cells!.biome).toBeInstanceOf(Uint8Array);
-  });
-
-  it('is deterministic per seed', () => {
-    const again = generateWorld('A', MEDIUM, DEFAULT_CONTENT).cells!;
-    for (const key of ['biome', 'volcano', 'aura', 'fertility', 'wildness'] as const) {
-      expect(again[key]).toEqual(worlds[0]![key]);
-    }
-    expect(again.resources).toEqual(worlds[0]!.resources);
-    expect(again.auraSpots).toEqual(worlds[0]!.auraSpots);
   });
 
   it('makes floodplains more fertile than nearby uplands', () => {

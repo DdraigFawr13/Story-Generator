@@ -7,16 +7,20 @@ TypeScript, React, Vite and Canvas 2D in the browser, tested with Vitest and Pla
 ```
 src/
   engine/    pure simulation: no DOM, Date, Math.random, timers or I/O
-    core/    types, rng streams, clock, scheduler, context, content validation, world/save
+    core/    types, content types and validation, rng streams, clock, scheduler, context, math, world/save
     people/  attributes, aptitude, magic tiers, combat scale
-    narrative/ narrator interface and template renderer
-    systems/ the ordered list of simulation systems
-    worldgen/ terrain, climate, water, biomes, regions, routes
-    history/ settlement (M2.2) and the yearly history stage (M2.3: harvest, demographics, famine, plague, migration, expansion, abandonment; per-run state in `HistoryRun`)
-    (later: site/, lod/)
-  content/   typed data ("raws"): races, abilities, weather, event types, rules, templates
-  platform/  browser services: IndexedDB saves (worker host for world generation; later: preferences)
-  app/       React UI at / (world map, legends, year slider)
+    worldgen/ terrain, erosion, climate, water, biomes, resources, aura, habitat, regions, routes
+    history/ settlement, then the yearly loop in `history/index.ts` (38 files: harvest, demography,
+             famine, plague, migration, war, notables, lineages, intrigue, feuds, faith, orders,
+             diplomacy, tempers, great beasts and works, playback); per-run state in `HistoryRun`
+    site/    the watched site: local map, layout, the day loop in `site/tick.ts` (needs, work, health,
+             social, family, society, threats, saves)
+    systems/ the day scheduler's list (only the weather demo today; the site and history have their own loops)
+    narrative/ biographies, legend pages, chronicle text rendering
+  content/   typed data ("raws"), one file per content type; site content under `content/site`
+  platform/  browser services: IndexedDB saves, the world-gen and site Web Workers and their hosts
+  app/       React: the four rooms (`tales/`, `people/`, `book/`, `town/`), their shell in `rooms/`,
+             and the classic viewer (`WorldMap`, `Legends`, `SiteView`) behind `?room=classic`
 ```
 
 `npm run boundaries` enforces the import table: `engine` imports only `engine`; `content` imports `engine` (types and helpers); `platform` imports `engine`; `app` may import all three. `engine` and `content` may not touch browser or nondeterministic globals, nor non-safe `Math` functions (below).
@@ -40,7 +44,7 @@ The legacy single-settlement app (`src/sim`, `src/controller`, `src/adapters`, `
 
 ## Performance budgets (desktop)
 
-256×256 world-gen under 2 s; 250 years of history under 10 s; a 150-resident site at 10+ days/s. World-gen and history move into a Web Worker when Phase 1 needs it.
+256×256 world-gen under 2 s; 250 years of history under 10 s (about 4 s measured 2026-10-17); a 150-resident site at 10+ days/s (the speed guard in `tests/speed` asks for a year in 2.5 s). World-gen and the site run in Web Workers (`src/platform`).
 
 ## Testing
 

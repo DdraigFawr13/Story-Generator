@@ -5,6 +5,7 @@
 // roll comes from the `dragonCourt` stream and every number from `content/dragons.ts`.
 
 import type { CreatureDef } from '../core/content-types';
+import { clamp } from '../core/math';
 import type { Civ, Creature, Id, Person, Site } from '../core/types';
 import { TIERS } from '../people/tiers';
 import { fightHunt, livingCreatures, whereIs } from './beasts';
@@ -131,8 +132,6 @@ export function unleashDragon(
   return { site: target, event: event.id };
 }
 
-const clamp = (value: number, [min, max]: [number, number]) => Math.min(max, Math.max(min, value));
-
 /** A realm's adults, for the soldiers it lends. */
 function adultsOf(run: HistoryRun, civ: Civ): number {
   return liveSites(run)
@@ -154,7 +153,7 @@ function answer(run: HistoryRun, dragon: Creature, civ: Civ, ruler: Person, cour
       c.bountyPerWar * Math.max(0, cultureValue(run, civ, 'war') - 5) -
       c.bountyPerWealth * Math.max(0, cultureValue(run, civ, 'wealth') - 5) +
       (legend ? c.bountyLegend : 0),
-    c.bountyRange,
+    ...c.bountyRange,
   );
   // Every roll is drawn, so the stream advances the same whichever answer follows.
   const bounty = rng.chance(chance) || !temper.tribute;

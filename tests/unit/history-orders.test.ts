@@ -1,15 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
 import { TIERS, generateWorld, type Order, type WorldState } from '../../src/engine';
-import { findWorld } from './helpers/find-world';
+import { findWorld, seedsFrom128 } from './helpers/find-world';
 
 // Each test searches a short fixed seed list for a world with the example it checks (first match
 // wins); worlds are generated once per seed and shared.
-const SEEDS = ['OR-9', 'OR-1', 'OR-2', 'OR-3', 'OR-4', 'OR-5', 'OR-6', 'OR-7', 'OR-8'];
+const SEEDS = seedsFrom128('OR-9', [
+  'OR-1',
+  'OR-2',
+  'OR-3',
+  'OR-4',
+  'OR-5',
+  'OR-6',
+  'OR-7',
+  'OR-8',
+]);
 const make = (seed: string) =>
   generateWorld(seed, { width: 128, height: 128, historyYears: 250 }, DEFAULT_CONTENT);
 const find = (what: string, has: (w: WorldState) => boolean) =>
-  findWorld(what, 'orders', SEEDS, make, has).world;
+  findWorld(what, 'd128', SEEDS, make, has).world;
 const ofType = (w: WorldState, type: string) => w.events.filter((e) => e.type === type);
 const orders = (w: WorldState): Order[] => [...w.orders.values()];
 

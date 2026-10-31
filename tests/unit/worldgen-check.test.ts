@@ -2,7 +2,8 @@ import { DEFAULT_CONTENT } from '../../src/content';
 import { describe, expect, it } from 'vitest';
 import { checkWorldCells, generateWorld, type WorldCells } from '../../src/engine';
 
-const SMALL = { width: 96, height: 96 };
+// Worldgen only: history never changes the cells, regions or routes, so the 250 years are skipped.
+const SMALL = { width: 96, height: 96, historyYears: 0 };
 
 function copyCells(cells: WorldCells): WorldCells {
   return {
