@@ -573,6 +573,17 @@ for (const r of rows) {
 }
 
 process.stdout.write(
+  '\ncrafts (W1): seed | discovered | reinvented | regained | brought | lost | held at the end | treatises\n',
+);
+for (const r of rows) {
+  const h = r.history;
+  process.stdout.write(
+    `${r.seed.padEnd(4)} | ${String(h.craftsDiscovered).padStart(3)} | ${String(h.craftsReinvented).padStart(3)} | ${String(h.craftsRegained).padStart(3)} | ` +
+      `${String(h.craftsBrought).padStart(3)} | ${String(h.craftsLost).padStart(3)} | ${String(h.craftsHeld).padStart(3)} | ${String(h.treatises).padStart(3)}\n`,
+  );
+}
+
+process.stdout.write(
   '\nfeuds: seed | begun | inherited | max generation | killings | ended wed / paid / forgotten / died out | exiles | returned pardoned / claim / raid | houses split | legends slain\n',
 );
 for (const r of rows) {

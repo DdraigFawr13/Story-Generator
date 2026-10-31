@@ -117,6 +117,7 @@ export function validateContent(content: ContentBundle): string[] {
   problems.push(...loreProblems(content));
   problems.push(...politicsProblems(content));
   problems.push(...lineageProblems(content));
+  problems.push(...craftProblems(content));
 
   for (const ability of content.abilities) {
     const where = `Ability ${ability.id}`;
@@ -895,6 +896,13 @@ const HISTORY_EVENT_IDS = [
   'book_burned',
   'lore_lost',
   'lore_regained',
+  'craft_discovered',
+  'craft_reinvented',
+  'craft_regained',
+  'craft_lost',
+  'craft_brought',
+  'craft_written',
+  'craft_taught',
   'high_priest_named',
   'heresy_denounced',
   'site_converted',
@@ -1616,6 +1624,57 @@ export function lineageProblems(content: ContentBundle): string[] {
       problems.push(`Lineages ${name} must be a whole number of 1 or more.`);
   }
   if (rules.oldLoreNames.length === 0) problems.push('Lineages oldLoreNames is empty.');
+  return problems;
+}
+
+/** Crafts (W1): unique ids, an earlier `requires`, a non-food good, factors above 0, chances 0-1. */
+export function craftProblems(content: ContentBundle): string[] {
+  const rules = content.history?.crafts;
+  if (!rules) return ['Content has no craft rules.'];
+  const problems: string[] = [];
+  const seen = new Set<string>();
+  for (const craft of rules.crafts) {
+    const where = `Craft ${craft.id}`;
+    if (seen.has(craft.id)) problems.push(`${where}: duplicate id.`);
+    if (craft.requires !== undefined && !seen.has(craft.requires))
+      problems.push(`${where}: requires "${craft.requires}", which is not an earlier craft.`);
+    seen.add(craft.id);
+    if (craft.good === 'food' || !GOODS.includes(craft.good))
+      problems.push(`${where}: good "${craft.good}" must be a known good other than food.`);
+    if (!(craft.minGood >= 0)) problems.push(`${where}: minGood must be 0 or more.`);
+    if (craft.siteKinds.length === 0) problems.push(`${where}: no site kinds.`);
+    for (const kind of craft.siteKinds)
+      if (!SITE_KINDS.includes(kind)) problems.push(`${where}: unknown site kind "${kind}".`);
+    if (!(craft.effect.factor > 0)) problems.push(`${where}: effect factor must be above 0.`);
+    if (
+      craft.effect.kind === 'yield' &&
+      (craft.effect.good === 'food' || !GOODS.includes(craft.effect.good))
+    )
+      problems.push(
+        `${where}: effect good "${craft.effect.good}" must be a known good other than food.`,
+      );
+    if (!craft.name || !craft.first || !craft.bookForm)
+      problems.push(`${where}: name, first and bookForm are needed.`);
+  }
+  const chances: [string, number][] = [
+    ['discoverChance', rules.discoverChance],
+    ['teachChance', rules.teachChance],
+    ['bookChance', rules.bookChance],
+    ['readChance', rules.readChance],
+  ];
+  for (const [name, value] of chances) {
+    if (!(value >= 0 && value <= 1)) problems.push(`Crafts ${name} must be 0-1, not ${value}.`);
+  }
+  if (!(rules.reinventFactor > 0)) problems.push('Crafts reinventFactor must be above 0.');
+  if (!(rules.reinventAfterYears >= 0))
+    problems.push('Crafts reinventAfterYears must be 0 or more.');
+  for (const name of ['maxMasters', 'trainingYears'] as const) {
+    if (!Number.isInteger(rules[name]) || rules[name] < 1)
+      problems.push(`Crafts ${name} must be a whole number of 1 or more.`);
+  }
+  if (rules.bookNames.length === 0) problems.push('Crafts bookNames is empty.');
+  for (const key of ['diedUntaught', 'wentAway', 'forgotten'] as const)
+    if (!rules.phrases[key]) problems.push(`Crafts phrase "${key}" is empty.`);
   return problems;
 }
 

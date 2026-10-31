@@ -14,7 +14,7 @@ import {
   type Id,
   type WorldState,
 } from '../../src/engine';
-import { baseB, biggest } from './helpers/site-fixture';
+import { baseB, baseC, biggest } from './helpers/site-fixture';
 
 const C = DEFAULT_CONTENT;
 
@@ -128,9 +128,9 @@ describe('health', () => {
   });
 
   it('keeps the dead dead and takes them out of the site counts', () => {
-    // SITE-B: after the 2026-10-17 dragon-court change SITE-A's biggest town lost nobody on leaving.
+    // SITE-C: after the crafts change (W1) SITE-B's town lost nobody on leaving (SITE-A before, after the dragon-court change).
     // A site that has a notable living in it, so one of the dead keeps a record.
-    const world = structuredClone(baseB());
+    const world = structuredClone(baseC());
     const home = [...world.people.values()].find(
       (p) =>
         p.died === undefined && p.siteId != null && sitePopulation(world.sites.get(p.siteId)!) > 20,

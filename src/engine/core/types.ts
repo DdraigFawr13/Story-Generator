@@ -261,6 +261,26 @@ export interface Person {
   temper?: string;
   /** H2: the byname earned from a deed ("the Dragonslayer") and the event that gave it. */
   byname?: { text: string; event: Id };
+  /** W1: the crafts this person knows (a `CraftDef` id each), in the order they learned them. */
+  crafts?: CraftLore[];
+}
+
+/** W1: one craft a person knows: when and how they came by it, and whom they taught. */
+export interface CraftLore {
+  /** A `CraftDef` id. */
+  id: string;
+  /** History year they learned it. */
+  since: number;
+  /** Found it themselves, taught by a master, read it in a treatise, found it again after a loss, or brought it from another people. */
+  how: 'found' | 'taught' | 'book' | 'again';
+  /** The master who taught them. */
+  teacher?: Id;
+  /** The treatise item they read. */
+  book?: Id;
+  /** Pupils they have taught, in order. */
+  pupils: Id[];
+  /** Set once they have written a treatise on it. */
+  wrote?: true;
 }
 
 /** M5.2: how a mage learned their magic and from whom. */
@@ -361,6 +381,8 @@ export interface Item {
   enchanted?: { school: string; spell: string; from: 'beast' | 'ore'; beast?: string };
   /** A legend's great item, the one work of their life. */
   great?: true;
+  /** W1: a treatise's crafts (`CraftDef` ids): a living member of the people may learn a lost craft from it. */
+  crafts?: string[];
 }
 
 /** A perilous place (M4.7): a ruin, old mine, barrow, empty lair or aura place in the wild. */
@@ -646,6 +668,22 @@ export interface Civ {
   faithId?: Id;
   /** The realm this one pays tribute to while it is a vassal (diplomacy.ts); cleared on revolt or fall. */
   overlord?: Id;
+  /** W1: the crafts the people has had, one entry per craft id (latest state). */
+  crafts?: CivCraft[];
+}
+
+/** W1: a people's hold on one craft (the latest state; the events are the record). */
+export interface CivCraft {
+  /** A `CraftDef` id. */
+  id: string;
+  /** The person who first made the craft the people's own (its discoverer, or the knower who brought it). */
+  first: Id;
+  /** History year of that, and its event (craft_discovered or craft_brought). */
+  year: number;
+  event: Id;
+  /** History year no living member knew it any more, and the craft_lost event; cleared when it is found again. */
+  lost?: number;
+  lostEvent?: Id;
 }
 
 /** A faith (religion engine): one per culture religion at the start, more by schism. Plain data. */

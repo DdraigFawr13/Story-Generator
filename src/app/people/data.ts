@@ -529,6 +529,19 @@ export const DEED_GROUPS = [
     ],
   },
   {
+    id: 'crafts',
+    label: 'Crafts',
+    types: [
+      'craft_discovered',
+      'craft_reinvented',
+      'craft_regained',
+      'craft_lost',
+      'craft_brought',
+      'craft_written',
+      'craft_taught',
+    ],
+  },
+  {
     id: 'works',
     label: 'Works',
     types: ['artifact_made', 'book_written', 'site_founded', 'outpost_founded', 'dynasty_founded'],

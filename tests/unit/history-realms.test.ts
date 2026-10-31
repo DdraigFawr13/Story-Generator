@@ -173,7 +173,11 @@ describe('succession wars', () => {
     const endings = ['throne_seized', 'revolt_crushed', 'realm_split'].flatMap((t) => ofType(w, t));
     for (const e of ofType(w, 'civil_war_began')) {
       const end = endings.find((x) => (x.data.rebels ?? x.data.civ) === e.data.civ && x.id > e.id);
-      if (!end) expect(yearOf(e)).toBeGreaterThan(250 - cw.maxYears);
+      // A third realm may raze the rebels' last town mid-war (CW-2 after the crafts change): their
+      // fall ends the war, within the limit like any other ending.
+      const fell = ofType(w, 'civ_fell').find((x) => x.data.civ === e.data.civ && x.id > e.id);
+      if (fell && !end) expect(yearOf(fell) - yearOf(e)).toBeLessThanOrEqual(cw.maxYears);
+      else if (!end) expect(yearOf(e)).toBeGreaterThan(250 - cw.maxYears);
     }
   });
 

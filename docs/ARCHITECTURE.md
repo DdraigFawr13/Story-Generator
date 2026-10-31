@@ -11,7 +11,7 @@ src/
     people/  attributes, aptitude, magic tiers, combat scale
     worldgen/ terrain, erosion, climate, water, biomes, resources, aura, habitat, regions, routes
     history/ settlement, then the yearly loop in `history/index.ts` (38 files: harvest, demography,
-             famine, plague, migration, war, notables, lineages, intrigue, feuds, faith, orders,
+             famine, plague, migration, war, notables, lineages, crafts, intrigue, feuds, faith, orders,
              diplomacy, tempers, great beasts and works, playback); per-run state in `HistoryRun`
     site/    the watched site: local map, layout, the day loop in `site/tick.ts` (needs, work, health,
              social, family, society, threats, saves)

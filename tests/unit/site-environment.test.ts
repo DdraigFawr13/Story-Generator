@@ -14,7 +14,7 @@ import {
   type Building,
   type WorldState,
 } from '../../src/engine';
-import { base, baseC, biggest } from './helpers/site-fixture';
+import { base, biggest } from './helpers/site-fixture';
 import { findWorld, seedsFrom, smallWorld } from './helpers/find-world';
 
 const C = DEFAULT_CONTENT;
@@ -85,8 +85,8 @@ describe('spoilage', () => {
   it("dates the month's line on its last day, with the Site tab's count for that month", () => {
     // The line used to come on the 1st, naming the month before as "this month" (729 against the
     // Site tab's 214 at S1 in the playtest).
-    // SITE-C: the 2026-10-17 dragon-at-court change left SITE-A's biggest town with no spoiled stores in two months.
-    const { world, active } = fresh(baseC);
+    // SITE-A again after the crafts change (W1); SITE-C had been used since the 2026-10-17 dragon-at-court change.
+    const { world, active } = fresh(base);
     const lines: number[] = [];
     for (let d = 0; d < 56; d += 1) {
       for (const e of stepSite(world, C)) {

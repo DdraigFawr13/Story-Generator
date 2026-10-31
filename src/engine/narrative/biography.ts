@@ -201,6 +201,7 @@ function personSummary(
       }),
     );
   out.push(...orderLines(world, say, person));
+  out.push(...craftLines(world, content, say, person));
   const spouses = person.family.spouses
     .map((id) => world.people.get(id)?.name)
     .filter((n): n is string => n !== undefined);
@@ -244,6 +245,46 @@ function ordinal(n: number): string {
   const teen = n % 100 >= 11 && n % 100 <= 13;
   const suffix = teen ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
   return `${n}${suffix}`;
+}
+
+/** One line for each craft the person knew: first of their people, taught, read in a treatise, or found again. */
+function craftLines(
+  world: WorldState,
+  content: BioContent,
+  say: (name: string, vars: Record<string, string | number>) => string,
+  person: Person,
+): string[] {
+  const out: string[] = [];
+  // Crafts they were the first of a people to know go in one line per people.
+  const firsts = new Map<string, string[]>();
+  for (const lore of person.crafts ?? []) {
+    const craft = content.history.crafts.crafts.find((c) => c.id === lore.id);
+    if (!craft) continue;
+    const vars = { craft: craft.name };
+    if (lore.how === 'found') {
+      const civ = [...world.civs.values()].find((c) =>
+        c.crafts?.some((e) => e.id === lore.id && e.first === person.id),
+      );
+      const home = civ ?? (person.civId == null ? undefined : world.civs.get(person.civId));
+      if (home) firsts.set(home.name, [...(firsts.get(home.name) ?? []), craft.name]);
+    } else if (lore.how === 'taught') {
+      const teacher = lore.teacher === undefined ? undefined : world.people.get(lore.teacher);
+      if (teacher) out.push(say('craftTaught', { ...vars, teacher: teacher.name }));
+    } else if (lore.how === 'book') {
+      const book = lore.book === undefined ? undefined : world.items.get(lore.book);
+      if (book) out.push(say('craftBook', { ...vars, book: book.name }));
+    } else if (lore.how === 'again') {
+      const found = world.events.find(
+        (e) =>
+          e.type === 'craft_reinvented' && e.actors[0] === person.id && e.data.craft === craft.name,
+      );
+      if (found) out.push(say('craftAgain', { ...vars, years: String(found.data.years ?? '') }));
+    }
+  }
+  const list = (names: string[]) =>
+    names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+  const lines = [...firsts].map(([civ, names]) => say('craftFirst', { craft: list(names), civ }));
+  return [...lines, ...out];
 }
 
 /** One line for the first order or academy the person founded, else headed, else joined. */

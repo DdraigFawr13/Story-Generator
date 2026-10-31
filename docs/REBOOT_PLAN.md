@@ -693,7 +693,7 @@ Morgan asked for world.world-sim.uk to be assessed as a model and then for every
 
 | Order | Addition | Where | What you would see | Value | Effort |
 | --- | --- | --- | --- | --- | --- |
-| W1 | Named discoverers and lost crafts | Phase 7 guilds, the M5.2 lineage pattern | Crafts as content entries with a first maker per people; a craft passes master to apprentice and is lost when the last master dies untaught, found again by reinvention or a written book; the chronicle names the discoverer and the loss | 4 | M |
+| W1 | Named discoverers and lost crafts | Phase 7 guilds, the M5.2 lineage pattern | Picked 2026-10-31; built 2026-10-31 (seven crafts with small effects on goods and artifacts; treatises, reinvention, masters who move). Crafts as content entries with a first maker per people; a craft passes master to apprentice and is lost when the last master dies untaught, found again by reinvention or a written book; the chronicle names the discoverer and the loss | 4 | M |
 | W2 | Follow a house, with alerts | U2 Follow, a step to Phase 8 | Follow a house or legend from any page: the chronicle filters to them, playback pauses on their events, and the year recap opens with what happened to them | 4 | S |
 | W3 | Feed tabs and a notable filter | U3 Book room | Lives, Stories, Trade, Conflict and Feasts tabs on the Book's chronicle, and a weight per event so the quiet lines can be hidden | 3 | S |
 | W4 | Someone to know | S3 world at a glance | A named person suggested on the opening page and the world-at-a-glance page, with one line on them and a jump to their page | 3 | S |

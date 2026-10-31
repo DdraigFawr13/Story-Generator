@@ -57,6 +57,9 @@ export const NOTABLES: NotableRules = {
       plunder_raid: 4,
       artifact_made: 8,
       book_written: 6,
+      // Crafts: the first maker of a craft, and the one who hits on it again.
+      craft_discovered: 6,
+      craft_reinvented: 6,
       // Faith: the high priest who names a quarrel, the prophet who preaches, splits or converts.
       heresy_denounced: 2,
       high_priest_named: 4,

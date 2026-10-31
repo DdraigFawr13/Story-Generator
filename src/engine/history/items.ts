@@ -18,6 +18,7 @@ import {
   siteOf,
 } from './people';
 import { hoardedItems } from './dragons';
+import { craftArtifactFactor } from './crafts';
 import { openPlaceCells } from './places';
 import { liveSites, type HistoryRun } from './state';
 
@@ -108,7 +109,7 @@ function makeArtifacts(run: HistoryRun): void {
     if (site.kind !== 'town' && site.kind !== 'city') continue;
     const civ = site.civId === null ? undefined : world.civs.get(site.civId);
     if (!civ || civ.fell !== undefined || site.goods.luxury < rules.artifactMinLuxury) continue;
-    if (!rng.notables.chance(rules.artifactChance)) continue;
+    if (!rng.notables.chance(rules.artifactChance * craftArtifactFactor(run, civ.id))) continue;
     const form = rng.notables.pick(rules.artifactForms);
     const epithet = rng.notables.pick(rules.artifactEpithets);
     const pattern = rng.notables.pick(rules.artifactNames);

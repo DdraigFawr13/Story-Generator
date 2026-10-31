@@ -24,6 +24,7 @@ import { runGoods } from './goods';
 import { runFamine, runHarvest } from './harvest';
 import { buildLinks, createLinkSearch } from './links';
 import { runExpansion, runMigration } from './migration';
+import { runCrafts } from './crafts';
 import { initLineages, runLineages } from './lineages';
 import { initNotables, runNotables } from './notables';
 import { runOrders } from './orders';
@@ -112,6 +113,7 @@ export function runHistory(
     runColleges(run);
     runOrders(run);
     runLineages(run);
+    runCrafts(run);
     runGreatWorks(run);
     runCityStates(run);
     runFaith(run);

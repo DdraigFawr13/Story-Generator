@@ -56,6 +56,11 @@ export const BIOGRAPHIES: BiographyRules = {
       '{He} was called {byname}, after {after}.',
       'Men called {him} {byname}, after {after}.',
     ],
+    // W1: crafts a person knew, by how they came by it.
+    craftFirst: ['{He} was the first of the {civ} to know {craft}.'],
+    craftTaught: ['{He} learned {craft} from {teacher}.'],
+    craftBook: ['{He} learned {craft} from {book}.'],
+    craftAgain: ['{He} found {craft} again, {years} after it was lost.'],
     personFamily: ['{He} {family}.'],
     personMagic: ['{He} carried {tier} magic.'],
     // M3.9: an awakening; the tier is the one woken to.

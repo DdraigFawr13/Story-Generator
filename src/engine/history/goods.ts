@@ -3,6 +3,7 @@
 
 import type { Goods, GoodId, Site } from '../core/types';
 import { GOODS } from '../core/types';
+import { craftFactor } from './crafts';
 import { bandCount, totalPop } from './pop';
 import { liveSites, type HistoryRun } from './state';
 
@@ -54,7 +55,7 @@ export function runGoods(run: HistoryRun): void {
     for (const good of GOODS) {
       if (good === 'food') continue;
       const share = Math.min(1, deposits[good] / rules.depositsForFull);
-      const made = adults * rules.goodsPerWorker[good] * share;
+      const made = adults * rules.goodsPerWorker[good] * share * craftFactor(run, site.civId, good);
       const cap = rules.goodsCapYears * adults * rules.goodsPerWorker[good];
       site.goods[good] = Math.max(
         0,

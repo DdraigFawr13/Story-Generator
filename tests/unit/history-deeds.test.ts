@@ -23,22 +23,22 @@ const FREQUENT = {
 const LEGEND_POWER = 17;
 
 // The tests search this fixed list for a world with the event they check (first match wins).
-// DH-137, DH-5, DH-81 and DH-144 hold every example between them (surveyed 2026-10-31 with
-// FIND_WORLD_POOL, see tests/unit/helpers/find-world.ts), so they lead and the scans build at most
-// those four worlds.
+// DH-134, DH-105 and DH-137 hold every example between them (re-surveyed 2026-10-31 after the
+// crafts change, W1, with FIND_WORLD_POOL, see tests/unit/helpers/find-world.ts), so they lead and
+// the scans build at most those three worlds.
 const SEEDS = [
+  'DH-134',
+  'DH-105',
   'DH-137',
   'DH-5',
   'DH-81',
   'DH-144',
   'DH-60',
-  'DH-134',
   'DH-3',
   'DH-37',
   'DH-79',
   'DH-152',
   'DH-34',
-  'DH-105',
 ];
 const make = (seed: string) =>
   generateWorld(seed, { width: 64, height: 64, historyYears: 250 }, FREQUENT);
