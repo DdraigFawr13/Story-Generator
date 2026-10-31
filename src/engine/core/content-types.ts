@@ -2391,6 +2391,57 @@ export interface HistoryRules {
   orders: OrderRules;
   /** H2: rulers' and legends' tempers, the choices they tilt, and bynames earned from deeds. */
   tempers: TemperRules;
+  /** W1: crafts a people discovers, passes from master to pupil, loses and finds again. */
+  crafts: CraftRules;
+}
+
+/** W1: what a craft does for the people that holds it. */
+export type CraftEffect =
+  { kind: 'yield'; good: GoodId; factor: number } | { kind: 'artifacts'; factor: number };
+
+/** W1: one craft (crafts.ts). */
+export interface CraftDef {
+  id: string;
+  /** The noun phrase used in sentences ("iron-working"). */
+  name: string;
+  /** What the discoverer did, as a verb phrase ("drew the first iron from the bloom"). */
+  first: string;
+  /** A site of the people must stock at least `minGood` of this good (never food) to discover it. */
+  good: GoodId;
+  minGood: number;
+  /** Site kinds that may discover it. */
+  siteKinds: SiteKind[];
+  /** A craft the people must hold first. */
+  requires?: string;
+  effect: CraftEffect;
+  /** The form of a treatise on it ("treatise"). */
+  bookForm: string;
+}
+
+/** W1: crafts, masters and pupils, treatises and lost crafts (crafts.ts): every number and phrase. */
+export interface CraftRules {
+  /** In content order, which is the order the engine loops in. */
+  crafts: CraftDef[];
+  /** Yearly chance per people per craft it lacks when a qualifying site exists. */
+  discoverChance: number;
+  /** Multiplier on `discoverChance` for a craft the people lost. */
+  reinventFactor: number;
+  /** Years after a loss before the people may hit on the craft again. */
+  reinventAfterYears: number;
+  /** Most living knowers of one craft a people keeps (teaching stops there). */
+  maxMasters: number;
+  /** Yearly chance a grown master with no pupil in training takes one. */
+  teachChance: number;
+  /** Years a pupil counts as in training. */
+  trainingYears: number;
+  /** Yearly chance a master who has not yet written a treatise on a craft writes one. */
+  bookChance: number;
+  /** Yearly chance a lost craft is learned back from a treatise a living member of the people holds. */
+  readChance: number;
+  /** Treatise name patterns: `{craft}`, `{writer}`, `{site}`. */
+  bookNames: string[];
+  /** Why a craft was lost; `{name}` is the last who knew it. */
+  phrases: { diedUntaught: string; wentAway: string; forgotten: string };
 }
 
 /** H2: the choices a temper tilts; each is a multiplier on the engine's existing odds or score. */

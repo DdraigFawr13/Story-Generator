@@ -224,6 +224,13 @@ export const TYPE_GROUPS: EventTypeGroup[] = [
     types: [
       'artifact_made',
       'book_written',
+      'craft_discovered',
+      'craft_reinvented',
+      'craft_regained',
+      'craft_lost',
+      'craft_brought',
+      'craft_written',
+      'craft_taught',
       'item_inherited',
       'item_lost',
       'item_stolen',

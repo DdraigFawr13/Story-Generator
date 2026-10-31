@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../src/content';
-import { DAYS_PER_YEAR, generateWorld, meetsRequirements } from '../../src/engine';
+import { DAYS_PER_YEAR, meetsRequirements } from '../../src/engine';
+import { findWorld, seedsFrom, smallWorld } from './helpers/find-world';
 
 const YEARS = 250;
-const world = generateWorld(
-  'LN-3',
-  { width: 64, height: 64, historyYears: YEARS },
-  DEFAULT_CONTENT,
-);
+// LN-3 first; a history change that burns no book there falls back to the shared list.
+const world = findWorld(
+  'a world with a burned book and apprentices',
+  'd64',
+  seedsFrom('LN-3'),
+  smallWorld,
+  (w) => [...w.items.values()].some((i) => i.burned !== undefined),
+).world;
 const rules = DEFAULT_CONTENT.history.lineages;
 const abilities = new Map(DEFAULT_CONTENT.abilities.map((a) => [a.id, a]));
 const race = (id: string) => DEFAULT_CONTENT.races.find((r) => r.id === id)!;

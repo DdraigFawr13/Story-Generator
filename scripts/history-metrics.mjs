@@ -215,6 +215,21 @@ export function notableMetrics(world, n, DAYS_PER_YEAR, orderRules, cultures) {
     greatItems: n.great_item_made ?? 0,
     partsCrafted: n.beast_parts_crafted ?? 0,
     carriedOff: n.item_carried_off ?? 0,
+    // Crafts (W1): discoveries, losses and what peoples hold at the end.
+    craftsDiscovered: n.craft_discovered ?? 0,
+    craftsReinvented: n.craft_reinvented ?? 0,
+    craftsRegained: n.craft_regained ?? 0,
+    craftsBrought: n.craft_brought ?? 0,
+    craftsLost: n.craft_lost ?? 0,
+    craftsHeld: [...world.civs.values()].reduce(
+      (sum, civ) =>
+        sum +
+        (civ.fell !== undefined
+          ? 0
+          : (civ.crafts ?? []).filter((c) => c.lost === undefined).length),
+      0,
+    ),
+    treatises: n.craft_written ?? 0,
     feuds: feudMetrics(world, n),
     ...orderMetrics(world, n, orderRules, cultures ?? []),
   };

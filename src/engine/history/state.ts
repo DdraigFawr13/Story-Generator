@@ -12,8 +12,9 @@ import type {
 import { streamFor, type RngStream } from '../core/rng';
 import type {
   Civ,
-  GreatWork,
+  GoodId,
   Goods,
+  GreatWork,
   Id,
   SimEvent,
   Site,
@@ -227,6 +228,17 @@ export interface LoreState {
   burns: Map<Id, { event: Id; site: string }>;
 }
 
+/** Crafts in the world (crafts.ts): who last knew each, and the effects each people holds, refreshed yearly. */
+export interface CraftState {
+  /** "civ:craft" keys to the living knower with the highest id at the last survey. */
+  lastKnower: Map<string, Id>;
+  /** The craft ids each live people holds (no `lost` mark), for the effects below. */
+  held: Map<Id, Set<string>>;
+  /** Per people: the product of the yield factors of held crafts per good, and of the artifact factors. */
+  yields: Map<Id, Partial<Record<GoodId, number>>>;
+  artifacts: Map<Id, number>;
+}
+
 /** A mage of another people studying at a college (colleges.ts). */
 export interface Student {
   siteId: Id;
@@ -343,6 +355,7 @@ export interface HistoryRun {
     diplomacy: RngStream;
     feuds: RngStream;
     orders: RngStream;
+    crafts: RngStream;
   };
   /** Remains of slain great beasts, in the order they were left. */
   remains: Remains[];
@@ -382,6 +395,8 @@ export interface HistoryRun {
   colleges: College[];
   /** Spellbooks and lineages (M5.2). */
   lore: LoreState;
+  /** W1: crafts, their last knowers and the effects they give (crafts.ts). */
+  crafts: CraftState;
   /** Mages studying abroad, by person id. */
   students: Map<Id, Student>;
   /** Mages who went to study at a college of another people (once each); they may work spells at home. */
@@ -569,6 +584,7 @@ export function createRun(
       diplomacy: streamFor(world, 'history.diplomacy'),
       feuds: streamFor(world, 'history.feuds'),
       orders: streamFor(world, 'history.orders'),
+      crafts: streamFor(world, 'history.crafts'),
     },
     remains: [],
     year: 0,
@@ -608,6 +624,7 @@ export function createRun(
     },
     colleges: [],
     lore: createLoreState(content.abilities),
+    crafts: { lastKnower: new Map(), held: new Map(), yields: new Map(), artifacts: new Map() },
     students: new Map(),
     studied: new Set(),
     pacts: [],

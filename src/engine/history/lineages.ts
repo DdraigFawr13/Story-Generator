@@ -54,7 +54,7 @@ function schoolAbilities(run: HistoryRun, school: string): AbilityDef[] {
 }
 
 /** The event of a notable's death, from their deeds. */
-function deathEventOf(run: HistoryRun, person: Person): Id | undefined {
+export function deathEventOf(run: HistoryRun, person: Person): Id | undefined {
   for (let i = person.deeds.length - 1; i >= 0; i -= 1) {
     const event = eventById(run, person.deeds[i]!);
     if (event && event.type === 'notable_died' && event.actors[0] === person.id) return event.id;
