@@ -22,6 +22,10 @@
     {
       "id": "GAME-05",
       "reason": "R-02: no old saves or rule versions are kept during the reboot; saves are not upgraded across versions."
+    },
+    {
+      "id": "DEL-02",
+      "reason": "Check runs (npm run check, test:browser, drama, sweep, baseline) go to the Haiku test-runner: measured 2026-10-31 as accurate as the main session at about a twentieth of the cost (AGENTS.md Overrides). Reads, searches and small edits stay direct."
     }
   ]
 }

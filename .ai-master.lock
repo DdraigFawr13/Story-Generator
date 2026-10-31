@@ -1,7 +1,7 @@
 {
   "version": "v0.3.0",
   "commit": "603505d70e799136de4971238ad09de4c224cee5",
-  "manifest": "e523ae8bea66fe4a3a83eb8c7a729c59afd40881ca3539afa10fdb3339fdd0fb",
+  "manifest": "bc52ffa6e508daef220448f7dd35ff7972d7a7399432f8929ab4774299d58e49",
   "budget": {
     "lines": 200,
     "bytes": 24576
@@ -13,7 +13,7 @@
     ".claude/agents/reviewer.md": "98278f07c43f0ffa5329f50f098c0c8f05d51e29923e9c41a09db675859bdeb2",
     ".claude/agents/test-runner.md": "f6d59450c2d1e3d82db75d7e6645274c1ce44931ff1bddf02b75b9e45f26d85d",
     ".claude/hooks/session-start.sh": "a5936b916dffaf98d8ab875600c5ca195d88194053f22b444bf2d8767d57bfd1",
-    ".claude/master/RULES.md": "d30a4b891a7c30b93e528ef1a4451f114701ec3be3a0f5b14fd1e722d3ed5239",
+    ".claude/master/RULES.md": "9addda1cf47212a3430566e2500e1f7c85a91cd9385ef01a8d37c9276b41652a",
     ".claude/master/sync.mjs": "b253d8cb3c22780bc00b951b1e9cc024aa5ad615243277a822093f8240544d70",
     ".claude/skills/efficient-github-actions/references/agent-policy.md": "a45580c978190bbadf21f2977c78936e9ef9aefd9396ca938d2641cf37e484d6",
     ".claude/skills/efficient-github-actions/references/patterns.md": "1ac338cf8f235b47e3b09999fe9620047dcdd0f23c4d28188af3fc03971d505a",
