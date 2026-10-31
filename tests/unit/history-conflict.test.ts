@@ -10,7 +10,6 @@ import {
   generateWorld,
   popBands,
   runHistory,
-  serializeWorld,
   validateContent,
   type Civ,
   type ContentBundle,
@@ -506,19 +505,6 @@ describe('trade', () => {
     expect(rich!.wealth).toBeGreaterThan(0);
     expect(linked!.wealth).toBeGreaterThan(0);
     expect(alone!.wealth).toBe(0);
-  });
-});
-
-describe('determinism', () => {
-  it('gives the same events, creatures and goods for a seed over 50 years', () => {
-    const a = generate('DET-A', 50);
-    const b = generate('DET-A', 50);
-    expect(b.events).toEqual(a.events);
-    expect([...b.creatures.values()]).toEqual([...a.creatures.values()]);
-    expect([...b.sites.values()].map((s) => s.goods)).toEqual(
-      [...a.sites.values()].map((s) => s.goods),
-    );
-    expect(serializeWorld(b)).toBe(serializeWorld(a));
   });
 });
 

@@ -11,10 +11,11 @@ import {
   type WorldCells,
 } from '../../src/engine';
 
-const SMALL = { width: 96, height: 96 };
+// Worldgen only: history never changes the cells, regions or routes, so the 250 years are skipped.
+const SMALL = { width: 96, height: 96, historyYears: 0 };
 const index = (id: string) => BIOMES.findIndex((b) => b.id === id);
 const SEEDS = ['A', 'B', 'C', 'D', 'E'];
-const MEDIUM = { width: 128, height: 128 };
+const MEDIUM = { width: 128, height: 128, historyYears: 0 };
 const worlds = SEEDS.map((seed) => generateWorld(seed, MEDIUM, DEFAULT_CONTENT).cells!);
 
 describe('biome content', () => {

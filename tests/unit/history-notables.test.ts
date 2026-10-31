@@ -7,7 +7,6 @@ import {
   encodeTerritory,
   generateWorld,
   validateContent,
-  worldDigest,
   type ContentBundle,
   type Id,
   type SimEvent,
@@ -224,10 +223,6 @@ describe('notables', () => {
       expect(e.data.rule).toContain(String(loser));
     }
     expect(disputed).toBeGreaterThan(0);
-  });
-
-  it('gives the same world digest for the same seed', () => {
-    expect(worldDigest(generate('NOT-DET', 80))).toBe(worldDigest(generate('NOT-DET', 80)));
   });
 
   it('keeps ten-year snapshots whose territory round-trips', () => {

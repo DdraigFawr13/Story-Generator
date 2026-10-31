@@ -26,7 +26,7 @@ A browser-only, data-driven world simulator in the Dwarf Fortress spirit: a 256Ã
 
 ## Commands
 
-- `npm run check`: format (changed files only; CI checks all), typecheck, boundaries, unit tests, the site speed guard, build. Run before every push. Measured 2026-10-31 on a 4-core container: about 66 s, of which the unit tests are 52 s (530 tests in 75 files). The speed guard misses by about 1% in thread containers, on main too; CI decides it.
+- `npm run check`: format (changed files only; CI checks all), typecheck, boundaries, unit tests, the site speed guard, build. Run before every push. Measured 2026-10-31 on a 4-core container: about 60 s, of which the unit tests are 46 s (528 tests in 75 files). The speed guard misses by about 1% in thread containers, on main too; CI decides it.
 - `npm run test:browser`: the Chromium smoke, against a production build with two workers; run for UI or browser-test changes (25 tests, about 125 s with the build, 2026-10-31).
 - While iterating, run only the related tests: `npx vitest run tests/unit/<file>.test.ts`.
 - `npm run drama -- --seeds 5`: world and history statistics per seed (a tool, not a gate).

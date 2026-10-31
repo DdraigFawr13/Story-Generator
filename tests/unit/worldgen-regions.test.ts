@@ -136,7 +136,8 @@ describe('fords', () => {
 });
 
 describe('generated worlds', () => {
-  const world = generateWorld('S1', { width: 128, height: 128 }, DEFAULT_CONTENT);
+  // Worldgen only: history never changes the regions, so the 250 years are skipped.
+  const world = generateWorld('S1', { width: 128, height: 128, historyYears: 0 }, DEFAULT_CONTENT);
   const regions = [...world.regions.values()];
 
   it('are sound, numbered 1..n and uniquely named', () => {

@@ -9,7 +9,8 @@ import {
   type WorldCells,
 } from '../../src/engine';
 
-const SMALL = { width: 96, height: 96 };
+// Worldgen only: history never changes the cells, regions or routes, so the 250 years are skipped.
+const SMALL = { width: 96, height: 96, historyYears: 0 };
 
 function mean(values: number[]): number {
   return values.reduce((sum, v) => sum + v, 0) / values.length;
@@ -108,7 +109,11 @@ describe('generated climate', () => {
 
   it('swings wider between seasons inland than on the coast', () => {
     // Needs a map big enough to have ground 15 cells from the sea.
-    const cells = generateWorld('INLAND', { width: 192, height: 192 }, DEFAULT_CONTENT).cells!;
+    const cells = generateWorld(
+      'INLAND',
+      { width: 192, height: 192, historyYears: 0 },
+      DEFAULT_CONTENT,
+    ).cells!;
     const { tempSummer, tempWinter, seaDistance } = cells;
     const spread = (i: number) => tempSummer[i]! - tempWinter[i]!;
     const inland = landCells(cells, (i) => seaDistance[i]! >= 15);

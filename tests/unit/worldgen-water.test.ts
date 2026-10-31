@@ -11,7 +11,8 @@ import {
 } from '../../src/engine';
 import { gridFromAscii } from './helpers/grid-from-ascii';
 
-const SMALL = { width: 96, height: 96 };
+// Worldgen only: history never changes the cells, regions or routes, so the 250 years are skipped.
+const SMALL = { width: 96, height: 96, historyYears: 0 };
 
 /** Cell reached by following one step of flowDir, or -1 at the end of a path. */
 function downstream(cells: WorldCells, i: number): number {
