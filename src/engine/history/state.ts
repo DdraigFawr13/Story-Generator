@@ -150,7 +150,12 @@ export interface Feud {
   /** The feud_began event; `last` is the latest event of the feud, cited by the next. */
   event: Id;
   last: Id;
-  /** The year of `last`: a bearer does not act in the year they were wronged. */
+  /**
+   * A killing counted in the feud since `last` (a notable_died that cites the battle or raid, not the
+   * feud). The next feud event cites it beside `last`, so the chain still leads back to feud_began.
+   */
+  blood?: Id;
+  /** The year of the latest event or killing: a bearer does not act in the year they were wronged. */
   lastYear: number;
   /** Who carries the feud for each house now (person id per dynasty id). */
   bearers: Map<Id, Id>;
