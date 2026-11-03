@@ -25,7 +25,7 @@
     "format": "prettier --write --cache .",
     "format:check": "prettier --check --cache .",
     "format:changed": "node scripts/format-changed.mjs",
-    "check": "npm run format:changed && npm run typecheck && npm run boundaries && npm test && npm run build"
+    "check": "node .claude/skills/test-design/scripts/test-traps.mjs && npm run format:changed && npm run typecheck && npm run boundaries && npm test && npm run build"
   },
   "dependencies": {
     "react": "19.3.0",
