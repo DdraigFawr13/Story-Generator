@@ -33,9 +33,12 @@ export const SEEDS = [
 /**
  * The 64x64 default-content seeds that between them hold every example the d64 searches look for
  * (surveyed 2026-10-31 with `FIND_WORLD_POOL`, below): NOT-1 holds all but two, NOT-B those two.
- * Every d64 search leads with them, so a worker builds at most these two worlds for its searches.
+ * Since then three searches (site-lore's waking reader and bookless town, lineages' burned book)
+ * matched only SITE-B, fifth in their lists, so the waking test built five worlds and ran five
+ * 40-day sites inside its 5 s timeout and timed out under load (find log, 2026-11-03); SITE-B joins.
+ * Every d64 search leads with them, so a worker builds at most these three worlds for its searches.
  */
-export const COVER_64 = ['NOT-1', 'NOT-B'] as const;
+export const COVER_64 = ['NOT-1', 'NOT-B', 'SITE-B'] as const;
 
 /**
  * A search list: the cover seeds, then `first` and any `extra` seeds (the file's own fallbacks;
