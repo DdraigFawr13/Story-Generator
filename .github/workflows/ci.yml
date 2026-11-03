@@ -9,6 +9,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review] # ready_for_review starts the first run of a draft
   workflow_dispatch:
 
 permissions:
@@ -21,6 +22,8 @@ concurrency:
 
 jobs:
   core:
+    # Draft PRs skip CI (CI-06); marking the PR ready runs it.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -39,6 +42,8 @@ jobs:
       - run: npm run build
 
   browser:
+    # Draft PRs skip CI (CI-06); marking the PR ready runs it.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
